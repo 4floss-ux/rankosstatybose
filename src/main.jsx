@@ -582,6 +582,238 @@ function formatNetPay(amount, unit) {
     : `${formatted} € į rankas / val.`;
 }
 
+
+function timeRangesOverlap(a, b) {
+  if (!a || !b || a.work_date !== b.work_date) return false;
+  const aStart = (a.start_time || "00:00").slice(0, 5);
+  const aEnd = (a.end_time || "23:59").slice(0, 5);
+  const bStart = (b.start_time || "00:00").slice(0, 5);
+  const bEnd = (b.end_time || "23:59").slice(0, 5);
+  return aStart < bEnd && aEnd > bStart;
+}
+
+function ConversationModal({ open, onClose, invitationId, title, user }) {
+  const [messages, setMessages] = useState([]);
+  const [names, setNames] = useState({});
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open && invitationId) loadMessages();
+  }, [open, invitationId]);
+
+  async function loadMessages() {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await supabase
+        .from("job_messages")
+        .select("id, sender_id, body, created_at")
+        .eq("invitation_id", invitationId)
+        .order("created_at", { ascending: true });
+
+      if (result.error) throw result.error;
+
+      const rows = result.data || [];
+      setMessages(rows);
+
+      const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
+      if (ids.length) {
+        const profilesResult = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", ids);
+
+        if (profilesResult.error) throw profilesResult.error;
+
+        setNames(
+          Object.fromEntries(
+            (profilesResult.data || []).map((row) => [
+              row.id,
+              row.display_name || "Vartotojas",
+            ])
+          )
+        );
+      } else {
+        setNames({});
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti žinučių.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || !invitationId) return;
+
+    setSending(true);
+    setError("");
+    try {
+      const result = await supabase.from("job_messages").insert({
+        invitation_id: invitationId,
+        sender_id: user.id,
+        body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="rs-modal-overlay" onMouseDown={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-messages{display:grid;gap:10px;max-height:360px;overflow:auto;padding:4px 2px 12px}
+          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+          .rs-message.mine{margin-left:auto;background:#fff3e7}
+          .rs-message b{display:block;font-size:12px;margin-bottom:4px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
+          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
+          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">ŽINUTĖS</div>
+            <h2>{title || "Pokalbis apie darbą"}</h2>
+          </div>
+          <button className="rs-close" onClick={onClose}>×</button>
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages">
+          {loading ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={message.sender_id === user.id ? "rs-message mine" : "rs-message"}
+                key={message.id}
+              >
+                <b>{message.sender_id === user.id ? "Jūs" : names[message.sender_id] || "Vartotojas"}</b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="rs-empty">Žinučių dar nėra. Galite parašyti pirmą.</div>
+          )}
+        </div>
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            maxLength={2000}
+            placeholder="Parašykite žinutę..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function WorkerProfileModal({ worker, onClose }) {
+  if (!worker) return null;
+
+  return (
+    <div className="rs-modal-overlay" onMouseDown={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+          .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
+          .rs-profile-stat span{display:block;font-size:12px;color:#6c7a88;margin-bottom:5px}.rs-profile-stat b{font-size:20px}
+          @media(max-width:560px){.rs-profile-grid{grid-template-columns:1fr}}
+        `}</style>
+        <div className="rs-modal-head">
+          <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: "50%", background: "#102438",
+              color: "#fff", display: "grid", placeItems: "center", fontWeight: 800
+            }}>
+              {worker.initials}
+            </div>
+            <div>
+              <div className="eyebrow">DARBUOTOJO PROFILIS</div>
+              <h2>{worker.name}</h2>
+            </div>
+          </div>
+          <button className="rs-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="rs-profile-grid">
+          <div className="rs-profile-stat"><span>Miestas</span><b>{worker.city}</b></div>
+          <div className="rs-profile-stat"><span>Patirtis</span><b>{worker.yearsExperience} m.</b></div>
+          <div className="rs-profile-stat"><span>Atvykimo patikimumas</span><b>{Math.round(worker.attendanceRate)}%</b></div>
+          <div className="rs-profile-stat"><span>Neatvykimų</span><b>{worker.noShowCount || 0}</b></div>
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <b>Transportas</b>
+          <p style={{ margin: "6px 0 0", color: "#6c7a88" }}>
+            {worker.hasTransport ? "Turi savo transportą" : "Savo transporto neturi"}
+            {worker.hasDrivingLicenseB ? " · turi B kategoriją" : ""}
+          </p>
+        </div>
+
+        {worker.shortBio && (
+          <div style={{ marginTop: 18 }}>
+            <b>Apie patirtį</b>
+            <p style={{ color: "#6c7a88", lineHeight: 1.55 }}>{worker.shortBio}</p>
+          </div>
+        )}
+
+        <div style={{ marginTop: 18 }}>
+          <b>Įgūdžiai</b>
+          <div className="ed-tags" style={{ marginTop: 9 }}>
+            {worker.skillNames.map((skill) => (
+              <span className="ed-tag" key={skill}>{skill}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -592,7 +824,11 @@ function WorkerDashboard({ user, onLogout }) {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [originalSkills, setOriginalSkills] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [confirmedJobs, setConfirmedJobs] = useState([]);
   const [respondingInvitation, setRespondingInvitation] = useState(null);
+  const [confirmInvitation, setConfirmInvitation] = useState(null);
+  const [commitmentChecked, setCommitmentChecked] = useState(false);
+  const [conversation, setConversation] = useState(null);
   const [form, setForm] = useState({
     displayName: "",
     city: "Vilnius",
@@ -607,6 +843,8 @@ function WorkerDashboard({ user, onLogout }) {
     attendanceRate: 100,
     completedJobs: 0,
     ratingAverage: null,
+    noShowCount: 0,
+    restrictedUntil: null,
   });
   const [availability, setAvailability] = useState(() =>
     Object.fromEntries(
@@ -650,7 +888,7 @@ function WorkerDashboard({ user, onLogout }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_transport, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average"
+            "travel_radius_km, has_transport, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, no_show_count, restricted_until"
           )
           .eq("user_id", user.id)
           .single(),
@@ -704,6 +942,8 @@ function WorkerDashboard({ user, onLogout }) {
           worker?.rating_average === null || worker?.rating_average === undefined
             ? null
             : Number(worker.rating_average),
+        noShowCount: Number(worker?.no_show_count || 0),
+        restrictedUntil: worker?.restricted_until || null,
       });
 
       setSkills(skillsResult.data || []);
@@ -766,28 +1006,43 @@ function WorkerDashboard({ user, onLogout }) {
   }
 
   async function loadInvitations() {
-    const invitationResult = await supabase
-      .from("job_invitations")
-      .select("id, job_id, status, message, invited_at, responded_at")
-      .eq("worker_id", user.id)
-      .order("invited_at", { ascending: false });
+    const [invitationResult, bookingResult] = await Promise.all([
+      supabase
+        .from("job_invitations")
+        .select("id, job_id, status, message, invited_at, responded_at")
+        .eq("worker_id", user.id)
+        .order("invited_at", { ascending: false }),
+      supabase
+        .from("bookings")
+        .select("id, job_id, status")
+        .eq("worker_id", user.id)
+        .eq("status", "confirmed"),
+    ]);
 
     if (invitationResult.error) throw invitationResult.error;
+    if (bookingResult.error) throw bookingResult.error;
 
     const invitationRows = invitationResult.data || [];
-    const jobIds = [...new Set(invitationRows.map((row) => row.job_id).filter(Boolean))];
+    const bookingRows = bookingResult.data || [];
+    const allJobIds = [
+      ...new Set([
+        ...invitationRows.map((row) => row.job_id),
+        ...bookingRows.map((row) => row.job_id),
+      ].filter(Boolean)),
+    ];
 
-    if (!jobIds.length) {
+    if (!allJobIds.length) {
       setInvitations([]);
+      setConfirmedJobs([]);
       return;
     }
 
     const jobsResult = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id"
+        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status"
       )
-      .in("id", jobIds);
+      .in("id", allJobIds);
 
     if (jobsResult.error) throw jobsResult.error;
 
@@ -820,6 +1075,19 @@ function WorkerDashboard({ user, onLogout }) {
         };
       })
     );
+
+    setConfirmedJobs(
+      bookingRows.map((booking) => jobMap.get(booking.job_id)).filter(Boolean)
+    );
+  }
+
+  function invitationHasConflict(invitation) {
+    if (!invitation?.job) return false;
+    return confirmedJobs.some(
+      (job) =>
+        job.id !== invitation.job.id &&
+        timeRangesOverlap(invitation.job, job)
+    );
   }
 
   async function respondToInvitation(invitationId, status) {
@@ -847,6 +1115,8 @@ function WorkerDashboard({ user, onLogout }) {
       }
 
       await loadInvitations();
+      setConfirmInvitation(null);
+      setCommitmentChecked(false);
 
       setNotice(
         status === "accepted"
@@ -1079,6 +1349,16 @@ function WorkerDashboard({ user, onLogout }) {
 
         {notice && <div className="wd-note ok">{notice}</div>}
         {error && <div className="wd-note err">{error}</div>}
+        {metrics.restrictedUntil &&
+          new Date(metrics.restrictedUntil) > new Date() && (
+            <div className="wd-note err">
+              Paskyrai taikomas laikinas apribojimas: naujų darbų priimti negalite iki{" "}
+              {new Date(metrics.restrictedUntil).toLocaleString("lt-LT", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}.
+            </div>
+          )}
 
         <div className="wd-form">
           <section className="wd-card">
@@ -1127,32 +1407,56 @@ function WorkerDashboard({ user, onLogout }) {
                         </div>
                       </div>
 
-                      {invitation.status === "pending" ? (
-                        <div className="wd-invite-actions">
-                          <button
-                            className="wd-accept"
-                            disabled={busy}
-                            onClick={() =>
-                              respondToInvitation(invitation.id, "accepted")
-                            }
-                          >
-                            {busy ? "Prašome..." : "Priimti"}
-                          </button>
-                          <button
-                            className="wd-decline"
-                            disabled={busy}
-                            onClick={() =>
-                              respondToInvitation(invitation.id, "declined")
-                            }
-                          >
-                            Atmesti
-                          </button>
-                        </div>
-                      ) : (
-                        <span className={`wd-invite-status ${invitation.status}`}>
-                          {statusLabel}
-                        </span>
-                      )}
+                      <div className="wd-invite-actions">
+                        {invitation.status === "pending" ? (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={
+                                busy ||
+                                invitationHasConflict(invitation) ||
+                                (metrics.restrictedUntil &&
+                                  new Date(metrics.restrictedUntil) > new Date())
+                              }
+                              onClick={() => {
+                                setCommitmentChecked(false);
+                                setConfirmInvitation(invitation);
+                              }}
+                            >
+                              {busy
+                                ? "Prašome..."
+                                : invitationHasConflict(invitation)
+                                ? "Laikas užimtas"
+                                : "Priimti"}
+                            </button>
+                            <button
+                              className="wd-decline"
+                              disabled={busy}
+                              onClick={() =>
+                                respondToInvitation(invitation.id, "declined")
+                              }
+                            >
+                              Atmesti
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`wd-invite-status ${invitation.status}`}>
+                            {statusLabel}
+                          </span>
+                        )}
+
+                        <button
+                          className="wd-decline"
+                          onClick={() =>
+                            setConversation({
+                              invitationId: invitation.id,
+                              title: `${invitation.companyName} · ${job.title}`,
+                            })
+                          }
+                        >
+                          Žinutės
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -1346,6 +1650,129 @@ function WorkerDashboard({ user, onLogout }) {
           </div>
         </div>
       </main>
+
+      {confirmInvitation && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !respondingInvitation) {
+              setConfirmInvitation(null);
+              setCommitmentChecked(false);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <style>{`
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+              .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+            `}</style>
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO PATVIRTINIMAS</div>
+                <h2>Ar tikrai įsipareigojate atvykti laiku?</h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={Boolean(respondingInvitation)}
+                onClick={() => {
+                  setConfirmInvitation(null);
+                  setCommitmentChecked(false);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ background: "#f6f8fa", borderRadius: 12, padding: 15 }}>
+              <b>{confirmInvitation.job?.title}</b>
+              <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
+                {confirmInvitation.companyName} · {confirmInvitation.job?.city}
+                <br />
+                {confirmInvitation.job?.work_date} ·{" "}
+                {confirmInvitation.job?.start_time?.slice(0, 5)}
+                {confirmInvitation.job?.end_time
+                  ? `–${confirmInvitation.job.end_time.slice(0, 5)}`
+                  : ""}
+              </div>
+              <div className="wd-pay">
+                {formatNetPay(
+                  confirmInvitation.job?.pay_amount,
+                  confirmInvitation.job?.pay_unit
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <b>Priimdami darbą prisiimate realų įsipareigojimą.</b>
+              <ul style={{ lineHeight: 1.65, color: "#425466", paddingLeft: 22 }}>
+                <li>
+                  Jei atsiranda problema dėl atvykimo, kuo greičiau parašykite
+                  darbdaviui žinutę šiame darbo pokalbyje.
+                </li>
+                <li>
+                  Neatvykus į patvirtintą darbą, 3 dienas negalėsite priimti
+                  naujų darbų.
+                </li>
+                <li>
+                  Neatvykimas sumažins jūsų patikimumo reitingą, todėl darbdavių
+                  paieškoje būsite rodomi žemiau ir galite gauti mažiau kvietimų.
+                </li>
+              </ul>
+              <p style={{ fontSize: 13, color: "#6c7a88", lineHeight: 1.5 }}>
+                Jei negalite atvykti, svarbiausia nepradingti — informuokite
+                darbdavį žinute kuo anksčiau.
+              </p>
+            </div>
+
+            <label style={{
+              display: "flex", gap: 9, alignItems: "flex-start",
+              padding: "12px 0", fontWeight: 700
+            }}>
+              <input
+                type="checkbox"
+                checked={commitmentChecked}
+                onChange={(e) => setCommitmentChecked(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              Suprantu sąlygas ir patvirtinu, kad planuoju atvykti laiku.
+            </label>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 9 }}>
+              <button
+                className="wd-decline"
+                disabled={Boolean(respondingInvitation)}
+                onClick={() => {
+                  setConfirmInvitation(null);
+                  setCommitmentChecked(false);
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className="wd-accept"
+                disabled={!commitmentChecked || Boolean(respondingInvitation)}
+                onClick={() =>
+                  respondToInvitation(confirmInvitation.id, "accepted")
+                }
+              >
+                {respondingInvitation
+                  ? "Patvirtinama..."
+                  : "Taip, įsipareigoju atvykti"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConversationModal
+        open={Boolean(conversation)}
+        onClose={() => setConversation(null)}
+        invitationId={conversation?.invitationId}
+        title={conversation?.title}
+        user={user}
+      />
     </div>
   );
 }
@@ -1386,6 +1813,11 @@ function EmployerDashboard({ user, onLogout }) {
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
   const [invitationStatuses, setInvitationStatuses] = useState({});
+  const [invitationByWorker, setInvitationByWorker] = useState({});
+  const [selectedWorker, setSelectedWorker] = useState(null);
+  const [conversation, setConversation] = useState(null);
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -1406,6 +1838,65 @@ function EmployerDashboard({ user, onLogout }) {
   useEffect(() => {
     loadEmployerDashboard();
   }, [user.id]);
+
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const timer = setInterval(async () => {
+      try {
+        await reloadJobs(company.id);
+
+        if (currentJob?.id) {
+          const [jobResult, bookingResult, invitationsResult] = await Promise.all([
+            supabase
+              .from("jobs")
+              .select(
+                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+              )
+              .eq("id", currentJob.id)
+              .single(),
+            supabase
+              .from("bookings")
+              .select("id", { count: "exact", head: true })
+              .eq("job_id", currentJob.id)
+              .eq("status", "confirmed"),
+            supabase
+              .from("job_invitations")
+              .select("id, worker_id, status")
+              .eq("job_id", currentJob.id),
+          ]);
+
+          if (!jobResult.error) {
+            const confirmedCount = bookingResult.count || 0;
+            setCurrentJob((existing) =>
+              existing?.id === currentJob.id
+                ? { ...jobResult.data, confirmedCount }
+                : existing
+            );
+          }
+
+          if (!invitationsResult.error) {
+            const invitationRows = invitationsResult.data || [];
+            setInvitedIds(invitationRows.map((row) => row.worker_id));
+            setInvitationStatuses(
+              Object.fromEntries(
+                invitationRows.map((row) => [row.worker_id, row.status])
+              )
+            );
+            setInvitationByWorker(
+              Object.fromEntries(
+                invitationRows.map((row) => [row.worker_id, row])
+              )
+            );
+          }
+        }
+      } catch {
+        // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
+      }
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [company?.id, currentJob?.id]);
 
   async function loadEmployerDashboard() {
     setLoading(true);
@@ -1441,7 +1932,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("jobs")
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
           )
           .eq("company_id", companyId)
           .order("created_at", { ascending: false })
@@ -1454,7 +1945,7 @@ function EmployerDashboard({ user, onLogout }) {
       if (failed?.error) throw failed.error;
 
       setCompany(companyResult.data);
-      setJobs(jobsResult.data || []);
+      setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
 
       const defaultSkill =
@@ -1478,19 +1969,49 @@ function EmployerDashboard({ user, onLogout }) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  async function addConfirmedCounts(jobRows) {
+    const rows = jobRows || [];
+    const ids = rows.map((job) => job.id);
+    if (!ids.length) return rows.map((job) => ({ ...job, confirmedCount: 0 }));
+
+    const result = await supabase
+      .from("bookings")
+      .select("job_id, status")
+      .in("job_id", ids)
+      .eq("status", "confirmed");
+
+    if (result.error) throw result.error;
+
+    const counts = {};
+    for (const booking of result.data || []) {
+      counts[booking.job_id] = (counts[booking.job_id] || 0) + 1;
+    }
+
+    return rows.map((job) => ({
+      ...job,
+      confirmedCount: counts[job.id] || 0,
+    }));
+  }
+
   async function reloadJobs(companyId = company?.id) {
     if (!companyId) return;
 
     const result = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
+        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(12);
 
-    if (!result.error) setJobs(result.data || []);
+    if (!result.error) {
+      try {
+        setJobs(await addConfirmedCounts(result.data || []));
+      } catch {
+        setJobs(result.data || []);
+      }
+    }
   }
 
   async function findMatches(job, skillId) {
@@ -1544,6 +2065,51 @@ function EmployerDashboard({ user, onLogout }) {
         return;
       }
 
+      const busyBookingsResult = await supabase
+        .from("bookings")
+        .select("worker_id, job_id")
+        .in("worker_id", workerIds)
+        .eq("status", "confirmed");
+
+      if (busyBookingsResult.error) throw busyBookingsResult.error;
+
+      const busyJobIds = [
+        ...new Set(
+          (busyBookingsResult.data || [])
+            .map((row) => row.job_id)
+            .filter((id) => id && id !== job.id)
+        ),
+      ];
+
+      let busyJobs = [];
+      if (busyJobIds.length) {
+        const busyJobsResult = await supabase
+          .from("jobs")
+          .select("id, work_date, start_time, end_time")
+          .in("id", busyJobIds);
+
+        if (busyJobsResult.error) throw busyJobsResult.error;
+        busyJobs = busyJobsResult.data || [];
+      }
+
+      const busyJobMap = new Map(busyJobs.map((item) => [item.id, item]));
+      const busyByWorker = new Set();
+
+      for (const booking of busyBookingsResult.data || []) {
+        if (booking.job_id === job.id) continue;
+        const busyJob = busyJobMap.get(booking.job_id);
+        if (busyJob && timeRangesOverlap(job, busyJob)) {
+          busyByWorker.add(booking.worker_id);
+        }
+      }
+
+      workerIds = workerIds.filter((id) => !busyByWorker.has(id));
+
+      if (!workerIds.length) {
+        setMatches([]);
+        return;
+      }
+
       const [profilesResult, workersResult, workerSkillsResult] =
         await Promise.all([
           supabase
@@ -1555,7 +2121,7 @@ function EmployerDashboard({ user, onLogout }) {
           supabase
             .from("worker_profiles")
             .select(
-              "user_id, has_transport, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average"
+              "user_id, has_transport, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
             )
             .in("user_id", workerIds),
           supabase
@@ -1611,6 +2177,13 @@ function EmployerDashboard({ user, onLogout }) {
             return null;
           }
 
+          if (
+            worker.restricted_until &&
+            new Date(worker.restricted_until) > new Date()
+          ) {
+            return null;
+          }
+
           const skillNames = (skillIdsByWorker.get(workerId) || [])
             .map((id) => skillNameMap.get(id))
             .filter(Boolean)
@@ -1626,6 +2199,9 @@ function EmployerDashboard({ user, onLogout }) {
             yearsExperience: Number(worker.years_experience || 0),
             attendanceRate: Number(worker.attendance_rate || 0),
             completedJobs: Number(worker.completed_jobs || 0),
+            shortBio: worker.short_bio || "",
+            travelRadiusKm: Number(worker.travel_radius_km || 0),
+            noShowCount: Number(worker.no_show_count || 0),
             ratingAverage:
               worker.rating_average === null
                 ? null
@@ -1642,7 +2218,7 @@ function EmployerDashboard({ user, onLogout }) {
 
       const invitationsResult = await supabase
         .from("job_invitations")
-        .select("worker_id, status")
+        .select("id, worker_id, status")
         .eq("job_id", job.id);
 
       if (!invitationsResult.error) {
@@ -1653,6 +2229,11 @@ function EmployerDashboard({ user, onLogout }) {
             invitationRows.map((row) => [row.worker_id, row.status])
           )
         );
+        setInvitationByWorker(
+          Object.fromEntries(
+            invitationRows.map((row) => [row.worker_id, row])
+          )
+        );
       }
     } catch (err) {
       setError(err?.message || "Nepavyko rasti darbuotojų.");
@@ -1661,7 +2242,7 @@ function EmployerDashboard({ user, onLogout }) {
     }
   }
 
-  async function createJobAndFind() {
+  async function saveJobAndFind() {
     setNotice("");
     setError("");
 
@@ -1698,46 +2279,105 @@ function EmployerDashboard({ user, onLogout }) {
     setSaving(true);
 
     try {
-      const insertResult = await supabase
-        .from("jobs")
-        .insert({
-          company_id: company.id,
-          created_by: user.id,
-          city: form.city.trim(),
-          address_text: form.address.trim() || null,
-          work_date: form.workDate,
-          start_time: form.startTime,
-          end_time: form.endTime || null,
-          workers_needed: Number(form.workersNeeded) || 1,
-          title: form.title.trim(),
-          description: form.description.trim() || null,
-          pay_amount: Number(form.payAmount),
-          pay_unit: form.payUnit,
-          status: "open",
-          requires_transport: form.requiresTransport,
-        })
-        .select(
-          "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
-        )
-        .single();
+      const payload = {
+        city: form.city.trim(),
+        address_text: form.address.trim() || null,
+        work_date: form.workDate,
+        start_time: form.startTime,
+        end_time: form.endTime || null,
+        workers_needed: Number(form.workersNeeded) || 1,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        pay_amount: Number(form.payAmount),
+        pay_unit: form.payUnit,
+        requires_transport: form.requiresTransport,
+      };
 
-      if (insertResult.error) throw insertResult.error;
-      const job = insertResult.data;
+      let job;
 
-      const skillResult = await supabase.from("job_skills").insert({
-        job_id: job.id,
-        skill_id: Number(form.skillId),
-        required: true,
-      });
+      if (editingJobId) {
+        const updateResult = await supabase
+          .from("jobs")
+          .update(payload)
+          .eq("id", editingJobId)
+          .select(
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+          )
+          .single();
 
-      if (skillResult.error) throw skillResult.error;
+        if (updateResult.error) throw updateResult.error;
+        job = updateResult.data;
 
-      setCurrentJob(job);
+        if (editingConfirmedCount === 0) {
+          const existingSkillResult = await supabase
+            .from("job_skills")
+            .select("skill_id")
+            .eq("job_id", editingJobId)
+            .eq("required", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingSkillResult.error) throw existingSkillResult.error;
+
+          if (
+            String(existingSkillResult.data?.skill_id || "") !==
+            String(form.skillId)
+          ) {
+            const deleteSkillResult = await supabase
+              .from("job_skills")
+              .delete()
+              .eq("job_id", editingJobId);
+
+            if (deleteSkillResult.error) throw deleteSkillResult.error;
+
+            const insertSkillResult = await supabase.from("job_skills").insert({
+              job_id: editingJobId,
+              skill_id: Number(form.skillId),
+              required: true,
+            });
+
+            if (insertSkillResult.error) throw insertSkillResult.error;
+          }
+        }
+
+        setNotice("Poreikis atnaujintas.");
+      } else {
+        const insertResult = await supabase
+          .from("jobs")
+          .insert({
+            ...payload,
+            company_id: company.id,
+            created_by: user.id,
+            status: "open",
+          })
+          .select(
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+          )
+          .single();
+
+        if (insertResult.error) throw insertResult.error;
+        job = insertResult.data;
+
+        const skillResult = await supabase.from("job_skills").insert({
+          job_id: job.id,
+          skill_id: Number(form.skillId),
+          required: true,
+        });
+
+        if (skillResult.error) throw skillResult.error;
+
+        setNotice("Poreikis sukurtas. Žemiau rodomi tinkami darbuotojai.");
+      }
+
+      setCurrentJob({ ...job, confirmedCount: editingConfirmedCount || 0 });
       setInvitedIds([]);
       setInvitationStatuses({});
-      setNotice("Poreikis sukurtas. Žemiau rodomi tinkami darbuotojai.");
+      setInvitationByWorker({});
+      setEditingJobId(null);
+      setEditingConfirmedCount(0);
       await reloadJobs(company.id);
       await findMatches(job, form.skillId);
+
     } catch (err) {
       setError(err?.message || "Nepavyko sukurti poreikio.");
     } finally {
@@ -1748,6 +2388,8 @@ function EmployerDashboard({ user, onLogout }) {
   async function openExistingJob(job) {
     setNotice("");
     setError("");
+    setEditingJobId(null);
+    setEditingConfirmedCount(0);
     setCurrentJob(job);
 
     try {
@@ -1776,12 +2418,92 @@ function EmployerDashboard({ user, onLogout }) {
         requiresTransport: Boolean(job.requires_transport),
         payAmount: job.pay_amount ?? "",
         payUnit: job.pay_unit === "day" ? "day" : "hour",
+        description: job.description || "",
       }));
 
       await findMatches(job, skillId);
       window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
       setError(err?.message || "Nepavyko atidaryti poreikio.");
+    }
+  }
+
+  async function startEditJob(job) {
+    await openExistingJob(job);
+    setEditingJobId(job.id);
+    setEditingConfirmedCount(Number(job.confirmedCount || 0));
+    setNotice(
+      job.confirmedCount > 0
+        ? "Poreikis jau turi patvirtintų darbuotojų. Esminės sąlygos užrakintos."
+        : "Redaguojate esamą poreikį."
+    );
+    window.scrollTo({ top: 220, behavior: "smooth" });
+  }
+
+  async function removeOrCancelJob(job) {
+    const confirmed = Number(job.confirmedCount || 0);
+    const question =
+      confirmed > 0
+        ? `Šiame darbe jau yra ${confirmed} patvirtintų darbuotojų. Poreikis bus atšauktas. Tęsti?`
+        : "Ar tikrai norite ištrinti šį poreikį?";
+
+    if (!window.confirm(question)) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      if (confirmed > 0) {
+        const jobResult = await supabase
+          .from("jobs")
+          .update({ status: "cancelled" })
+          .eq("id", job.id);
+
+        if (jobResult.error) throw jobResult.error;
+
+        const bookingsResult = await supabase
+          .from("bookings")
+          .update({
+            status: "cancelled_by_employer",
+            cancelled_at: new Date().toISOString(),
+            cancellation_reason: "Darbdavys atšaukė darbo poreikį.",
+          })
+          .eq("job_id", job.id)
+          .eq("status", "confirmed");
+
+        if (bookingsResult.error) throw bookingsResult.error;
+
+        const invitationsResult = await supabase
+          .from("job_invitations")
+          .update({
+            status: "cancelled",
+            responded_at: new Date().toISOString(),
+          })
+          .eq("job_id", job.id)
+          .in("status", ["pending", "accepted"]);
+
+        if (invitationsResult.error) throw invitationsResult.error;
+
+        setNotice("Poreikis atšauktas.");
+      } else {
+        const result = await supabase.from("jobs").delete().eq("id", job.id);
+        if (result.error) throw result.error;
+        setNotice("Poreikis ištrintas.");
+      }
+
+      if (currentJob?.id === job.id) {
+        setCurrentJob(null);
+        setMatches([]);
+      }
+
+      if (editingJobId === job.id) {
+        setEditingJobId(null);
+        setEditingConfirmedCount(0);
+      }
+
+      await reloadJobs(company.id);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti poreikio.");
     }
   }
 
@@ -1792,11 +2514,22 @@ function EmployerDashboard({ user, onLogout }) {
     setNotice("");
 
     try {
-      const result = await supabase.from("job_invitations").insert({
-        job_id: currentJob.id,
-        worker_id: workerId,
-        status: "pending",
-      });
+      if (
+        currentJob.status !== "open" ||
+        Number(currentJob.confirmedCount || 0) >= Number(currentJob.workers_needed || 0)
+      ) {
+        throw new Error("Šis poreikis jau užpildytas arba uždarytas.");
+      }
+
+      const result = await supabase
+        .from("job_invitations")
+        .insert({
+          job_id: currentJob.id,
+          worker_id: workerId,
+          status: "pending",
+        })
+        .select("id, worker_id, status")
+        .single();
 
       if (result.error) throw result.error;
 
@@ -1804,6 +2537,10 @@ function EmployerDashboard({ user, onLogout }) {
       setInvitationStatuses((current) => ({
         ...current,
         [workerId]: "pending",
+      }));
+      setInvitationByWorker((current) => ({
+        ...current,
+        [workerId]: result.data,
       }));
       setNotice("Kvietimas darbuotojui išsiųstas.");
     } catch (err) {
@@ -1850,13 +2587,15 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-actions{display:flex;justify-content:flex-end;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
         .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
-        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.5fr) minmax(220px,2fr) 120px 130px 100px;gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px 120px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
         .ed-worker-id{display:flex;align-items:center;gap:11px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}.ed-transport{font-size:13px;font-weight:700}.ed-transport.yes{color:#167a54}.ed-transport.no{color:#8a98a6}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
+        .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
-        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:110px 1.3fr 1fr 90px 120px;gap:14px;align-items:center;padding:13px 0;border-top:1px solid #edf1f4}.ed-job:first-child{border-top:0}
+        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 0;border-top:1px solid #edf1f4}.ed-job:first-child{border-top:0}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
@@ -1908,9 +2647,11 @@ function EmployerDashboard({ user, onLogout }) {
         {error && <div className="ed-note err">{error}</div>}
 
         <section className="ed-card">
-          <h2>1. Naujas poreikis</h2>
+          <h2>{editingJobId ? "1. Redaguoti poreikį" : "1. Naujas poreikis"}</h2>
           <p className="ed-sub">
-            Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių.
+            {editingJobId
+              ? "Atnaujinkite poreikį. Kai darbuotojas jau patvirtino darbą, esminės sąlygos užrakinamos."
+              : "Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių."}
           </p>
 
           <div className="ed-form-grid">
@@ -1929,6 +2670,7 @@ function EmployerDashboard({ user, onLogout }) {
               <input
                 className="ed-input"
                 value={form.city}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("city", e.target.value)}
               />
             </label>
@@ -1950,6 +2692,7 @@ function EmployerDashboard({ user, onLogout }) {
               <select
                 className="ed-select"
                 value={form.skillId}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("skillId", e.target.value)}
               >
                 <option value="">Pasirinkite</option>
@@ -1966,6 +2709,7 @@ function EmployerDashboard({ user, onLogout }) {
               <input
                 className="ed-input"
                 value={form.address}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("address", e.target.value)}
                 placeholder="Pvz. Naujamiestis, Vilnius"
               />
@@ -1977,6 +2721,7 @@ function EmployerDashboard({ user, onLogout }) {
                 className="ed-input"
                 type="date"
                 value={form.workDate}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("workDate", e.target.value)}
               />
             </label>
@@ -1987,6 +2732,7 @@ function EmployerDashboard({ user, onLogout }) {
                 className="ed-input"
                 type="time"
                 value={form.startTime}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("startTime", e.target.value)}
               />
             </label>
@@ -1997,6 +2743,7 @@ function EmployerDashboard({ user, onLogout }) {
                 className="ed-input"
                 type="time"
                 value={form.endTime}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("endTime", e.target.value)}
               />
             </label>
@@ -2010,6 +2757,7 @@ function EmployerDashboard({ user, onLogout }) {
                 step="0.5"
                 required
                 value={form.payAmount}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("payAmount", e.target.value)}
                 placeholder={form.payUnit === "day" ? "Pvz. 90" : "Pvz. 12"}
               />
@@ -2021,6 +2769,7 @@ function EmployerDashboard({ user, onLogout }) {
                 className="ed-select"
                 required
                 value={form.payUnit}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("payUnit", e.target.value)}
               >
                 <option value="hour">Už valandą</option>
@@ -2032,6 +2781,7 @@ function EmployerDashboard({ user, onLogout }) {
               <input
                 type="checkbox"
                 checked={form.requiresTransport}
+                disabled={editingConfirmedCount > 0}
                 onChange={(e) =>
                   updateField("requiresTransport", e.target.checked)
                 }
@@ -2054,15 +2804,26 @@ function EmployerDashboard({ user, onLogout }) {
             <button
               className="ed-primary"
               disabled={saving}
-              onClick={createJobAndFind}
+              onClick={saveJobAndFind}
             >
-              {saving ? "Kuriama..." : "Sukurti poreikį ir rasti darbuotojus"}
+              {saving
+                ? "Saugoma..."
+                : editingJobId
+                ? "Išsaugoti pakeitimus"
+                : "Sukurti poreikį ir rasti darbuotojus"}
             </button>
           </div>
         </section>
 
         {currentJob && (
           <section className="ed-card">
+            {currentJob.status === "filled" && (
+              <div className="ed-note ok" style={{ marginBottom: 16 }}>
+                Poreikis užpildytas: {currentJob.confirmedCount}/{currentJob.workers_needed}.
+                Darbuotojų paieška automatiškai uždaryta.
+              </div>
+            )}
+
             <div className="ed-results-head">
               <div>
                 <h2>2. Tinkami darbuotojai</h2>
@@ -2078,7 +2839,12 @@ function EmployerDashboard({ user, onLogout }) {
                     : ""}
                 </p>
               </div>
-              <b>{matches.length} rasti</b>
+              <div style={{ textAlign: "right" }}>
+                <b>{matches.length} rasti</b>
+                <div className="ed-progress">
+                  {Number(currentJob.confirmedCount || 0)}/{currentJob.workers_needed} patvirtinti
+                </div>
+              </div>
             </div>
 
             {searching ? (
@@ -2124,19 +2890,44 @@ function EmployerDashboard({ user, onLogout }) {
                           : "Be transporto"}
                       </div>
 
-                      <button
-                        className={invited ? "ed-invite sent" : "ed-invite"}
-                        disabled={invited}
-                        onClick={() => inviteWorker(worker.id)}
-                      >
-                        {!invited
-                          ? "Kviesti"
-                          : invitationStatuses[worker.id] === "accepted"
-                          ? "Priėmė"
-                          : invitationStatuses[worker.id] === "declined"
-                          ? "Atmetė"
-                          : "Pakviestas"}
-                      </button>
+                      <div className="ed-worker-actions">
+                        <button
+                          className="ed-secondary"
+                          onClick={() => setSelectedWorker(worker)}
+                        >
+                          Profilis
+                        </button>
+
+                        <button
+                          className={invited ? "ed-invite sent" : "ed-invite"}
+                          disabled={invited || currentJob.status !== "open"}
+                          onClick={() => inviteWorker(worker.id)}
+                        >
+                          {!invited
+                            ? "Kviesti"
+                            : invitationStatuses[worker.id] === "accepted"
+                            ? "Priėmė"
+                            : invitationStatuses[worker.id] === "declined"
+                            ? "Atmetė"
+                            : invitationStatuses[worker.id] === "expired"
+                            ? "Užpildyta"
+                            : "Pakviestas"}
+                        </button>
+
+                        {invitationByWorker[worker.id] && (
+                          <button
+                            className="ed-secondary"
+                            onClick={() =>
+                              setConversation({
+                                invitationId: invitationByWorker[worker.id].id,
+                                title: `${worker.name} · ${currentJob.title}`,
+                              })
+                            }
+                          >
+                            Žinutė
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -2170,11 +2961,32 @@ function EmployerDashboard({ user, onLogout }) {
                         : ""}
                     </div>
                   </div>
-                  <span>{job.workers_needed} žm.</span>
-                  <span className="ed-status">{job.status}</span>
-                  <button onClick={() => openExistingJob(job)}>
-                    Atidaryti
-                  </button>
+                  <span className="ed-progress">
+                    {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
+                  </span>
+                  <span className="ed-status">
+                    {job.status === "filled"
+                      ? "Užpildyta"
+                      : job.status === "cancelled"
+                      ? "Atšaukta"
+                      : job.status === "open"
+                      ? "Atvira"
+                      : job.status}
+                  </span>
+                  <div className="ed-job-actions">
+                    <button onClick={() => openExistingJob(job)}>Atidaryti</button>
+                    {job.status !== "cancelled" && job.status !== "completed" && (
+                      <button onClick={() => startEditJob(job)}>Redaguoti</button>
+                    )}
+                    {job.status !== "cancelled" && job.status !== "completed" && (
+                      <button
+                        className="ed-danger"
+                        onClick={() => removeOrCancelJob(job)}
+                      >
+                        {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2183,6 +2995,19 @@ function EmployerDashboard({ user, onLogout }) {
           )}
         </section>
       </main>
+
+      <WorkerProfileModal
+        worker={selectedWorker}
+        onClose={() => setSelectedWorker(null)}
+      />
+
+      <ConversationModal
+        open={Boolean(conversation)}
+        onClose={() => setConversation(null)}
+        invitationId={conversation?.invitationId}
+        title={conversation?.title}
+        user={user}
+      />
     </div>
   );
 }
