@@ -2079,6 +2079,7 @@ function EmployerDashboard({ user, onLogout }) {
   const [conversation, setConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
+  const [showJobForm, setShowJobForm] = useState(false);
   const [cancelJobTarget, setCancelJobTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancellingJob, setCancellingJob] = useState(false);
@@ -2739,6 +2740,7 @@ function EmployerDashboard({ user, onLogout }) {
       setEditingConfirmedCount(0);
       await reloadJobs(company.id);
       await findMatches(job, form.skillId);
+      setShowJobForm(false);
 
     } catch (err) {
       setError(err?.message || "Nepavyko sukurti poreikio.");
@@ -2752,6 +2754,7 @@ function EmployerDashboard({ user, onLogout }) {
     setError("");
     setEditingJobId(null);
     setEditingConfirmedCount(0);
+    setShowJobForm(false);
     setCurrentJob(job);
 
     try {
@@ -2791,8 +2794,37 @@ function EmployerDashboard({ user, onLogout }) {
     }
   }
 
+  function openNewJobForm() {
+    setEditingJobId(null);
+    setEditingConfirmedCount(0);
+    setCurrentJob(null);
+    setMatches([]);
+    setNotice("");
+    setError("");
+    setInvitedIds([]);
+    setInvitationStatuses({});
+    setInvitationByWorker({});
+    setForm({
+      title: "Statybų pagalbiniai",
+      city: company?.city || "Vilnius",
+      address: "",
+      workDate: employerTomorrowISO(),
+      startTime: "08:00",
+      endTime: "17:00",
+      workersNeeded: 1,
+      skillId: skills[0]?.id ? String(skills[0].id) : "",
+      requiresTransport: false,
+      payAmount: "",
+      payUnit: "hour",
+      description: "",
+    });
+    setShowJobForm(true);
+    window.scrollTo({ top: 220, behavior: "smooth" });
+  }
+
   async function startEditJob(job) {
     await openExistingJob(job);
+    setShowJobForm(true);
     setEditingJobId(job.id);
     setEditingConfirmedCount(Number(job.confirmedCount || 0));
     setNotice(
@@ -3066,7 +3098,7 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
         .ed-textarea{min-height:90px;resize:vertical}
         .ed-check{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;min-height:46px}.ed-check input{width:18px;height:18px;accent-color:#1c9b67}
-        .ed-actions{display:flex;justify-content:flex-end;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
+        .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
         .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px 120px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
@@ -3080,7 +3112,7 @@ function EmployerDashboard({ user, onLogout }) {
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
-        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 0;border-top:1px solid #edf1f4}.ed-job:first-child{border-top:0}
+        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 10px;border-top:1px solid #edf1f4;border-radius:10px;transition:background .18s ease}.ed-job:first-child{border-top:0}.ed-job-active{background:#eef1f3}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
@@ -3126,6 +3158,14 @@ function EmployerDashboard({ user, onLogout }) {
               dieną ir tuo laiku pažymėjo, kad gali dirbti.
             </p>
           </div>
+
+          <button
+            className="ed-primary"
+            type="button"
+            onClick={openNewJobForm}
+          >
+            + Sukurti darbo pasiūlymą
+          </button>
         </div>
 
         <section>
@@ -3173,8 +3213,11 @@ function EmployerDashboard({ user, onLogout }) {
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
 
+        {showJobForm && (
         <section className="ed-card">
-          <h2>{editingJobId ? "1. Redaguoti poreikį" : "1. Naujas poreikis"}</h2>
+          <h2>
+            {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
+          </h2>
           <p className="ed-sub">
             {editingJobId
               ? "Atnaujinkite poreikį. Kai darbuotojas jau patvirtino darbą, esminės sąlygos užrakinamos."
@@ -3329,6 +3372,19 @@ function EmployerDashboard({ user, onLogout }) {
 
           <div className="ed-actions">
             <button
+              className="ed-secondary"
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                setShowJobForm(false);
+                setEditingJobId(null);
+                setEditingConfirmedCount(0);
+              }}
+            >
+              Uždaryti
+            </button>
+
+            <button
               className="ed-primary"
               disabled={saving}
               onClick={saveJobAndFind}
@@ -3341,6 +3397,7 @@ function EmployerDashboard({ user, onLogout }) {
             </button>
           </div>
         </section>
+        )}
 
         {currentJob && (
           <section className="ed-card">
@@ -3510,10 +3567,29 @@ function EmployerDashboard({ user, onLogout }) {
                 const newsPresentation = notificationPresentation(unreadNews);
 
                 return (
-                  <div className="ed-job" key={job.id}>
+                  <div
+                    className={
+                      currentJob?.id === job.id
+                        ? "ed-job ed-job-active"
+                        : "ed-job"
+                    }
+                    key={job.id}
+                  >
                     <b>{job.work_date}</b>
                     <div>
-                      <b>{job.title}</b>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <b>{job.title}</b>
+                        {currentJob?.id === job.id && (
+                          <span className="ed-opened-badge">Atidarytas</span>
+                        )}
+                      </div>
                       <div style={{ color: "#6c7a88", fontSize: 13 }}>
                         {job.city} · {job.start_time?.slice(0, 5)}
                         {job.pay_amount
