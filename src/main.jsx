@@ -1054,7 +1054,7 @@ function WorkerDashboard({ user, onLogout }) {
     if (companyIds.length) {
       const companiesResult = await supabase
         .from("companies")
-        .select("id, name")
+        .select("id, name, reliability_rate, late_cancel_count")
         .in("id", companyIds);
 
       if (companiesResult.error) throw companiesResult.error;
@@ -1072,6 +1072,8 @@ function WorkerDashboard({ user, onLogout }) {
           ...invitation,
           job,
           companyName: company?.name || "Darbdavys",
+          companyReliability: Number(company?.reliability_rate ?? 100),
+          companyLateCancels: Number(company?.late_cancel_count ?? 0),
         };
       })
     );
@@ -1392,6 +1394,13 @@ function WorkerDashboard({ user, onLogout }) {
                         <div className="wd-invite-meta">
                           <div className="wd-invite-company">{invitation.companyName}</div>
                           <div>
+                            Darbdavio patikimumas:{" "}
+                            <b>{Math.round(invitation.companyReliability)}%</b>
+                            {invitation.companyLateCancels > 0
+                              ? ` · vėlyvų atšaukimų: ${invitation.companyLateCancels}`
+                              : ""}
+                          </div>
+                          <div>
                             {job.city}
                             {job.address_text ? ` · ${job.address_text}` : ""}
                           </div>
@@ -1689,6 +1698,12 @@ function WorkerDashboard({ user, onLogout }) {
               <b>{confirmInvitation.job?.title}</b>
               <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
                 {confirmInvitation.companyName} · {confirmInvitation.job?.city}
+                <br />
+                Darbdavio patikimumas:{" "}
+                <b>{Math.round(confirmInvitation.companyReliability)}%</b>
+                {confirmInvitation.companyLateCancels > 0
+                  ? ` · vėlyvų atšaukimų: ${confirmInvitation.companyLateCancels}`
+                  : ""}
                 <br />
                 {confirmInvitation.job?.work_date} ·{" "}
                 {confirmInvitation.job?.start_time?.slice(0, 5)}
