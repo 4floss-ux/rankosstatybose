@@ -623,6 +623,8 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [conversationLocked, setConversationLocked] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -633,13 +635,32 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
     setLoading(true);
     setError("");
     try {
-      const result = await supabase
-        .from("job_messages")
-        .select("id, sender_id, body, created_at")
-        .eq("invitation_id", invitationId)
-        .order("created_at", { ascending: true });
+      const [result, invitationResult] = await Promise.all([
+        supabase
+          .from("job_messages")
+          .select("id, sender_id, body, created_at")
+          .eq("invitation_id", invitationId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("job_invitations")
+          .select("job_id")
+          .eq("id", invitationId)
+          .single(),
+      ]);
 
       if (result.error) throw result.error;
+      if (invitationResult.error) throw invitationResult.error;
+
+      const jobResult = await supabase
+        .from("jobs")
+        .select("status, cancellation_reason")
+        .eq("id", invitationResult.data.job_id)
+        .single();
+
+      if (jobResult.error) throw jobResult.error;
+
+      setConversationLocked(jobResult.data?.status === "cancelled");
+      setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = result.data || [];
       setMessages(rows);
@@ -674,7 +695,7 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
   async function sendMessage(e) {
     e.preventDefault();
     const body = textValue.trim();
-    if (!body || !invitationId) return;
+    if (!body || !invitationId || conversationLocked) return;
 
     setSending(true);
     setError("");
@@ -718,6 +739,7 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
           .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
           .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+          .rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
         `}</style>
 
         <div className="rs-modal-head">
@@ -754,14 +776,33 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
           )}
         </div>
 
+        {conversationLocked && (
+          <div className="rs-locked">
+            <b>Šis darbas atšauktas — pokalbis uždarytas.</b>
+            {cancellationReason && (
+              <div style={{ marginTop: 4 }}>
+                Atšaukimo priežastis: {cancellationReason}
+              </div>
+            )}
+            <div style={{ marginTop: 4 }}>
+              Ankstesnes žinutes galite perskaityti, tačiau naujų siųsti nebegalima.
+            </div>
+          </div>
+        )}
+
         <form className="rs-msg-form" onSubmit={sendMessage}>
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
             maxLength={2000}
-            placeholder="Parašykite žinutę..."
+            disabled={conversationLocked}
+            placeholder={
+              conversationLocked
+                ? "Pokalbis uždarytas"
+                : "Parašykite žinutę..."
+            }
           />
-          <button disabled={sending || !textValue.trim()}>
+          <button disabled={conversationLocked || sending || !textValue.trim()}>
             {sending ? "Siunčiama..." : "Siųsti"}
           </button>
         </form>
@@ -1084,7 +1125,7 @@ function WorkerDashboard({ user, onLogout }) {
     const jobsResult = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status"
+        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status, cancellation_reason, cancelled_at"
       )
       .in("id", allJobIds);
 
@@ -1504,6 +1545,19 @@ function WorkerDashboard({ user, onLogout }) {
                         <div className="wd-pay">
                           {formatNetPay(job.pay_amount, job.pay_unit)}
                         </div>
+
+                        {job.status === "cancelled" && (
+                          <div
+                            className="wd-note err"
+                            style={{ marginTop: 12 }}
+                          >
+                            <b>Darbdavys atšaukė šį darbą.</b>
+                            <div style={{ marginTop: 4 }}>
+                              Priežastis:{" "}
+                              {job.cancellation_reason || "Priežastis nenurodyta."}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="wd-invite-actions">
@@ -1925,6 +1979,9 @@ function EmployerDashboard({ user, onLogout }) {
   const [conversation, setConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
+  const [cancelJobTarget, setCancelJobTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancellingJob, setCancellingJob] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -1959,7 +2016,7 @@ function EmployerDashboard({ user, onLogout }) {
             supabase
               .from("jobs")
               .select(
-                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
               )
               .eq("id", currentJob.id)
               .single(),
@@ -2074,7 +2131,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("jobs")
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
           )
           .eq("company_id", companyId)
           .order("created_at", { ascending: false })
@@ -2142,7 +2199,7 @@ function EmployerDashboard({ user, onLogout }) {
     const result = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
@@ -2444,7 +2501,7 @@ function EmployerDashboard({ user, onLogout }) {
           .update(payload)
           .eq("id", editingJobId)
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
@@ -2494,7 +2551,7 @@ function EmployerDashboard({ user, onLogout }) {
             status: "open",
           })
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
@@ -2584,56 +2641,40 @@ function EmployerDashboard({ user, onLogout }) {
     window.scrollTo({ top: 220, behavior: "smooth" });
   }
 
-  async function removeOrCancelJob(job) {
-    const confirmed = Number(job.confirmedCount || 0);
-    const question =
-      confirmed > 0
-        ? `Šiame darbe jau yra ${confirmed} patvirtintų darbuotojų. Poreikis bus atšauktas. Tęsti?`
-        : "Ar tikrai norite ištrinti šį poreikį?";
-
-    if (!window.confirm(question)) return;
-
+  async function requestRemoveOrCancelJob(job) {
     setError("");
     setNotice("");
 
     try {
-      if (confirmed > 0) {
-        const jobResult = await supabase
-          .from("jobs")
-          .update({ status: "cancelled" })
-          .eq("id", job.id);
+      const countResult = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", job.id)
+        .eq("status", "confirmed");
 
-        if (jobResult.error) throw jobResult.error;
+      if (countResult.error) throw countResult.error;
 
-        const bookingsResult = await supabase
-          .from("bookings")
-          .update({
-            status: "cancelled_by_employer",
-            cancelled_at: new Date().toISOString(),
-            cancellation_reason: "Darbdavys atšaukė darbo poreikį.",
-          })
-          .eq("job_id", job.id)
-          .eq("status", "confirmed");
+      const confirmedCount = Number(countResult.count || 0);
 
-        if (bookingsResult.error) throw bookingsResult.error;
-
-        const invitationsResult = await supabase
-          .from("job_invitations")
-          .update({
-            status: "cancelled",
-            responded_at: new Date().toISOString(),
-          })
-          .eq("job_id", job.id)
-          .in("status", ["pending", "accepted"]);
-
-        if (invitationsResult.error) throw invitationsResult.error;
-
-        setNotice("Poreikis atšauktas.");
-      } else {
-        const result = await supabase.from("jobs").delete().eq("id", job.id);
-        if (result.error) throw result.error;
-        setNotice("Poreikis ištrintas.");
+      if (confirmedCount > 0) {
+        setCancelReason("");
+        setCancelJobTarget({
+          ...job,
+          confirmedCount,
+        });
+        return;
       }
+
+      const shouldDelete = window.confirm(
+        "Šis poreikis neturi patvirtintų darbuotojų. Ar tikrai norite jį ištrinti?"
+      );
+
+      if (!shouldDelete) return;
+
+      const result = await supabase.from("jobs").delete().eq("id", job.id);
+      if (result.error) throw result.error;
+
+      setNotice("Poreikis ištrintas.");
 
       if (currentJob?.id === job.id) {
         setCurrentJob(null);
@@ -2650,6 +2691,107 @@ function EmployerDashboard({ user, onLogout }) {
       setError(err?.message || "Nepavyko pašalinti poreikio.");
     }
   }
+
+  async function confirmEmployerCancellation() {
+    if (!cancelJobTarget) return;
+
+    const reason = cancelReason.trim();
+
+    if (reason.length < 5) {
+      setError("Įrašykite aiškią atšaukimo priežastį.");
+      return;
+    }
+
+    setCancellingJob(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const now = new Date().toISOString();
+
+      const countResult = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", cancelJobTarget.id)
+        .eq("status", "confirmed");
+
+      if (countResult.error) throw countResult.error;
+
+      const confirmedCount = Number(countResult.count || 0);
+
+      if (confirmedCount === 0) {
+        throw new Error(
+          "Patvirtintų darbuotojų nebeliko. Atnaujinkite poreikį ir bandykite dar kartą."
+        );
+      }
+
+      const jobResult = await supabase
+        .from("jobs")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+          cancelled_at: now,
+        })
+        .eq("id", cancelJobTarget.id);
+
+      if (jobResult.error) throw jobResult.error;
+
+      const bookingsResult = await supabase
+        .from("bookings")
+        .update({
+          status: "cancelled_by_employer",
+          cancelled_at: now,
+          cancellation_reason: reason,
+        })
+        .eq("job_id", cancelJobTarget.id)
+        .eq("status", "confirmed");
+
+      if (bookingsResult.error) throw bookingsResult.error;
+
+      const invitationsResult = await supabase
+        .from("job_invitations")
+        .update({
+          status: "cancelled",
+          responded_at: now,
+        })
+        .eq("job_id", cancelJobTarget.id)
+        .in("status", ["pending", "accepted"]);
+
+      if (invitationsResult.error) throw invitationsResult.error;
+
+      setNotice("Poreikis atšauktas. Darbuotojai matys jūsų nurodytą priežastį.");
+
+      if (currentJob?.id === cancelJobTarget.id) {
+        setCurrentJob((existing) =>
+          existing
+            ? {
+                ...existing,
+                status: "cancelled",
+                cancellation_reason: reason,
+                cancelled_at: now,
+                confirmedCount: 0,
+              }
+            : existing
+        );
+        setMatches([]);
+      }
+
+      if (editingJobId === cancelJobTarget.id) {
+        setEditingJobId(null);
+        setEditingConfirmedCount(0);
+      }
+
+      setCancelJobTarget(null);
+      setCancelReason("");
+      await reloadJobs(company.id);
+      await loadEmployerNotifications();
+    } catch (err) {
+      setError(err?.message || "Nepavyko atšaukti poreikio.");
+    } finally {
+      setCancellingJob(false);
+    }
+  }
+
 
   async function inviteWorker(workerId) {
     if (!currentJob?.id) return;
@@ -2982,6 +3124,16 @@ function EmployerDashboard({ user, onLogout }) {
               );
             })()}
 
+            {currentJob.status === "cancelled" && (
+              <div className="ed-note err" style={{ marginBottom: 16 }}>
+                <b>Poreikis atšauktas.</b>
+                <div style={{ marginTop: 4 }}>
+                  Priežastis:{" "}
+                  {currentJob.cancellation_reason || "Priežastis nenurodyta."}
+                </div>
+              </div>
+            )}
+
             {currentJob.status === "filled" && (
               <div className="ed-note ok" style={{ marginBottom: 16 }}>
                 Poreikis užpildytas: {currentJob.confirmedCount}/{currentJob.workers_needed}.
@@ -3159,7 +3311,7 @@ function EmployerDashboard({ user, onLogout }) {
                       {job.status !== "cancelled" && job.status !== "completed" && (
                         <button
                           className="ed-danger"
-                          onClick={() => removeOrCancelJob(job)}
+                          onClick={() => requestRemoveOrCancelJob(job)}
                         >
                           {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
                         </button>
@@ -3174,6 +3326,105 @@ function EmployerDashboard({ user, onLogout }) {
           )}
         </section>
       </main>
+
+      {cancelJobTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !cancellingJob) {
+              setCancelJobTarget(null);
+              setCancelReason("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <style>{`
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2100;display:grid;place-items:center;padding:20px}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+              .rs-modal-head h2{margin:0;font-size:22px}
+              .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+              .rs-cancel-warning{background:#fff0ec;color:#9f4529;border-radius:12px;padding:14px;line-height:1.5;margin-bottom:16px}
+              .rs-cancel-reason{width:100%;min-height:105px;border:1px solid #dbe4ea;border-radius:10px;padding:12px;font:inherit;resize:vertical}
+              .rs-cancel-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
+            `}</style>
+
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO ATŠAUKIMAS</div>
+                <h2>Ar tikrai norite atšaukti šį darbą?</h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={cancellingJob}
+                onClick={() => {
+                  setCancelJobTarget(null);
+                  setCancelReason("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="rs-cancel-warning">
+              <b>
+                Šį darbą jau patvirtino {cancelJobTarget.confirmedCount}{" "}
+                {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}.
+              </b>
+              <div style={{ marginTop: 5 }}>
+                Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus
+                uždarytas, o darbuotojai matys jūsų nurodytą atšaukimo priežastį.
+              </div>
+              <div style={{ marginTop: 5 }}>
+                Jei atšaukiate likus mažiau nei 24 valandoms, sumažės darbdavio
+                patikimumo reitingas.
+              </div>
+            </div>
+
+            <label className="ed-label">
+              Atšaukimo priežastis *
+              <textarea
+                className="rs-cancel-reason"
+                value={cancelReason}
+                maxLength={500}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę."
+              />
+            </label>
+
+            <div
+              style={{
+                marginTop: 6,
+                color: "#6c7a88",
+                fontSize: 12,
+              }}
+            >
+              Šią priežastį matys darbą patvirtinę darbuotojai.
+            </div>
+
+            <div className="rs-cancel-actions">
+              <button
+                className="ed-secondary"
+                disabled={cancellingJob}
+                onClick={() => {
+                  setCancelJobTarget(null);
+                  setCancelReason("");
+                }}
+              >
+                Ne, grįžti
+              </button>
+              <button
+                className="ed-primary"
+                style={{ background: "#b64d2a" }}
+                disabled={cancellingJob || cancelReason.trim().length < 5}
+                onClick={confirmEmployerCancellation}
+              >
+                {cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <WorkerProfileModal
         worker={selectedWorker}
