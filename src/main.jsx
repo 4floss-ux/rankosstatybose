@@ -2262,15 +2262,9 @@ function EmployerDashboard({ user, onLogout }) {
         loadEmployerStats(companyId),
       ]);
 
-      const defaultSkill =
-        (skillsResult.data || []).find(
-          (skill) => skill.name === "Pagalbiniai statybos darbai"
-        ) || skillsResult.data?.[0];
-
       setForm((current) => ({
         ...current,
         city: companyResult.data?.city || current.city,
-        skillId: current.skillId || String(defaultSkill?.id || ""),
       }));
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti darbdavio paskyros.");
