@@ -571,6 +571,17 @@ function nextSevenDays() {
   });
 }
 
+function formatNetPay(amount, unit) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return "Atlygis nenurodytas";
+  const formatted = Number.isInteger(value)
+    ? String(value)
+    : value.toLocaleString("lt-LT", { maximumFractionDigits: 2 });
+  return unit === "day"
+    ? `${formatted} € į rankas / dieną`
+    : `${formatted} € į rankas / val.`;
+}
+
 function WorkerDashboard({ user, onLogout }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -580,6 +591,8 @@ function WorkerDashboard({ user, onLogout }) {
   const [skills, setSkills] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [originalSkills, setOriginalSkills] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [respondingInvitation, setRespondingInvitation] = useState(null);
   const [form, setForm] = useState({
     displayName: "",
     city: "Vilnius",
@@ -724,6 +737,8 @@ function WorkerDashboard({ user, onLogout }) {
           ])
         )
       );
+
+      await loadInvitations();
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
     } finally {
@@ -748,6 +763,101 @@ function WorkerDashboard({ user, onLogout }) {
       ...current,
       [date]: { ...current[date], ...patch },
     }));
+  }
+
+  async function loadInvitations() {
+    const invitationResult = await supabase
+      .from("job_invitations")
+      .select("id, job_id, status, message, invited_at, responded_at")
+      .eq("worker_id", user.id)
+      .order("invited_at", { ascending: false });
+
+    if (invitationResult.error) throw invitationResult.error;
+
+    const invitationRows = invitationResult.data || [];
+    const jobIds = [...new Set(invitationRows.map((row) => row.job_id).filter(Boolean))];
+
+    if (!jobIds.length) {
+      setInvitations([]);
+      return;
+    }
+
+    const jobsResult = await supabase
+      .from("jobs")
+      .select(
+        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id"
+      )
+      .in("id", jobIds);
+
+    if (jobsResult.error) throw jobsResult.error;
+
+    const companyIds = [
+      ...new Set((jobsResult.data || []).map((job) => job.company_id).filter(Boolean)),
+    ];
+
+    let companies = [];
+    if (companyIds.length) {
+      const companiesResult = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds);
+
+      if (companiesResult.error) throw companiesResult.error;
+      companies = companiesResult.data || [];
+    }
+
+    const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
+    const companyMap = new Map(companies.map((company) => [company.id, company]));
+
+    setInvitations(
+      invitationRows.map((invitation) => {
+        const job = jobMap.get(invitation.job_id);
+        const company = job ? companyMap.get(job.company_id) : null;
+        return {
+          ...invitation,
+          job,
+          companyName: company?.name || "Darbdavys",
+        };
+      })
+    );
+  }
+
+  async function respondToInvitation(invitationId, status) {
+    setRespondingInvitation(invitationId);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase
+        .from("job_invitations")
+        .update({
+          status,
+          responded_at: new Date().toISOString(),
+        })
+        .eq("id", invitationId)
+        .eq("worker_id", user.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+
+      if (result.error) throw result.error;
+
+      if (!result.data) {
+        throw new Error("Šis kvietimas jau buvo atsakytas arba nebegalioja.");
+      }
+
+      await loadInvitations();
+
+      setNotice(
+        status === "accepted"
+          ? "Darbo kvietimas priimtas. Darbas patvirtintas."
+          : "Darbo kvietimas atmestas."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko atsakyti į kvietimą.");
+    } finally {
+      setRespondingInvitation(null);
+    }
   }
 
   async function saveEverything() {
@@ -888,6 +998,12 @@ function WorkerDashboard({ user, onLogout }) {
         .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
+        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+        .wd-invite-main h3{margin:0 0 5px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
+        .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
+        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
+        .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
+        .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 1fr 110px 110px;align-items:center;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
         .wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-toggle{display:flex;align-items:center;gap:9px;font-weight:700}.wd-toggle input{width:18px;height:18px;accent-color:#1c9b67}
@@ -906,6 +1022,7 @@ function WorkerDashboard({ user, onLogout }) {
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}
+          .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
           .wd-bottom{bottom:10px}
           .wd-save{width:100%}
         }
@@ -964,6 +1081,89 @@ function WorkerDashboard({ user, onLogout }) {
         {error && <div className="wd-note err">{error}</div>}
 
         <div className="wd-form">
+          <section className="wd-card">
+            <h2>Darbo kvietimai</h2>
+            <p className="wd-card-sub">
+              Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
+            </p>
+
+            {invitations.length ? (
+              <div className="wd-invites">
+                {invitations.map((invitation) => {
+                  const job = invitation.job;
+                  if (!job) return null;
+
+                  const busy = respondingInvitation === invitation.id;
+                  const statusLabel =
+                    invitation.status === "accepted"
+                      ? "Priimta"
+                      : invitation.status === "declined"
+                      ? "Atmesta"
+                      : invitation.status === "cancelled"
+                      ? "Atšaukta"
+                      : invitation.status === "expired"
+                      ? "Nebegalioja"
+                      : "Laukia atsakymo";
+
+                  return (
+                    <div className="wd-invite" key={invitation.id}>
+                      <div className="wd-invite-main">
+                        <h3>{job.title}</h3>
+                        <div className="wd-invite-meta">
+                          <div className="wd-invite-company">{invitation.companyName}</div>
+                          <div>
+                            {job.city}
+                            {job.address_text ? ` · ${job.address_text}` : ""}
+                          </div>
+                          <div>
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </div>
+                          {job.description && <div>{job.description}</div>}
+                        </div>
+
+                        <div className="wd-pay">
+                          {formatNetPay(job.pay_amount, job.pay_unit)}
+                        </div>
+                      </div>
+
+                      {invitation.status === "pending" ? (
+                        <div className="wd-invite-actions">
+                          <button
+                            className="wd-accept"
+                            disabled={busy}
+                            onClick={() =>
+                              respondToInvitation(invitation.id, "accepted")
+                            }
+                          >
+                            {busy ? "Prašome..." : "Priimti"}
+                          </button>
+                          <button
+                            className="wd-decline"
+                            disabled={busy}
+                            onClick={() =>
+                              respondToInvitation(invitation.id, "declined")
+                            }
+                          >
+                            Atmesti
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={`wd-invite-status ${invitation.status}`}>
+                          {statusLabel}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Šiuo metu naujų darbo kvietimų nėra.
+              </div>
+            )}
+          </section>
+
           <section className="wd-card">
             <h2>1. Pagrindinė informacija</h2>
             <p className="wd-card-sub">
@@ -1185,6 +1385,7 @@ function EmployerDashboard({ user, onLogout }) {
   const [currentJob, setCurrentJob] = useState(null);
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
+  const [invitationStatuses, setInvitationStatuses] = useState({});
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -1198,6 +1399,7 @@ function EmployerDashboard({ user, onLogout }) {
     skillId: "",
     requiresTransport: false,
     payAmount: "",
+    payUnit: "hour",
     description: "",
   });
 
@@ -1440,12 +1642,16 @@ function EmployerDashboard({ user, onLogout }) {
 
       const invitationsResult = await supabase
         .from("job_invitations")
-        .select("worker_id")
+        .select("worker_id, status")
         .eq("job_id", job.id);
 
       if (!invitationsResult.error) {
-        setInvitedIds(
-          (invitationsResult.data || []).map((row) => row.worker_id)
+        const invitationRows = invitationsResult.data || [];
+        setInvitedIds(invitationRows.map((row) => row.worker_id));
+        setInvitationStatuses(
+          Object.fromEntries(
+            invitationRows.map((row) => [row.worker_id, row.status])
+          )
         );
       }
     } catch (err) {
@@ -1479,6 +1685,16 @@ function EmployerDashboard({ user, onLogout }) {
       return;
     }
 
+    if (!form.payAmount || Number(form.payAmount) <= 0) {
+      setError("Atlygis į rankas yra privalomas. Įveskite sumą.");
+      return;
+    }
+
+    if (!["hour", "day"].includes(form.payUnit)) {
+      setError("Pasirinkite, ar atlygis mokamas už valandą, ar už dieną.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -1495,8 +1711,8 @@ function EmployerDashboard({ user, onLogout }) {
           workers_needed: Number(form.workersNeeded) || 1,
           title: form.title.trim(),
           description: form.description.trim() || null,
-          pay_amount: form.payAmount ? Number(form.payAmount) : null,
-          pay_unit: form.payAmount ? "hour" : null,
+          pay_amount: Number(form.payAmount),
+          pay_unit: form.payUnit,
           status: "open",
           requires_transport: form.requiresTransport,
         })
@@ -1518,6 +1734,7 @@ function EmployerDashboard({ user, onLogout }) {
 
       setCurrentJob(job);
       setInvitedIds([]);
+      setInvitationStatuses({});
       setNotice("Poreikis sukurtas. Žemiau rodomi tinkami darbuotojai.");
       await reloadJobs(company.id);
       await findMatches(job, form.skillId);
@@ -1558,6 +1775,7 @@ function EmployerDashboard({ user, onLogout }) {
         skillId,
         requiresTransport: Boolean(job.requires_transport),
         payAmount: job.pay_amount ?? "",
+        payUnit: job.pay_unit === "day" ? "day" : "hour",
       }));
 
       await findMatches(job, skillId);
@@ -1583,6 +1801,10 @@ function EmployerDashboard({ user, onLogout }) {
       if (result.error) throw result.error;
 
       setInvitedIds((current) => [...current, workerId]);
+      setInvitationStatuses((current) => ({
+        ...current,
+        [workerId]: "pending",
+      }));
       setNotice("Kvietimas darbuotojui išsiųstas.");
     } catch (err) {
       if (String(err?.message || "").toLowerCase().includes("duplicate")) {
@@ -1780,16 +2002,30 @@ function EmployerDashboard({ user, onLogout }) {
             </label>
 
             <label className="ed-label">
-              Atlygis €/val. (nebūtina)
+              Atlygis į rankas (€) *
               <input
                 className="ed-input"
                 type="number"
-                min="0"
+                min="0.01"
                 step="0.5"
+                required
                 value={form.payAmount}
                 onChange={(e) => updateField("payAmount", e.target.value)}
-                placeholder="Pvz. 10"
+                placeholder={form.payUnit === "day" ? "Pvz. 90" : "Pvz. 12"}
               />
+            </label>
+
+            <label className="ed-label">
+              Mokėjimo tipas *
+              <select
+                className="ed-select"
+                required
+                value={form.payUnit}
+                onChange={(e) => updateField("payUnit", e.target.value)}
+              >
+                <option value="hour">Už valandą</option>
+                <option value="day">Už dieną</option>
+              </select>
             </label>
 
             <label className="ed-check ed-span-2">
@@ -1837,6 +2073,9 @@ function EmployerDashboard({ user, onLogout }) {
                     ? `–${currentJob.end_time.slice(0, 5)}`
                     : ""}
                   {selectedSkillName ? ` · ${selectedSkillName}` : ""}
+                  {currentJob.pay_amount
+                    ? ` · ${formatNetPay(currentJob.pay_amount, currentJob.pay_unit)}`
+                    : ""}
                 </p>
               </div>
               <b>{matches.length} rasti</b>
@@ -1890,7 +2129,13 @@ function EmployerDashboard({ user, onLogout }) {
                         disabled={invited}
                         onClick={() => inviteWorker(worker.id)}
                       >
-                        {invited ? "Pakviestas" : "Kviesti"}
+                        {!invited
+                          ? "Kviesti"
+                          : invitationStatuses[worker.id] === "accepted"
+                          ? "Priėmė"
+                          : invitationStatuses[worker.id] === "declined"
+                          ? "Atmetė"
+                          : "Pakviestas"}
                       </button>
                     </div>
                   );
@@ -1920,6 +2165,9 @@ function EmployerDashboard({ user, onLogout }) {
                     <b>{job.title}</b>
                     <div style={{ color: "#6c7a88", fontSize: 13 }}>
                       {job.city} · {job.start_time?.slice(0, 5)}
+                      {job.pay_amount
+                        ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                        : ""}
                     </div>
                   </div>
                   <span>{job.workers_needed} žm.</span>
