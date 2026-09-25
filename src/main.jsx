@@ -9,10 +9,10 @@ const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const workers = [
-  { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, transport:true },
-  { initials:"MP", name:"Mantas P.", status:"Laisvas rytoj", city:"Vilnius", skills:["Medžiagų nešiojimas","Tvarkymas"], attendance:100, transport:true },
-  { initials:"DS", name:"Darius S.", status:"Laisvas šiandien", city:"Vilnius", skills:["Betonavimo pagalba","Krovos darbai"], attendance:94, transport:false },
-  { initials:"RK", name:"Rytis K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Tvarkymas","Statybvietės pagalba"], attendance:92, transport:true },
+  { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, experience:2 },
+  { initials:"MP", name:"Mantas P.", status:"Laisvas rytoj", city:"Vilnius", skills:["Medžiagų nešiojimas","Tvarkymas"], attendance:100, experience:1 },
+  { initials:"DS", name:"Darius S.", status:"Laisvas šiandien", city:"Vilnius", skills:["Betonavimo pagalba","Krovos darbai"], attendance:94, experience:3 },
+  { initials:"RK", name:"Rytis K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Tvarkymas","Statybvietės pagalba"], attendance:92, experience:2 },
 ];
 
 function Icon({children}) {
@@ -452,9 +452,9 @@ function SearchBox({ onEmployerSignup }) {
         </div>
       </div>
       <div className="field">
-        <label>Darbo tipas</label>
+        <label>Atvykimas</label>
         <div className="control">
-          ⚒ Betonavimo pagalba <span>⌄</span>
+          ↗ Darbuotojas atvyksta pats <span>⌄</span>
         </div>
       </div>
       <div className="field">
@@ -531,8 +531,9 @@ function WorkersPanel({ onEmployerSignup }) {
                   <span>atvykimas</span>
                 </div>
 
-                <div className={"transport " + (w.transport ? "yes" : "no")}>
-                  {w.transport ? "Turi transportą" : "Neturi"}
+                <div className="metric">
+                  <strong>{w.experience} m.</strong>
+                  <span>patirties</span>
                 </div>
 
                 <button
@@ -852,13 +853,14 @@ function WorkerProfileModal({ worker, onClose }) {
           <div className="rs-profile-stat"><span>Neatvykimų</span><b>{worker.noShowCount || 0}</b></div>
         </div>
 
-        <div style={{ marginTop: 18 }}>
-          <b>Transportas</b>
-          <p style={{ margin: "6px 0 0", color: "#6c7a88" }}>
-            {worker.hasTransport ? "Turi savo transportą" : "Savo transporto neturi"}
-            {worker.hasDrivingLicenseB ? " · turi B kategoriją" : ""}
-          </p>
-        </div>
+        {worker.hasDrivingLicenseB && (
+          <div style={{ marginTop: 18 }}>
+            <b>Vairuotojo pažymėjimas</b>
+            <p style={{ margin: "6px 0 0", color: "#6c7a88" }}>
+              Turi B kategoriją
+            </p>
+          </div>
+        )}
 
         {worker.shortBio && (
           <div style={{ marginTop: 18 }}>
@@ -901,7 +903,6 @@ function WorkerDashboard({ user, onLogout }) {
     city: "Vilnius",
     phone: "",
     travelRadius: 30,
-    hasTransport: false,
     hasDrivingLicenseB: false,
     yearsExperience: 0,
     shortBio: "",
@@ -974,7 +975,7 @@ function WorkerDashboard({ user, onLogout }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_transport, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until"
           )
           .eq("user_id", user.id)
           .single(),
@@ -1015,7 +1016,6 @@ function WorkerDashboard({ user, onLogout }) {
         city: profile?.city || "Vilnius",
         phone: privateData?.phone || "",
         travelRadius: worker?.travel_radius_km ?? 30,
-        hasTransport: Boolean(worker?.has_transport),
         hasDrivingLicenseB: Boolean(worker?.has_driving_license_b),
         yearsExperience: worker?.years_experience ?? 0,
         shortBio: worker?.short_bio || "",
@@ -1180,7 +1180,7 @@ function WorkerDashboard({ user, onLogout }) {
     const jobsResult = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status, cancellation_reason, cancelled_at"
+        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at"
       )
       .in("id", allJobIds);
 
@@ -1324,7 +1324,6 @@ function WorkerDashboard({ user, onLogout }) {
         .from("worker_profiles")
         .update({
           travel_radius_km: Number(form.travelRadius),
-          has_transport: form.hasTransport,
           has_driving_license_b: form.hasDrivingLicenseB,
           years_experience: Number(form.yearsExperience) || 0,
           short_bio: form.shortBio.trim() || null,
@@ -1629,6 +1628,14 @@ function WorkerDashboard({ user, onLogout }) {
                             {job.work_date} · {job.start_time?.slice(0, 5)}
                             {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
                           </div>
+                          <div>
+                            Atvykimas:{" "}
+                            <b>
+                              {job.transport_mode === "employer_pickup"
+                                ? "darbdavys paima darbuotoją"
+                                : "darbuotojas atvyksta pats"}
+                            </b>
+                          </div>
                           {job.description && <div>{job.description}</div>}
                         </div>
 
@@ -1773,15 +1780,6 @@ function WorkerDashboard({ user, onLogout }) {
             </div>
 
             <div className="wd-checks">
-              <label className="wd-check">
-                <input
-                  type="checkbox"
-                  checked={form.hasTransport}
-                  onChange={(e) => updateField("hasTransport", e.target.checked)}
-                />
-                Turiu savo transportą
-              </label>
-
               <label className="wd-check">
                 <input
                   type="checkbox"
@@ -1945,6 +1943,13 @@ function WorkerDashboard({ user, onLogout }) {
                 {confirmInvitation.job?.end_time
                   ? `–${confirmInvitation.job.end_time.slice(0, 5)}`
                   : ""}
+                <br />
+                Atvykimas:{" "}
+                <b>
+                  {confirmInvitation.job?.transport_mode === "employer_pickup"
+                    ? "darbdavys paima darbuotoją"
+                    : "darbuotojas atvyksta pats"}
+                </b>
               </div>
               <div className="wd-pay">
                 {formatNetPay(
@@ -2094,8 +2099,7 @@ function EmployerDashboard({ user, onLogout }) {
     startTime: "08:00",
     endTime: "17:00",
     workersNeeded: 1,
-    skillId: "",
-    requiresTransport: false,
+    transportMode: "self_arrival",
     payAmount: "",
     payUnit: "hour",
     description: "",
@@ -2121,7 +2125,7 @@ function EmployerDashboard({ user, onLogout }) {
             supabase
               .from("jobs")
               .select(
-                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
+                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
               )
               .eq("id", currentJob.id)
               .single(),
@@ -2238,7 +2242,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("jobs")
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .eq("company_id", companyId)
           .order("created_at", { ascending: false })
@@ -2425,7 +2429,7 @@ function EmployerDashboard({ user, onLogout }) {
     const result = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
+        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
@@ -2446,7 +2450,7 @@ function EmployerDashboard({ user, onLogout }) {
     }
   }
 
-  async function findMatches(job, skillId) {
+  async function findMatches(job) {
     setSearching(true);
     setError("");
     setMatches([]);
@@ -2472,25 +2476,6 @@ function EmployerDashboard({ user, onLogout }) {
       );
 
       let workerIds = suitableAvailability.map((row) => row.worker_id);
-
-      if (!workerIds.length) {
-        setMatches([]);
-        return;
-      }
-
-      if (skillId) {
-        const skillResult = await supabase
-          .from("worker_skills")
-          .select("worker_id")
-          .eq("skill_id", Number(skillId))
-          .in("worker_id", workerIds);
-
-        if (skillResult.error) throw skillResult.error;
-        const skilledIds = new Set(
-          (skillResult.data || []).map((row) => row.worker_id)
-        );
-        workerIds = workerIds.filter((id) => skilledIds.has(id));
-      }
 
       if (!workerIds.length) {
         setMatches([]);
@@ -2553,7 +2538,7 @@ function EmployerDashboard({ user, onLogout }) {
           supabase
             .from("worker_profiles")
             .select(
-              "user_id, has_transport, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
+              "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
             )
             .in("user_id", workerIds),
           supabase
@@ -2605,10 +2590,6 @@ function EmployerDashboard({ user, onLogout }) {
             return null;
           }
 
-          if (job.requires_transport && !worker.has_transport) {
-            return null;
-          }
-
           if (
             worker.restricted_until &&
             new Date(worker.restricted_until) > new Date()
@@ -2626,7 +2607,6 @@ function EmployerDashboard({ user, onLogout }) {
             name: shortWorkerName(profile.display_name),
             initials: workerInitials(profile.display_name),
             city: profile.city,
-            hasTransport: Boolean(worker.has_transport),
             hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
             yearsExperience: Number(worker.years_experience || 0),
             attendanceRate: Number(worker.attendance_rate || 0),
@@ -2693,8 +2673,8 @@ function EmployerDashboard({ user, onLogout }) {
       return;
     }
 
-    if (!form.skillId) {
-      setError("Pasirinkite darbo tipą.");
+    if (form.description.trim().length < 10) {
+      setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
       return;
     }
 
@@ -2722,7 +2702,7 @@ function EmployerDashboard({ user, onLogout }) {
         description: form.description.trim() || null,
         pay_amount: Number(form.payAmount),
         pay_unit: form.payUnit,
-        requires_transport: form.requiresTransport,
+        transport_mode: form.transportMode,
       };
 
       let job;
@@ -2733,44 +2713,13 @@ function EmployerDashboard({ user, onLogout }) {
           .update(payload)
           .eq("id", editingJobId)
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
         if (updateResult.error) throw updateResult.error;
         job = updateResult.data;
 
-        if (editingConfirmedCount === 0) {
-          const existingSkillResult = await supabase
-            .from("job_skills")
-            .select("skill_id")
-            .eq("job_id", editingJobId)
-            .eq("required", true)
-            .limit(1)
-            .maybeSingle();
-
-          if (existingSkillResult.error) throw existingSkillResult.error;
-
-          if (
-            String(existingSkillResult.data?.skill_id || "") !==
-            String(form.skillId)
-          ) {
-            const deleteSkillResult = await supabase
-              .from("job_skills")
-              .delete()
-              .eq("job_id", editingJobId);
-
-            if (deleteSkillResult.error) throw deleteSkillResult.error;
-
-            const insertSkillResult = await supabase.from("job_skills").insert({
-              job_id: editingJobId,
-              skill_id: Number(form.skillId),
-              required: true,
-            });
-
-            if (insertSkillResult.error) throw insertSkillResult.error;
-          }
-        }
 
         setNotice("Poreikis atnaujintas.");
       } else {
@@ -2783,22 +2732,14 @@ function EmployerDashboard({ user, onLogout }) {
             status: "open",
           })
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
         if (insertResult.error) throw insertResult.error;
         job = insertResult.data;
 
-        const skillResult = await supabase.from("job_skills").insert({
-          job_id: job.id,
-          skill_id: Number(form.skillId),
-          required: true,
-        });
-
-        if (skillResult.error) throw skillResult.error;
-
-        setNotice("Poreikis sukurtas. Žemiau rodomi tinkami darbuotojai.");
+        setNotice("Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai.");
       }
 
       setCurrentJob({ ...job, confirmedCount: editingConfirmedCount || 0 });
@@ -2808,11 +2749,11 @@ function EmployerDashboard({ user, onLogout }) {
       setEditingJobId(null);
       setEditingConfirmedCount(0);
       await reloadJobs(company.id);
-      await findMatches(job, form.skillId);
+      await findMatches(job);
       setShowJobForm(false);
 
     } catch (err) {
-      setError(err?.message || "Nepavyko sukurti poreikio.");
+      setError(err?.message || "Nepavyko sukurti darbo pasiūlymo.");
     } finally {
       setSaving(false);
     }
@@ -2827,18 +2768,6 @@ function EmployerDashboard({ user, onLogout }) {
     setCurrentJob(job);
 
     try {
-      const skillResult = await supabase
-        .from("job_skills")
-        .select("skill_id")
-        .eq("job_id", job.id)
-        .eq("required", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (skillResult.error) throw skillResult.error;
-
-      const skillId = String(skillResult.data?.skill_id || "");
-
       setForm((current) => ({
         ...current,
         title: job.title || "",
@@ -2848,14 +2777,16 @@ function EmployerDashboard({ user, onLogout }) {
         startTime: job.start_time?.slice(0, 5) || "08:00",
         endTime: job.end_time?.slice(0, 5) || "",
         workersNeeded: job.workers_needed || 1,
-        skillId,
-        requiresTransport: Boolean(job.requires_transport),
+        transportMode:
+          job.transport_mode === "employer_pickup"
+            ? "employer_pickup"
+            : "self_arrival",
         payAmount: job.pay_amount ?? "",
         payUnit: job.pay_unit === "day" ? "day" : "hour",
         description: job.description || "",
       }));
 
-      await findMatches(job, skillId);
+      await findMatches(job);
       await markEmployerJobRead(job.id);
       window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
@@ -2881,8 +2812,7 @@ function EmployerDashboard({ user, onLogout }) {
       startTime: "08:00",
       endTime: "17:00",
       workersNeeded: 1,
-      skillId: skills[0]?.id ? String(skills[0].id) : "",
-      requiresTransport: false,
+      transportMode: "self_arrival",
       payAmount: "",
       payUnit: "hour",
       description: "",
@@ -3132,10 +3062,6 @@ function EmployerDashboard({ user, onLogout }) {
     }
   }
 
-  const selectedSkillName =
-    skills.find((skill) => String(skill.id) === String(form.skillId))?.name ||
-    "";
-
   if (loading) {
     return (
       <div className="ed-loading">
@@ -3206,10 +3132,10 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
         .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
-        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px 120px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
         .ed-worker-id{display:flex;align-items:center;gap:11px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
-        .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}.ed-transport{font-size:13px;font-weight:700}.ed-transport.yes{color:#167a54}.ed-transport.no{color:#8a98a6}
+        .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
         .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
@@ -3353,12 +3279,12 @@ function EmployerDashboard({ user, onLogout }) {
 
           <div className="ed-form-grid">
             <label className="ed-label ed-span-2">
-              Poreikio pavadinimas
+              Darbo pasiūlymo pavadinimas
               <input
                 className="ed-input"
                 value={form.title}
                 onChange={(e) => updateField("title", e.target.value)}
-                placeholder="Pvz. Reikia 2 pagalbinių betonavimui"
+                placeholder="Pvz. Reikia 2 statybų pagalbinių rytoj"
               />
             </label>
 
@@ -3382,23 +3308,6 @@ function EmployerDashboard({ user, onLogout }) {
                 value={form.workersNeeded}
                 onChange={(e) => updateField("workersNeeded", e.target.value)}
               />
-            </label>
-
-            <label className="ed-label ed-span-2">
-              Darbo tipas
-              <select
-                className="ed-select"
-                value={form.skillId}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("skillId", e.target.value)}
-              >
-                <option value="">Pasirinkite</option>
-                {skills.map((skill) => (
-                  <option key={skill.id} value={skill.id}>
-                    {skill.name}
-                  </option>
-                ))}
-              </select>
             </label>
 
             <label className="ed-label ed-span-2">
@@ -3474,25 +3383,27 @@ function EmployerDashboard({ user, onLogout }) {
               </select>
             </label>
 
-            <label className="ed-check ed-span-2">
-              <input
-                type="checkbox"
-                checked={form.requiresTransport}
+            <label className="ed-label ed-span-2">
+              Atvykimas į darbo vietą *
+              <select
+                className="ed-select"
+                value={form.transportMode}
                 disabled={editingConfirmedCount > 0}
-                onChange={(e) =>
-                  updateField("requiresTransport", e.target.checked)
-                }
-              />
-              Darbuotojas turi turėti savo transportą
+                onChange={(e) => updateField("transportMode", e.target.value)}
+              >
+                <option value="self_arrival">Darbuotojas atvyksta pats</option>
+                <option value="employer_pickup">Darbdavys paima darbuotoją</option>
+              </select>
             </label>
 
             <label className="ed-label ed-span-4">
-              Papildoma informacija
+              Darbo aprašymas *
               <textarea
                 className="ed-textarea"
+                required
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Pvz. Darbas lauke, darbo rūbai būtini, įrankiai objekte."
+                placeholder="Aprašykite, ką reikės daryti, darbo sąlygas, ar suteikiami įrankiai, kokia apranga reikalinga ir kitą svarbią informaciją."
               />
             </label>
           </div>
@@ -3520,7 +3431,7 @@ function EmployerDashboard({ user, onLogout }) {
                 ? "Saugoma..."
                 : editingJobId
                 ? "Išsaugoti pakeitimus"
-                : "Sukurti poreikį ir rasti darbuotojus"}
+                : "Sukurti darbo pasiūlymą"}
             </button>
           </div>
         </section>
@@ -3572,10 +3483,14 @@ function EmployerDashboard({ user, onLogout }) {
                   {currentJob.end_time
                     ? `–${currentJob.end_time.slice(0, 5)}`
                     : ""}
-                  {selectedSkillName ? ` · ${selectedSkillName}` : ""}
                   {currentJob.pay_amount
                     ? ` · ${formatNetPay(currentJob.pay_amount, currentJob.pay_unit)}`
                     : ""}
+                  {` · ${
+                    currentJob.transport_mode === "employer_pickup"
+                      ? "Darbdavys paima darbuotoją"
+                      : "Darbuotojas atvyksta pats"
+                  }`}
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -3615,18 +3530,6 @@ function EmployerDashboard({ user, onLogout }) {
                       <div className="ed-metric">
                         <b>{Math.round(worker.attendanceRate)}%</b>
                         <span>atvykimas</span>
-                      </div>
-
-                      <div
-                        className={
-                          worker.hasTransport
-                            ? "ed-transport yes"
-                            : "ed-transport no"
-                        }
-                      >
-                        {worker.hasTransport
-                          ? "Turi transportą"
-                          : "Be transporto"}
                       </div>
 
                       <div className="ed-worker-actions">
