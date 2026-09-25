@@ -573,7 +573,6 @@ function nextSevenDays() {
 
 function WorkerDashboard({ user, onLogout }) {
   const days = nextSevenDays();
-  const [tab, setTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
@@ -659,16 +658,15 @@ function WorkerDashboard({ user, onLogout }) {
           .lte("available_date", end),
       ]);
 
-      const results = [
+      const failed = [
         profileResult,
         privateResult,
         workerResult,
         skillsResult,
         workerSkillsResult,
         availabilityResult,
-      ];
+      ].find((result) => result.error);
 
-      const failed = results.find((result) => result.error);
       if (failed?.error) throw failed.error;
 
       const profile = profileResult.data;
@@ -752,7 +750,7 @@ function WorkerDashboard({ user, onLogout }) {
     }));
   }
 
-  async function saveProfile() {
+  async function saveEverything() {
     setSaving(true);
     setNotice("");
     setError("");
@@ -815,22 +813,7 @@ function WorkerDashboard({ user, onLogout }) {
         if (insertResult.error) throw insertResult.error;
       }
 
-      setOriginalSkills([...selectedSkills]);
-      setNotice("Profilis išsaugotas.");
-    } catch (err) {
-      setError(err?.message || "Nepavyko išsaugoti profilio.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveAvailability() {
-    setSaving(true);
-    setNotice("");
-    setError("");
-
-    try {
-      const rows = days.map((day) => {
+      const availabilityRows = days.map((day) => {
         const state = availability[day.iso];
         return {
           worker_id: user.id,
@@ -841,14 +824,18 @@ function WorkerDashboard({ user, onLogout }) {
         };
       });
 
-      const result = await supabase
+      const availabilityResult = await supabase
         .from("availability")
-        .upsert(rows, { onConflict: "worker_id,available_date" });
+        .upsert(availabilityRows, { onConflict: "worker_id,available_date" });
 
-      if (result.error) throw result.error;
-      setNotice("Prieinamumas išsaugotas.");
+      if (availabilityResult.error) throw availabilityResult.error;
+
+      setOriginalSkills([...selectedSkills]);
+      setNotice("Visi profilio duomenys išsaugoti.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setError(err?.message || "Nepavyko išsaugoti prieinamumo.");
+      setError(err?.message || "Nepavyko išsaugoti duomenų.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
@@ -879,38 +866,49 @@ function WorkerDashboard({ user, onLogout }) {
       <style>{`
         .wd-page{min-height:100vh;background:#f6f8fa;color:#102438}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
-        .wd-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .wd-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 64px;display:grid;grid-template-columns:230px 1fr;gap:28px;align-items:start}
-        .wd-sidebar,.wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045)}
-        .wd-sidebar{padding:18px;position:sticky;top:96px}
-        .wd-person{display:flex;align-items:center;gap:12px;padding:4px 4px 18px;border-bottom:1px solid #edf1f4;margin-bottom:14px}
+        .wd-topbar-inner{width:min(1060px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .wd-shell{width:min(1060px,calc(100% - 40px));margin:32px auto 70px}
+        .wd-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}
+        .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
+        .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
+        .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
-        .wd-person b{display:block}.wd-person span{font-size:13px;color:#6c7a88}
-        .wd-nav{display:grid;gap:6px}.wd-nav button{border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:10px;color:#425466;font:inherit;font-weight:700;cursor:pointer}
-        .wd-nav button.active{background:#fff3e7;color:#c96a12}
-        .wd-main{display:grid;gap:20px}
-        .wd-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}
-        .wd-heading h1{margin:3px 0 0;font-size:32px;letter-spacing:-.03em}.wd-heading p{margin:8px 0 0;color:#6c7a88}
-        .wd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px}.wd-kpi span{display:block;font-size:13px;color:#6c7a88;margin-bottom:8px}.wd-kpi b{font-size:25px}
-        .wd-card{padding:24px}.wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}
+        .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
+        .wd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;margin-bottom:8px}.wd-kpi b{font-size:25px}
+        .wd-form{display:grid;gap:18px}
+        .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
         .wd-input:focus,.wd-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
         .wd-textarea{min-height:92px;resize:vertical}
-        .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:4px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+        .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
-        .wd-actions{display:flex;justify-content:flex-end;margin-top:22px}
-        .wd-save{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.wd-save:disabled{opacity:.6;cursor:wait}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 1fr 110px 110px;align-items:center;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
         .wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-toggle{display:flex;align-items:center;gap:9px;font-weight:700}.wd-toggle input{width:18px;height:18px;accent-color:#1c9b67}
         .wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;font:inherit}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
-        .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a}
-        .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}.wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}@keyframes wdspin{to{transform:rotate(360deg)}}
-        @media(max-width:820px){.wd-shell{grid-template-columns:1fr}.wd-sidebar{position:static}.wd-nav{grid-template-columns:1fr 1fr}.wd-kpis{grid-template-columns:1fr}.wd-grid-2{grid-template-columns:1fr}.wd-day{grid-template-columns:1fr 1fr}.wd-day-date{grid-column:1/-1}.wd-topbar-inner,.wd-shell{width:min(100% - 24px,1180px)}}
+        .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
+        .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
+        .wd-save:disabled{opacity:.6;cursor:wait}
+        .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:18px}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a}
+        .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}
+        .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
+        @keyframes wdspin{to{transform:rotate(360deg)}}
+        @media(max-width:760px){
+          .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1060px)}
+          .wd-heading{align-items:flex-start;flex-direction:column}
+          .wd-kpis{grid-template-columns:1fr}
+          .wd-grid-2{grid-template-columns:1fr}
+          .wd-day{grid-template-columns:1fr 1fr}
+          .wd-day-date{grid-column:1/-1}
+          .wd-bottom{bottom:10px}
+          .wd-save{width:100%}
+        }
       `}</style>
 
       <header className="wd-topbar">
@@ -927,273 +925,227 @@ function WorkerDashboard({ user, onLogout }) {
         </div>
       </header>
 
-      <div className="wd-shell">
-        <aside className="wd-sidebar">
-          <div className="wd-person">
+      <main className="wd-shell">
+        <div className="wd-heading">
+          <div>
+            <div className="eyebrow">DARBUOTOJO PASKYRA</div>
+            <h1>Mano profilis ir prieinamumas</h1>
+            <p>
+              Užpildykite viską viename lange. Apačioje vienu paspaudimu
+              išsaugosite profilį, įgūdžius ir laisvas dienas.
+            </p>
+          </div>
+
+          <div className="wd-user">
             <div className="wd-avatar">{initials || "D"}</div>
             <div>
               <b>{form.displayName || "Darbuotojas"}</b>
               <span>{form.city || "Miestas nenurodytas"}</span>
             </div>
           </div>
+        </div>
 
-          <div className="wd-nav">
-            <button
-              className={tab === "profile" ? "active" : ""}
-              onClick={() => {
-                setTab("profile");
-                setNotice("");
-                setError("");
-              }}
-            >
-              Mano profilis
-            </button>
-            <button
-              className={tab === "availability" ? "active" : ""}
-              onClick={() => {
-                setTab("availability");
-                setNotice("");
-                setError("");
-              }}
-            >
-              Mano prieinamumas
-            </button>
+        <div className="wd-kpis">
+          <div className="wd-kpi">
+            <span>Atvykimo patikimumas</span>
+            <b>{Math.round(metrics.attendanceRate)}%</b>
           </div>
-        </aside>
-
-        <main className="wd-main">
-          <div className="wd-heading">
-            <div>
-              <div className="eyebrow">DARBUOTOJO PASKYRA</div>
-              <h1>
-                {tab === "profile" ? "Mano profilis" : "Kada galiu dirbti?"}
-              </h1>
-              <p>
-                {tab === "profile"
-                  ? "Užpildykite informaciją, pagal kurią darbdaviai ras tinkamus darbuotojus."
-                  : "Pažymėkite dienas, kuriomis realiai galite priimti darbą."}
-              </p>
-            </div>
+          <div className="wd-kpi">
+            <span>Pasirinkti įgūdžiai</span>
+            <b>{selectedSkills.length}</b>
           </div>
-
-          <div className="wd-kpis">
-            <div className="wd-kpi">
-              <span>Atvykimo patikimumas</span>
-              <b>{Math.round(metrics.attendanceRate)}%</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Pasirinkti įgūdžiai</span>
-              <b>{selectedSkills.length}</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Laisvos dienos per 7 d.</span>
-              <b>{availableCount}</b>
-            </div>
+          <div className="wd-kpi">
+            <span>Laisvos dienos per 7 d.</span>
+            <b>{availableCount}</b>
           </div>
+        </div>
 
-          {notice && <div className="wd-note ok">{notice}</div>}
-          {error && <div className="wd-note err">{error}</div>}
+        {notice && <div className="wd-note ok">{notice}</div>}
+        {error && <div className="wd-note err">{error}</div>}
 
-          {tab === "profile" ? (
-            <>
-              <section className="wd-card">
-                <h2>Pagrindinė informacija</h2>
-                <p className="wd-card-sub">
-                  Nuotraukos nereikia — darbdaviai matys jūsų inicialus ir darbo informaciją.
-                </p>
+        <div className="wd-form">
+          <section className="wd-card">
+            <h2>1. Pagrindinė informacija</h2>
+            <p className="wd-card-sub">
+              Nuotraukos nereikia — darbdaviai matys inicialus ir darbo informaciją.
+            </p>
 
-                <div className="wd-grid-2">
-                  <label className="wd-label">
-                    Vardas
-                    <input
-                      className="wd-input"
-                      value={form.displayName}
-                      onChange={(e) => updateField("displayName", e.target.value)}
-                    />
-                  </label>
+            <div className="wd-grid-2">
+              <label className="wd-label">
+                Vardas
+                <input
+                  className="wd-input"
+                  value={form.displayName}
+                  onChange={(e) => updateField("displayName", e.target.value)}
+                />
+              </label>
 
-                  <label className="wd-label">
-                    Miestas
-                    <input
-                      className="wd-input"
-                      value={form.city}
-                      onChange={(e) => updateField("city", e.target.value)}
-                    />
-                  </label>
+              <label className="wd-label">
+                Miestas
+                <input
+                  className="wd-input"
+                  value={form.city}
+                  onChange={(e) => updateField("city", e.target.value)}
+                />
+              </label>
 
-                  <label className="wd-label">
-                    Telefonas
-                    <input
-                      className="wd-input"
-                      value={form.phone}
-                      onChange={(e) => updateField("phone", e.target.value)}
-                      placeholder="+370..."
-                    />
-                  </label>
+              <label className="wd-label">
+                Telefonas
+                <input
+                  className="wd-input"
+                  value={form.phone}
+                  onChange={(e) => updateField("phone", e.target.value)}
+                  placeholder="+370..."
+                />
+              </label>
 
-                  <label className="wd-label">
-                    Kiek km galite nuvykti?
-                    <input
-                      className="wd-input"
-                      type="number"
-                      min="0"
-                      max="300"
-                      value={form.travelRadius}
-                      onChange={(e) => updateField("travelRadius", e.target.value)}
-                    />
-                  </label>
+              <label className="wd-label">
+                Kiek km galite nuvykti?
+                <input
+                  className="wd-input"
+                  type="number"
+                  min="0"
+                  max="300"
+                  value={form.travelRadius}
+                  onChange={(e) => updateField("travelRadius", e.target.value)}
+                />
+              </label>
 
-                  <label className="wd-label">
-                    Patirtis statybose (metais)
-                    <input
-                      className="wd-input"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={form.yearsExperience}
-                      onChange={(e) =>
-                        updateField("yearsExperience", e.target.value)
-                      }
-                    />
-                  </label>
-                </div>
+              <label className="wd-label">
+                Patirtis statybose (metais)
+                <input
+                  className="wd-input"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={form.yearsExperience}
+                  onChange={(e) => updateField("yearsExperience", e.target.value)}
+                />
+              </label>
+            </div>
 
-                <div className="wd-checks">
-                  <label className="wd-check">
-                    <input
-                      type="checkbox"
-                      checked={form.hasTransport}
-                      onChange={(e) =>
-                        updateField("hasTransport", e.target.checked)
-                      }
-                    />
-                    Turiu savo transportą
-                  </label>
+            <div className="wd-checks">
+              <label className="wd-check">
+                <input
+                  type="checkbox"
+                  checked={form.hasTransport}
+                  onChange={(e) => updateField("hasTransport", e.target.checked)}
+                />
+                Turiu savo transportą
+              </label>
 
-                  <label className="wd-check">
-                    <input
-                      type="checkbox"
-                      checked={form.hasDrivingLicenseB}
-                      onChange={(e) =>
-                        updateField("hasDrivingLicenseB", e.target.checked)
-                      }
-                    />
-                    Turiu B kategoriją
-                  </label>
-                </div>
+              <label className="wd-check">
+                <input
+                  type="checkbox"
+                  checked={form.hasDrivingLicenseB}
+                  onChange={(e) =>
+                    updateField("hasDrivingLicenseB", e.target.checked)
+                  }
+                />
+                Turiu B kategoriją
+              </label>
+            </div>
 
-                <label className="wd-label" style={{ marginTop: 18 }}>
-                  Trumpai apie patirtį
-                  <textarea
-                    className="wd-textarea"
-                    value={form.shortBio}
-                    onChange={(e) => updateField("shortBio", e.target.value)}
-                    placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
-                  />
-                </label>
-              </section>
+            <label className="wd-label" style={{ marginTop: 18 }}>
+              Trumpai apie patirtį
+              <textarea
+                className="wd-textarea"
+                value={form.shortBio}
+                onChange={(e) => updateField("shortBio", e.target.value)}
+                placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
+              />
+            </label>
+          </section>
 
-              <section className="wd-card">
-                <h2>Kokius darbus mokate?</h2>
-                <p className="wd-card-sub">
-                  Pasirinkite visus darbus, kuriuos galite atlikti arba kuriuose galite padėti.
-                </p>
+          <section className="wd-card">
+            <h2>2. Kokius darbus mokate?</h2>
+            <p className="wd-card-sub">
+              Pasirinkite visus darbus, kuriuos galite atlikti arba kuriuose galite padėti.
+            </p>
 
-                <div className="wd-skills">
-                  {skills.map((skill) => (
-                    <button
-                      type="button"
-                      key={skill.id}
-                      className={
-                        selectedSkills.includes(Number(skill.id))
-                          ? "wd-skill on"
-                          : "wd-skill"
-                      }
-                      onClick={() => toggleSkill(Number(skill.id))}
-                    >
-                      {skill.name}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="wd-actions">
-                  <button
-                    className="wd-save"
-                    disabled={saving}
-                    onClick={saveProfile}
-                  >
-                    {saving ? "Saugoma..." : "Išsaugoti profilį"}
-                  </button>
-                </div>
-              </section>
-            </>
-          ) : (
-            <section className="wd-card">
-              <h2>Artimiausios 7 dienos</h2>
-              <p className="wd-card-sub">
-                Žymėkite tik tas dienas, kuriomis tikrai galėtumėte priimti darbo pasiūlymą.
-              </p>
-
-              <div className="wd-days">
-                {days.map((day) => {
-                  const state = availability[day.iso];
-                  return (
-                    <div className="wd-day" key={day.iso}>
-                      <div className="wd-day-date">
-                        <b>{day.weekday}</b>
-                        <span>{day.label}</span>
-                      </div>
-
-                      <label className="wd-toggle">
-                        <input
-                          type="checkbox"
-                          checked={state.available}
-                          onChange={(e) =>
-                            updateAvailability(day.iso, {
-                              available: e.target.checked,
-                            })
-                          }
-                        />
-                        {state.available ? "Laisvas" : "Užimtas"}
-                      </label>
-
-                      <input
-                        className="wd-time"
-                        type="time"
-                        disabled={!state.available}
-                        value={state.from}
-                        onChange={(e) =>
-                          updateAvailability(day.iso, { from: e.target.value })
-                        }
-                      />
-
-                      <input
-                        className="wd-time"
-                        type="time"
-                        disabled={!state.available}
-                        value={state.to}
-                        onChange={(e) =>
-                          updateAvailability(day.iso, { to: e.target.value })
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="wd-actions">
+            <div className="wd-skills">
+              {skills.map((skill) => (
                 <button
-                  className="wd-save"
-                  disabled={saving}
-                  onClick={saveAvailability}
+                  type="button"
+                  key={skill.id}
+                  className={
+                    selectedSkills.includes(Number(skill.id))
+                      ? "wd-skill on"
+                      : "wd-skill"
+                  }
+                  onClick={() => toggleSkill(Number(skill.id))}
                 >
-                  {saving ? "Saugoma..." : "Išsaugoti prieinamumą"}
+                  {skill.name}
                 </button>
-              </div>
-            </section>
-          )}
-        </main>
-      </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="wd-card">
+            <h2>3. Kada galite dirbti?</h2>
+            <p className="wd-card-sub">
+              Pažymėkite artimiausias dienas, kuriomis realiai galite priimti darbo pasiūlymą.
+            </p>
+
+            <div className="wd-days">
+              {days.map((day) => {
+                const state = availability[day.iso];
+                return (
+                  <div className="wd-day" key={day.iso}>
+                    <div className="wd-day-date">
+                      <b>{day.weekday}</b>
+                      <span>{day.label}</span>
+                    </div>
+
+                    <label className="wd-toggle">
+                      <input
+                        type="checkbox"
+                        checked={state.available}
+                        onChange={(e) =>
+                          updateAvailability(day.iso, {
+                            available: e.target.checked,
+                          })
+                        }
+                      />
+                      {state.available ? "Laisvas" : "Užimtas"}
+                    </label>
+
+                    <input
+                      className="wd-time"
+                      type="time"
+                      disabled={!state.available}
+                      value={state.from}
+                      onChange={(e) =>
+                        updateAvailability(day.iso, { from: e.target.value })
+                      }
+                    />
+
+                    <input
+                      className="wd-time"
+                      type="time"
+                      disabled={!state.available}
+                      value={state.to}
+                      onChange={(e) =>
+                        updateAvailability(day.iso, { to: e.target.value })
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="wd-bottom">
+            <button
+              className="wd-save"
+              disabled={saving}
+              onClick={saveEverything}
+            >
+              {saving ? "Saugoma..." : "Išsaugoti viską"}
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
