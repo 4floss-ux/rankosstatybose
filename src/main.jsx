@@ -3159,17 +3159,32 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px}
         .ed-kpi span{display:block;font-size:12px;color:#6c7a88;margin-bottom:7px}
         .ed-kpi b{font-size:24px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
-        .ed-reliability-card{display:flex;align-items:center;justify-content:space-between;gap:14px}
+        .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
         .ed-reliability-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
         .ed-reliability-title{display:flex;align-items:center;gap:7px;color:#6c7a88;font-family:Inter,sans-serif;font-size:12px;line-height:1.25;margin-bottom:7px}
-        .ed-info-btn{width:21px;height:21px;border-radius:50%;border:1px solid #cbd5dc;background:#fff;color:#425466;font-family:Inter,sans-serif;font-size:12px;font-weight:800;line-height:1;cursor:pointer;display:inline-grid;place-items:center;padding:0;box-shadow:0 1px 2px rgba(16,36,56,.04);transition:.15s ease}
+        .ed-info-btn{
+          width:22px;
+          height:22px;
+          min-width:22px;
+          min-height:22px;
+          border-radius:50%;
+          border:1px solid #cbd5dc;
+          background:#fff;
+          color:#425466;
+          font-family:Inter,sans-serif;
+          font-size:12px;
+          font-weight:800;
+          line-height:22px;
+          text-align:center;
+          cursor:pointer;
+          padding:0;
+          margin:0;
+          box-sizing:border-box;
+          vertical-align:middle;
+        }
         .ed-info-btn:hover{background:#f3f6f8;border-color:#aebbc5}
-        .ed-info-btn span{display:block;transform:translateY(-.25px)}
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:24px!important;line-height:1.05}
         .ed-reliability-score-text{font-family:Inter,sans-serif;font-size:12px!important;color:#6c7a88!important;margin-top:6px!important}
-        .ed-reliability-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
-        .ed-reliability-ring-inner{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(16,36,56,.04)}
-        .ed-reliability-ring-inner strong{font-family:Manrope,Inter,sans-serif;font-size:14px;color:#102438}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
@@ -3290,7 +3305,7 @@ function EmployerDashboard({ user, onLogout }) {
                     title="Kaip veikia darbdavio patikimumas"
                     onClick={() => setShowReliabilityInfo(true)}
                   >
-                    <span aria-hidden="true">i</span>
+                    i
                   </button>
                 </div>
 
@@ -3307,23 +3322,6 @@ function EmployerDashboard({ user, onLogout }) {
                 <small className="ed-reliability-score-text">
                   {Math.round(employerStats.reliabilityRate)} / 100
                 </small>
-              </div>
-
-              <div
-                className="ed-reliability-ring"
-                style={{
-                  background: `conic-gradient(#1c9b67 ${Math.max(
-                    0,
-                    Math.min(100, Math.round(employerStats.reliabilityRate))
-                  )}%, #e6ebef 0)`,
-                }}
-                aria-label={`Patikimumas ${Math.round(
-                  employerStats.reliabilityRate
-                )} iš 100`}
-              >
-                <div className="ed-reliability-ring-inner">
-                  <strong>{Math.round(employerStats.reliabilityRate)}</strong>
-                </div>
               </div>
             </div>
           </div>
