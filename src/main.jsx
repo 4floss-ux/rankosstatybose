@@ -592,6 +592,31 @@ function timeRangesOverlap(a, b) {
   return aStart < bEnd && aEnd > bStart;
 }
 
+function notificationPresentation(events = []) {
+  const types = events.map((event) => event.event_type);
+
+  if (types.includes("invitation_declined")) {
+    return { tone: "red", label: "⚑ Darbuotojas atsisakė" };
+  }
+  if (types.includes("invitation_cancelled")) {
+    return { tone: "red", label: "⚑ Darbdavys atšaukė" };
+  }
+  if (types.includes("message")) {
+    return { tone: "orange", label: "● Nauja žinutė" };
+  }
+  if (types.includes("job_updated")) {
+    return { tone: "orange", label: "● Darbas atnaujintas" };
+  }
+  if (types.includes("invitation_accepted")) {
+    return { tone: "green", label: "✓ Darbuotojas priėmė" };
+  }
+  if (types.includes("invitation_expired")) {
+    return { tone: "muted", label: "Kvietimas nebegalioja" };
+  }
+
+  return { tone: "orange", label: "● Yra naujienų" };
+}
+
 function ConversationModal({ open, onClose, invitationId, title, user }) {
   const [messages, setMessages] = useState([]);
   const [names, setNames] = useState({});
@@ -824,6 +849,7 @@ function WorkerDashboard({ user, onLogout }) {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [originalSkills, setOriginalSkills] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [workerNotifications, setWorkerNotifications] = useState([]);
   const [confirmedJobs, setConfirmedJobs] = useState([]);
   const [respondingInvitation, setRespondingInvitation] = useState(null);
   const [confirmInvitation, setConfirmInvitation] = useState(null);
@@ -857,6 +883,16 @@ function WorkerDashboard({ user, onLogout }) {
 
   useEffect(() => {
     loadDashboard();
+  }, [user.id]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadInvitations().catch(() => {
+        // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, [user.id]);
 
   async function loadDashboard() {
@@ -1006,7 +1042,7 @@ function WorkerDashboard({ user, onLogout }) {
   }
 
   async function loadInvitations() {
-    const [invitationResult, bookingResult] = await Promise.all([
+    const [invitationResult, bookingResult, notificationResult] = await Promise.all([
       supabase
         .from("job_invitations")
         .select("id, job_id, status, message, invited_at, responded_at")
@@ -1017,10 +1053,18 @@ function WorkerDashboard({ user, onLogout }) {
         .select("id, job_id, status")
         .eq("worker_id", user.id)
         .eq("status", "confirmed"),
+      supabase
+        .from("job_notifications")
+        .select("id, job_id, invitation_id, event_type, created_at, read_at")
+        .is("read_at", null)
+        .order("created_at", { ascending: false }),
     ]);
 
     if (invitationResult.error) throw invitationResult.error;
     if (bookingResult.error) throw bookingResult.error;
+    if (notificationResult.error) throw notificationResult.error;
+
+    setWorkerNotifications(notificationResult.data || []);
 
     const invitationRows = invitationResult.data || [];
     const bookingRows = bookingResult.data || [];
@@ -1080,6 +1124,31 @@ function WorkerDashboard({ user, onLogout }) {
 
     setConfirmedJobs(
       bookingRows.map((booking) => jobMap.get(booking.job_id)).filter(Boolean)
+    );
+  }
+
+  function unreadWorkerNotifications(invitationId) {
+    return workerNotifications.filter(
+      (item) => item.invitation_id === invitationId
+    );
+  }
+
+  async function markWorkerNotificationsRead(invitationId) {
+    const ids = unreadWorkerNotifications(invitationId).map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setWorkerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
     );
   }
 
@@ -1276,6 +1345,9 @@ function WorkerDashboard({ user, onLogout }) {
         .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
+        .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
+        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 1fr 110px 110px;align-items:center;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
         .wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-toggle{display:flex;align-items:center;gap:9px;font-weight:700}.wd-toggle input{width:18px;height:18px;accent-color:#1c9b67}
@@ -1376,6 +1448,8 @@ function WorkerDashboard({ user, onLogout }) {
                   if (!job) return null;
 
                   const busy = respondingInvitation === invitation.id;
+                  const unreadNews = unreadWorkerNotifications(invitation.id);
+                  const unreadPresentation = notificationPresentation(unreadNews);
                   const statusLabel =
                     invitation.status === "accepted"
                       ? "Priimta"
@@ -1390,6 +1464,22 @@ function WorkerDashboard({ user, onLogout }) {
                   return (
                     <div className="wd-invite" key={invitation.id}>
                       <div className="wd-invite-main">
+                        {unreadNews.length > 0 && (
+                          <div>
+                            <span className={`rs-alert ${unreadPresentation.tone}`}>
+                              {unreadPresentation.label}
+                              {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                            </span>
+                            <div>
+                              <button
+                                className="rs-alert-read"
+                                onClick={() => markWorkerNotificationsRead(invitation.id)}
+                              >
+                                Pažymėti perskaityta
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <h3>{job.title}</h3>
                         <div className="wd-invite-meta">
                           <div className="wd-invite-company">{invitation.companyName}</div>
@@ -1456,12 +1546,13 @@ function WorkerDashboard({ user, onLogout }) {
 
                         <button
                           className="wd-decline"
-                          onClick={() =>
+                          onClick={async () => {
+                            await markWorkerNotificationsRead(invitation.id);
                             setConversation({
                               invitationId: invitation.id,
                               title: `${invitation.companyName} · ${job.title}`,
-                            })
-                          }
+                            });
+                          }}
                         >
                           Žinutės
                         </button>
@@ -1829,6 +1920,7 @@ function EmployerDashboard({ user, onLogout }) {
   const [invitedIds, setInvitedIds] = useState([]);
   const [invitationStatuses, setInvitationStatuses] = useState({});
   const [invitationByWorker, setInvitationByWorker] = useState({});
+  const [employerNotifications, setEmployerNotifications] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [conversation, setConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
@@ -1860,6 +1952,7 @@ function EmployerDashboard({ user, onLogout }) {
     const timer = setInterval(async () => {
       try {
         await reloadJobs(company.id);
+        await loadEmployerNotifications();
 
         if (currentJob?.id) {
           const [jobResult, bookingResult, invitationsResult] = await Promise.all([
@@ -1913,6 +2006,40 @@ function EmployerDashboard({ user, onLogout }) {
     return () => clearInterval(timer);
   }, [company?.id, currentJob?.id]);
 
+  async function loadEmployerNotifications() {
+    const result = await supabase
+      .from("job_notifications")
+      .select("id, job_id, invitation_id, event_type, created_at, read_at")
+      .is("read_at", null)
+      .order("created_at", { ascending: false });
+
+    if (result.error) throw result.error;
+    setEmployerNotifications(result.data || []);
+  }
+
+  function unreadEmployerNotifications(jobId) {
+    return employerNotifications.filter((item) => item.job_id === jobId);
+  }
+
+  async function markEmployerJobRead(jobId) {
+    const ids = unreadEmployerNotifications(jobId).map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setEmployerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
+    );
+  }
+
   async function loadEmployerDashboard() {
     setLoading(true);
     setError("");
@@ -1962,6 +2089,7 @@ function EmployerDashboard({ user, onLogout }) {
       setCompany(companyResult.data);
       setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
+      await loadEmployerNotifications();
 
       const defaultSkill =
         (skillsResult.data || []).find(
@@ -2437,6 +2565,7 @@ function EmployerDashboard({ user, onLogout }) {
       }));
 
       await findMatches(job, skillId);
+      await markEmployerJobRead(job.id);
       window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
       setError(err?.message || "Nepavyko atidaryti poreikio.");
@@ -2609,6 +2738,9 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
         .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
+        .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
+        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
         .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 0;border-top:1px solid #edf1f4}.ed-job:first-child{border-top:0}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -2832,6 +2964,24 @@ function EmployerDashboard({ user, onLogout }) {
 
         {currentJob && (
           <section className="ed-card">
+            {unreadEmployerNotifications(currentJob.id).length > 0 && (() => {
+              const currentNews = unreadEmployerNotifications(currentJob.id);
+              const currentPresentation = notificationPresentation(currentNews);
+              return (
+                <div className={`ed-note ${currentPresentation.tone === "red" ? "err" : "ok"}`} style={{ marginBottom: 16 }}>
+                  {currentPresentation.label}
+                  {currentNews.length > 1 ? ` · ${currentNews.length} naujienos` : ""}
+                  <button
+                    className="ed-secondary"
+                    style={{ marginLeft: 10 }}
+                    onClick={() => markEmployerJobRead(currentJob.id)}
+                  >
+                    Peržiūrėta
+                  </button>
+                </div>
+              );
+            })()}
+
             {currentJob.status === "filled" && (
               <div className="ed-note ok" style={{ marginBottom: 16 }}>
                 Poreikis užpildytas: {currentJob.confirmedCount}/{currentJob.workers_needed}.
@@ -2932,12 +3082,13 @@ function EmployerDashboard({ user, onLogout }) {
                         {invitationByWorker[worker.id] && (
                           <button
                             className="ed-secondary"
-                            onClick={() =>
+                            onClick={async () => {
+                              await markEmployerJobRead(currentJob.id);
                               setConversation({
                                 invitationId: invitationByWorker[worker.id].id,
                                 title: `${worker.name} · ${currentJob.title}`,
-                              })
-                            }
+                              });
+                            }}
                           >
                             Žinutė
                           </button>
@@ -2964,46 +3115,59 @@ function EmployerDashboard({ user, onLogout }) {
 
           {jobs.length ? (
             <div className="ed-jobs">
-              {jobs.map((job) => (
-                <div className="ed-job" key={job.id}>
-                  <b>{job.work_date}</b>
-                  <div>
-                    <b>{job.title}</b>
-                    <div style={{ color: "#6c7a88", fontSize: 13 }}>
-                      {job.city} · {job.start_time?.slice(0, 5)}
-                      {job.pay_amount
-                        ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                        : ""}
+              {jobs.map((job) => {
+                const unreadNews = unreadEmployerNotifications(job.id);
+                const newsPresentation = notificationPresentation(unreadNews);
+
+                return (
+                  <div className="ed-job" key={job.id}>
+                    <b>{job.work_date}</b>
+                    <div>
+                      <b>{job.title}</b>
+                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                        {job.city} · {job.start_time?.slice(0, 5)}
+                        {job.pay_amount
+                          ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                          : ""}
+                      </div>
+                      {unreadNews.length > 0 && (
+                        <div className="ed-news">
+                          <span className={`rs-alert ${newsPresentation.tone}`}>
+                            {newsPresentation.label}
+                            {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="ed-progress">
+                      {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
+                    </span>
+                    <span className="ed-status">
+                      {job.status === "filled"
+                        ? "Užpildyta"
+                        : job.status === "cancelled"
+                        ? "Atšaukta"
+                        : job.status === "open"
+                        ? "Atvira"
+                        : job.status}
+                    </span>
+                    <div className="ed-job-actions">
+                      <button onClick={() => openExistingJob(job)}>Atidaryti</button>
+                      {job.status !== "cancelled" && job.status !== "completed" && (
+                        <button onClick={() => startEditJob(job)}>Redaguoti</button>
+                      )}
+                      {job.status !== "cancelled" && job.status !== "completed" && (
+                        <button
+                          className="ed-danger"
+                          onClick={() => removeOrCancelJob(job)}
+                        >
+                          {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <span className="ed-progress">
-                    {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
-                  </span>
-                  <span className="ed-status">
-                    {job.status === "filled"
-                      ? "Užpildyta"
-                      : job.status === "cancelled"
-                      ? "Atšaukta"
-                      : job.status === "open"
-                      ? "Atvira"
-                      : job.status}
-                  </span>
-                  <div className="ed-job-actions">
-                    <button onClick={() => openExistingJob(job)}>Atidaryti</button>
-                    {job.status !== "cancelled" && job.status !== "completed" && (
-                      <button onClick={() => startEditJob(job)}>Redaguoti</button>
-                    )}
-                    {job.status !== "cancelled" && job.status !== "completed" && (
-                      <button
-                        className="ed-danger"
-                        onClick={() => removeOrCancelJob(job)}
-                      >
-                        {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="ed-empty">Dar neturite sukurtų poreikių.</div>
