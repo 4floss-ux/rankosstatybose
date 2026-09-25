@@ -1,19 +1,23 @@
 # rankosstatybose.lt
 
-Pirmoji rankosstatybose.lt frontend versija.
+MVP v0.2: React + Vite + Supabase Auth.
 
-## Paleidimas kompiuteryje
+## Aplinkos kintamieji
 
-1. Įsidiek Node.js (LTS).
-2. Terminale šiame aplanke:
-   npm install
-   npm run dev
-3. Atidaryk Vite parodytą adresą naršyklėje.
+Cloudflare build variables:
 
-## Vėliau
-- Supabase autentifikacija
-- Darbuotojų duomenų bazė
-- Prieinamumo kalendorius
-- Darbdavių užklausos
-- Kvietimų ir atvykimo sistema
-- Mokamos darbdavių prenumeratos
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+## Build
+
+```bash
+npm install
+npm run build
+```
+
+Deploy:
+
+```bash
+npx wrangler deploy
+```
