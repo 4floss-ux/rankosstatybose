@@ -910,8 +910,17 @@ function WorkerDashboard({ user, onLogout }) {
     attendanceRate: 100,
     completedJobs: 0,
     ratingAverage: null,
+    ratingCount: 0,
     noShowCount: 0,
     restrictedUntil: null,
+  });
+  const [workerStats, setWorkerStats] = useState({
+    totalBookings: 0,
+    activeJobs: 0,
+    completedJobs: 0,
+    cancelledByEmployer: 0,
+    cancelledByWorker: 0,
+    noShows: 0,
   });
   const [availability, setAvailability] = useState(() =>
     Object.fromEntries(
@@ -928,7 +937,7 @@ function WorkerDashboard({ user, onLogout }) {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      loadInvitations().catch(() => {
+      Promise.all([loadInvitations(), loadWorkerStats()]).catch(() => {
         // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
       });
     }, 5000);
@@ -965,7 +974,7 @@ function WorkerDashboard({ user, onLogout }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_transport, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, no_show_count, restricted_until"
+            "travel_radius_km, has_transport, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until"
           )
           .eq("user_id", user.id)
           .single(),
@@ -1019,6 +1028,7 @@ function WorkerDashboard({ user, onLogout }) {
           worker?.rating_average === null || worker?.rating_average === undefined
             ? null
             : Number(worker.rating_average),
+        ratingCount: Number(worker?.rating_count || 0),
         noShowCount: Number(worker?.no_show_count || 0),
         restrictedUntil: worker?.restricted_until || null,
       });
@@ -1055,7 +1065,7 @@ function WorkerDashboard({ user, onLogout }) {
         )
       );
 
-      await loadInvitations();
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
     } finally {
@@ -1079,6 +1089,51 @@ function WorkerDashboard({ user, onLogout }) {
     setAvailability((current) => ({
       ...current,
       [date]: { ...current[date], ...patch },
+    }));
+  }
+
+  async function loadWorkerStats() {
+    const [bookingsResult, workerResult] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("status")
+        .eq("worker_id", user.id),
+      supabase
+        .from("worker_profiles")
+        .select(
+          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until"
+        )
+        .eq("user_id", user.id)
+        .single(),
+    ]);
+
+    if (bookingsResult.error) throw bookingsResult.error;
+    if (workerResult.error) throw workerResult.error;
+
+    const rows = bookingsResult.data || [];
+    const countStatus = (status) =>
+      rows.filter((row) => row.status === status).length;
+
+    setWorkerStats({
+      totalBookings: rows.length,
+      activeJobs: countStatus("confirmed"),
+      completedJobs: countStatus("completed"),
+      cancelledByEmployer: countStatus("cancelled_by_employer"),
+      cancelledByWorker: countStatus("cancelled_by_worker"),
+      noShows: countStatus("no_show"),
+    });
+
+    const worker = workerResult.data;
+    setMetrics((current) => ({
+      ...current,
+      attendanceRate: Number(worker?.attendance_rate ?? current.attendanceRate ?? 100),
+      ratingAverage:
+        worker?.rating_average === null || worker?.rating_average === undefined
+          ? null
+          : Number(worker.rating_average),
+      ratingCount: Number(worker?.rating_count || 0),
+      noShowCount: Number(worker?.no_show_count || 0),
+      restrictedUntil: worker?.restricted_until || null,
     }));
   }
 
@@ -1226,7 +1281,7 @@ function WorkerDashboard({ user, onLogout }) {
         throw new Error("Šis kvietimas jau buvo atsakytas arba nebegalioja.");
       }
 
-      await loadInvitations();
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
       setConfirmInvitation(null);
       setCommitmentChecked(false);
 
@@ -1366,7 +1421,7 @@ function WorkerDashboard({ user, onLogout }) {
         .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
-        .wd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+        .wd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;margin-bottom:8px}.wd-kpi b{font-size:25px}
         .wd-form{display:grid;gap:18px}
@@ -1403,7 +1458,7 @@ function WorkerDashboard({ user, onLogout }) {
         @media(max-width:760px){
           .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1060px)}
           .wd-heading{align-items:flex-start;flex-direction:column}
-          .wd-kpis{grid-template-columns:1fr}
+          .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}
@@ -1447,20 +1502,55 @@ function WorkerDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="wd-kpis">
-          <div className="wd-kpi">
-            <span>Atvykimo patikimumas</span>
-            <b>{Math.round(metrics.attendanceRate)}%</b>
+        <section>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">MANO STATISTIKA</div>
           </div>
-          <div className="wd-kpi">
-            <span>Pasirinkti įgūdžiai</span>
-            <b>{selectedSkills.length}</b>
+
+          <div className="wd-kpis">
+            <div className="wd-kpi">
+              <span>Iš viso darbų</span>
+              <b>{workerStats.totalBookings}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Aktyvūs darbai</span>
+              <b>{workerStats.activeJobs}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Užbaigti darbai</span>
+              <b>{workerStats.completedJobs}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbdavio atšaukti</span>
+              <b>{workerStats.cancelledByEmployer}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Neatvykimai</span>
+              <b>{workerStats.noShows}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Atvykimo patikimumas</span>
+              <b>{Math.round(metrics.attendanceRate)}%</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbdavių įvertinimas</span>
+              <b>
+                {metrics.ratingAverage === null
+                  ? "—"
+                  : `${metrics.ratingAverage.toFixed(1)} / 5`}
+              </b>
+              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                {metrics.ratingCount
+                  ? `${metrics.ratingCount} vertinimai`
+                  : "Dar nėra vertinimų"}
+              </small>
+            </div>
+            <div className="wd-kpi">
+              <span>Laisvos dienos per 7 d.</span>
+              <b>{availableCount}</b>
+            </div>
           </div>
-          <div className="wd-kpi">
-            <span>Laisvos dienos per 7 d.</span>
-            <b>{availableCount}</b>
-          </div>
-        </div>
+        </section>
 
         {notice && <div className="wd-note ok">{notice}</div>}
         {error && <div className="wd-note err">{error}</div>}
@@ -1969,6 +2059,16 @@ function EmployerDashboard({ user, onLogout }) {
   const [company, setCompany] = useState(null);
   const [skills, setSkills] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [employerStats, setEmployerStats] = useState({
+    totalJobs: 0,
+    activeJobs: 0,
+    openJobs: 0,
+    filledJobs: 0,
+    completedJobs: 0,
+    cancelledJobs: 0,
+    reliabilityRate: 100,
+    lateCancelCount: 0,
+  });
   const [currentJob, setCurrentJob] = useState(null);
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
@@ -2009,7 +2109,10 @@ function EmployerDashboard({ user, onLogout }) {
     const timer = setInterval(async () => {
       try {
         await reloadJobs(company.id);
-        await loadEmployerNotifications();
+        await Promise.all([
+          loadEmployerNotifications(),
+          loadEmployerStats(company.id),
+        ]);
 
         if (currentJob?.id) {
           const [jobResult, bookingResult, invitationsResult] = await Promise.all([
@@ -2120,7 +2223,9 @@ function EmployerDashboard({ user, onLogout }) {
       const [companyResult, skillsResult, jobsResult] = await Promise.all([
         supabase
           .from("companies")
-          .select("id, name, company_code, city, is_verified")
+          .select(
+            "id, name, company_code, city, is_verified, reliability_rate, late_cancel_count"
+          )
           .eq("id", companyId)
           .single(),
         supabase
@@ -2146,7 +2251,10 @@ function EmployerDashboard({ user, onLogout }) {
       setCompany(companyResult.data);
       setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
-      await loadEmployerNotifications();
+      await Promise.all([
+        loadEmployerNotifications(),
+        loadEmployerStats(companyId),
+      ]);
 
       const defaultSkill =
         (skillsResult.data || []).find(
@@ -2167,6 +2275,54 @@ function EmployerDashboard({ user, onLogout }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function loadEmployerStats(companyId = company?.id) {
+    if (!companyId) return;
+
+    const [jobsResult, companyResult] = await Promise.all([
+      supabase
+        .from("jobs")
+        .select("status")
+        .eq("company_id", companyId),
+      supabase
+        .from("companies")
+        .select("reliability_rate, late_cancel_count")
+        .eq("id", companyId)
+        .single(),
+    ]);
+
+    if (jobsResult.error) throw jobsResult.error;
+    if (companyResult.error) throw companyResult.error;
+
+    const rows = jobsResult.data || [];
+    const countStatus = (status) =>
+      rows.filter((row) => row.status === status).length;
+
+    const openJobs = countStatus("open");
+    const filledJobs = countStatus("filled");
+    const inProgressJobs = countStatus("in_progress");
+
+    setEmployerStats({
+      totalJobs: rows.length,
+      activeJobs: openJobs + filledJobs + inProgressJobs,
+      openJobs,
+      filledJobs,
+      completedJobs: countStatus("completed"),
+      cancelledJobs: countStatus("cancelled"),
+      reliabilityRate: Number(companyResult.data?.reliability_rate ?? 100),
+      lateCancelCount: Number(companyResult.data?.late_cancel_count || 0),
+    });
+
+    setCompany((current) =>
+      current
+        ? {
+            ...current,
+            reliability_rate: companyResult.data?.reliability_rate ?? 100,
+            late_cancel_count: companyResult.data?.late_cancel_count || 0,
+          }
+        : current
+    );
   }
 
   async function addConfirmedCounts(jobRows) {
@@ -2210,6 +2366,12 @@ function EmployerDashboard({ user, onLogout }) {
         setJobs(await addConfirmedCounts(result.data || []));
       } catch {
         setJobs(result.data || []);
+      }
+
+      try {
+        await loadEmployerStats(companyId);
+      } catch {
+        // Statistikos klaida neturi blokuoti poreikių sąrašo.
       }
     }
   }
@@ -2645,6 +2807,36 @@ function EmployerDashboard({ user, onLogout }) {
     setError("");
     setNotice("");
 
+    const visibleConfirmedCount = Number(job.confirmedCount || 0);
+
+    // Jei darbdavys jau mato "Atšaukti", modalą rodome IŠKART.
+    // Galutinio atšaukimo metu DB vis tiek dar kartą patikrinama.
+    if (visibleConfirmedCount > 0) {
+      setCancelReason("");
+      setCancelJobTarget({
+        ...job,
+        confirmedCount: visibleConfirmedCount,
+      });
+
+      // Fone tik patiksliname skaičių. Tai neblokuoja modalo atsidarymo.
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", job.id)
+        .eq("status", "confirmed")
+        .then(({ count, error: countError }) => {
+          if (!countError && Number(count || 0) > 0) {
+            setCancelJobTarget((current) =>
+              current?.id === job.id
+                ? { ...current, confirmedCount: Number(count || 0) }
+                : current
+            );
+          }
+        });
+
+      return;
+    }
+
     try {
       const countResult = await supabase
         .from("bookings")
@@ -2862,6 +3054,10 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
+        .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px}
+        .ed-kpi span{display:block;font-size:12px;color:#6c7a88;margin-bottom:7px}
+        .ed-kpi b{font-size:24px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
@@ -2931,6 +3127,48 @@ function EmployerDashboard({ user, onLogout }) {
             </p>
           </div>
         </div>
+
+        <section>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">ĮMONĖS STATISTIKA</div>
+          </div>
+
+          <div className="ed-kpis">
+            <div className="ed-kpi">
+              <span>Iš viso sukurta darbų</span>
+              <b>{employerStats.totalJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Aktyvūs darbai</span>
+              <b>{employerStats.activeJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Ieško darbuotojų</span>
+              <b>{employerStats.openJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Užpildyti</span>
+              <b>{employerStats.filledJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Užbaigti</span>
+              <b>{employerStats.completedJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Atšaukti</span>
+              <b>{employerStats.cancelledJobs}</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Darbdavio patikimumas</span>
+              <b>{Math.round(employerStats.reliabilityRate)}%</b>
+            </div>
+            <div className="ed-kpi">
+              <span>Vėlyvi atšaukimai</span>
+              <b>{employerStats.lateCancelCount}</b>
+              <small>Atšaukti likus mažiau nei 24 val.</small>
+            </div>
+          </div>
+        </section>
 
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
