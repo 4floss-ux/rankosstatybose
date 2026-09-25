@@ -3154,11 +3154,22 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
-        .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
+        .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
         .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px}
         .ed-kpi span{display:block;font-size:12px;color:#6c7a88;margin-bottom:7px}
         .ed-kpi b{font-size:24px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
+        .ed-reliability-card{display:flex;align-items:center;justify-content:space-between;gap:14px}
+        .ed-reliability-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+        .ed-reliability-title{display:flex;align-items:center;gap:7px;color:#6c7a88;font-family:Inter,sans-serif;font-size:12px;line-height:1.25;margin-bottom:7px}
+        .ed-info-btn{width:21px;height:21px;border-radius:50%;border:1px solid #cbd5dc;background:#fff;color:#425466;font-family:Inter,sans-serif;font-size:12px;font-weight:800;line-height:1;cursor:pointer;display:inline-grid;place-items:center;padding:0;box-shadow:0 1px 2px rgba(16,36,56,.04);transition:.15s ease}
+        .ed-info-btn:hover{background:#f3f6f8;border-color:#aebbc5}
+        .ed-info-btn span{display:block;transform:translateY(-.25px)}
+        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:24px!important;line-height:1.05}
+        .ed-reliability-score-text{font-family:Inter,sans-serif;font-size:12px!important;color:#6c7a88!important;margin-top:6px!important}
+        .ed-reliability-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+        .ed-reliability-ring-inner{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(16,36,56,.04)}
+        .ed-reliability-ring-inner strong{font-family:Manrope,Inter,sans-serif;font-size:14px;color:#102438}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
@@ -3271,18 +3282,19 @@ function EmployerDashboard({ user, onLogout }) {
             <div className="ed-kpi ed-reliability-card">
               <div className="ed-reliability-copy">
                 <div className="ed-reliability-title">
-                  Patikimumas
+                  <span>Patikimumas</span>
                   <button
                     type="button"
                     className="ed-info-btn"
-                    aria-label="Kaip veikia patikimumas"
-                    title="Kaip veikia patikimumas"
+                    aria-label="Kaip veikia darbdavio patikimumas"
+                    title="Kaip veikia darbdavio patikimumas"
                     onClick={() => setShowReliabilityInfo(true)}
                   >
-                    i
+                    <span aria-hidden="true">i</span>
                   </button>
                 </div>
-                <b>
+
+                <b className="ed-reliability-label">
                   {employerStats.reliabilityRate >= 90
                     ? "Puikus"
                     : employerStats.reliabilityRate >= 75
@@ -3291,19 +3303,27 @@ function EmployerDashboard({ user, onLogout }) {
                     ? "Vidutinis"
                     : "Žemas"}
                 </b>
-                <small>
+
+                <small className="ed-reliability-score-text">
                   {Math.round(employerStats.reliabilityRate)} / 100
                 </small>
               </div>
 
               <div
                 className="ed-reliability-ring"
-                style={{ "--score": Math.round(employerStats.reliabilityRate) }}
+                style={{
+                  background: `conic-gradient(#1c9b67 ${Math.max(
+                    0,
+                    Math.min(100, Math.round(employerStats.reliabilityRate))
+                  )}%, #e6ebef 0)`,
+                }}
                 aria-label={`Patikimumas ${Math.round(
                   employerStats.reliabilityRate
                 )} iš 100`}
               >
-                <strong>{Math.round(employerStats.reliabilityRate)}</strong>
+                <div className="ed-reliability-ring-inner">
+                  <strong>{Math.round(employerStats.reliabilityRate)}</strong>
+                </div>
               </div>
             </div>
           </div>
@@ -3756,97 +3776,264 @@ function EmployerDashboard({ user, onLogout }) {
 
       {showReliabilityInfo && (
         <div
-          className="rs-modal-overlay"
+          className="reliability-modal-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setShowReliabilityInfo(false);
           }}
         >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
+          <style>{`
+            .reliability-modal-overlay{
+              position:fixed;
+              inset:0;
+              z-index:3000;
+              display:grid;
+              place-items:center;
+              padding:24px;
+              background:rgba(16,36,56,.62);
+              backdrop-filter:blur(2px);
+              font-family:Inter,sans-serif;
+            }
+            .reliability-modal{
+              width:min(620px,100%);
+              max-height:calc(100vh - 48px);
+              overflow:auto;
+              background:#fff;
+              border:1px solid rgba(16,36,56,.08);
+              border-radius:20px;
+              box-shadow:0 28px 90px rgba(16,36,56,.28);
+              padding:26px;
+              color:#102438;
+            }
+            .reliability-modal-head{
+              display:flex;
+              justify-content:space-between;
+              align-items:flex-start;
+              gap:18px;
+              margin-bottom:20px;
+            }
+            .reliability-modal-eyebrow{
+              color:#f08a28;
+              font-size:12px;
+              font-weight:800;
+              letter-spacing:.08em;
+              margin-bottom:7px;
+            }
+            .reliability-modal h2{
+              margin:0;
+              font-family:Manrope,Inter,sans-serif;
+              font-size:28px;
+              line-height:1.15;
+              letter-spacing:-.025em;
+              color:#102438;
+            }
+            .reliability-modal-close{
+              width:38px;
+              height:38px;
+              flex:0 0 auto;
+              border:0;
+              border-radius:10px;
+              background:#f1f4f6;
+              color:#102438;
+              font-family:Inter,sans-serif;
+              font-size:22px;
+              line-height:1;
+              cursor:pointer;
+            }
+            .reliability-score-box{
+              display:flex;
+              align-items:center;
+              gap:16px;
+              padding:15px;
+              margin-bottom:20px;
+              border:1px solid #e3e9ed;
+              border-radius:14px;
+              background:#f7f9fa;
+            }
+            .reliability-score-ring{
+              width:64px;
+              height:64px;
+              flex:0 0 auto;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+            }
+            .reliability-score-ring-inner{
+              width:49px;
+              height:49px;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+              background:#fff;
+              box-shadow:inset 0 0 0 1px rgba(16,36,56,.05);
+              font-family:Manrope,Inter,sans-serif;
+              font-size:15px;
+              font-weight:800;
+            }
+            .reliability-score-copy strong{
+              display:block;
+              font-family:Manrope,Inter,sans-serif;
+              font-size:18px;
+              margin-bottom:4px;
+            }
+            .reliability-score-copy span{
+              color:#6c7a88;
+              font-size:13px;
+              line-height:1.45;
+            }
+            .reliability-rules{
+              display:grid;
+              gap:10px;
+            }
+            .reliability-rule{
+              display:grid;
+              grid-template-columns:28px 1fr;
+              gap:10px;
+              align-items:flex-start;
+              padding:12px 0;
+              border-bottom:1px solid #edf1f4;
+            }
+            .reliability-rule:last-child{border-bottom:0}
+            .reliability-rule-icon{
+              width:28px;
+              height:28px;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+              background:#f1f4f6;
+              font-weight:800;
+              font-size:12px;
+              color:#425466;
+            }
+            .reliability-rule p{
+              margin:0;
+              color:#425466;
+              font-size:14px;
+              line-height:1.55;
+            }
+            .reliability-note{
+              margin-top:16px;
+              padding:13px 14px;
+              border-radius:12px;
+              background:#fff3e7;
+              color:#8a531d;
+              font-size:13px;
+              line-height:1.5;
+            }
+            .reliability-modal-actions{
+              display:flex;
+              justify-content:flex-end;
+              margin-top:20px;
+            }
+            .reliability-modal-actions button{
+              border:0;
+              border-radius:10px;
+              padding:11px 17px;
+              background:#f08a28;
+              color:#fff;
+              font-family:Manrope,Inter,sans-serif;
+              font-weight:800;
+              cursor:pointer;
+            }
+            @media(max-width:600px){
+              .reliability-modal-overlay{padding:12px}
+              .reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}
+              .reliability-modal h2{font-size:23px}
+              .reliability-score-box{align-items:flex-start}
+            }
+          `}</style>
+
+          <div
+            className="reliability-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reliability-modal-title"
+          >
+            <div className="reliability-modal-head">
               <div>
-                <div className="eyebrow">PATIKIMUMO REITINGAS</div>
-                <h2>Kaip veikia darbdavio patikimumas?</h2>
+                <div className="reliability-modal-eyebrow">
+                  PATIKIMUMO REITINGAS
+                </div>
+                <h2 id="reliability-modal-title">
+                  Kaip veikia darbdavio patikimumas?
+                </h2>
               </div>
+
               <button
-                className="rs-close"
+                className="reliability-modal-close"
                 type="button"
+                aria-label="Uždaryti"
                 onClick={() => setShowReliabilityInfo(false)}
               >
                 ×
               </button>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                background: "#f6f8fa",
-                borderRadius: 12,
-                padding: 15,
-                marginBottom: 18,
-              }}
-            >
+            <div className="reliability-score-box">
               <div
-                className="ed-reliability-ring"
-                style={{ "--score": Math.round(employerStats.reliabilityRate) }}
-              >
-                <strong>{Math.round(employerStats.reliabilityRate)}</strong>
-              </div>
-              <div>
-                <b style={{ fontSize: 18 }}>
-                  Dabartinis patikimumas:{" "}
-                  {Math.round(employerStats.reliabilityRate)} / 100
-                </b>
-                <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
-                </div>
-              </div>
-            </div>
-
-            <div style={{ lineHeight: 1.6, color: "#425466" }}>
-              <p style={{ marginTop: 0 }}>
-                Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
-              </p>
-
-              <p>
-                Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys vėliau
-                tą darbą atšaukia, patikimumas sumažėja <b>10 taškų</b>.
-              </p>
-
-              <p>
-                Atšaukus pasiūlymą, kuriame dar <b>nė vienas darbuotojas nebuvo
-                patvirtinęs dalyvavimo</b>, patikimumas nemažėja.
-              </p>
-
-              <p>
-                Atšaukimo priežastis yra išsaugoma ir ją mato darbą patvirtinę
-                darbuotojai. Po atšaukimo to darbo pokalbis uždaromas.
-              </p>
-
-              <p>
-                Žemesnis patikimumas darbuotojui signalizuoja, kad darbdavys
-                anksčiau atšaukė jau patvirtintus darbus. Tai gali turėti įtakos
-                darbuotojo sprendimui priimti naują kvietimą.
-              </p>
-
-              <div
+                className="reliability-score-ring"
                 style={{
-                  marginTop: 16,
-                  padding: 13,
-                  borderRadius: 10,
-                  background: "#fff3e7",
-                  color: "#8a531d",
+                  background: `conic-gradient(#1c9b67 ${Math.max(
+                    0,
+                    Math.min(100, Math.round(employerStats.reliabilityRate))
+                  )}%, #e6ebef 0)`,
                 }}
               >
-                <b>Svarbu:</b> reitingas mažėja tik tada, kai nuo atšaukimo realiai
-                nukenčia jau darbą patvirtinęs darbuotojas.
+                <div className="reliability-score-ring-inner">
+                  {Math.round(employerStats.reliabilityRate)}
+                </div>
+              </div>
+
+              <div className="reliability-score-copy">
+                <strong>
+                  Dabartinis patikimumas:{" "}
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </strong>
+                <span>
+                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
+                </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+            <div className="reliability-rules">
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">100</div>
+                <p>
+                  Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−10</div>
+                <p>
+                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys jį
+                  atšaukia, patikimumas sumažėja <b>10 taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">0</div>
+                <p>
+                  Jei darbo dar <b>nė vienas darbuotojas nebuvo patvirtinęs</b>,
+                  jo pašalinimas patikimumo nemažina.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">i</div>
+                <p>
+                  Atšaukimo priežastis išsaugoma ir ją mato darbą patvirtinę
+                  darbuotojai. Atšaukus darbą, jo pokalbis uždaromas.
+                </p>
+              </div>
+            </div>
+
+            <div className="reliability-note">
+              <b>Svarbu:</b> reitingas mažėja tik tada, kai atšaukiamas jau
+              darbuotojo patvirtintas darbas.
+            </div>
+
+            <div className="reliability-modal-actions">
               <button
-                className="ed-primary"
                 type="button"
                 onClick={() => setShowReliabilityInfo(false)}
               >
