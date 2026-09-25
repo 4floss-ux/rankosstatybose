@@ -1150,6 +1150,795 @@ function WorkerDashboard({ user, onLogout }) {
   );
 }
 
+
+function employerTomorrowISO() {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + 1);
+  return localDateISO(date);
+}
+
+function shortWorkerName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "Darbuotojas";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function workerInitials(name) {
+  return String(name || "D")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function EmployerDashboard({ user, onLogout }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [company, setCompany] = useState(null);
+  const [skills, setSkills] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [invitedIds, setInvitedIds] = useState([]);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    title: "Statybų pagalbiniai",
+    city: "Vilnius",
+    address: "",
+    workDate: employerTomorrowISO(),
+    startTime: "08:00",
+    endTime: "17:00",
+    workersNeeded: 1,
+    skillId: "",
+    requiresTransport: false,
+    payAmount: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    loadEmployerDashboard();
+  }, [user.id]);
+
+  async function loadEmployerDashboard() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const memberResult = await supabase
+        .from("company_members")
+        .select("company_id, member_role")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (memberResult.error) throw memberResult.error;
+      if (!memberResult.data?.company_id) {
+        throw new Error("Prie paskyros nerasta įmonė.");
+      }
+
+      const companyId = memberResult.data.company_id;
+
+      const [companyResult, skillsResult, jobsResult] = await Promise.all([
+        supabase
+          .from("companies")
+          .select("id, name, company_code, city, is_verified")
+          .eq("id", companyId)
+          .single(),
+        supabase
+          .from("skills")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+        supabase
+          .from("jobs")
+          .select(
+            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
+          )
+          .eq("company_id", companyId)
+          .order("created_at", { ascending: false })
+          .limit(12),
+      ]);
+
+      const failed = [companyResult, skillsResult, jobsResult].find(
+        (result) => result.error
+      );
+      if (failed?.error) throw failed.error;
+
+      setCompany(companyResult.data);
+      setJobs(jobsResult.data || []);
+      setSkills(skillsResult.data || []);
+
+      const defaultSkill =
+        (skillsResult.data || []).find(
+          (skill) => skill.name === "Pagalbiniai statybos darbai"
+        ) || skillsResult.data?.[0];
+
+      setForm((current) => ({
+        ...current,
+        city: companyResult.data?.city || current.city,
+        skillId: current.skillId || String(defaultSkill?.id || ""),
+      }));
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbdavio paskyros.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateField(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function reloadJobs(companyId = company?.id) {
+    if (!companyId) return;
+
+    const result = await supabase
+      .from("jobs")
+      .select(
+        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
+      )
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(12);
+
+    if (!result.error) setJobs(result.data || []);
+  }
+
+  async function findMatches(job, skillId) {
+    setSearching(true);
+    setError("");
+    setMatches([]);
+
+    try {
+      const availabilityResult = await supabase
+        .from("availability")
+        .select("worker_id, available_from, available_to")
+        .eq("available_date", job.work_date)
+        .eq("status", "available");
+
+      if (availabilityResult.error) throw availabilityResult.error;
+
+      const suitableAvailability = (availabilityResult.data || []).filter(
+        (row) => {
+          const from = row.available_from?.slice(0, 5);
+          const to = row.available_to?.slice(0, 5);
+          const startsInWindow = !from || from <= job.start_time.slice(0, 5);
+          const endsInWindow =
+            !job.end_time || !to || to >= job.end_time.slice(0, 5);
+          return startsInWindow && endsInWindow;
+        }
+      );
+
+      let workerIds = suitableAvailability.map((row) => row.worker_id);
+
+      if (!workerIds.length) {
+        setMatches([]);
+        return;
+      }
+
+      if (skillId) {
+        const skillResult = await supabase
+          .from("worker_skills")
+          .select("worker_id")
+          .eq("skill_id", Number(skillId))
+          .in("worker_id", workerIds);
+
+        if (skillResult.error) throw skillResult.error;
+        const skilledIds = new Set(
+          (skillResult.data || []).map((row) => row.worker_id)
+        );
+        workerIds = workerIds.filter((id) => skilledIds.has(id));
+      }
+
+      if (!workerIds.length) {
+        setMatches([]);
+        return;
+      }
+
+      const [profilesResult, workersResult, workerSkillsResult] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, display_name, city")
+            .eq("role", "worker")
+            .eq("is_active", true)
+            .in("id", workerIds),
+          supabase
+            .from("worker_profiles")
+            .select(
+              "user_id, has_transport, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average"
+            )
+            .in("user_id", workerIds),
+          supabase
+            .from("worker_skills")
+            .select("worker_id, skill_id")
+            .in("worker_id", workerIds),
+        ]);
+
+      const failed = [
+        profilesResult,
+        workersResult,
+        workerSkillsResult,
+      ].find((result) => result.error);
+
+      if (failed?.error) throw failed.error;
+
+      const profileMap = new Map(
+        (profilesResult.data || []).map((row) => [row.id, row])
+      );
+      const workerMap = new Map(
+        (workersResult.data || []).map((row) => [row.user_id, row])
+      );
+      const availabilityMap = new Map(
+        suitableAvailability.map((row) => [row.worker_id, row])
+      );
+
+      const skillIdsByWorker = new Map();
+      for (const row of workerSkillsResult.data || []) {
+        const list = skillIdsByWorker.get(row.worker_id) || [];
+        list.push(Number(row.skill_id));
+        skillIdsByWorker.set(row.worker_id, list);
+      }
+
+      const skillNameMap = new Map(
+        skills.map((skill) => [Number(skill.id), skill.name])
+      );
+
+      const combined = workerIds
+        .map((workerId) => {
+          const profile = profileMap.get(workerId);
+          const worker = workerMap.get(workerId);
+          const slot = availabilityMap.get(workerId);
+          if (!profile || !worker || !slot) return null;
+
+          if (
+            String(profile.city || "").trim().toLowerCase() !==
+            String(job.city || "").trim().toLowerCase()
+          ) {
+            return null;
+          }
+
+          if (job.requires_transport && !worker.has_transport) {
+            return null;
+          }
+
+          const skillNames = (skillIdsByWorker.get(workerId) || [])
+            .map((id) => skillNameMap.get(id))
+            .filter(Boolean)
+            .slice(0, 4);
+
+          return {
+            id: workerId,
+            name: shortWorkerName(profile.display_name),
+            initials: workerInitials(profile.display_name),
+            city: profile.city,
+            hasTransport: Boolean(worker.has_transport),
+            hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+            yearsExperience: Number(worker.years_experience || 0),
+            attendanceRate: Number(worker.attendance_rate || 0),
+            completedJobs: Number(worker.completed_jobs || 0),
+            ratingAverage:
+              worker.rating_average === null
+                ? null
+                : Number(worker.rating_average),
+            availableFrom: slot.available_from?.slice(0, 5) || "",
+            availableTo: slot.available_to?.slice(0, 5) || "",
+            skillNames,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.attendanceRate - a.attendanceRate);
+
+      setMatches(combined);
+
+      const invitationsResult = await supabase
+        .from("job_invitations")
+        .select("worker_id")
+        .eq("job_id", job.id);
+
+      if (!invitationsResult.error) {
+        setInvitedIds(
+          (invitationsResult.data || []).map((row) => row.worker_id)
+        );
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko rasti darbuotojų.");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function createJobAndFind() {
+    setNotice("");
+    setError("");
+
+    if (!company?.id) {
+      setError("Nerasta įmonė.");
+      return;
+    }
+
+    if (!form.title.trim()) {
+      setError("Įrašykite poreikio pavadinimą.");
+      return;
+    }
+
+    if (!form.workDate || !form.startTime) {
+      setError("Pasirinkite datą ir pradžios laiką.");
+      return;
+    }
+
+    if (!form.skillId) {
+      setError("Pasirinkite darbo tipą.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const insertResult = await supabase
+        .from("jobs")
+        .insert({
+          company_id: company.id,
+          created_by: user.id,
+          city: form.city.trim(),
+          address_text: form.address.trim() || null,
+          work_date: form.workDate,
+          start_time: form.startTime,
+          end_time: form.endTime || null,
+          workers_needed: Number(form.workersNeeded) || 1,
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          pay_amount: form.payAmount ? Number(form.payAmount) : null,
+          pay_unit: form.payAmount ? "hour" : null,
+          status: "open",
+          requires_transport: form.requiresTransport,
+        })
+        .select(
+          "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, requires_transport, created_at"
+        )
+        .single();
+
+      if (insertResult.error) throw insertResult.error;
+      const job = insertResult.data;
+
+      const skillResult = await supabase.from("job_skills").insert({
+        job_id: job.id,
+        skill_id: Number(form.skillId),
+        required: true,
+      });
+
+      if (skillResult.error) throw skillResult.error;
+
+      setCurrentJob(job);
+      setInvitedIds([]);
+      setNotice("Poreikis sukurtas. Žemiau rodomi tinkami darbuotojai.");
+      await reloadJobs(company.id);
+      await findMatches(job, form.skillId);
+    } catch (err) {
+      setError(err?.message || "Nepavyko sukurti poreikio.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function openExistingJob(job) {
+    setNotice("");
+    setError("");
+    setCurrentJob(job);
+
+    try {
+      const skillResult = await supabase
+        .from("job_skills")
+        .select("skill_id")
+        .eq("job_id", job.id)
+        .eq("required", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (skillResult.error) throw skillResult.error;
+
+      const skillId = String(skillResult.data?.skill_id || "");
+
+      setForm((current) => ({
+        ...current,
+        title: job.title || "",
+        city: job.city || "",
+        address: job.address_text || "",
+        workDate: job.work_date,
+        startTime: job.start_time?.slice(0, 5) || "08:00",
+        endTime: job.end_time?.slice(0, 5) || "",
+        workersNeeded: job.workers_needed || 1,
+        skillId,
+        requiresTransport: Boolean(job.requires_transport),
+        payAmount: job.pay_amount ?? "",
+      }));
+
+      await findMatches(job, skillId);
+      window.scrollTo({ top: 430, behavior: "smooth" });
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti poreikio.");
+    }
+  }
+
+  async function inviteWorker(workerId) {
+    if (!currentJob?.id) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.from("job_invitations").insert({
+        job_id: currentJob.id,
+        worker_id: workerId,
+        status: "pending",
+      });
+
+      if (result.error) throw result.error;
+
+      setInvitedIds((current) => [...current, workerId]);
+      setNotice("Kvietimas darbuotojui išsiųstas.");
+    } catch (err) {
+      if (String(err?.message || "").toLowerCase().includes("duplicate")) {
+        setInvitedIds((current) => [...new Set([...current, workerId])]);
+        setNotice("Šis darbuotojas jau pakviestas.");
+      } else {
+        setError(err?.message || "Nepavyko išsiųsti kvietimo.");
+      }
+    }
+  }
+
+  const selectedSkillName =
+    skills.find((skill) => String(skill.id) === String(form.skillId))?.name ||
+    "";
+
+  if (loading) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Kraunamas darbdavio darbo skydelis...</b>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ed-page">
+      <style>{`
+        .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
+        .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
+        .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
+        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
+        .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
+        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
+        .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
+        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
+        .ed-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
+        .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
+        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
+        .ed-textarea{min-height:90px;resize:vertical}
+        .ed-check{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;min-height:46px}.ed-check input{width:18px;height:18px;accent-color:#1c9b67}
+        .ed-actions{display:flex;justify-content:flex-end;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
+        .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
+        .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.5fr) minmax(220px,2fr) 120px 130px 100px;gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
+        .ed-worker-id{display:flex;align-items:center;gap:11px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
+        .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
+        .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}.ed-transport{font-size:13px;font-weight:700}.ed-transport.yes{color:#167a54}.ed-transport.no{color:#8a98a6}
+        .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
+        .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
+        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:110px 1.3fr 1fr 90px 120px;gap:14px;align-items:center;padding:13px 0;border-top:1px solid #edf1f4}.ed-job:first-child{border-top:0}
+        .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+        .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
+        .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
+        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}}
+        @media(max-width:620px){.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}}
+      `}</style>
+
+      <header className="ed-topbar">
+        <div className="ed-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {company && (
+              <div className="ed-company">
+                <div className="ed-company-icon">
+                  {workerInitials(company.name) || "Į"}
+                </div>
+                <div>
+                  <b>{company.name}</b>
+                  <span>{company.city || "Miestas nenurodytas"}</span>
+                </div>
+              </div>
+            )}
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="ed-shell">
+        <div className="ed-heading">
+          <div>
+            <div className="eyebrow">DARBDAVIO PASKYRA</div>
+            <h1>Raskite laisvus darbuotojus</h1>
+            <p>
+              Sukurkite konkretų poreikį. Sistema rodys darbuotojus, kurie tą
+              dieną ir tuo laiku pažymėjo, kad gali dirbti.
+            </p>
+          </div>
+        </div>
+
+        {notice && <div className="ed-note ok">{notice}</div>}
+        {error && <div className="ed-note err">{error}</div>}
+
+        <section className="ed-card">
+          <h2>1. Naujas poreikis</h2>
+          <p className="ed-sub">
+            Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių.
+          </p>
+
+          <div className="ed-form-grid">
+            <label className="ed-label ed-span-2">
+              Poreikio pavadinimas
+              <input
+                className="ed-input"
+                value={form.title}
+                onChange={(e) => updateField("title", e.target.value)}
+                placeholder="Pvz. Reikia 2 pagalbinių betonavimui"
+              />
+            </label>
+
+            <label className="ed-label">
+              Miestas
+              <input
+                className="ed-input"
+                value={form.city}
+                onChange={(e) => updateField("city", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label">
+              Žmonių skaičius
+              <input
+                className="ed-input"
+                type="number"
+                min="1"
+                max="100"
+                value={form.workersNeeded}
+                onChange={(e) => updateField("workersNeeded", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label ed-span-2">
+              Darbo tipas
+              <select
+                className="ed-select"
+                value={form.skillId}
+                onChange={(e) => updateField("skillId", e.target.value)}
+              >
+                <option value="">Pasirinkite</option>
+                {skills.map((skill) => (
+                  <option key={skill.id} value={skill.id}>
+                    {skill.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="ed-label ed-span-2">
+              Objekto vieta / adresas
+              <input
+                className="ed-input"
+                value={form.address}
+                onChange={(e) => updateField("address", e.target.value)}
+                placeholder="Pvz. Naujamiestis, Vilnius"
+              />
+            </label>
+
+            <label className="ed-label">
+              Data
+              <input
+                className="ed-input"
+                type="date"
+                value={form.workDate}
+                onChange={(e) => updateField("workDate", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label">
+              Nuo
+              <input
+                className="ed-input"
+                type="time"
+                value={form.startTime}
+                onChange={(e) => updateField("startTime", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label">
+              Iki
+              <input
+                className="ed-input"
+                type="time"
+                value={form.endTime}
+                onChange={(e) => updateField("endTime", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label">
+              Atlygis €/val. (nebūtina)
+              <input
+                className="ed-input"
+                type="number"
+                min="0"
+                step="0.5"
+                value={form.payAmount}
+                onChange={(e) => updateField("payAmount", e.target.value)}
+                placeholder="Pvz. 10"
+              />
+            </label>
+
+            <label className="ed-check ed-span-2">
+              <input
+                type="checkbox"
+                checked={form.requiresTransport}
+                onChange={(e) =>
+                  updateField("requiresTransport", e.target.checked)
+                }
+              />
+              Darbuotojas turi turėti savo transportą
+            </label>
+
+            <label className="ed-label ed-span-4">
+              Papildoma informacija
+              <textarea
+                className="ed-textarea"
+                value={form.description}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="Pvz. Darbas lauke, darbo rūbai būtini, įrankiai objekte."
+              />
+            </label>
+          </div>
+
+          <div className="ed-actions">
+            <button
+              className="ed-primary"
+              disabled={saving}
+              onClick={createJobAndFind}
+            >
+              {saving ? "Kuriama..." : "Sukurti poreikį ir rasti darbuotojus"}
+            </button>
+          </div>
+        </section>
+
+        {currentJob && (
+          <section className="ed-card">
+            <div className="ed-results-head">
+              <div>
+                <h2>2. Tinkami darbuotojai</h2>
+                <p>
+                  {currentJob.city} · {currentJob.work_date} ·{" "}
+                  {currentJob.start_time?.slice(0, 5)}
+                  {currentJob.end_time
+                    ? `–${currentJob.end_time.slice(0, 5)}`
+                    : ""}
+                  {selectedSkillName ? ` · ${selectedSkillName}` : ""}
+                </p>
+              </div>
+              <b>{matches.length} rasti</b>
+            </div>
+
+            {searching ? (
+              <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
+            ) : matches.length ? (
+              <div className="ed-results">
+                {matches.map((worker) => {
+                  const invited = invitedIds.includes(worker.id);
+                  return (
+                    <div className="ed-worker" key={worker.id}>
+                      <div className="ed-worker-id">
+                        <div className="ed-avatar">{worker.initials}</div>
+                        <div>
+                          <b>{worker.name}</b>
+                          <span>
+                            {worker.city} · {worker.yearsExperience} m. patirties
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="ed-tags">
+                        {worker.skillNames.map((skill) => (
+                          <span className="ed-tag" key={skill}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="ed-metric">
+                        <b>{Math.round(worker.attendanceRate)}%</b>
+                        <span>atvykimas</span>
+                      </div>
+
+                      <div
+                        className={
+                          worker.hasTransport
+                            ? "ed-transport yes"
+                            : "ed-transport no"
+                        }
+                      >
+                        {worker.hasTransport
+                          ? "Turi transportą"
+                          : "Be transporto"}
+                      </div>
+
+                      <button
+                        className={invited ? "ed-invite sent" : "ed-invite"}
+                        disabled={invited}
+                        onClick={() => inviteWorker(worker.id)}
+                      >
+                        {invited ? "Pakviestas" : "Kviesti"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ed-empty">
+                Šiuo metu pagal šiuos kriterijus laisvų darbuotojų nerasta.
+                Pabandykite kitą datą, laiką arba darbo tipą.
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="ed-card">
+          <h2>Mano poreikiai</h2>
+          <p className="ed-sub">
+            Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas.
+          </p>
+
+          {jobs.length ? (
+            <div className="ed-jobs">
+              {jobs.map((job) => (
+                <div className="ed-job" key={job.id}>
+                  <b>{job.work_date}</b>
+                  <div>
+                    <b>{job.title}</b>
+                    <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                      {job.city} · {job.start_time?.slice(0, 5)}
+                    </div>
+                  </div>
+                  <span>{job.workers_needed} žm.</span>
+                  <span className="ed-status">{job.status}</span>
+                  <button onClick={() => openExistingJob(job)}>
+                    Atidaryti
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="ed-empty">Dar neturite sukurtų poreikių.</div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [accountRole, setAccountRole] = useState(null);
@@ -1226,6 +2015,10 @@ function App() {
 
   if (user && accountRole === "worker") {
     return <WorkerDashboard user={user} onLogout={logout} />;
+  }
+
+  if (user && accountRole === "employer") {
+    return <EmployerDashboard user={user} onLogout={logout} />;
   }
 
   return (
