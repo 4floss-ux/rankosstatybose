@@ -1194,7 +1194,7 @@ function WorkerDashboard({ user, onLogout }) {
     if (companyIds.length) {
       const companiesResult = await supabase
         .from("companies")
-        .select("id, name, reliability_rate, late_cancel_count")
+        .select("id, name, reliability_rate, cancelled_confirmed_count")
         .in("id", companyIds);
 
       if (companiesResult.error) throw companiesResult.error;
@@ -1213,7 +1213,7 @@ function WorkerDashboard({ user, onLogout }) {
           job,
           companyName: company?.name || "Darbdavys",
           companyReliability: Number(company?.reliability_rate ?? 100),
-          companyLateCancels: Number(company?.late_cancel_count ?? 0),
+          companyCancelledConfirmed: Number(company?.cancelled_confirmed_count ?? 0),
         };
       })
     );
@@ -1617,8 +1617,8 @@ function WorkerDashboard({ user, onLogout }) {
                           <div>
                             Darbdavio patikimumas:{" "}
                             <b>{Math.round(invitation.companyReliability)}%</b>
-                            {invitation.companyLateCancels > 0
-                              ? ` · vėlyvų atšaukimų: ${invitation.companyLateCancels}`
+                            {invitation.companyCancelledConfirmed > 0
+                              ? ` · atšauktų patvirtintų darbų: ${invitation.companyCancelledConfirmed}`
                               : ""}
                           </div>
                           <div>
@@ -1936,8 +1936,8 @@ function WorkerDashboard({ user, onLogout }) {
                 <br />
                 Darbdavio patikimumas:{" "}
                 <b>{Math.round(confirmInvitation.companyReliability)}%</b>
-                {confirmInvitation.companyLateCancels > 0
-                  ? ` · vėlyvų atšaukimų: ${confirmInvitation.companyLateCancels}`
+                {confirmInvitation.companyCancelledConfirmed > 0
+                  ? ` · atšauktų patvirtintų darbų: ${confirmInvitation.companyCancelledConfirmed}`
                   : ""}
                 <br />
                 {confirmInvitation.job?.work_date} ·{" "}
@@ -2061,14 +2061,15 @@ function EmployerDashboard({ user, onLogout }) {
   const [jobs, setJobs] = useState([]);
   const [employerStats, setEmployerStats] = useState({
     totalJobs: 0,
-    activeJobs: 0,
-    openJobs: 0,
     filledJobs: 0,
+    missingWorkers: 0,
     completedJobs: 0,
     cancelledJobs: 0,
     reliabilityRate: 100,
-    lateCancelCount: 0,
+    cancelledConfirmedCount: 0,
   });
+  const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
+  const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
@@ -2225,7 +2226,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("companies")
           .select(
-            "id, name, company_code, city, is_verified, reliability_rate, late_cancel_count"
+            "id, name, company_code, city, is_verified, reliability_rate, cancelled_confirmed_count"
           )
           .eq("id", companyId)
           .single(),
@@ -2281,46 +2282,114 @@ function EmployerDashboard({ user, onLogout }) {
   async function loadEmployerStats(companyId = company?.id) {
     if (!companyId) return;
 
-    const [jobsResult, companyResult] = await Promise.all([
+    const [jobsResult, companyResult, penaltiesResult] = await Promise.all([
       supabase
         .from("jobs")
-        .select("status")
+        .select("id, status, workers_needed, work_date")
         .eq("company_id", companyId),
       supabase
         .from("companies")
-        .select("reliability_rate, late_cancel_count")
+        .select("reliability_rate, cancelled_confirmed_count")
         .eq("id", companyId)
         .single(),
+      supabase
+        .from("employer_penalties")
+        .select("job_id, reliability_change, affected_workers, created_at")
+        .eq("company_id", companyId)
+        .eq("penalty_type", "job_cancelled")
+        .order("created_at", { ascending: false }),
     ]);
 
     if (jobsResult.error) throw jobsResult.error;
     if (companyResult.error) throw companyResult.error;
+    if (penaltiesResult.error) throw penaltiesResult.error;
 
-    const rows = jobsResult.data || [];
-    const countStatus = (status) =>
-      rows.filter((row) => row.status === status).length;
+    const jobRows = jobsResult.data || [];
+    const jobIds = jobRows.map((job) => job.id);
 
-    const openJobs = countStatus("open");
-    const filledJobs = countStatus("filled");
-    const inProgressJobs = countStatus("in_progress");
+    let confirmedBookings = [];
+    if (jobIds.length) {
+      const bookingsResult = await supabase
+        .from("bookings")
+        .select("job_id, status")
+        .in("job_id", jobIds)
+        .eq("status", "confirmed");
+
+      if (bookingsResult.error) throw bookingsResult.error;
+      confirmedBookings = bookingsResult.data || [];
+    }
+
+    const confirmedByJob = {};
+    for (const booking of confirmedBookings) {
+      confirmedByJob[booking.job_id] =
+        (confirmedByJob[booking.job_id] || 0) + 1;
+    }
+
+    const today = localDateISO(new Date());
+
+    const filledJobs = jobRows.filter((job) => {
+      const confirmed = confirmedByJob[job.id] || 0;
+      return (
+        job.status !== "cancelled" &&
+        confirmed >= Number(job.workers_needed || 0) &&
+        job.work_date >= today
+      );
+    }).length;
+
+    const missingWorkers = jobRows
+      .filter(
+        (job) =>
+          job.status !== "cancelled" &&
+          job.status !== "completed" &&
+          job.work_date >= today
+      )
+      .reduce((sum, job) => {
+        const confirmed = confirmedByJob[job.id] || 0;
+        return sum + Math.max(0, Number(job.workers_needed || 0) - confirmed);
+      }, 0);
+
+    const completedJobs = jobRows.filter((job) => {
+      if (job.status === "completed") return true;
+      const confirmed = confirmedByJob[job.id] || 0;
+      return (
+        job.status !== "cancelled" &&
+        job.work_date < today &&
+        confirmed >= Number(job.workers_needed || 0)
+      );
+    }).length;
 
     setEmployerStats({
-      totalJobs: rows.length,
-      activeJobs: openJobs + filledJobs + inProgressJobs,
-      openJobs,
+      totalJobs: jobRows.length,
       filledJobs,
-      completedJobs: countStatus("completed"),
-      cancelledJobs: countStatus("cancelled"),
+      missingWorkers,
+      completedJobs,
+      cancelledJobs: jobRows.filter((job) => job.status === "cancelled").length,
       reliabilityRate: Number(companyResult.data?.reliability_rate ?? 100),
-      lateCancelCount: Number(companyResult.data?.late_cancel_count || 0),
+      cancelledConfirmedCount: Number(
+        companyResult.data?.cancelled_confirmed_count || 0
+      ),
     });
+
+    setEmployerPenaltyByJob(
+      Object.fromEntries(
+        (penaltiesResult.data || []).map((penalty) => [
+          penalty.job_id,
+          {
+            change: Number(penalty.reliability_change || 0),
+            affectedWorkers: Number(penalty.affected_workers || 0),
+            createdAt: penalty.created_at,
+          },
+        ])
+      )
+    );
 
     setCompany((current) =>
       current
         ? {
             ...current,
             reliability_rate: companyResult.data?.reliability_rate ?? 100,
-            late_cancel_count: companyResult.data?.late_cancel_count || 0,
+            cancelled_confirmed_count:
+              companyResult.data?.cancelled_confirmed_count || 0,
           }
         : current
     );
@@ -3175,37 +3244,67 @@ function EmployerDashboard({ user, onLogout }) {
 
           <div className="ed-kpis">
             <div className="ed-kpi">
-              <span>Iš viso sukurta darbų</span>
+              <span>Sukurta darbo pasiūlymų</span>
               <b>{employerStats.totalJobs}</b>
             </div>
+
             <div className="ed-kpi">
-              <span>Aktyvūs darbai</span>
-              <b>{employerStats.activeJobs}</b>
-            </div>
-            <div className="ed-kpi">
-              <span>Ieško darbuotojų</span>
-              <b>{employerStats.openJobs}</b>
-            </div>
-            <div className="ed-kpi">
-              <span>Užpildyti</span>
+              <span>Užpildyti pasiūlymai</span>
               <b>{employerStats.filledJobs}</b>
             </div>
+
             <div className="ed-kpi">
-              <span>Užbaigti</span>
+              <span>Trūksta darbuotojų</span>
+              <b>{employerStats.missingWorkers}</b>
+            </div>
+
+            <div className="ed-kpi">
+              <span>Įvykdyti darbai</span>
               <b>{employerStats.completedJobs}</b>
             </div>
+
             <div className="ed-kpi">
-              <span>Atšaukti</span>
+              <span>Atšaukti darbai</span>
               <b>{employerStats.cancelledJobs}</b>
             </div>
-            <div className="ed-kpi">
-              <span>Darbdavio patikimumas</span>
-              <b>{Math.round(employerStats.reliabilityRate)}%</b>
-            </div>
-            <div className="ed-kpi">
-              <span>Vėlyvi atšaukimai</span>
-              <b>{employerStats.lateCancelCount}</b>
-              <small>Atšaukti likus mažiau nei 24 val.</small>
+
+            <div className="ed-kpi ed-reliability-card">
+              <div className="ed-reliability-copy">
+                <div className="ed-reliability-title">
+                  Patikimumas
+                  <button
+                    type="button"
+                    className="ed-info-btn"
+                    aria-label="Kaip veikia patikimumas"
+                    title="Kaip veikia patikimumas"
+                    onClick={() => setShowReliabilityInfo(true)}
+                  >
+                    i
+                  </button>
+                </div>
+                <b>
+                  {employerStats.reliabilityRate >= 90
+                    ? "Puikus"
+                    : employerStats.reliabilityRate >= 75
+                    ? "Geras"
+                    : employerStats.reliabilityRate >= 60
+                    ? "Vidutinis"
+                    : "Žemas"}
+                </b>
+                <small>
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </small>
+              </div>
+
+              <div
+                className="ed-reliability-ring"
+                style={{ "--score": Math.round(employerStats.reliabilityRate) }}
+                aria-label={`Patikimumas ${Math.round(
+                  employerStats.reliabilityRate
+                )} iš 100`}
+              >
+                <strong>{Math.round(employerStats.reliabilityRate)}</strong>
+              </div>
             </div>
           </div>
         </section>
@@ -3604,6 +3703,20 @@ function EmployerDashboard({ user, onLogout }) {
                           </span>
                         </div>
                       )}
+                      {job.status === "cancelled" &&
+                        employerPenaltyByJob[job.id] && (
+                          <div
+                            style={{
+                              marginTop: 7,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#b64d2a",
+                            }}
+                          >
+                            Šis atšaukimas sumažino jūsų patikimumą{" "}
+                            {employerPenaltyByJob[job.id].change} taškų.
+                          </div>
+                        )}
                     </div>
                     <span className="ed-progress">
                       {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
@@ -3640,6 +3753,109 @@ function EmployerDashboard({ user, onLogout }) {
           )}
         </section>
       </main>
+
+      {showReliabilityInfo && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowReliabilityInfo(false);
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">PATIKIMUMO REITINGAS</div>
+                <h2>Kaip veikia darbdavio patikimumas?</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                onClick={() => setShowReliabilityInfo(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                background: "#f6f8fa",
+                borderRadius: 12,
+                padding: 15,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                className="ed-reliability-ring"
+                style={{ "--score": Math.round(employerStats.reliabilityRate) }}
+              >
+                <strong>{Math.round(employerStats.reliabilityRate)}</strong>
+              </div>
+              <div>
+                <b style={{ fontSize: 18 }}>
+                  Dabartinis patikimumas:{" "}
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </b>
+                <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ lineHeight: 1.6, color: "#425466" }}>
+              <p style={{ marginTop: 0 }}>
+                Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
+              </p>
+
+              <p>
+                Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys vėliau
+                tą darbą atšaukia, patikimumas sumažėja <b>10 taškų</b>.
+              </p>
+
+              <p>
+                Atšaukus pasiūlymą, kuriame dar <b>nė vienas darbuotojas nebuvo
+                patvirtinęs dalyvavimo</b>, patikimumas nemažėja.
+              </p>
+
+              <p>
+                Atšaukimo priežastis yra išsaugoma ir ją mato darbą patvirtinę
+                darbuotojai. Po atšaukimo to darbo pokalbis uždaromas.
+              </p>
+
+              <p>
+                Žemesnis patikimumas darbuotojui signalizuoja, kad darbdavys
+                anksčiau atšaukė jau patvirtintus darbus. Tai gali turėti įtakos
+                darbuotojo sprendimui priimti naują kvietimą.
+              </p>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 13,
+                  borderRadius: 10,
+                  background: "#fff3e7",
+                  color: "#8a531d",
+                }}
+              >
+                <b>Svarbu:</b> reitingas mažėja tik tada, kai nuo atšaukimo realiai
+                nukenčia jau darbą patvirtinęs darbuotojas.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+              <button
+                className="ed-primary"
+                type="button"
+                onClick={() => setShowReliabilityInfo(false)}
+              >
+                Supratau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancelJobTarget && (
         <div
@@ -3690,8 +3906,8 @@ function EmployerDashboard({ user, onLogout }) {
                 uždarytas, o darbuotojai matys jūsų nurodytą atšaukimo priežastį.
               </div>
               <div style={{ marginTop: 5 }}>
-                Jei atšaukiate likus mažiau nei 24 valandoms, sumažės darbdavio
-                patikimumo reitingas.
+                Kadangi darbą jau patvirtino darbuotojas, atšaukimas sumažins
+                jūsų darbdavio patikimumo reitingą 10 punktų.
               </div>
             </div>
 
