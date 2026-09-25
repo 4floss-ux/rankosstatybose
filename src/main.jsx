@@ -3161,26 +3161,36 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-kpi b{font-size:24px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
         .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
         .ed-reliability-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
-        .ed-reliability-title{display:flex;align-items:center;gap:7px;color:#6c7a88;font-family:Inter,sans-serif;font-size:12px;line-height:1.25;margin-bottom:7px}
-        .ed-info-btn{
-          width:22px;
-          height:22px;
-          min-width:22px;
-          min-height:22px;
-          border-radius:50%;
-          border:1px solid #cbd5dc;
-          background:#fff;
-          color:#425466;
+        .ed-reliability-title{
+          display:flex;
+          align-items:center;
+          gap:4px;
+          color:#6c7a88;
           font-family:Inter,sans-serif;
           font-size:12px;
+          line-height:1.25;
+          margin-bottom:7px;
+        }
+        .ed-info-btn{
+          width:15px;
+          height:15px;
+          min-width:15px;
+          min-height:15px;
+          border-radius:50%;
+          border:1px solid #bfc9d0;
+          background:#fff;
+          color:#6c7a88;
+          font-family:Inter,sans-serif;
+          font-size:9px;
           font-weight:800;
-          line-height:22px;
+          line-height:13px;
           text-align:center;
           cursor:pointer;
           padding:0;
           margin:0;
           box-sizing:border-box;
           vertical-align:middle;
+          flex:0 0 auto;
         }
         .ed-info-btn:hover{background:#f3f6f8;border-color:#aebbc5}
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:24px!important;line-height:1.05}
@@ -3275,7 +3285,7 @@ function EmployerDashboard({ user, onLogout }) {
             </div>
 
             <div className="ed-kpi">
-              <span>Užpildyti pasiūlymai</span>
+              <span>Pilnai žmonėmis užpildyti darbai</span>
               <b>{employerStats.filledJobs}</b>
             </div>
 
