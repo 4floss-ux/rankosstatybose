@@ -1532,6 +1532,22 @@ function ConversationModal({
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (
+                  !conversationLocked &&
+                  !sending &&
+                  textValue.trim()
+                ) {
+                  sendMessage(e);
+                }
+              }
+            }}
             maxLength={2000}
             disabled={conversationLocked}
             placeholder={
@@ -1781,6 +1797,22 @@ function GroupConversationModal({
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (
+                  !conversationLocked &&
+                  !sending &&
+                  textValue.trim()
+                ) {
+                  sendMessage(e);
+                }
+              }
+            }}
             maxLength={2000}
             disabled={conversationLocked}
             placeholder={
@@ -1967,6 +1999,18 @@ function CompanyTeamChatModal({
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) {
+                  sendMessage(e);
+                }
+              }
+            }}
             maxLength={2000}
             placeholder="Parašykite komandai..."
           />
@@ -11993,6 +12037,18 @@ function AdminJobChatModal({ job, user, onClose }) {
             value={textValue}
             maxLength={2000}
             onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) {
+                  sendMessage(e);
+                }
+              }
+            }}
             placeholder="Administratoriaus žinutė darbo komandai..."
           />
           <button disabled={sending || !textValue.trim()}>
