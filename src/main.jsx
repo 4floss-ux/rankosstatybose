@@ -8569,7 +8569,6 @@ function AdminDashboard({
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
-        .admin-audit-section{width:100%;max-width:none;margin:0;box-sizing:border-box}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
         @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
         @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
@@ -9280,11 +9279,8 @@ function AdminDashboard({
             )}
           </section>
         )}
-      </main>
-
-
         {activeTab === "audit" && (
-          <section className="admin-section admin-audit-section">
+          <section className="admin-section">
             <div className="admin-section-head">
               <div>
                 <h2>Administratoriaus veiksmų istorija</h2>
@@ -9347,6 +9343,9 @@ function AdminDashboard({
             )}
           </section>
         )}
+
+      </main>
+
 
       <AdminJobChatModal
         job={adminConversation}
