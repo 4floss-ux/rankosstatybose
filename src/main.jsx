@@ -456,6 +456,16 @@ function AuthModal({
         }
 
         if (
+          role === "worker" &&
+          !teamInvite &&
+          !form.phone.trim()
+        ) {
+          throw new Error(
+            "Darbuotojo registracijai telefono numeris yra privalomas."
+          );
+        }
+
+        if (
           role === "employer" &&
           !teamInvite &&
           !form.companyName.trim()
@@ -677,13 +687,16 @@ function AuthModal({
                 </label>
 
                 <label style={labelStyle}>
-                  Telefonas
+                  {role === "worker" && !teamInvite
+                    ? "Telefonas *"
+                    : "Telefonas"}
                   <input
                     style={inputStyle}
                     value={form.phone}
                     onChange={setField("phone")}
                     placeholder="+370..."
                     autoComplete="tel"
+                    required={role === "worker" && !teamInvite}
                   />
                 </label>
               </div>
@@ -1966,9 +1979,13 @@ function CompanyTeamChatModal({
   );
 }
 
-function WorkerProfileModal({ worker, onClose }) {
+function WorkerProfileModal({ worker, jobId, onClose }) {
   const [ratingReviews, setRatingReviews] = useState([]);
   const [ratingReviewsLoading, setRatingReviewsLoading] = useState(false);
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [phoneCopied, setPhoneCopied] = useState(false);
 
   useEffect(() => {
     if (!worker?.id) {
@@ -1999,6 +2016,61 @@ function WorkerProfileModal({ worker, onClose }) {
       cancelled = true;
     };
   }, [worker?.id]);
+
+  useEffect(() => {
+    if (!worker?.id || !jobId) {
+      setContactPhone("");
+      setContactError("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadContact() {
+      setContactLoading(true);
+      setContactError("");
+
+      try {
+        const result = await supabase.rpc("get_worker_contact", {
+          p_worker_id: worker.id,
+          p_job_id: jobId,
+        });
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setContactPhone(result.data?.[0]?.phone || "");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setContactPhone("");
+          setContactError(
+            err?.message || "Nepavyko įkelti darbuotojo telefono numerio."
+          );
+        }
+      } finally {
+        if (!cancelled) setContactLoading(false);
+      }
+    }
+
+    loadContact();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id, jobId]);
+
+  async function copyWorkerPhone() {
+    if (!contactPhone) return;
+
+    try {
+      await navigator.clipboard.writeText(contactPhone);
+      setPhoneCopied(true);
+      window.setTimeout(() => setPhoneCopied(false), 1800);
+    } catch {
+      setContactError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
 
   if (!worker) return null;
 
@@ -2035,6 +2107,9 @@ function WorkerProfileModal({ worker, onClose }) {
           .rs-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
           .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
           .rs-profile-stat span{display:block;font-size:11px;color:#6c7a88;margin-bottom:5px;line-height:1.3}.rs-profile-stat b{font-family:Manrope,Inter,sans-serif;font-size:18px}
+          .rs-profile-phone{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+          .rs-profile-phone button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+          .rs-profile-contact-error{margin-top:6px;font-size:11px;color:#b64d2a}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
           @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
@@ -2085,6 +2160,26 @@ function WorkerProfileModal({ worker, onClose }) {
             <span>Miestas</span>
             <b>{worker.city || "—"}</b>
           </div>
+
+          <div className="rs-profile-stat">
+            <span>Telefonas</span>
+            {contactLoading ? (
+              <b>...</b>
+            ) : contactPhone ? (
+              <div className="rs-profile-phone">
+                <b>{contactPhone}</b>
+                <button type="button" onClick={copyWorkerPhone}>
+                  {phoneCopied ? "Nukopijuota" : "Kopijuoti"}
+                </button>
+              </div>
+            ) : (
+              <b>—</b>
+            )}
+            {contactError && (
+              <div className="rs-profile-contact-error">{contactError}</div>
+            )}
+          </div>
+
           <div className="rs-profile-stat">
             <span>Patirtis</span>
             <b>{Number(worker.yearsExperience || 0)} m.</b>
@@ -2982,6 +3077,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
+      if (!form.phone.trim()) {
+        throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
+      }
+
       const canonicalCity = await canonicalCityName(form.city);
       if (!canonicalCity) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
@@ -3390,12 +3489,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </label>
 
                 <label className="wd-label">
-                  Telefonas
+                  Telefonas *
                   <input
                     className="wd-input"
                     value={form.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
                     placeholder="+370..."
+                    required
                   />
                 </label>
 
@@ -6511,7 +6611,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             return null;
           }
 
-          const activityCutoff = Date.now() - 72 * 60 * 60 * 1000;
+          const activityCutoff = Date.now() - 24 * 60 * 60 * 1000;
           const lastActiveAt = worker.last_active_at
             ? new Date(worker.last_active_at).getTime()
             : 0;
@@ -8194,7 +8294,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div>
                 <h2>Kviesti laisvus darbuotojus pagal jūsų parinktis</h2>
                 <p>
-                  Rodomi tik per paskutines 72 val. aktyvūs ir savo grafiką
+                  Rodomi tik per paskutines 24 val. aktyvūs ir savo grafiką
                   patvirtinę darbuotojai.
                 </p>
               </div>
@@ -9648,6 +9748,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <WorkerProfileModal
         worker={selectedWorker}
+        jobId={currentJob?.id || null}
         onClose={() => setSelectedWorker(null)}
       />
 
