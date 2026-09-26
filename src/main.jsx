@@ -884,6 +884,217 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
   );
 }
 
+
+function GroupConversationModal({ open, onClose, jobId, title, user }) {
+  const [messages, setMessages] = useState([]);
+  const [names, setNames] = useState({});
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [conversationLocked, setConversationLocked] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open || !jobId) return;
+
+    loadMessages();
+    const timer = setInterval(loadMessages, 3000);
+    return () => clearInterval(timer);
+  }, [open, jobId]);
+
+  async function loadMessages() {
+    if (!messages.length) setLoading(true);
+    setError("");
+
+    try {
+      const [messagesResult, jobResult] = await Promise.all([
+        supabase
+          .from("job_group_messages")
+          .select("id, sender_id, body, created_at")
+          .eq("job_id", jobId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("jobs")
+          .select("status, cancellation_reason")
+          .eq("id", jobId)
+          .single(),
+      ]);
+
+      if (messagesResult.error) throw messagesResult.error;
+      if (jobResult.error) throw jobResult.error;
+
+      setConversationLocked(jobResult.data?.status === "cancelled");
+      setCancellationReason(jobResult.data?.cancellation_reason || "");
+
+      const rows = messagesResult.data || [];
+      setMessages(rows);
+
+      const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
+      if (ids.length) {
+        const profilesResult = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", ids);
+
+        if (profilesResult.error) throw profilesResult.error;
+
+        setNames(
+          Object.fromEntries(
+            (profilesResult.data || []).map((row) => [
+              row.id,
+              row.display_name || "Vartotojas",
+            ])
+          )
+        );
+      } else {
+        setNames({});
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbo pokalbio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || !jobId || conversationLocked) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.from("job_group_messages").insert({
+        job_id: jobId,
+        sender_id: user.id,
+        body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}
+          .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+          .rs-messages{display:grid;gap:10px;max-height:360px;overflow:auto;padding:4px 2px 12px}
+          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+          .rs-message.mine{margin-left:auto;background:#fff3e7}
+          .rs-message b{display:block;font-size:12px;margin-bottom:4px}
+          .rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
+          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
+          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.6}
+          .rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+          .rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">DARBO POKALBIS</div>
+            <h2>{title || "Bendras darbo pokalbis"}</h2>
+          </div>
+          <button className="rs-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="rs-group-note">
+          Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai.
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages">
+          {loading && !messages.length ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={
+                  message.sender_id === user.id
+                    ? "rs-message mine"
+                    : "rs-message"
+                }
+                key={message.id}
+              >
+                <b>
+                  {message.sender_id === user.id
+                    ? "Jūs"
+                    : names[message.sender_id] || "Vartotojas"}
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="rs-empty">
+              Darbo pokalbis dar tuščias. Galite parašyti pirmą žinutę.
+            </div>
+          )}
+        </div>
+
+        {conversationLocked && (
+          <div className="rs-locked">
+            <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
+            {cancellationReason && (
+              <div style={{ marginTop: 4 }}>
+                Atšaukimo priežastis: {cancellationReason}
+              </div>
+            )}
+          </div>
+        )}
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            maxLength={2000}
+            disabled={conversationLocked}
+            placeholder={
+              conversationLocked
+                ? "Pokalbis uždarytas"
+                : "Žinutė visai darbo komandai..."
+            }
+          />
+          <button disabled={conversationLocked || sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function WorkerProfileModal({ worker, onClose }) {
   if (!worker) return null;
 
@@ -1052,6 +1263,7 @@ function WorkerDashboard({ user, onLogout }) {
   const [confirmInvitation, setConfirmInvitation] = useState(null);
   const [commitmentChecked, setCommitmentChecked] = useState(false);
   const [conversation, setConversation] = useState(null);
+  const [groupConversation, setGroupConversation] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
@@ -1361,27 +1573,11 @@ function WorkerDashboard({ user, onLogout }) {
     if (companyIds.length) {
       const companiesResult = await supabase
         .from("companies")
-        .select("id, owner_id, name, reliability_rate, cancelled_confirmed_count")
+        .select("id, name, reliability_rate, cancelled_confirmed_count")
         .in("id", companyIds);
 
       if (companiesResult.error) throw companiesResult.error;
       companies = companiesResult.data || [];
-    }
-
-    const ownerIds = [
-      ...new Set(companies.map((company) => company.owner_id).filter(Boolean)),
-    ];
-
-    let privateRows = [];
-    if (ownerIds.length) {
-      const privateResult = await supabase
-        .from("user_private")
-        .select("user_id, phone")
-        .in("user_id", ownerIds);
-
-      if (!privateResult.error) {
-        privateRows = privateResult.data || [];
-      }
     }
 
     let attendanceRows = [];
@@ -1400,7 +1596,6 @@ function WorkerDashboard({ user, onLogout }) {
 
     const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
     const companyMap = new Map(companies.map((company) => [company.id, company]));
-    const privateMap = new Map(privateRows.map((row) => [row.user_id, row]));
     const attendanceMap = new Map(
       attendanceRows.map((row) => [row.booking_id, row])
     );
@@ -1413,9 +1608,6 @@ function WorkerDashboard({ user, onLogout }) {
           ...invitation,
           job,
           companyName: company?.name || "Darbdavys",
-          companyPhone: company?.owner_id
-            ? privateMap.get(company.owner_id)?.phone || ""
-            : "",
           companyReliability: Number(company?.reliability_rate ?? 100),
           companyCancelledConfirmed: Number(company?.cancelled_confirmed_count ?? 0),
         };
@@ -1438,9 +1630,6 @@ function WorkerDashboard({ user, onLogout }) {
             ...booking,
             job,
             companyName: company?.name || "Darbdavys",
-            companyPhone: company?.owner_id
-              ? privateMap.get(company.owner_id)?.phone || ""
-              : "",
             attendance: attendanceMap.get(booking.id) || null,
           };
         })
@@ -1455,6 +1644,39 @@ function WorkerDashboard({ user, onLogout }) {
     return workerNotifications.filter(
       (item) => item.invitation_id === invitationId
     );
+  }
+
+  function unreadWorkerJobNotifications(jobId) {
+    return workerNotifications.filter(
+      (item) => item.job_id === jobId && !item.invitation_id
+    );
+  }
+
+  async function markWorkerJobNotificationsRead(jobId) {
+    const ids = unreadWorkerJobNotifications(jobId).map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setWorkerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
+    );
+  }
+
+  async function openWorkerGroupConversation(job) {
+    await markWorkerJobNotificationsRead(job.id);
+    setGroupConversation({
+      jobId: job.id,
+      title: job.title,
+    });
   }
 
   async function markWorkerNotificationsRead(invitationId) {
@@ -1550,6 +1772,32 @@ function WorkerDashboard({ user, onLogout }) {
       setNotice(`Telefono numeris nukopijuotas: ${phone}`);
     } catch (err) {
       setError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
+  async function openArrivalHelp(item) {
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_job_contact", {
+        p_job_id: item.job.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const contact = result.data?.[0] || {};
+
+      setArrivalHelpTarget({
+        ...item,
+        companyName: contact.company_name || item.companyName,
+        companyPhone: contact.phone || "",
+      });
+    } catch (err) {
+      setArrivalHelpTarget({
+        ...item,
+        companyPhone: "",
+      });
+      setError(err?.message || "Nepavyko įkelti darbdavio kontaktų.");
     }
   }
 
@@ -2024,6 +2272,12 @@ function WorkerDashboard({ user, onLogout }) {
                           </span>
                         )}
 
+                        {unreadWorkerJobNotifications(job.id).length > 0 && (
+                          <span className="wd-workday-status orange">
+                            ● Nauja žinutė darbo pokalbyje
+                          </span>
+                        )}
+
                         {attendance.finalized_at && (
                           <span
                             className={`wd-workday-status ${
@@ -2151,12 +2405,32 @@ function WorkerDashboard({ user, onLogout }) {
                             <button
                               className="wd-decline"
                               type="button"
-                              onClick={() => setArrivalHelpTarget(item)}
+                              onClick={() => openArrivalHelp(item)}
                             >
                               Atvykau, bet nerandu
                             </button>
+                            <button
+                              className="wd-decline"
+                              type="button"
+                              onClick={() => openWorkerGroupConversation(job)}
+                            >
+                              Darbo pokalbis
+                            </button>
                           </>
                         )}
+
+                        {!canCheckIn &&
+                          ["confirmed", "completed", "no_show"].includes(
+                            item.status
+                          ) && (
+                            <button
+                              className="wd-decline"
+                              type="button"
+                              onClick={() => openWorkerGroupConversation(job)}
+                            >
+                              Darbo pokalbis
+                            </button>
+                          )}
 
                         {pendingNegative && !disputed && (
                           <>
@@ -3002,6 +3276,14 @@ function WorkerDashboard({ user, onLogout }) {
         title={conversation?.title}
         user={user}
       />
+
+      <GroupConversationModal
+        open={Boolean(groupConversation)}
+        onClose={() => setGroupConversation(null)}
+        jobId={groupConversation?.jobId}
+        title={groupConversation?.title}
+        user={user}
+      />
     </div>
   );
 }
@@ -3068,6 +3350,7 @@ function EmployerDashboard({ user, onLogout }) {
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSaving, setRatingSaving] = useState(false);
   const [conversation, setConversation] = useState(null);
+  const [groupConversation, setGroupConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -4483,16 +4766,29 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
         .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
+        .ed-attendance-panel h2{margin:0 0 4px}
+        .ed-attendance-list{display:grid;gap:9px;margin-top:14px}
+        .ed-attendance-row{display:grid;grid-template-columns:minmax(220px,1.35fr) minmax(210px,.9fr) auto;gap:18px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:14px 15px}
+        .ed-member-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .ed-member-metric{padding:8px 10px;border-radius:10px;background:#f6f8fa}
+        .ed-member-metric span{display:block;color:#6c7a88;font-size:11px;margin-bottom:3px}
+        .ed-member-metric b{font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .ed-member-status{grid-column:1/-1;margin-top:2px}
+        .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+        .ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
+        .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
+        .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
         .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 10px;border-top:1px solid #edf1f4;border-radius:10px;transition:background .18s ease}.ed-job:first-child{border-top:0}.ed-job-active{background:#eef1f3}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr 1fr}.ed-attendance-actions{grid-column:1/-1;justify-content:flex-start}}
+        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}}
         @media(max-width:620px){.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}}
       `}</style>
 
@@ -4846,9 +5142,9 @@ function EmployerDashboard({ user, onLogout }) {
               <div className="ed-attendance-panel">
                 <h2>Patvirtinti darbuotojai ir darbo diena</h2>
                 <p className="ed-sub" style={{ marginBottom: 0 }}>
-                  Pasibaigus darbo laikui uždarykite kiekvieno darbuotojo darbo
-                  dieną. Neigiamas pažymėjimas darbuotojo reitingo iškart
-                  nekeičia — darbuotojas gali jį patvirtinti arba ginčyti.
+                  Kiekvieno darbuotojo eilutėje matote jo patikimumą,
+                  darbdavių įvertinimą ir darbo dienos būseną. „Darbo pokalbis“
+                  yra bendras visai šio darbo komandai.
                 </p>
 
                 <div className="ed-attendance-list">
@@ -4885,43 +5181,35 @@ function EmployerDashboard({ user, onLogout }) {
                           </div>
                         </div>
 
-                        <div className="ed-attendance-meta">
-                          {attendance.worker_check_in_at && (
-                            <div>
-                              <b style={{ color: "#167a54" }}>
-                                ✓ Darbuotojas pažymėjo „Atvykau“
-                              </b>{" "}
-                              {new Date(
-                                attendance.worker_check_in_at
-                              ).toLocaleTimeString("lt-LT", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          )}
-                          {attendance.employer_check_in_at && (
-                            <div>
-                              <b style={{ color: "#167a54" }}>
-                                ✓ Jūs patvirtinote darbuotojo atvykimą
-                              </b>{" "}
-                              {new Date(
-                                attendance.employer_check_in_at
-                              ).toLocaleTimeString("lt-LT", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          )}
+                        <div className="ed-member-metrics">
+                          <div className="ed-member-metric">
+                            <span>Atvykimo patikimumas</span>
+                            <b>{Math.round(worker.attendanceRate)}%</b>
+                          </div>
 
-                          {attendance.worker_workday_claim === "worked" &&
-                            !attendance.finalized_at && (
-                              <div>
-                                Darbuotojas pažymėjo, kad <b>dirbo šiame darbe</b>.
-                              </div>
+                          <div className="ed-member-metric">
+                            <span>Darbdavių įvertinimas</span>
+                            <b>
+                              {worker.ratingAverage === null
+                                ? "—"
+                                : `${worker.ratingAverage.toFixed(1)} / 5`}
+                            </b>
+                          </div>
+
+                          <div className="ed-member-status">
+                            {attendance.worker_check_in_at && (
+                              <span className="ed-attendance-badge green">
+                                ✓ Darbuotojas pažymėjo „Atvykau“
+                              </span>
                             )}
 
-                          {attendance.finalized_at && (
-                            <>
+                            {attendance.employer_check_in_at && (
+                              <span className="ed-attendance-badge green">
+                                ✓ Atvykimą patvirtinote
+                              </span>
+                            )}
+
+                            {attendance.finalized_at && (
                               <span
                                 className={`ed-attendance-badge ${
                                   attendance.final_outcome === "no_show" ||
@@ -4932,70 +5220,43 @@ function EmployerDashboard({ user, onLogout }) {
                                 }`}
                               >
                                 {attendanceOutcomeLabel(attendance)}
-                              </span>
-                              {attendance.worked_minutes > 0 && (
-                                <div style={{ marginTop: 5 }}>
-                                  Įskaityta:{" "}
-                                  <b>
-                                    {formatWorkedMinutes(
+                                {attendance.worked_minutes > 0
+                                  ? ` · ${formatWorkedMinutes(
                                       attendance.worked_minutes
-                                    )}
-                                  </b>
-                                </div>
-                              )}
-                            </>
-                          )}
+                                    )}`
+                                  : ""}
+                              </span>
+                            )}
 
-                          {pendingNegative && !disputed && (
-                            <>
+                            {pendingNegative && !disputed && (
                               <span className="ed-attendance-badge orange">
                                 Laukiama darbuotojo patvirtinimo
                               </span>
-                              {attendance.employer_note && (
-                                <div style={{ marginTop: 5 }}>
-                                  Jūsų komentaras: {attendance.employer_note}
-                                </div>
-                              )}
-                            </>
-                          )}
+                            )}
 
-                          {disputed && (
-                            <>
+                            {disputed && (
                               <span className="ed-attendance-badge red">
-                                Darbo dienos ginčas
+                                Ginčas · reitingas nekeičiamas
                               </span>
-                              <div style={{ marginTop: 5 }}>
-                                Kol ginčas neišspręstas, darbuotojo reitingas
-                                nekeičiamas.
-                              </div>
-                              {attendance.worker_response_note && (
-                                <div style={{ marginTop: 5 }}>
-                                  Darbuotojo paaiškinimas:{" "}
-                                  {attendance.worker_response_note}
-                                </div>
+                            )}
+
+                            {canClose && (
+                              <span className="ed-attendance-badge orange">
+                                Neuždaryta darbo diena
+                              </span>
+                            )}
+
+                            {!ended &&
+                              isConfirmed &&
+                              !attendance.finalized_at &&
+                              !attendance.employer_check_in_at && (
+                                <span className="ed-attendance-badge muted">
+                                  {checkInOpen
+                                    ? "Darbo diena vyksta"
+                                    : "Darbo diena dar neprasidėjo"}
+                                </span>
                               )}
-                            </>
-                          )}
-
-                          {canClose && (
-                            <span className="ed-attendance-badge orange">
-                              Neuždaryta darbo diena · reikia veiksmo
-                            </span>
-                          )}
-
-                          {!ended && isConfirmed && !attendance.finalized_at && (
-                            <span className="ed-attendance-badge muted">
-                              {checkInOpen
-                                ? "Darbo diena vyksta"
-                                : "Darbo diena dar neprasidėjo"}
-                            </span>
-                          )}
-
-                          {worker.bookingStatus === "cancelled_by_employer" && (
-                            <span className="ed-attendance-badge red">
-                              Darbas atšauktas darbdavio
-                            </span>
-                          )}
+                          </div>
                         </div>
 
                         <div className="ed-attendance-actions">
@@ -5006,62 +5267,49 @@ function EmployerDashboard({ user, onLogout }) {
                             Profilis
                           </button>
 
+                          <button
+                            className="ed-secondary"
+                            onClick={() =>
+                              setGroupConversation({
+                                jobId: currentJob.id,
+                                title: currentJob.title,
+                              })
+                            }
+                          >
+                            Darbo pokalbis
+                          </button>
+
                           {checkInOpen &&
                             isConfirmed &&
                             !attendance.finalized_at &&
                             !attendance.employer_check_in_at && (
                               <button
-                                className="ed-primary"
+                                className="ed-secondary"
                                 disabled={attendanceSaving}
                                 onClick={() => employerCheckInWorker(worker)}
                               >
-                                Patvirtinti, kad atvyko
+                                Patvirtinti atvykimą
                               </button>
                             )}
 
-                          {canClose && (
-                            <>
-                              <button
-                                className="ed-secondary"
-                                disabled={attendanceSaving}
-                                onClick={() =>
-                                  recordEmployerAttendance(
-                                    worker,
-                                    "full_day"
-                                  )
-                                }
-                              >
-                                Išdirbo visą dieną
-                              </button>
-
-                              <button
-                                className="ed-secondary"
-                                disabled={attendanceSaving}
-                                onClick={() => {
-                                  setAttendanceTarget(worker);
-                                  setAttendanceMode("left_early_agreed");
-                                  setAttendanceEndTime("");
-                                  setAttendanceNote("");
-                                }}
-                              >
-                                Išėjo anksčiau
-                              </button>
-
-                              {!attendance.employer_check_in_at && (
-                                <button
-                                  className="ed-danger"
-                                  disabled={attendanceSaving}
-                                  onClick={() => {
-                                    setAttendanceTarget(worker);
-                                    setAttendanceMode("no_show");
-                                    setAttendanceEndTime("");
-                                    setAttendanceNote("");
-                                  }}
-                                >
-                                  Neatvyko
-                                </button>
-                              )}
-                            </>
+                          {isConfirmed && !attendance.finalized_at && (
+                            <button
+                              className="ed-primary"
+                              disabled={!canClose || attendanceSaving}
+                              title={
+                                canClose
+                                  ? "Uždaryti šio darbuotojo darbo dieną"
+                                  : "Darbo dieną galima uždaryti pasibaigus darbo laikui"
+                              }
+                              onClick={() => {
+                                setAttendanceTarget(worker);
+                                setAttendanceMode("choose");
+                                setAttendanceEndTime("");
+                                setAttendanceNote("");
+                              }}
+                            >
+                              Uždaryti dieną
+                            </button>
                           )}
 
                           {attendance.finalized_at &&
@@ -5094,7 +5342,7 @@ function EmployerDashboard({ user, onLogout }) {
 
             <div className="ed-results-head">
               <div>
-                <h2>2. Tinkami darbuotojai</h2>
+                <h2>Kiti laisvi darbuotojai</h2>
                 <p>
                   {currentJob.city} · {currentJob.work_date} ·{" "}
                   {currentJob.start_time?.slice(0, 5)}
@@ -5209,9 +5457,9 @@ function EmployerDashboard({ user, onLogout }) {
                 })}
               </div>
             ) : (
-              <div className="ed-empty">
-                Šiuo metu pagal šiuos kriterijus laisvų darbuotojų nerasta.
-                Pabandykite kitą datą arba laiką.
+              <div className="ed-empty compact">
+                Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus
+                nerasta.
               </div>
             )}
           </section>
@@ -5346,11 +5594,14 @@ function EmployerDashboard({ user, onLogout }) {
               <div>
                 <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
                 <h2>
-                  {attendanceMode === "no_show"
+                  {attendanceMode === "choose"
+                    ? "Kaip baigėsi darbuotojo darbo diena?"
+                    : attendanceMode === "no_show"
                     ? "Pažymėti, kad darbuotojas neatvyko?"
                     : "Darbuotojas išėjo anksčiau"}
                 </h2>
               </div>
+
               <button
                 className="rs-close"
                 disabled={attendanceSaving}
@@ -5379,114 +5630,171 @@ function EmployerDashboard({ user, onLogout }) {
               </div>
             </div>
 
-            {attendanceMode !== "no_show" && (
-              <>
-                <label className="ed-label" style={{ marginBottom: 14 }}>
-                  Ankstyvo išėjimo tipas *
-                  <select
-                    className="ed-select"
-                    value={attendanceMode}
-                    onChange={(e) => setAttendanceMode(e.target.value)}
-                  >
-                    <option value="left_early_agreed">
-                      Išėjo anksčiau – suderinta
-                    </option>
-                    <option value="left_early_unexcused">
-                      Išėjo anksčiau be pateisinamos priežasties
-                    </option>
-                  </select>
-                </label>
+            {attendanceMode === "choose" && (
+              <div style={{ display: "grid", gap: 10 }}>
+                <button
+                  className="ed-primary"
+                  disabled={attendanceSaving}
+                  onClick={() =>
+                    recordEmployerAttendance(
+                      attendanceTarget,
+                      "full_day"
+                    )
+                  }
+                >
+                  Išdirbo visą dieną
+                </button>
 
-                <label className="ed-label" style={{ marginBottom: 14 }}>
-                  Faktinis išėjimo laikas *
-                  <input
-                    className="ed-input"
-                    type="time"
-                    value={attendanceEndTime}
-                    onChange={(e) => setAttendanceEndTime(e.target.value)}
+                <button
+                  className="ed-secondary"
+                  disabled={attendanceSaving}
+                  onClick={() => {
+                    setAttendanceMode("left_early_agreed");
+                    setAttendanceEndTime("");
+                    setAttendanceNote("");
+                  }}
+                >
+                  Išėjo anksčiau
+                </button>
+
+                {!attendanceTarget?.attendance?.employer_check_in_at && (
+                  <button
+                    className="ed-secondary ed-danger"
+                    disabled={attendanceSaving}
+                    onClick={() => {
+                      setAttendanceMode("no_show");
+                      setAttendanceEndTime("");
+                      setAttendanceNote("");
+                    }}
+                  >
+                    Neatvyko
+                  </button>
+                )}
+              </div>
+            )}
+
+            {attendanceMode !== "choose" &&
+              attendanceMode !== "no_show" && (
+                <>
+                  <label className="ed-label" style={{ marginBottom: 14 }}>
+                    Ankstyvo išėjimo tipas *
+                    <select
+                      className="ed-select"
+                      value={attendanceMode}
+                      onChange={(e) => setAttendanceMode(e.target.value)}
+                    >
+                      <option value="left_early_agreed">
+                        Išėjo anksčiau – suderinta
+                      </option>
+                      <option value="left_early_unexcused">
+                        Išėjo anksčiau be pateisinamos priežasties
+                      </option>
+                    </select>
+                  </label>
+
+                  <label className="ed-label" style={{ marginBottom: 14 }}>
+                    Faktinis išėjimo laikas *
+                    <input
+                      className="ed-input"
+                      type="time"
+                      value={attendanceEndTime}
+                      onChange={(e) => setAttendanceEndTime(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+
+            {attendanceMode !== "choose" && (
+              <>
+                <label className="ed-label">
+                  {attendanceMode === "left_early_agreed"
+                    ? "Pastaba"
+                    : "Paaiškinimas *"}
+                  <textarea
+                    className="ed-textarea"
+                    maxLength={1000}
+                    value={attendanceNote}
+                    onChange={(e) => setAttendanceNote(e.target.value)}
+                    placeholder={
+                      attendanceMode === "no_show"
+                        ? "Trumpai parašykite, kodėl pažymite neatvykimą."
+                        : attendanceMode === "left_early_unexcused"
+                        ? "Trumpai aprašykite, kas įvyko."
+                        : "Pvz. Išėjimas buvo suderintas iš anksto."
+                    }
                   />
                 </label>
+
+                {["no_show", "left_early_unexcused"].includes(
+                  attendanceMode
+                ) && (
+                  <div className="ed-note err" style={{ marginTop: 14 }}>
+                    Šis neigiamas pažymėjimas{" "}
+                    <b>darbuotojo reitingo iškart nemažina</b>. Darbuotojas
+                    galės jį patvirtinti arba ginčyti.
+                  </div>
+                )}
+
+                {attendanceMode === "left_early_agreed" && (
+                  <div className="ed-note ok" style={{ marginTop: 14 }}>
+                    Suderintas ankstyvas išėjimas darbuotojo patikimumo
+                    nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas
+                    laikas.
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 9,
+                    marginTop: 18,
+                  }}
+                >
+                  <button
+                    className="ed-secondary"
+                    disabled={attendanceSaving}
+                    onClick={() => {
+                      setAttendanceMode("choose");
+                      setAttendanceEndTime("");
+                      setAttendanceNote("");
+                    }}
+                  >
+                    Grįžti
+                  </button>
+
+                  <button
+                    className={
+                      ["no_show", "left_early_unexcused"].includes(
+                        attendanceMode
+                      )
+                        ? "ed-secondary ed-danger"
+                        : "ed-primary"
+                    }
+                    disabled={
+                      attendanceSaving ||
+                      (attendanceMode !== "no_show" && !attendanceEndTime) ||
+                      (["no_show", "left_early_unexcused"].includes(
+                        attendanceMode
+                      ) &&
+                        attendanceNote.trim().length < 5)
+                    }
+                    onClick={() =>
+                      recordEmployerAttendance(
+                        attendanceTarget,
+                        attendanceMode,
+                        attendanceEndTime || null,
+                        attendanceNote
+                      )
+                    }
+                  >
+                    {attendanceSaving
+                      ? "Saugoma..."
+                      : "Patvirtinti rezultatą"}
+                  </button>
+                </div>
               </>
             )}
-
-            <label className="ed-label">
-              {attendanceMode === "left_early_agreed"
-                ? "Pastaba"
-                : "Paaiškinimas *"}
-              <textarea
-                className="ed-textarea"
-                maxLength={1000}
-                value={attendanceNote}
-                onChange={(e) => setAttendanceNote(e.target.value)}
-                placeholder={
-                  attendanceMode === "no_show"
-                    ? "Trumpai parašykite, kodėl pažymite neatvykimą."
-                    : attendanceMode === "left_early_unexcused"
-                    ? "Trumpai aprašykite, kas įvyko."
-                    : "Pvz. Išėjimas buvo suderintas iš anksto."
-                }
-              />
-            </label>
-
-            {["no_show", "left_early_unexcused"].includes(attendanceMode) && (
-              <div className="ed-note err" style={{ marginTop: 14 }}>
-                Šis neigiamas pažymėjimas <b>darbuotojo reitingo iškart nemažina</b>.
-                Darbuotojas galės jį patvirtinti arba ginčyti. Ginčo metu
-                sankcijos sustabdomos.
-              </div>
-            )}
-
-            {attendanceMode === "left_early_agreed" && (
-              <div className="ed-note ok" style={{ marginTop: 14 }}>
-                Suderintas ankstyvas išėjimas darbuotojo patikimumo nemažina.
-                Į statistiką bus įskaitytas tik faktiškai dirbtas laikas.
-              </div>
-            )}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 9,
-                marginTop: 18,
-              }}
-            >
-              <button
-                className="ed-secondary"
-                disabled={attendanceSaving}
-                onClick={() => {
-                  setAttendanceTarget(null);
-                  setAttendanceMode(null);
-                  setAttendanceEndTime("");
-                  setAttendanceNote("");
-                }}
-              >
-                Grįžti
-              </button>
-              <button
-                className={
-                  ["no_show", "left_early_unexcused"].includes(attendanceMode)
-                    ? "ed-danger"
-                    : "ed-primary"
-                }
-                disabled={
-                  attendanceSaving ||
-                  (attendanceMode !== "no_show" && !attendanceEndTime) ||
-                  (["no_show", "left_early_unexcused"].includes(attendanceMode) &&
-                    attendanceNote.trim().length < 5)
-                }
-                onClick={() =>
-                  recordEmployerAttendance(
-                    attendanceTarget,
-                    attendanceMode,
-                    attendanceEndTime || null,
-                    attendanceNote
-                  )
-                }
-              >
-                {attendanceSaving ? "Saugoma..." : "Patvirtinti rezultatą"}
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -5966,6 +6274,13 @@ function EmployerDashboard({ user, onLogout }) {
         onClose={() => setConversation(null)}
         invitationId={conversation?.invitationId}
         title={conversation?.title}
+        user={user}
+      />
+      <GroupConversationModal
+        open={Boolean(groupConversation)}
+        onClose={() => setGroupConversation(null)}
+        jobId={groupConversation?.jobId}
+        title={groupConversation?.title}
         user={user}
       />
     </div>
