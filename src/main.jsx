@@ -3079,7 +3079,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
         .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
-        .wd-invite-main h3{margin:0 0 5px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
+        .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
+        .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
         .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
         .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
@@ -3871,45 +3872,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                         )}
                         <h3>{job.title}</h3>
-                        <div className="wd-invite-meta">
-                          <div className="wd-invite-company">{invitation.companyName}</div>
-                          <div>
-                            Darbdavio patikimumas:{" "}
-                            <b>{Math.round(invitation.companyReliability)}%</b>
-                            {invitation.companyCancelledConfirmed > 0
-                              ? ` · atšauktų patvirtintų darbų: ${invitation.companyCancelledConfirmed}`
-                              : ""}
-                          </div>
-                          <div>
-                            {job.city}
-                            {job.address_text ? ` · ${job.address_text}` : ""}
-                          </div>
-                          <div>
-                            {job.work_date} · {job.start_time?.slice(0, 5)}
-                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
-                          </div>
-                          {job.break_start_time && job.break_end_time && (
-                            <div>
-                              Pietų pertrauka:{" "}
-                              <b>
-                                {job.break_start_time.slice(0, 5)}–
-                                {job.break_end_time.slice(0, 5)}
-                              </b>
-                            </div>
-                          )}
-                          <div>
-                            Atvykimas:{" "}
-                            <b>
-                              {job.transport_mode === "employer_pickup"
-                                ? "darbdavys paima darbuotoją"
-                                : "darbuotojas atvyksta pats"}
-                            </b>
-                          </div>
-                          {job.description && <div>{job.description}</div>}
-                        </div>
-
-                        <div className="wd-pay">
-                          {formatNetPay(job.pay_amount, job.pay_unit)}
+                        <div className="wd-invite-summary">
+                          <b>{invitation.companyName}</b>
+                          <span>{job.city || "Miestas nenurodytas"}</span>
+                          <span>
+                            {job.pay_amount
+                              ? formatNetPay(job.pay_amount, job.pay_unit)
+                              : "Atlygis nenurodytas"}
+                          </span>
+                          <span>
+                            Patikimumas:{" "}
+                            {Math.round(invitation.companyReliability)} / 100
+                          </span>
                         </div>
 
                         {job.status === "cancelled" && (
@@ -3927,6 +3901,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       </div>
 
                       <div className="wd-invite-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(invitation)}
+                        >
+                          Atidaryti
+                        </button>
+
                         {invitation.status === "pending" ? (
                           <>
                             <button
@@ -4037,6 +4019,42 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   {workdayDetailsTarget.companyName || "Darbdavys"}
                 </b>
               </div>
+
+              {workdayDetailsTarget.companyReliability !== undefined && (
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Darbdavio patikimumas
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {Math.round(
+                      Number(workdayDetailsTarget.companyReliability || 0)
+                    )}{" "}
+                    / 100
+                  </b>
+                  {Number(
+                    workdayDetailsTarget.companyCancelledConfirmed || 0
+                  ) > 0 && (
+                    <div
+                      style={{
+                        color: "#6c7a88",
+                        fontSize: 12,
+                        marginTop: 5,
+                      }}
+                    >
+                      Atšauktų jau patvirtintų darbų:{" "}
+                      {Number(
+                        workdayDetailsTarget.companyCancelledConfirmed || 0
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div
                 style={{
@@ -4210,6 +4228,44 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 flexWrap: "wrap",
               }}
             >
+              {workdayDetailsTarget.status === "pending" && (
+                <>
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => {
+                      const invitationId = workdayDetailsTarget.id;
+                      setWorkdayDetailsTarget(null);
+                      await respondToInvitation(invitationId, "declined");
+                    }}
+                  >
+                    Atmesti
+                  </button>
+
+                  <button
+                    className="wd-accept"
+                    type="button"
+                    disabled={
+                      busy ||
+                      invitationHasConflict(workdayDetailsTarget) ||
+                      (metrics.restrictedUntil &&
+                        new Date(metrics.restrictedUntil) > new Date())
+                    }
+                    onClick={() => {
+                      const invitation = workdayDetailsTarget;
+                      setWorkdayDetailsTarget(null);
+                      setCommitmentChecked(false);
+                      setConfirmInvitation(invitation);
+                    }}
+                  >
+                    {invitationHasConflict(workdayDetailsTarget)
+                      ? "Laikas užimtas"
+                      : "Priimti darbą"}
+                  </button>
+                </>
+              )}
+
               {["confirmed", "completed", "no_show"].includes(
                 workdayDetailsTarget.status
               ) && (
@@ -4227,7 +4283,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               )}
 
               <button
-                className="wd-accept"
+                className="wd-decline"
                 type="button"
                 onClick={() => setWorkdayDetailsTarget(null)}
               >
@@ -4919,6 +4975,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           if (!invitationsResult.error) {
             const invitationRows = invitationsResult.data || [];
+            const declinedWorkerIds = new Set(
+              invitationRows
+                .filter((row) => row.status === "declined")
+                .map((row) => row.worker_id)
+            );
+
+            setMatches((current) =>
+              current.filter((worker) => !declinedWorkerIds.has(worker.id))
+            );
+
             setInvitedIds(invitationRows.map((row) => row.worker_id));
             setInvitationStatuses(
               Object.fromEntries(
@@ -6381,8 +6447,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           return (b.ratingAverage || 0) - (a.ratingAverage || 0);
         });
 
-      setMatches(combined);
-
       const invitationsResult = await supabase
         .from("job_invitations")
         .select("id, worker_id, status")
@@ -6390,6 +6454,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (!invitationsResult.error) {
         const invitationRows = invitationsResult.data || [];
+        const declinedWorkerIds = new Set(
+          invitationRows
+            .filter((row) => row.status === "declined")
+            .map((row) => row.worker_id)
+        );
+
+        setMatches(
+          combined.filter((worker) => !declinedWorkerIds.has(worker.id))
+        );
+
         setInvitedIds(invitationRows.map((row) => row.worker_id));
         setInvitationStatuses(
           Object.fromEntries(
@@ -6401,6 +6475,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             invitationRows.map((row) => [row.worker_id, row])
           )
         );
+      } else {
+        setMatches(combined);
       }
     } catch (err) {
       setError(err?.message || "Nepavyko rasti darbuotojų.");
@@ -6873,10 +6949,50 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setNotice("Kvietimas darbuotojui išsiųstas.");
     } catch (err) {
       if (String(err?.message || "").toLowerCase().includes("duplicate")) {
-        setInvitedIds((current) => [...new Set([...current, workerId])]);
-        setNotice("Šis darbuotojas jau pakviestas.");
+        const existingResult = await supabase
+          .from("job_invitations")
+          .select("id, worker_id, status")
+          .eq("job_id", currentJob.id)
+          .eq("worker_id", workerId)
+          .maybeSingle();
+
+        const existing = existingResult.data || null;
+
+        if (existing?.status === "declined") {
+          setMatches((current) =>
+            current.filter((worker) => worker.id !== workerId)
+          );
+          setInvitationStatuses((current) => ({
+            ...current,
+            [workerId]: "declined",
+          }));
+          setInvitationByWorker((current) => ({
+            ...current,
+            [workerId]: existing,
+          }));
+          setNotice(
+            "Šis darbuotojas jau atmetė šį darbą, todėl pakartotinai jam jo neberodome."
+          );
+        } else {
+          setInvitedIds((current) => [...new Set([...current, workerId])]);
+          setNotice("Šis darbuotojas jau buvo pakviestas į šį darbą.");
+        }
       } else {
-        setError(err?.message || "Nepavyko išsiųsti kvietimo.");
+        const message = String(err?.message || "");
+        if (
+          message
+            .toLowerCase()
+            .includes("darbuotojas šį darbą atmetė")
+        ) {
+          setMatches((current) =>
+            current.filter((worker) => worker.id !== workerId)
+          );
+          setNotice(
+            "Šis darbuotojas šį darbą atmetė, todėl pakartotinai jo kviesti negalima."
+          );
+        } else {
+          setError(message || "Nepavyko išsiųsti kvietimo.");
+        }
       }
     }
   }
