@@ -19,6 +19,363 @@ function Icon({children}) {
   return <span className="icon">{children}</span>;
 }
 
+const LITHUANIAN_CITY_NAMES = [
+  "Akmenė",
+  "Alytus",
+  "Anykščiai",
+  "Ariogala",
+  "Avižieniai",
+  "Baltoji Vokė",
+  "Birštonas",
+  "Biržai",
+  "Bukiškis",
+  "Daugai",
+  "Didžioji Riešė",
+  "Druskininkai",
+  "Dūkštas",
+  "Dusetos",
+  "Eišiškės",
+  "Elektrėnai",
+  "Ežerėlis",
+  "Gargždai",
+  "Garliava",
+  "Gelgaudiškis",
+  "Grigiškės",
+  "Ignalina",
+  "Jieznas",
+  "Jonava",
+  "Joniškėlis",
+  "Joniškis",
+  "Juodšiliai",
+  "Jurbarkas",
+  "Kaišiadorys",
+  "Kalvarija",
+  "Kaunas",
+  "Kavarskas",
+  "Kazlų Rūda",
+  "Kėdainiai",
+  "Kelmė",
+  "Klaipėda",
+  "Kretinga",
+  "Kudirkos Naumiestis",
+  "Kupiškis",
+  "Kuršėnai",
+  "Kybartai",
+  "Lazdijai",
+  "Lentvaris",
+  "Linkuva",
+  "Maišiagala",
+  "Marijampolė",
+  "Mažeikiai",
+  "Medininkai",
+  "Molėtai",
+  "Naujoji Akmenė",
+  "Nemenčinė",
+  "Neringa",
+  "Obeliai",
+  "Pabradė",
+  "Pagėgiai",
+  "Pagiriai",
+  "Pakruojis",
+  "Palanga",
+  "Pandėlys",
+  "Panemunė",
+  "Panevėžys",
+  "Pasvalys",
+  "Plungė",
+  "Priekulė",
+  "Prienai",
+  "Radviliškis",
+  "Ramygala",
+  "Raseiniai",
+  "Riešė",
+  "Rietavas",
+  "Rokiškis",
+  "Rudamina",
+  "Rūdiškės",
+  "Šakiai",
+  "Salantai",
+  "Šalčininkai",
+  "Seda",
+  "Šeduva",
+  "Šiauliai",
+  "Šilalė",
+  "Šilutė",
+  "Simnas",
+  "Širvintos",
+  "Skaidiškės",
+  "Skaudvilė",
+  "Skuodas",
+  "Smalininkai",
+  "Subačius",
+  "Sudervė",
+  "Švenčionėliai",
+  "Švenčionys",
+  "Tauragė",
+  "Telšiai",
+  "Trakai",
+  "Troškūnai",
+  "Tytuvėnai",
+  "Ukmergė",
+  "Utena",
+  "Užventis",
+  "Vabalninkas",
+  "Valčiūnai",
+  "Varėna",
+  "Varniai",
+  "Veisiejai",
+  "Venta",
+  "Viekšniai",
+  "Vievis",
+  "Vilkaviškis",
+  "Vilkija",
+  "Vilnius",
+  "Virbalis",
+  "Visaginas",
+  "Žagarė",
+  "Zarasai",
+  "Žiežmariai",
+  "Zujūnai",
+];
+
+const STATIC_CITY_OPTIONS = LITHUANIAN_CITY_NAMES.map((name) => ({
+  city_key: normalizeCityKey(name),
+  name,
+}));
+
+let cityLocationsCache = STATIC_CITY_OPTIONS;
+let cityLocationsPromise = null;
+
+async function loadCityLocations() {
+  if (!supabase) return STATIC_CITY_OPTIONS;
+
+  if (!cityLocationsPromise) {
+    cityLocationsPromise = supabase
+      .from("city_locations")
+      .select("city_key, name, latitude, longitude")
+      .order("name")
+      .then(({ data, error }) => {
+        if (error || !data?.length) {
+          return STATIC_CITY_OPTIONS;
+        }
+
+        const merged = new Map(
+          STATIC_CITY_OPTIONS.map((city) => [city.city_key, city])
+        );
+
+        for (const city of data) {
+          merged.set(city.city_key, city);
+        }
+
+        cityLocationsCache = [...merged.values()].sort((a, b) =>
+          a.name.localeCompare(b.name, "lt")
+        );
+
+        return cityLocationsCache;
+      })
+      .catch(() => STATIC_CITY_OPTIONS)
+      .finally(() => {
+        cityLocationsPromise = null;
+      });
+  }
+
+  return cityLocationsPromise;
+}
+
+async function canonicalCityName(value) {
+  const key = normalizeCityKey(value);
+  if (!key) return null;
+
+  const staticMatch = STATIC_CITY_OPTIONS.find(
+    (city) =>
+      city.city_key === key ||
+      normalizeCityKey(city.name) === key
+  );
+
+  if (staticMatch) return staticMatch.name;
+
+  const cities = await loadCityLocations();
+  const match = cities.find(
+    (city) =>
+      city.city_key === key ||
+      normalizeCityKey(city.name) === key
+  );
+
+  return match?.name || null;
+}
+
+function CityAutocomplete({
+  value,
+  onChange,
+  className = "",
+  style,
+  disabled = false,
+  placeholder = "Pradėkite rašyti miestą",
+}) {
+  const [cities, setCities] = useState(cityLocationsCache);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCityLocations().then((rows) => {
+      if (!cancelled && rows?.length) {
+        setCities(rows);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const query = normalizeCityKey(value);
+
+  const exactMatch = cities.some(
+    (city) =>
+      city.city_key === query ||
+      normalizeCityKey(city.name) === query
+  );
+
+  const suggestions = cities
+    .filter((city) => {
+      if (!query) return true;
+      const cityKey = normalizeCityKey(city.name);
+      return cityKey.includes(query);
+    })
+    .sort((a, b) => {
+      if (!query) return a.name.localeCompare(b.name, "lt");
+
+      const aKey = normalizeCityKey(a.name);
+      const bKey = normalizeCityKey(b.name);
+      const aStarts = aKey.startsWith(query) ? 0 : 1;
+      const bStarts = bKey.startsWith(query) ? 0 : 1;
+
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.localeCompare(b.name, "lt");
+    })
+    .slice(0, 12);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        zIndex: open ? 8000 : "auto",
+      }}
+    >
+      <input
+        className={className}
+        style={style}
+        value={value}
+        disabled={disabled}
+        autoComplete="off"
+        placeholder={placeholder}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onMouseDown={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setOpen(false);
+          }
+
+          if (e.key === "Enter" && suggestions.length === 1) {
+            e.preventDefault();
+            onChange(suggestions[0].name);
+            setOpen(false);
+          }
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 180);
+        }}
+      />
+
+      {open && !disabled && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            zIndex: 8001,
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            maxHeight: 270,
+            overflowY: "auto",
+            background: "#fff",
+            border: "1px solid #d6e0e7",
+            borderRadius: 11,
+            boxShadow: "0 16px 42px rgba(16,36,56,.20)",
+            padding: 5,
+          }}
+        >
+          {suggestions.length ? (
+            suggestions.map((city) => (
+              <button
+                key={city.city_key}
+                type="button"
+                role="option"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(city.name);
+                  setOpen(false);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  border: 0,
+                  background:
+                    normalizeCityKey(value) === city.city_key
+                      ? "#eef3f6"
+                      : "#fff",
+                  color: "#102438",
+                  textAlign: "left",
+                  borderRadius: 8,
+                  padding: "10px 11px",
+                  font: "inherit",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {city.name}
+              </button>
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "10px 11px",
+                color: "#6c7a88",
+                fontSize: 13,
+              }}
+            >
+              Tokio miesto sąraše nėra.
+            </div>
+          )}
+        </div>
+      )}
+
+      {!!value && !exactMatch && (
+        <div
+          style={{
+            marginTop: 5,
+            color: "#b85f0e",
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+        >
+          Pasirinkite miestą iš pasiūlymų sąrašo.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AuthModal({ open, onClose, initialMode="login", initialRole="worker" }) {
   const [mode, setMode] = useState(initialMode);
   const [role, setRole] = useState(initialRole);
@@ -88,6 +445,11 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
+        const canonicalCity = await canonicalCityName(form.city);
+        if (!canonicalCity) {
+          throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email: form.email.trim(),
           password: form.password,
@@ -97,7 +459,7 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
               role,
               display_name: form.name.trim(),
               legal_name: form.name.trim(),
-              city: form.city.trim(),
+              city: canonicalCity,
               phone: form.phone.trim(),
               company_name:
                 role === "employer" ? form.companyName.trim() : "",
@@ -280,11 +642,13 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
               <div style={twoColumns}>
                 <label style={labelStyle}>
                   Miestas
-                  <input
+                  <CityAutocomplete
                     style={inputStyle}
                     value={form.city}
-                    onChange={setField("city")}
-                    placeholder="Vilnius"
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, city: value }))
+                    }
+                    placeholder="Pradėkite rašyti miestą"
                   />
                 </label>
 
@@ -2022,11 +2386,16 @@ function WorkerDashboard({ user, onLogout }) {
     setError("");
 
     try {
+      const canonicalCity = await canonicalCityName(form.city);
+      if (!canonicalCity) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
       const profileUpdate = await supabase
         .from("profiles")
         .update({
           display_name: form.displayName.trim(),
-          city: form.city.trim(),
+          city: canonicalCity,
         })
         .eq("id", user.id);
 
@@ -2096,6 +2465,7 @@ function WorkerDashboard({ user, onLogout }) {
       if (availabilityResult.error) throw availabilityResult.error;
 
       setOriginalSkills([...selectedSkills]);
+      setForm((current) => ({ ...current, city: canonicalCity }));
       setNotice("Visi profilio duomenys išsaugoti.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -2807,10 +3177,11 @@ function WorkerDashboard({ user, onLogout }) {
 
               <label className="wd-label">
                 Miestas
-                <input
+                <CityAutocomplete
                   className="wd-input"
                   value={form.city}
-                  onChange={(e) => updateField("city", e.target.value)}
+                  onChange={(value) => updateField("city", value)}
+                  placeholder="Pradėkite rašyti miestą"
                 />
               </label>
 
@@ -3683,7 +4054,7 @@ function EmployerDashboard({ user, onLogout }) {
 
   async function saveCompanyInformation() {
     const name = companyForm.name.trim();
-    const city = companyForm.city.trim();
+    const cityInput = companyForm.city.trim();
     const phone = companyForm.phone.trim();
     const description = companyForm.description.trim();
 
@@ -3699,8 +4070,8 @@ function EmployerDashboard({ user, onLogout }) {
       return;
     }
 
-    if (city.length < 2) {
-      setError("Įveskite įmonės miestą.");
+    if (cityInput.length < 2) {
+      setError("Pasirinkite įmonės miestą.");
       return;
     }
 
@@ -3709,6 +4080,11 @@ function EmployerDashboard({ user, onLogout }) {
     setNotice("");
 
     try {
+      const city = await canonicalCityName(cityInput);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
       const companyResult = await supabase
         .from("companies")
         .update({
@@ -4653,8 +5029,13 @@ function EmployerDashboard({ user, onLogout }) {
     setSaving(true);
 
     try {
+      const canonicalCity = await canonicalCityName(form.city);
+      if (!canonicalCity) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
       const payload = {
-        city: form.city.trim(),
+        city: canonicalCity,
         address_text: form.address.trim() || null,
         work_date: form.workDate,
         start_time: form.startTime,
@@ -4706,6 +5087,7 @@ function EmployerDashboard({ user, onLogout }) {
         setNotice("Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai.");
       }
 
+      setForm((current) => ({ ...current, city: canonicalCity }));
       setCurrentJob({ ...job, confirmedCount: editingConfirmedCount || 0 });
       setInvitedIds([]);
       setInvitationStatuses({});
@@ -5224,14 +5606,13 @@ function EmployerDashboard({ user, onLogout }) {
 
               <label className="ed-label">
                 Miestas *
-                <input
+                <CityAutocomplete
                   className="ed-input"
                   value={companyForm.city}
-                  maxLength={100}
-                  onChange={(e) =>
-                    updateCompanyField("city", e.target.value)
+                  onChange={(value) =>
+                    updateCompanyField("city", value)
                   }
-                  placeholder="Pvz. Vilnius"
+                  placeholder="Pradėkite rašyti miestą"
                 />
               </label>
 
@@ -5400,11 +5781,12 @@ function EmployerDashboard({ user, onLogout }) {
 
             <label className="ed-label">
               Miestas
-              <input
+              <CityAutocomplete
                 className="ed-input"
                 value={form.city}
                 disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("city", e.target.value)}
+                onChange={(value) => updateField("city", value)}
+                placeholder="Pradėkite rašyti miestą"
               />
             </label>
 
