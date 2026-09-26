@@ -2053,9 +2053,24 @@ function WorkerProfileModal({ worker, onClose }) {
                 display: "grid",
                 placeItems: "center",
                 fontWeight: 800,
+                overflow: "hidden",
+                flex: "0 0 50px",
               }}
             >
-              {worker.initials}
+              {worker.avatarUrl ? (
+                <img
+                  src={worker.avatarUrl}
+                  alt={worker.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                worker.initials
+              )}
             </div>
             <div>
               <div className="eyebrow">DARBUOTOJO PROFILIS</div>
@@ -2214,6 +2229,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
   const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
   const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
@@ -2223,6 +2240,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     hasDrivingLicenseB: false,
     yearsExperience: 0,
     shortBio: "",
+    avatarPath: "",
   });
   const [metrics, setMetrics] = useState({
     attendanceRate: 100,
@@ -2307,7 +2325,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
           )
           .eq("user_id", user.id)
           .single(),
@@ -2361,7 +2379,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         hasDrivingLicenseB: Boolean(worker?.has_driving_license_b),
         yearsExperience: worker?.years_experience ?? 0,
         shortBio: worker?.short_bio || "",
+        avatarPath: worker?.avatar_path || "",
       });
+      setAvatarFile(null);
+      setAvatarPreview("");
 
       setMetrics({
         attendanceRate: Number(worker?.attendance_rate ?? 100),
@@ -2417,6 +2438,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function chooseAvatarFile(file) {
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError("Profilio nuotrauka turi būti JPG, PNG arba WEBP formato.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profilio nuotrauka negali būti didesnė nei 5 MB.");
+      return;
+    }
+
+    if (avatarPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setError("");
   }
 
   function toggleSkill(skillId) {
@@ -2960,6 +3004,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (privateUpdate.error) throw privateUpdate.error;
 
+      let nextAvatarPath = form.avatarPath || "";
+
+      if (avatarFile) {
+        const extension =
+          avatarFile.type === "image/png"
+            ? "png"
+            : avatarFile.type === "image/webp"
+            ? "webp"
+            : "jpg";
+        const uploadPath = `${user.id}/avatar-${Date.now()}.${extension}`;
+
+        const uploadResult = await supabase.storage
+          .from("worker-avatars")
+          .upload(uploadPath, avatarFile, {
+            cacheControl: "3600",
+            contentType: avatarFile.type,
+            upsert: false,
+          });
+
+        if (uploadResult.error) throw uploadResult.error;
+        nextAvatarPath = uploadPath;
+      }
+
       const workerUpdate = await supabase
         .from("worker_profiles")
         .update({
@@ -2967,10 +3034,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           has_driving_license_b: form.hasDrivingLicenseB,
           years_experience: Number(form.yearsExperience) || 0,
           short_bio: form.shortBio.trim() || null,
+          avatar_path: nextAvatarPath || null,
         })
         .eq("user_id", user.id);
 
       if (workerUpdate.error) throw workerUpdate.error;
+
+      if (
+        avatarFile &&
+        form.avatarPath &&
+        form.avatarPath !== nextAvatarPath
+      ) {
+        await supabase.storage
+          .from("worker-avatars")
+          .remove([form.avatarPath]);
+      }
 
       const selectedSet = new Set(selectedSkills);
       const originalSet = new Set(originalSkills);
@@ -3021,7 +3099,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setNeedsAvailabilityConfirm(false);
       setOriginalSkills([...selectedSkills]);
-      setForm((current) => ({ ...current, city: canonicalCity }));
+      setForm((current) => ({
+        ...current,
+        city: canonicalCity,
+        avatarPath: nextAvatarPath,
+      }));
+      if (avatarPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      setAvatarFile(null);
+      setAvatarPreview("");
       setShowProfileEditor(false);
       setNotice("Profilio informacija atnaujinta.");
     } catch (err) {
@@ -3041,6 +3128,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const availableCount = Object.values(availability).filter(
     (item) => item.available
   ).length;
+
+  const profileAvatarUrl =
+    avatarPreview || workerAvatarUrl(form.avatarPath);
 
   if (loading) {
     return (
@@ -3095,6 +3185,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-section:first-of-type{margin-top:16px}
         .wd-profile-editor-section h3{margin:0 0 6px;font-family:Manrope,Inter,sans-serif;font-size:17px}
         .wd-profile-editor-section>p{margin:0 0 14px;color:#6c7a88;font-size:13px;line-height:1.5}
+        .wd-avatar-editor{display:flex;align-items:center;gap:14px;margin:14px 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
+        .wd-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}
+        .wd-avatar-preview img,.wd-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+        .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
+        .wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .wd-avatar-upload input{display:none}
         .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
@@ -3111,10 +3207,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-        .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 1fr 110px 110px;align-items:center;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
-        .wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
-        .wd-toggle{display:flex;align-items:center;gap:9px;font-weight:700}.wd-toggle input{width:18px;height:18px;accent-color:#1c9b67}
-        .wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;font:inherit}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
+        .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
+        .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
+        .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
+        .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
+        .wd-time-field{display:grid;gap:5px}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
         .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
         .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
         .wd-save:disabled{opacity:.6;cursor:wait}
@@ -3136,6 +3233,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}
+          .wd-availability-choice{grid-column:1/-1}
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
           .wd-workday{grid-template-columns:1fr}.wd-workday-actions{justify-content:flex-start}
           .wd-heading-actions{justify-items:start}
@@ -3184,7 +3282,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           <div className="wd-heading-actions">
             <div className="wd-user">
-              <div className="wd-avatar">{initials || "D"}</div>
+              <div className="wd-avatar">
+                {profileAvatarUrl ? (
+                  <img
+                    src={profileAvatarUrl}
+                    alt={form.displayName || "Darbuotojo profilis"}
+                  />
+                ) : (
+                  initials || "D"
+                )}
+              </div>
               <div>
                 <b>{form.displayName || "Darbuotojas"}</b>
                 <span>{form.city || "Miestas nenurodytas"}</span>
@@ -3210,8 +3317,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className="eyebrow">MANO INFORMACIJA</div>
                 <h2>Tvarkyti mano informaciją</h2>
                 <p>
-                  Atnaujinkite savo profilį, įgūdžius ir laiką, kada galite
-                  priimti darbo pasiūlymus.
+                  Atnaujinkite savo profilį ir laiką, kada galite priimti darbo
+                  pasiūlymus.
                 </p>
               </div>
 
@@ -3228,6 +3335,37 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="wd-profile-editor-section">
               <h3>Pagrindinė informacija</h3>
+
+              <div className="wd-avatar-editor">
+                <div className="wd-avatar-preview">
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt={form.displayName || "Profilio nuotrauka"}
+                    />
+                  ) : (
+                    initials || "D"
+                  )}
+                </div>
+
+                <div className="wd-avatar-editor-copy">
+                  <b>Profilio nuotrauka</b>
+                  <span>
+                    Nuotrauką matys darbdaviai prie jūsų profilio. JPG, PNG arba
+                    WEBP, iki 5 MB.
+                  </span>
+                  <label className="wd-avatar-upload">
+                    {profileAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) =>
+                        chooseAvatarFile(e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
 
               <div className="wd-grid-2">
                 <label className="wd-label">
@@ -3313,31 +3451,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="wd-profile-editor-section">
-              <h3>Kokius darbus mokate?</h3>
-              <p>
-                Pasirinkite visus darbus, kuriuos galite atlikti arba kuriuose
-                galite padėti.
-              </p>
-
-              <div className="wd-skills">
-                {skills.map((skill) => (
-                  <button
-                    type="button"
-                    key={skill.id}
-                    className={
-                      selectedSkills.includes(Number(skill.id))
-                        ? "wd-skill on"
-                        : "wd-skill"
-                    }
-                    onClick={() => toggleSkill(Number(skill.id))}
-                  >
-                    {skill.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="wd-profile-editor-section">
               <h3>Kada galite dirbti?</h3>
               <p>
                 Pažymėkite artimiausias dienas, kuriomis realiai galite priimti
@@ -3355,42 +3468,51 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span>{day.label}</span>
                       </div>
 
-                      <label className="wd-toggle">
-                        <input
-                          type="checkbox"
-                          checked={state.available}
+                      <label className="wd-availability-choice">
+                        <span>Būsena</span>
+                        <select
+                          className="wd-status-select"
+                          value={state.available ? "available" : "unavailable"}
                           onChange={(e) =>
                             updateAvailability(day.iso, {
-                              available: e.target.checked,
+                              available: e.target.value === "available",
+                            })
+                          }
+                        >
+                          <option value="unavailable">Užimtas</option>
+                          <option value="available">Laisvas</option>
+                        </select>
+                      </label>
+
+                      <label className="wd-time-field">
+                        <span>Nuo</span>
+                        <input
+                          className="wd-time"
+                          type="time"
+                          disabled={!state.available}
+                          value={state.from}
+                          onChange={(e) =>
+                            updateAvailability(day.iso, {
+                              from: e.target.value,
                             })
                           }
                         />
-                        {state.available ? "Laisvas" : "Užimtas"}
                       </label>
 
-                      <input
-                        className="wd-time"
-                        type="time"
-                        disabled={!state.available}
-                        value={state.from}
-                        onChange={(e) =>
-                          updateAvailability(day.iso, {
-                            from: e.target.value,
-                          })
-                        }
-                      />
-
-                      <input
-                        className="wd-time"
-                        type="time"
-                        disabled={!state.available}
-                        value={state.to}
-                        onChange={(e) =>
-                          updateAvailability(day.iso, {
-                            to: e.target.value,
-                          })
-                        }
-                      />
+                      <label className="wd-time-field">
+                        <span>Iki</span>
+                        <input
+                          className="wd-time"
+                          type="time"
+                          disabled={!state.available}
+                          value={state.to}
+                          onChange={(e) =>
+                            updateAvailability(day.iso, {
+                              to: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
                     </div>
                   );
                 })}
@@ -4825,6 +4947,14 @@ function shortWorkerName(name) {
   return `${parts[0]} ${parts[1][0]}.`;
 }
 
+function workerAvatarUrl(path) {
+  if (!path) return "";
+  return (
+    supabase.storage.from("worker-avatars").getPublicUrl(path).data
+      ?.publicUrl || ""
+  );
+}
+
 function workerInitials(name) {
   return String(name || "D")
     .trim()
@@ -5990,6 +6120,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           ),
           hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
           shortBio: worker.short_bio || "",
+          avatarUrl: workerAvatarUrl(worker.avatar_path),
           skillNames,
           attendance: attendanceMap.get(booking.id) || null,
           rating: ratingMap.get(booking.id) || null,
@@ -6274,7 +6405,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
+            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, avatar_path, travel_radius_km, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
           )
           .in("user_id", workerIds),
         supabase
@@ -6412,6 +6543,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             attendanceRate: Number(worker.attendance_rate || 0),
             completedJobs: Number(worker.completed_jobs || 0),
             shortBio: worker.short_bio || "",
+            avatarUrl: workerAvatarUrl(worker.avatar_path),
             travelRadiusKm: Number(worker.travel_radius_km || 0),
             distanceKm:
               distanceKm === null
@@ -7190,7 +7322,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
-        .ed-worker-id{display:flex;align-items:flex-start;gap:0}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
+        .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
@@ -8091,7 +8223,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   return (
                     <div className="ed-worker" key={worker.id}>
                       <div className="ed-worker-id">
-                        <div className="ed-avatar">{worker.initials}</div>
+                        <div className="ed-avatar">
+                          {worker.avatarUrl ? (
+                            <img src={worker.avatarUrl} alt={worker.name} />
+                          ) : (
+                            worker.initials
+                          )}
+                        </div>
                         <div>
                           <b>{worker.name}</b>
                           <span>
