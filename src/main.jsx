@@ -1058,6 +1058,7 @@ function WorkerDashboard({ user, onLogout }) {
   const [workerAttendanceMode, setWorkerAttendanceMode] = useState(null);
   const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
+  const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
@@ -1360,11 +1361,27 @@ function WorkerDashboard({ user, onLogout }) {
     if (companyIds.length) {
       const companiesResult = await supabase
         .from("companies")
-        .select("id, name, reliability_rate, cancelled_confirmed_count")
+        .select("id, owner_id, name, reliability_rate, cancelled_confirmed_count")
         .in("id", companyIds);
 
       if (companiesResult.error) throw companiesResult.error;
       companies = companiesResult.data || [];
+    }
+
+    const ownerIds = [
+      ...new Set(companies.map((company) => company.owner_id).filter(Boolean)),
+    ];
+
+    let privateRows = [];
+    if (ownerIds.length) {
+      const privateResult = await supabase
+        .from("user_private")
+        .select("user_id, phone")
+        .in("user_id", ownerIds);
+
+      if (!privateResult.error) {
+        privateRows = privateResult.data || [];
+      }
     }
 
     let attendanceRows = [];
@@ -1383,6 +1400,7 @@ function WorkerDashboard({ user, onLogout }) {
 
     const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
     const companyMap = new Map(companies.map((company) => [company.id, company]));
+    const privateMap = new Map(privateRows.map((row) => [row.user_id, row]));
     const attendanceMap = new Map(
       attendanceRows.map((row) => [row.booking_id, row])
     );
@@ -1395,6 +1413,9 @@ function WorkerDashboard({ user, onLogout }) {
           ...invitation,
           job,
           companyName: company?.name || "Darbdavys",
+          companyPhone: company?.owner_id
+            ? privateMap.get(company.owner_id)?.phone || ""
+            : "",
           companyReliability: Number(company?.reliability_rate ?? 100),
           companyCancelledConfirmed: Number(company?.cancelled_confirmed_count ?? 0),
         };
@@ -1417,6 +1438,9 @@ function WorkerDashboard({ user, onLogout }) {
             ...booking,
             job,
             companyName: company?.name || "Darbdavys",
+            companyPhone: company?.owner_id
+              ? privateMap.get(company.owner_id)?.phone || ""
+              : "",
             attendance: attendanceMap.get(booking.id) || null,
           };
         })
@@ -1516,6 +1540,16 @@ function WorkerDashboard({ user, onLogout }) {
       setError(err?.message || "Nepavyko pažymėti atvykimo.");
     } finally {
       setAttendanceBusy(false);
+    }
+  }
+
+  async function copyPhoneNumber(phone) {
+    if (!phone) return;
+    try {
+      await navigator.clipboard.writeText(phone);
+      setNotice(`Telefono numeris nukopijuotas: ${phone}`);
+    } catch (err) {
+      setError("Nepavyko nukopijuoti telefono numerio.");
     }
   }
 
@@ -1754,8 +1788,8 @@ function WorkerDashboard({ user, onLogout }) {
         .wd-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
-        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px}
-        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;margin-bottom:8px}.wd-kpi b{font-size:25px}
+        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}
@@ -1781,7 +1815,7 @@ function WorkerDashboard({ user, onLogout }) {
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
@@ -2106,13 +2140,22 @@ function WorkerDashboard({ user, onLogout }) {
 
                       <div className="wd-workday-actions">
                         {canCheckIn && (
-                          <button
-                            className="wd-accept"
-                            disabled={attendanceBusy}
-                            onClick={() => workerCheckIn(item.id)}
-                          >
-                            Atvykau
-                          </button>
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={attendanceBusy}
+                              onClick={() => workerCheckIn(item.id)}
+                            >
+                              Atvykau
+                            </button>
+                            <button
+                              className="wd-decline"
+                              type="button"
+                              onClick={() => setArrivalHelpTarget(item)}
+                            >
+                              Atvykau, bet nerandu
+                            </button>
+                          </>
                         )}
 
                         {pendingNegative && !disputed && (
@@ -2543,6 +2586,117 @@ function WorkerDashboard({ user, onLogout }) {
           )}
         </div>
       </main>
+
+      {arrivalHelpTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setArrivalHelpTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">PAGALBA ATVYKUS</div>
+                <h2>Atvykau, bet nerandu darbdavio</h2>
+              </div>
+              <button
+                className="rs-close"
+                onClick={() => setArrivalHelpTarget(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#f6f8fa",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <b>{arrivalHelpTarget.companyName}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {arrivalHelpTarget.job?.title} · {arrivalHelpTarget.job?.work_date}
+              </div>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {arrivalHelpTarget.job?.address_text || "Adresas nenurodytas"}
+              </div>
+            </div>
+
+            <div className="wd-note ok" style={{ marginBottom: 16 }}>
+              Jei jau esate vietoje, pirmiausia parašykite žinutę darbdaviui.
+              Jei reikia, galite nukopijuoti jo telefono numerį ir susisiekti tiesiogiai.
+            </div>
+
+            <div style={{ display: "grid", gap: 12, marginBottom: 18 }}>
+              <button
+                className="wd-accept"
+                type="button"
+                onClick={() => {
+                  setArrivalHelpTarget(null);
+                  setConversation({
+                    invitationId: arrivalHelpTarget.invitation_id,
+                    title: `${arrivalHelpTarget.companyName} · ${arrivalHelpTarget.job?.title}`,
+                  });
+                }}
+              >
+                Rašyti žinutę darbdaviui
+              </button>
+
+              {arrivalHelpTarget.companyPhone ? (
+                <div
+                  style={{
+                    border: "1px solid #dbe4ea",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fff",
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 13, marginBottom: 6 }}>
+                    Darbdavio telefono numeris
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <b style={{ fontSize: 18 }}>{arrivalHelpTarget.companyPhone}</b>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      onClick={() => copyPhoneNumber(arrivalHelpTarget.companyPhone)}
+                    >
+                      Kopijuoti numerį
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="wd-note err" style={{ marginBottom: 0 }}>
+                  Šiuo metu darbdavio telefono numeris nenurodytas. Parašykite jam žinutę platformoje.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                className="wd-decline"
+                type="button"
+                onClick={() => setArrivalHelpTarget(null)}
+              >
+                Uždaryti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {workerAttendanceTarget && workerAttendanceMode && (
         <div
@@ -4273,9 +4427,9 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
         .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px}
-        .ed-kpi span{display:block;font-size:12px;color:#6c7a88;margin-bottom:7px}
-        .ed-kpi b{font-size:24px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
+        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
+        .ed-kpi span{display:block;font-size:12px;color:#6c7a88;line-height:1.35;min-height:34px}
+        .ed-kpi b{font-size:24px;line-height:1;margin-top:10px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
         .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
         .ed-reliability-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
         .ed-reliability-title{
@@ -4852,20 +5006,6 @@ function EmployerDashboard({ user, onLogout }) {
                             Profilis
                           </button>
 
-                          {worker.invitationId && (
-                            <button
-                              className="ed-secondary"
-                              onClick={() =>
-                                setConversation({
-                                  invitationId: worker.invitationId,
-                                  title: `${worker.name} · ${currentJob.title}`,
-                                })
-                              }
-                            >
-                              Žinutė
-                            </button>
-                          )}
-
                           {checkInOpen &&
                             isConfirmed &&
                             !attendance.finalized_at &&
@@ -4979,7 +5119,7 @@ function EmployerDashboard({ user, onLogout }) {
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <b>{matches.length} rasti</b>
+                <b>{matches.filter((worker) => !jobWorkers.some((item) => item.id === worker.id)).length} rasti</b>
                 <div className="ed-progress">
                   {currentJob.status === "completed"
                     ? "Darbo diena užbaigta"
@@ -4990,9 +5130,15 @@ function EmployerDashboard({ user, onLogout }) {
 
             {searching ? (
               <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
-            ) : matches.length ? (
+            ) : matches.filter(
+              (worker) => !jobWorkers.some((item) => item.id === worker.id)
+            ).length ? (
               <div className="ed-results">
-                {matches.map((worker) => {
+                {matches
+                  .filter(
+                    (worker) => !jobWorkers.some((item) => item.id === worker.id)
+                  )
+                  .map((worker) => {
                   const invited = invitedIds.includes(worker.id);
                   return (
                     <div className="ed-worker" key={worker.id}>
