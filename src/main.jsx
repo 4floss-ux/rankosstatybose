@@ -2353,11 +2353,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [urgentSaving, setUrgentSaving] = useState(false);
   const [urgentAvailability, setUrgentAvailability] = useState({
     city: "",
-    until: null,
+    active: false,
   });
   const [urgentForm, setUrgentForm] = useState({
     city: "",
-    hours: "4",
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
@@ -2459,7 +2458,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_available_until"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active"
           )
           .eq("user_id", user.id)
           .single(),
@@ -2520,11 +2519,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setUrgentAvailability({
         city: worker?.urgent_city || "",
-        until: worker?.urgent_available_until || null,
+        active: Boolean(worker?.urgent_is_active),
       });
       setUrgentForm({
         city: worker?.urgent_city || profile?.city || "Vilnius",
-        hours: "4",
       });
 
       setMetrics({
@@ -2588,8 +2586,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function urgentAvailabilityIsActive() {
-    if (!urgentAvailability.until) return false;
-    return new Date(urgentAvailability.until).getTime() > Date.now();
+    return Boolean(urgentAvailability.active);
   }
 
   async function enableUrgentAvailability() {
@@ -2616,7 +2613,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const result = await supabase.rpc("worker_set_urgent_availability", {
         p_city: canonicalCity,
-        p_hours: Number(urgentForm.hours),
       });
 
       if (result.error) throw result.error;
@@ -2624,7 +2620,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const row = result.data?.[0] || {};
       setUrgentAvailability({
         city: row.urgent_city || canonicalCity,
-        until: row.urgent_available_until || null,
+        active: Boolean(row.urgent_is_active),
       });
       setUrgentForm((current) => ({
         ...current,
@@ -2632,7 +2628,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       }));
       setShowUrgentAvailability(false);
       setNotice(
-        "Režimas „Laisvas dabar“ įjungtas. Business ir Business Pro darbdaviai šiame mieste gali matyti jūsų telefono numerį iki pasirinkto laiko."
+        "Režimas „Laisvas dabar“ įjungtas. Business Pro darbdaviai šiame mieste gali matyti jūsų telefono numerį, kol patys šio režimo neišjungsite."
       );
     } catch (err) {
       setError(err?.message || "Nepavyko įjungti režimo „Laisvas dabar“.");
@@ -2650,7 +2646,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const result = await supabase.rpc("worker_clear_urgent_availability");
       if (result.error) throw result.error;
 
-      setUrgentAvailability({ city: "", until: null });
+      setUrgentAvailability({ city: "", active: false });
       setShowUrgentAvailability(false);
       setNotice("Režimas „Laisvas dabar“ išjungtas.");
     } catch (err) {
@@ -3643,11 +3639,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {urgentAvailabilityIsActive() && (
               <div className="wd-urgent-status">
-                {urgentAvailability.city} · iki{" "}
-                {new Date(urgentAvailability.until).toLocaleTimeString(
-                  "lt-LT",
-                  { hour: "2-digit", minute: "2-digit" }
-                )}
+                {urgentAvailability.city} · matomas „Skubiai!“ paieškoje
               </div>
             )}
 
@@ -4953,9 +4945,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               Įjungę šį režimą patvirtinate, kad šiuo metu laukiate skubaus
-              darbo. Iki pasirinkto laiko Business ir Business Pro darbdaviai,
-              ieškantys darbuotojo jūsų pasirinktame mieste, galės matyti jūsų
-              vardą ir telefono numerį.
+              darbo. Business Pro darbdaviai, ieškantys darbuotojo jūsų
+              pasirinktame mieste, galės matyti jūsų vardą ir telefono numerį,
+              kol patys šio režimo neišjungsite.
             </div>
 
             <div style={{ display: "grid", gap: 14 }}>
@@ -4974,23 +4966,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </label>
 
-              <label className="wd-label">
-                Kiek laiko būsite laisvas?
-                <select
-                  className="wd-input"
-                  value={urgentForm.hours}
-                  onChange={(e) =>
-                    setUrgentForm((current) => ({
-                      ...current,
-                      hours: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="2">2 valandas</option>
-                  <option value="4">4 valandas</option>
-                  <option value="8">8 valandas</option>
-                </select>
-              </label>
             </div>
 
             <div
@@ -5663,7 +5638,6 @@ const EMPLOYER_PLANS = [
       "Viskas, kas yra Basic plane",
       "Iki 25 darbo pasiūlymų per mėnesį",
       "Darbuotojų patikimumas ir įvertinimai",
-      "„Skubiai!“ – tiesioginiai šiuo metu laisvų darbuotojų kontaktai",
       "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė įmonės statistika",
       "1 įmonės vartotojas",
@@ -5683,6 +5657,7 @@ const EMPLOYER_PLANS = [
       "„Mano darbai“ ir „Visi įmonės darbai“",
       "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
       "Atskira vadybininko darbų statistika",
+      "„Skubiai!“ – tiesioginiai šiuo metu laisvų darbuotojų kontaktai",
       "Vidinis įmonės komandos pokalbis platformoje",
     ],
   },
@@ -7735,13 +7710,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function openUrgentSearch() {
-    const canUseUrgent = ["business", "business_pro"].includes(
-      planSummary?.plan_key
-    );
+    const canUseUrgent = Boolean(planSummary?.can_team_management);
 
     if (!canUseUrgent) {
       setNotice(
-        "„Skubiai!“ kontaktų paieška prieinama Business ir Business Pro planuose."
+        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane."
       );
       setShowPlans(true);
       return;
@@ -8650,7 +8623,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 type="button"
                 onClick={openUrgentSearch}
               >
-                Skubiai!
+                {planSummary?.can_team_management
+                  ? "Skubiai!"
+                  : "Skubiai! · Pro"}
               </button>
             </div>
 
@@ -10260,8 +10235,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <h2>Kas gali atvykti dirbti dabar?</h2>
                 <p>
                   Pasirinkite miestą. Rodomi tik darbuotojai, kurie patys
-                  įjungė režimą „Laisvas dabar“ ir sutiko laikinai parodyti
-                  savo telefono numerį darbdaviams.
+                  įjungė režimą „Laisvas dabar“ ir sutiko parodyti savo
+                  telefono numerį Business Pro darbdaviams.
                 </p>
               </div>
 
@@ -10278,8 +10253,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-urgent-note">
               Ši paieška nesukuria darbo pasiūlymo ir nesiunčia kvietimų.
               Susisiekę su darbuotoju darbo sąlygas suderinate tiesiogiai.
-              Darbuotojo numeris iš sąrašo dingsta automatiškai pasibaigus jo
-              pasirinktam „Laisvas dabar“ laikui.
+              Darbuotojo numeris iš sąrašo dingsta, kai pats darbuotojas
+              išjungia „Laisvas dabar“ režimą. Rodomi tik per paskutines 24 val.
+              platformoje aktyvūs darbuotojai.
             </div>
 
             <div className="ed-urgent-filter">
@@ -10328,14 +10304,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             : ""}
                           {worker.has_driving_license_b ? " · B kategorija" : ""}
                         </span>
-                        <span>
-                          Laisvas iki{" "}
-                          {new Date(
-                            worker.urgent_available_until
-                          ).toLocaleTimeString("lt-LT", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                        <span style={{ color: "#167a54", fontWeight: 800 }}>
+                          Laisvas dabar
                         </span>
                       </div>
                     </div>
@@ -14609,7 +14579,6 @@ function App() {
                   <li>Visa Basic funkcionalumo apimtis</li>
                   <li>Iki 25 darbo pasiūlymų / mėn.</li>
                   <li>Darbuotojų patikimumas ir įvertinimai</li>
-                  <li>„Skubiai!“ laisvų darbuotojų kontaktų paieška</li>
                   <li>Privatūs ir bendri darbo pokalbiai</li>
                   <li>Išplėstinė įmonės statistika</li>
                   <li>1 įmonės vartotojas</li>
@@ -14663,6 +14632,7 @@ function App() {
                   <li>Savininko, vadovo ir vadybininko rolės</li>
                   <li>Mano darbai / visi įmonės darbai</li>
                   <li>Atsakingo žmogaus priskyrimas ir darbų perskirstymas</li>
+                  <li>„Skubiai!“ laisvų darbuotojų kontaktų paieška</li>
                   <li>Vidinis įmonės komandos pokalbis</li>
                 </ul>
                 <button
