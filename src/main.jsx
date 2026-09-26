@@ -583,6 +583,57 @@ function formatNetPay(amount, unit) {
     : `${formatted} € į rankas / val.`;
 }
 
+function formatWorkedMinutes(minutes) {
+  const total = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (!hours) return `${mins} min.`;
+  if (!mins) return `${hours} val.`;
+  return `${hours} val. ${mins} min.`;
+}
+
+function jobEndMoment(job) {
+  if (!job?.work_date) return null;
+  const end = (job.end_time || job.start_time || "23:59").slice(0, 5);
+  const value = new Date(`${job.work_date}T${end}:00`);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function jobHasEnded(job) {
+  const end = jobEndMoment(job);
+  return end ? new Date() >= end : false;
+}
+
+function jobCheckInWindowOpen(job) {
+  if (!job?.work_date || !job?.start_time) return false;
+
+  const start = new Date(
+    `${job.work_date}T${job.start_time.slice(0, 5)}:00`
+  );
+  if (Number.isNaN(start.getTime())) return false;
+
+  const opens = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+  let end = job.end_time
+    ? new Date(`${job.work_date}T${job.end_time.slice(0, 5)}:00`)
+    : new Date(start.getTime() + 12 * 60 * 60 * 1000);
+
+  if (job.end_time && end <= start) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const now = new Date();
+  return now >= opens && now <= end;
+}
+
+function attendanceOutcomeLabel(attendance) {
+  const outcome = attendance?.final_outcome || attendance?.employer_outcome;
+  if (outcome === "full_day") return "Išdirbo visą dieną";
+  if (outcome === "left_early_agreed") return "Išėjo anksčiau – suderinta";
+  if (outcome === "left_early_unexcused") return "Išėjo anksčiau be pateisinamos priežasties";
+  if (outcome === "no_show") return "Neatvyko";
+  return "Darbo diena neuždaryta";
+}
+
 
 function timeRangesOverlap(a, b) {
   if (!a || !b || a.work_date !== b.work_date) return false;
@@ -610,6 +661,27 @@ function notificationPresentation(events = []) {
   }
   if (types.includes("invitation_accepted")) {
     return { tone: "green", label: "✓ Darbuotojas priėmė" };
+  }
+  if (types.includes("attendance_disputed")) {
+    return { tone: "red", label: "⚑ Darbo dienos ginčas" };
+  }
+  if (types.includes("attendance_review_required")) {
+    return { tone: "orange", label: "● Reikia patvirtinti darbo dieną" };
+  }
+  if (types.includes("attendance_action_required")) {
+    return { tone: "orange", label: "● Reikia uždaryti darbo dieną" };
+  }
+  if (types.includes("worker_checked_in")) {
+    return { tone: "green", label: "✓ Darbuotojas pažymėjo „Atvykau“" };
+  }
+  if (types.includes("employer_checked_in")) {
+    return { tone: "green", label: "✓ Darbdavys patvirtino atvykimą" };
+  }
+  if (types.includes("attendance_finalized")) {
+    return { tone: "green", label: "✓ Darbo diena uždaryta" };
+  }
+  if (types.includes("attendance_resolved")) {
+    return { tone: "green", label: "✓ Ginčas išspręstas" };
   }
   if (types.includes("invitation_expired")) {
     return { tone: "muted", label: "Kvietimas nebegalioja" };
@@ -815,27 +887,58 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
 function WorkerProfileModal({ worker, onClose }) {
   if (!worker) return null;
 
+  const stats = worker.publicStats || {};
+  const monthMinutes = Number(stats.monthWorkedMinutes || 0);
+  const ratingAverage =
+    stats.ratingAverage ?? worker.ratingAverage ?? null;
+  const ratingCount =
+    Number(stats.ratingCount ?? worker.ratingCount ?? 0);
+  const attendanceRate =
+    Number(stats.attendanceRate ?? worker.attendanceRate ?? 100);
+  const noShows =
+    Number(stats.noShowCount ?? worker.noShowCount ?? 0);
+  const earlyLeaves =
+    Number(
+      stats.unexcusedEarlyLeaveCount ??
+        worker.unexcusedEarlyLeaveCount ??
+        0
+    );
+
   return (
-    <div className="rs-modal-overlay" onMouseDown={(e) => {
-      if (e.target === e.currentTarget) onClose();
-    }}>
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="rs-modal-card">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-card{width:min(700px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-          .rs-profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-          .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
-          .rs-profile-stat span{display:block;font-size:12px;color:#6c7a88;margin-bottom:5px}.rs-profile-stat b{font-size:20px}
-          @media(max-width:560px){.rs-profile-grid{grid-template-columns:1fr}}
+          .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+          .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
+          .rs-profile-stat span{display:block;font-size:11px;color:#6c7a88;margin-bottom:5px;line-height:1.3}.rs-profile-stat b{font-family:Manrope,Inter,sans-serif;font-size:18px}
+          .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
+          @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
+          @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
         `}</style>
+
         <div className="rs-modal-head">
           <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
-            <div style={{
-              width: 50, height: 50, borderRadius: "50%", background: "#102438",
-              color: "#fff", display: "grid", placeItems: "center", fontWeight: 800
-            }}>
+            <div
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: "#102438",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+              }}
+            >
               {worker.initials}
             </div>
             <div>
@@ -847,14 +950,61 @@ function WorkerProfileModal({ worker, onClose }) {
         </div>
 
         <div className="rs-profile-grid">
-          <div className="rs-profile-stat"><span>Miestas</span><b>{worker.city}</b></div>
-          <div className="rs-profile-stat"><span>Patirtis</span><b>{worker.yearsExperience} m.</b></div>
-          <div className="rs-profile-stat"><span>Atvykimo patikimumas</span><b>{Math.round(worker.attendanceRate)}%</b></div>
-          <div className="rs-profile-stat"><span>Neatvykimų</span><b>{worker.noShowCount || 0}</b></div>
+          <div className="rs-profile-stat">
+            <span>Miestas</span>
+            <b>{worker.city || "—"}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Patirtis</span>
+            <b>{Number(worker.yearsExperience || 0)} m.</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Dirbta šį mėnesį</span>
+            <b>{Number(stats.monthWorkedDays || 0)} d.</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Valandų šį mėnesį</span>
+            <b>{formatWorkedMinutes(monthMinutes)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Darbų šį mėnesį</span>
+            <b>{Number(stats.monthJobs || 0)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Aktyvūs darbai</span>
+            <b>{Number(stats.activeJobs || 0)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Darbdavio atšaukti</span>
+            <b>{Number(stats.cancelledByEmployer || 0)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Atvykimo patikimumas</span>
+            <b>{Math.round(attendanceRate)}%</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Darbdavių įvertinimas</span>
+            <b>
+              {ratingAverage === null || ratingAverage === undefined
+                ? "—"
+                : `${Number(ratingAverage).toFixed(1)} / 5`}
+            </b>
+            <span style={{ marginTop: 4, marginBottom: 0 }}>
+              {ratingCount ? `${ratingCount} vert.` : "Dar nėra vertinimų"}
+            </span>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Neatvykimai</span>
+            <b>{noShows}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Nepagrįsti ankstyvi išėjimai</span>
+            <b>{earlyLeaves}</b>
+          </div>
         </div>
 
         {worker.hasDrivingLicenseB && (
-          <div style={{ marginTop: 18 }}>
+          <div className="rs-profile-section">
             <b>Vairuotojo pažymėjimas</b>
             <p style={{ margin: "6px 0 0", color: "#6c7a88" }}>
               Turi B kategoriją
@@ -863,20 +1013,24 @@ function WorkerProfileModal({ worker, onClose }) {
         )}
 
         {worker.shortBio && (
-          <div style={{ marginTop: 18 }}>
+          <div className="rs-profile-section">
             <b>Apie patirtį</b>
-            <p style={{ color: "#6c7a88", lineHeight: 1.55 }}>{worker.shortBio}</p>
+            <p style={{ color: "#6c7a88", lineHeight: 1.55 }}>
+              {worker.shortBio}
+            </p>
           </div>
         )}
 
-        <div style={{ marginTop: 18 }}>
-          <b>Įgūdžiai</b>
-          <div className="ed-tags" style={{ marginTop: 9 }}>
-            {worker.skillNames.map((skill) => (
-              <span className="ed-tag" key={skill}>{skill}</span>
-            ))}
+        {!!(worker.skillNames || []).length && (
+          <div className="rs-profile-section">
+            <b>Įgūdžiai</b>
+            <div className="ed-tags" style={{ marginTop: 9 }}>
+              {(worker.skillNames || []).map((skill) => (
+                <span className="ed-tag" key={skill}>{skill}</span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -898,6 +1052,13 @@ function WorkerDashboard({ user, onLogout }) {
   const [confirmInvitation, setConfirmInvitation] = useState(null);
   const [commitmentChecked, setCommitmentChecked] = useState(false);
   const [conversation, setConversation] = useState(null);
+  const [workdays, setWorkdays] = useState([]);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
+  const [workerAttendanceMode, setWorkerAttendanceMode] = useState(null);
+  const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
+  const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
     city: "Vilnius",
@@ -916,12 +1077,12 @@ function WorkerDashboard({ user, onLogout }) {
     restrictedUntil: null,
   });
   const [workerStats, setWorkerStats] = useState({
-    totalBookings: 0,
+    monthWorkedDays: 0,
+    monthWorkedMinutes: 0,
+    monthJobs: 0,
     activeJobs: 0,
-    completedJobs: 0,
     cancelledByEmployer: 0,
-    cancelledByWorker: 0,
-    noShows: 0,
+    unexcusedEarlyLeaveCount: 0,
   });
   const [availability, setAvailability] = useState(() =>
     Object.fromEntries(
@@ -1093,47 +1254,51 @@ function WorkerDashboard({ user, onLogout }) {
   }
 
   async function loadWorkerStats() {
-    const [bookingsResult, workerResult] = await Promise.all([
-      supabase
-        .from("bookings")
-        .select("status")
-        .eq("worker_id", user.id),
+    const [statsResult, workerResult] = await Promise.all([
+      supabase.rpc("get_worker_public_stats", { p_worker_id: user.id }),
       supabase
         .from("worker_profiles")
         .select(
-          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until"
+          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until, completed_jobs, unexcused_early_leave_count"
         )
         .eq("user_id", user.id)
         .single(),
     ]);
 
-    if (bookingsResult.error) throw bookingsResult.error;
+    if (statsResult.error) throw statsResult.error;
     if (workerResult.error) throw workerResult.error;
 
-    const rows = bookingsResult.data || [];
-    const countStatus = (status) =>
-      rows.filter((row) => row.status === status).length;
+    const stats = statsResult.data?.[0] || {};
+    const worker = workerResult.data || {};
 
     setWorkerStats({
-      totalBookings: rows.length,
-      activeJobs: countStatus("confirmed"),
-      completedJobs: countStatus("completed"),
-      cancelledByEmployer: countStatus("cancelled_by_employer"),
-      cancelledByWorker: countStatus("cancelled_by_worker"),
-      noShows: countStatus("no_show"),
+      monthWorkedDays: Number(stats.month_worked_days || 0),
+      monthWorkedMinutes: Number(stats.month_worked_minutes || 0),
+      monthJobs: Number(stats.month_jobs || 0),
+      activeJobs: Number(stats.active_jobs || 0),
+      cancelledByEmployer: Number(stats.cancelled_by_employer || 0),
+      unexcusedEarlyLeaveCount: Number(
+        stats.unexcused_early_leave_count ||
+          worker.unexcused_early_leave_count ||
+          0
+      ),
     });
 
-    const worker = workerResult.data;
     setMetrics((current) => ({
       ...current,
-      attendanceRate: Number(worker?.attendance_rate ?? current.attendanceRate ?? 100),
+      attendanceRate: Number(
+        stats.attendance_rate ?? worker.attendance_rate ?? current.attendanceRate ?? 100
+      ),
+      completedJobs: Number(worker.completed_jobs || 0),
       ratingAverage:
-        worker?.rating_average === null || worker?.rating_average === undefined
-          ? null
-          : Number(worker.rating_average),
-      ratingCount: Number(worker?.rating_count || 0),
-      noShowCount: Number(worker?.no_show_count || 0),
-      restrictedUntil: worker?.restricted_until || null,
+        stats.rating_average === null || stats.rating_average === undefined
+          ? worker.rating_average === null || worker.rating_average === undefined
+            ? null
+            : Number(worker.rating_average)
+          : Number(stats.rating_average),
+      ratingCount: Number(stats.rating_count ?? worker.rating_count ?? 0),
+      noShowCount: Number(stats.no_show_count ?? worker.no_show_count ?? 0),
+      restrictedUntil: worker.restricted_until || null,
     }));
   }
 
@@ -1146,9 +1311,9 @@ function WorkerDashboard({ user, onLogout }) {
         .order("invited_at", { ascending: false }),
       supabase
         .from("bookings")
-        .select("id, job_id, status")
+        .select("id, job_id, invitation_id, status, confirmed_at, cancelled_at, cancellation_reason")
         .eq("worker_id", user.id)
-        .eq("status", "confirmed"),
+        .order("confirmed_at", { ascending: false }),
       supabase
         .from("job_notifications")
         .select("id, job_id, invitation_id, event_type, created_at, read_at")
@@ -1174,13 +1339,14 @@ function WorkerDashboard({ user, onLogout }) {
     if (!allJobIds.length) {
       setInvitations([]);
       setConfirmedJobs([]);
+      setWorkdays([]);
       return;
     }
 
     const jobsResult = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at"
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at"
       )
       .in("id", allJobIds);
 
@@ -1201,8 +1367,25 @@ function WorkerDashboard({ user, onLogout }) {
       companies = companiesResult.data || [];
     }
 
+    let attendanceRows = [];
+    const bookingIds = bookingRows.map((row) => row.id);
+    if (bookingIds.length) {
+      const attendanceResult = await supabase
+        .from("attendance")
+        .select(
+          "id, booking_id, status, worker_check_in_at, employer_check_in_at, worker_workday_claim, worker_claimed_at, employer_outcome, employer_marked_at, actual_end_time, employer_note, worker_response, worker_response_note, worker_responded_at, dispute_status, final_outcome, finalized_at, worked_minutes, resolution_note, worker_evidence_path, worker_evidence_name"
+        )
+        .in("booking_id", bookingIds);
+
+      if (attendanceResult.error) throw attendanceResult.error;
+      attendanceRows = attendanceResult.data || [];
+    }
+
     const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
     const companyMap = new Map(companies.map((company) => [company.id, company]));
+    const attendanceMap = new Map(
+      attendanceRows.map((row) => [row.booking_id, row])
+    );
 
     setInvitations(
       invitationRows.map((invitation) => {
@@ -1219,7 +1402,28 @@ function WorkerDashboard({ user, onLogout }) {
     );
 
     setConfirmedJobs(
-      bookingRows.map((booking) => jobMap.get(booking.job_id)).filter(Boolean)
+      bookingRows
+        .filter((booking) => booking.status === "confirmed")
+        .map((booking) => jobMap.get(booking.job_id))
+        .filter(Boolean)
+    );
+
+    setWorkdays(
+      bookingRows
+        .map((booking) => {
+          const job = jobMap.get(booking.job_id);
+          const company = job ? companyMap.get(job.company_id) : null;
+          return {
+            ...booking,
+            job,
+            companyName: company?.name || "Darbdavys",
+            attendance: attendanceMap.get(booking.id) || null,
+          };
+        })
+        .filter((item) => item.job)
+        .sort((a, b) =>
+          String(b.job.work_date || "").localeCompare(String(a.job.work_date || ""))
+        )
     );
   }
 
@@ -1294,6 +1498,135 @@ function WorkerDashboard({ user, onLogout }) {
       setError(err?.message || "Nepavyko atsakyti į kvietimą.");
     } finally {
       setRespondingInvitation(null);
+    }
+  }
+
+  async function workerCheckIn(bookingId) {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_check_in", {
+        p_booking_id: bookingId,
+      });
+      if (result.error) throw result.error;
+      setNotice("Atvykimas pažymėtas. Darbdavys matys, kad atvykote.");
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pažymėti atvykimo.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function workerClaimWorkday(bookingId, claim) {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_claim_workday", {
+        p_booking_id: bookingId,
+        p_claim: claim,
+      });
+      if (result.error) throw result.error;
+
+      setNotice(
+        claim === "worked"
+          ? "Pažymėjote, kad dirbote. Laukiama darbdavio darbo dienos uždarymo."
+          : "Neatvykimas patvirtintas. Pritaikytas darbuotojo patikimumo poveikis."
+      );
+
+      setWorkerAttendanceTarget(null);
+      setWorkerAttendanceMode(null);
+      setWorkerAttendanceNote("");
+      setWorkerEvidenceFile(null);
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko užbaigti darbo dienos.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function workerRespondAttendance(attendanceId, response, note = "") {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+
+    let uploadedPath = null;
+
+    try {
+      if (response === "disputed" && workerEvidenceFile) {
+        const allowedTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf",
+        ];
+
+        if (!allowedTypes.includes(workerEvidenceFile.type)) {
+          throw new Error(
+            "Įrodymui galima įkelti JPG, PNG, WEBP nuotrauką arba PDF dokumentą."
+          );
+        }
+
+        if (workerEvidenceFile.size > 8 * 1024 * 1024) {
+          throw new Error("Įrodymo failas negali būti didesnis nei 8 MB.");
+        }
+
+        const safeName = workerEvidenceFile.name
+          .replace(/[^a-zA-Z0-9._-]+/g, "-")
+          .slice(-100);
+
+        uploadedPath = `${user.id}/${attendanceId}/${Date.now()}-${safeName}`;
+
+        const uploadResult = await supabase.storage
+          .from("attendance-evidence")
+          .upload(uploadedPath, workerEvidenceFile, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: workerEvidenceFile.type,
+          });
+
+        if (uploadResult.error) throw uploadResult.error;
+      }
+
+      const result = await supabase.rpc("worker_respond_attendance", {
+        p_attendance_id: attendanceId,
+        p_response: response,
+        p_note: note || null,
+        p_evidence_path: uploadedPath,
+        p_evidence_name:
+          response === "disputed" && workerEvidenceFile
+            ? workerEvidenceFile.name
+            : null,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice(
+        response === "disputed"
+          ? "Ginčas pateiktas. Kol jis neišspręstas, jūsų reitingas nekeičiamas."
+          : "Darbo dienos rezultatas patvirtintas."
+      );
+
+      setWorkerAttendanceTarget(null);
+      setWorkerAttendanceMode(null);
+      setWorkerAttendanceNote("");
+      setWorkerEvidenceFile(null);
+
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      if (uploadedPath) {
+        await supabase.storage
+          .from("attendance-evidence")
+          .remove([uploadedPath])
+          .catch(() => {});
+      }
+
+      setError(err?.message || "Nepavyko pateikti atsakymo.");
+    } finally {
+      setAttendanceBusy(false);
     }
   }
 
@@ -1440,9 +1773,19 @@ function WorkerDashboard({ user, onLogout }) {
         .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
+        .wd-heading-actions{display:grid;justify-items:end;gap:10px}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday h3{margin:0 0 5px;font-size:18px}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}
+        .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+        .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+        .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
+        .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+        .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+        .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 1fr 110px 110px;align-items:center;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
         .wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-toggle{display:flex;align-items:center;gap:9px;font-weight:700}.wd-toggle input{width:18px;height:18px;accent-color:#1c9b67}
@@ -1462,6 +1805,8 @@ function WorkerDashboard({ user, onLogout }) {
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
+          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{justify-content:flex-start}
+          .wd-heading-actions{justify-items:start}
           .wd-bottom{bottom:10px}
           .wd-save{width:100%}
         }
@@ -1485,19 +1830,29 @@ function WorkerDashboard({ user, onLogout }) {
         <div className="wd-heading">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
-            <h1>Mano profilis ir prieinamumas</h1>
+            <h1>Mano darbai ir statistika</h1>
             <p>
-              Užpildykite viską viename lange. Apačioje vienu paspaudimu
-              išsaugosite profilį, įgūdžius ir laisvas dienas.
+              Čia matote aktyvius darbus, neuždarytas darbo dienas ir savo
+              patikimumo statistiką.
             </p>
           </div>
 
-          <div className="wd-user">
-            <div className="wd-avatar">{initials || "D"}</div>
-            <div>
-              <b>{form.displayName || "Darbuotojas"}</b>
-              <span>{form.city || "Miestas nenurodytas"}</span>
+          <div className="wd-heading-actions">
+            <div className="wd-user">
+              <div className="wd-avatar">{initials || "D"}</div>
+              <div>
+                <b>{form.displayName || "Darbuotojas"}</b>
+                <span>{form.city || "Miestas nenurodytas"}</span>
+              </div>
             </div>
+
+            <button
+              className="wd-edit-profile"
+              type="button"
+              onClick={() => setShowProfileEditor((current) => !current)}
+            >
+              {showProfileEditor ? "Uždaryti informaciją" : "Tvarkyti mano informaciją"}
+            </button>
           </div>
         </div>
 
@@ -1508,24 +1863,24 @@ function WorkerDashboard({ user, onLogout }) {
 
           <div className="wd-kpis">
             <div className="wd-kpi">
-              <span>Iš viso darbų</span>
-              <b>{workerStats.totalBookings}</b>
+              <span>Dirbta šį mėnesį</span>
+              <b>{workerStats.monthWorkedDays} d.</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Valandų šį mėnesį</span>
+              <b>{formatWorkedMinutes(workerStats.monthWorkedMinutes)}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbų šį mėnesį</span>
+              <b>{workerStats.monthJobs}</b>
             </div>
             <div className="wd-kpi">
               <span>Aktyvūs darbai</span>
               <b>{workerStats.activeJobs}</b>
             </div>
             <div className="wd-kpi">
-              <span>Užbaigti darbai</span>
-              <b>{workerStats.completedJobs}</b>
-            </div>
-            <div className="wd-kpi">
               <span>Darbdavio atšaukti</span>
               <b>{workerStats.cancelledByEmployer}</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Neatvykimai</span>
-              <b>{workerStats.noShows}</b>
             </div>
             <div className="wd-kpi">
               <span>Atvykimo patikimumas</span>
@@ -1545,8 +1900,8 @@ function WorkerDashboard({ user, onLogout }) {
               </small>
             </div>
             <div className="wd-kpi">
-              <span>Laisvos dienos per 7 d.</span>
-              <b>{availableCount}</b>
+              <span>Nepagrįsti ankstyvi išėjimai</span>
+              <b>{workerStats.unexcusedEarlyLeaveCount}</b>
             </div>
           </div>
         </section>
@@ -1565,6 +1920,289 @@ function WorkerDashboard({ user, onLogout }) {
           )}
 
         <div className="wd-form">
+          <section className="wd-card">
+            <h2>Mano darbo dienos</h2>
+            <p className="wd-card-sub">
+              Pasibaigus darbo laikui darbo dieną turi uždaryti bent viena pusė.
+              Jei rezultatai nesutampa, reitingas nekeičiamas iki ginčo išsprendimo.
+            </p>
+
+            {workdays.length ? (
+              <div className="wd-workdays">
+                {workdays.map((item) => {
+                  const job = item.job;
+                  const attendance = item.attendance || {};
+                  const ended = jobHasEnded(job);
+                  const checkInOpen = jobCheckInWindowOpen(job);
+                  const isConfirmed = item.status === "confirmed";
+                  const pendingNegative =
+                    !attendance.finalized_at &&
+                    ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+                      attendance.employer_outcome
+                    );
+                  const disputed =
+                    attendance.dispute_status === "disputed";
+                  const canCheckIn =
+                    isConfirmed &&
+                    checkInOpen &&
+                    !attendance.worker_check_in_at;
+                  const needsClose =
+                    isConfirmed &&
+                    ended &&
+                    !attendance.finalized_at &&
+                    !pendingNegative;
+                  const recentOrActive =
+                    isConfirmed ||
+                    item.status === "completed" ||
+                    item.status === "no_show" ||
+                    item.status === "cancelled_by_employer";
+
+                  if (!recentOrActive) return null;
+
+                  return (
+                    <div className="wd-workday" key={item.id}>
+                      <div>
+                        <h3>{job.title}</h3>
+                        <div className="wd-workday-meta">
+                          <div><b>{item.companyName}</b></div>
+                          <div>
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </div>
+                          {job.break_start_time && job.break_end_time && (
+                            <div>
+                              Pietų pertrauka:{" "}
+                              <b>
+                                {job.break_start_time.slice(0, 5)}–
+                                {job.break_end_time.slice(0, 5)}
+                              </b>
+                            </div>
+                          )}
+                          <div>
+                            {job.city}
+                            {job.address_text ? ` · ${job.address_text}` : ""}
+                          </div>
+                        </div>
+
+                        {item.status === "cancelled_by_employer" && (
+                          <span className="wd-workday-status red">
+                            Darbdavys atšaukė darbą
+                          </span>
+                        )}
+
+                        {attendance.finalized_at && (
+                          <span
+                            className={`wd-workday-status ${
+                              attendance.final_outcome === "no_show" ||
+                              attendance.final_outcome === "left_early_unexcused"
+                                ? "red"
+                                : "green"
+                            }`}
+                          >
+                            {attendanceOutcomeLabel(attendance)}
+                            {attendance.worked_minutes > 0
+                              ? ` · ${formatWorkedMinutes(attendance.worked_minutes)}`
+                              : ""}
+                          </span>
+                        )}
+
+                        {!attendance.finalized_at && disputed && (
+                          <span className="wd-workday-status red">
+                            Ginčas pateiktas · reitingas nekeičiamas
+                          </span>
+                        )}
+
+                        {!attendance.finalized_at &&
+                          pendingNegative &&
+                          !disputed && (
+                            <div style={{ marginTop: 10 }}>
+                              <span className="wd-workday-status orange">
+                                Darbdavys pažymėjo: {attendanceOutcomeLabel(attendance)}
+                              </span>
+                              {attendance.employer_note && (
+                                <div
+                                  style={{
+                                    marginTop: 7,
+                                    color: "#6c7a88",
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  Darbdavio paaiškinimas: {attendance.employer_note}
+                                </div>
+                              )}
+                              {attendance.worker_check_in_at && (
+                                <div
+                                  style={{
+                                    marginTop: 7,
+                                    color: "#167a54",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Sistema turi jūsų „Atvykau“ pažymėjimą.
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim === "worked" && (
+                            <span className="wd-workday-status orange">
+                              Pažymėjote, kad dirbote · laukiama darbdavio patvirtinimo
+                            </span>
+                          )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim !== "worked" && (
+                            <span className="wd-workday-status orange">
+                              Neuždaryta darbo diena · reikia veiksmo
+                            </span>
+                          )}
+
+                        {canCheckIn && (
+                          <span className="wd-workday-status muted">
+                            Darbo diena vyksta
+                          </span>
+                        )}
+
+                        {attendance.worker_check_in_at &&
+                          !attendance.finalized_at &&
+                          !pendingNegative && (
+                            <div
+                              style={{
+                                marginTop: 7,
+                                color: "#167a54",
+                                fontSize: 13,
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓ Atvykimą pažymėjote{" "}
+                              {new Date(attendance.worker_check_in_at).toLocaleTimeString(
+                                "lt-LT",
+                                { hour: "2-digit", minute: "2-digit" }
+                              )}
+                            </div>
+                          )}
+                        {attendance.employer_check_in_at &&
+                          !attendance.finalized_at && (
+                            <div
+                              style={{
+                                marginTop: 7,
+                                color: "#167a54",
+                                fontSize: 13,
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓ Darbdavys patvirtino jūsų atvykimą{" "}
+                              {new Date(
+                                attendance.employer_check_in_at
+                              ).toLocaleTimeString("lt-LT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+                      </div>
+
+                      <div className="wd-workday-actions">
+                        {canCheckIn && (
+                          <button
+                            className="wd-accept"
+                            disabled={attendanceBusy}
+                            onClick={() => workerCheckIn(item.id)}
+                          >
+                            Atvykau
+                          </button>
+                        )}
+
+                        {pendingNegative && !disputed && (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={attendanceBusy}
+                              onClick={() =>
+                                workerRespondAttendance(
+                                  attendance.id,
+                                  "confirmed"
+                                )
+                              }
+                            >
+                              Patvirtinti
+                            </button>
+                            <button
+                              className="wd-danger"
+                              disabled={attendanceBusy}
+                              onClick={() => {
+                                setWorkerAttendanceTarget(item);
+                                setWorkerAttendanceMode("dispute");
+                                setWorkerAttendanceNote("");
+                                setWorkerEvidenceFile(null);
+                              }}
+                            >
+                              Ginčyti
+                            </button>
+                          </>
+                        )}
+
+                        {disputed && attendance.id && (
+                          <button
+                            className="wd-decline"
+                            disabled={attendanceBusy}
+                            onClick={() => {
+                              setWorkerAttendanceTarget(item);
+                              setWorkerAttendanceMode("dispute");
+                              setWorkerAttendanceNote(
+                                attendance.worker_response_note?.startsWith(
+                                  "Automatinis ginčas:"
+                                )
+                                  ? ""
+                                  : attendance.worker_response_note || ""
+                              );
+                              setWorkerEvidenceFile(null);
+                            }}
+                          >
+                            Papildyti ginčą
+                          </button>
+                        )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim !== "worked" && (
+                            <>
+                              <button
+                                className="wd-accept"
+                                disabled={attendanceBusy}
+                                onClick={() =>
+                                  workerClaimWorkday(item.id, "worked")
+                                }
+                              >
+                                Dirbau šiame darbe
+                              </button>
+                              <button
+                                className="wd-danger"
+                                disabled={attendanceBusy}
+                                onClick={() => {
+                                  setWorkerAttendanceTarget(item);
+                                  setWorkerAttendanceMode("self_no_show");
+                                  setWorkerAttendanceNote("");
+                                  setWorkerEvidenceFile(null);
+                                }}
+                              >
+                                Neatvykau
+                              </button>
+                            </>
+                          )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Patvirtintų darbo dienų kol kas nėra.
+              </div>
+            )}
+          </section>
+
           <section className="wd-card">
             <h2>Darbo kvietimai</h2>
             <p className="wd-card-sub">
@@ -1628,6 +2266,15 @@ function WorkerDashboard({ user, onLogout }) {
                             {job.work_date} · {job.start_time?.slice(0, 5)}
                             {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
                           </div>
+                          {job.break_start_time && job.break_end_time && (
+                            <div>
+                              Pietų pertrauka:{" "}
+                              <b>
+                                {job.break_start_time.slice(0, 5)}–
+                                {job.break_end_time.slice(0, 5)}
+                              </b>
+                            </div>
+                          )}
                           <div>
                             Atvykimas:{" "}
                             <b>
@@ -1719,6 +2366,8 @@ function WorkerDashboard({ user, onLogout }) {
             )}
           </section>
 
+          {showProfileEditor && (
+            <>
           <section className="wd-card">
             <h2>1. Pagrindinė informacija</h2>
             <p className="wd-card-sub">
@@ -1890,8 +2539,168 @@ function WorkerDashboard({ user, onLogout }) {
               {saving ? "Saugoma..." : "Išsaugoti viską"}
             </button>
           </div>
+            </>
+          )}
         </div>
       </main>
+
+      {workerAttendanceTarget && workerAttendanceMode && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !attendanceBusy) {
+              setWorkerAttendanceTarget(null);
+              setWorkerAttendanceMode(null);
+              setWorkerAttendanceNote("");
+              setWorkerEvidenceFile(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">
+                  {workerAttendanceMode === "dispute"
+                    ? "DARBO DIENOS GINČAS"
+                    : "DARBO DIENOS PATVIRTINIMAS"}
+                </div>
+                <h2>
+                  {workerAttendanceMode === "dispute"
+                    ? "Nesutinkate su darbdavio pažymėjimu?"
+                    : "Patvirtinti, kad neatvykote?"}
+                </h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={attendanceBusy}
+                onClick={() => {
+                  setWorkerAttendanceTarget(null);
+                  setWorkerAttendanceMode(null);
+                  setWorkerAttendanceNote("");
+                  setWorkerEvidenceFile(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {workerAttendanceMode === "dispute" ? (
+              <>
+                <div className="wd-note err" style={{ marginBottom: 14 }}>
+                  Kol ginčas neišspręstas, jūsų patikimumo reitingas nebus
+                  mažinamas. Trumpai parašykite, kas įvyko.
+                </div>
+                <label className="wd-label">
+                  Paaiškinimas *
+                  <textarea
+                    className="wd-textarea"
+                    value={workerAttendanceNote}
+                    maxLength={1000}
+                    onChange={(e) => setWorkerAttendanceNote(e.target.value)}
+                    placeholder="Pvz. Atvykau 07:55 ir dirbau iki 17:00. Darbdaviui parašiau žinutę..."
+                  />
+                </label>
+                <label className="wd-label" style={{ marginTop: 14 }}>
+                  Įrodymas (nebūtina)
+                  <input
+                    className="wd-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    disabled={attendanceBusy}
+                    onChange={(e) =>
+                      setWorkerEvidenceFile(e.target.files?.[0] || null)
+                    }
+                  />
+                  <span
+                    style={{
+                      display: "block",
+                      marginTop: 6,
+                      color: "#6c7a88",
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Galite pridėti nuotrauką arba PDF iki 8 MB. Failą matys tik
+                    ginčą nagrinėjantis administratorius.
+                  </span>
+                  {workerEvidenceFile && (
+                    <span
+                      style={{
+                        display: "block",
+                        marginTop: 6,
+                        color: "#167a54",
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Pasirinkta: {workerEvidenceFile.name}
+                    </span>
+                  )}
+                </label>
+              </>
+            ) : (
+              <div className="wd-note err" style={{ marginBottom: 0 }}>
+                Patvirtinus neatvykimą, bus pritaikytas 3 dienų naujų darbų
+                priėmimo apribojimas ir sumažės atvykimo patikimumas.
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="wd-decline"
+                disabled={attendanceBusy}
+                onClick={() => {
+                  setWorkerAttendanceTarget(null);
+                  setWorkerAttendanceMode(null);
+                  setWorkerAttendanceNote("");
+                  setWorkerEvidenceFile(null);
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className={
+                  workerAttendanceMode === "dispute"
+                    ? "wd-danger"
+                    : "wd-danger"
+                }
+                disabled={
+                  attendanceBusy ||
+                  (workerAttendanceMode === "dispute" &&
+                    workerAttendanceNote.trim().length < 5)
+                }
+                onClick={() => {
+                  if (workerAttendanceMode === "dispute") {
+                    workerRespondAttendance(
+                      workerAttendanceTarget.attendance.id,
+                      "disputed",
+                      workerAttendanceNote.trim()
+                    );
+                  } else {
+                    workerClaimWorkday(
+                      workerAttendanceTarget.id,
+                      "no_show"
+                    );
+                  }
+                }}
+              >
+                {attendanceBusy
+                  ? "Prašome..."
+                  : workerAttendanceMode === "dispute"
+                  ? "Pateikti ginčą"
+                  : "Taip, neatvykau"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmInvitation && (
         <div
@@ -1950,6 +2759,17 @@ function WorkerDashboard({ user, onLogout }) {
                     ? "darbdavys paima darbuotoją"
                     : "darbuotojas atvyksta pats"}
                 </b>
+                {confirmInvitation.job?.break_start_time &&
+                  confirmInvitation.job?.break_end_time && (
+                    <>
+                      <br />
+                      Pietų pertrauka:{" "}
+                      <b>
+                        {confirmInvitation.job.break_start_time.slice(0, 5)}–
+                        {confirmInvitation.job.break_end_time.slice(0, 5)}
+                      </b>
+                    </>
+                  )}
               </div>
               <div className="wd-pay">
                 {formatNetPay(
@@ -2072,6 +2892,7 @@ function EmployerDashboard({ user, onLogout }) {
     cancelledJobs: 0,
     reliabilityRate: 100,
     cancelledConfirmedCount: 0,
+    falseAttendanceClaimCount: 0,
   });
   const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
@@ -2082,6 +2903,16 @@ function EmployerDashboard({ user, onLogout }) {
   const [invitationByWorker, setInvitationByWorker] = useState({});
   const [employerNotifications, setEmployerNotifications] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [jobWorkers, setJobWorkers] = useState([]);
+  const [attendanceTarget, setAttendanceTarget] = useState(null);
+  const [attendanceMode, setAttendanceMode] = useState(null);
+  const [attendanceEndTime, setAttendanceEndTime] = useState("");
+  const [attendanceNote, setAttendanceNote] = useState("");
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState(null);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSaving, setRatingSaving] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
@@ -2098,6 +2929,8 @@ function EmployerDashboard({ user, onLogout }) {
     workDate: employerTomorrowISO(),
     startTime: "08:00",
     endTime: "17:00",
+    breakStartTime: "12:00",
+    breakEndTime: "12:30",
     workersNeeded: 1,
     transportMode: "self_arrival",
     payAmount: "",
@@ -2121,11 +2954,13 @@ function EmployerDashboard({ user, onLogout }) {
         ]);
 
         if (currentJob?.id) {
+          await loadCurrentJobWorkers(currentJob.id);
+
           const [jobResult, bookingResult, invitationsResult] = await Promise.all([
             supabase
               .from("jobs")
               .select(
-                "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+                "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
               )
               .eq("id", currentJob.id)
               .single(),
@@ -2230,7 +3065,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("companies")
           .select(
-            "id, name, company_code, city, is_verified, reliability_rate, cancelled_confirmed_count"
+            "id, name, company_code, city, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
           )
           .eq("id", companyId)
           .single(),
@@ -2242,7 +3077,7 @@ function EmployerDashboard({ user, onLogout }) {
         supabase
           .from("jobs")
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .eq("company_id", companyId)
           .order("created_at", { ascending: false })
@@ -2287,7 +3122,7 @@ function EmployerDashboard({ user, onLogout }) {
         .eq("company_id", companyId),
       supabase
         .from("companies")
-        .select("reliability_rate, cancelled_confirmed_count")
+        .select("reliability_rate, cancelled_confirmed_count, false_attendance_claim_count")
         .eq("id", companyId)
         .single(),
       supabase
@@ -2346,15 +3181,9 @@ function EmployerDashboard({ user, onLogout }) {
         return sum + Math.max(0, Number(job.workers_needed || 0) - confirmed);
       }, 0);
 
-    const completedJobs = jobRows.filter((job) => {
-      if (job.status === "completed") return true;
-      const confirmed = confirmedByJob[job.id] || 0;
-      return (
-        job.status !== "cancelled" &&
-        job.work_date < today &&
-        confirmed >= Number(job.workers_needed || 0)
-      );
-    }).length;
+    const completedJobs = jobRows.filter(
+      (job) => job.status === "completed"
+    ).length;
 
     setEmployerStats({
       totalJobs: jobRows.length,
@@ -2365,6 +3194,9 @@ function EmployerDashboard({ user, onLogout }) {
       reliabilityRate: Number(companyResult.data?.reliability_rate ?? 100),
       cancelledConfirmedCount: Number(
         companyResult.data?.cancelled_confirmed_count || 0
+      ),
+      falseAttendanceClaimCount: Number(
+        companyResult.data?.false_attendance_claim_count || 0
       ),
     });
 
@@ -2388,6 +3220,8 @@ function EmployerDashboard({ user, onLogout }) {
             reliability_rate: companyResult.data?.reliability_rate ?? 100,
             cancelled_confirmed_count:
               companyResult.data?.cancelled_confirmed_count || 0,
+            false_attendance_claim_count:
+              companyResult.data?.false_attendance_claim_count || 0,
           }
         : current
     );
@@ -2423,7 +3257,7 @@ function EmployerDashboard({ user, onLogout }) {
     const result = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
@@ -2441,6 +3275,332 @@ function EmployerDashboard({ user, onLogout }) {
       } catch {
         // Statistikos klaida neturi blokuoti poreikių sąrašo.
       }
+    }
+  }
+
+  async function loadCurrentJobWorkers(jobId) {
+    if (!jobId) {
+      setJobWorkers([]);
+      return;
+    }
+
+    const bookingsResult = await supabase
+      .from("bookings")
+      .select(
+        "id, worker_id, invitation_id, status, confirmed_at, cancelled_at, cancellation_reason"
+      )
+      .eq("job_id", jobId)
+      .order("confirmed_at", { ascending: true });
+
+    if (bookingsResult.error) throw bookingsResult.error;
+
+    const bookingRows = bookingsResult.data || [];
+    const workerIds = [...new Set(bookingRows.map((row) => row.worker_id))];
+    const bookingIds = bookingRows.map((row) => row.id);
+
+    if (!workerIds.length) {
+      setJobWorkers([]);
+      return;
+    }
+
+    const [profilesResult, workersResult, workerSkillsResult, attendanceResult, ratingsResult] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, display_name, city")
+          .in("id", workerIds),
+        supabase
+          .from("worker_profiles")
+          .select(
+            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, rating_count, short_bio, travel_radius_km, no_show_count, restricted_until, unexcused_early_leave_count"
+          )
+          .in("user_id", workerIds),
+        supabase
+          .from("worker_skills")
+          .select("worker_id, skill_id")
+          .in("worker_id", workerIds),
+        supabase
+          .from("attendance")
+          .select(
+            "id, booking_id, status, worker_check_in_at, employer_check_in_at, worker_workday_claim, worker_claimed_at, employer_outcome, employer_marked_at, actual_end_time, employer_note, worker_response, worker_response_note, worker_responded_at, dispute_status, final_outcome, finalized_at, worked_minutes, resolution_note"
+          )
+          .in("booking_id", bookingIds),
+        supabase
+          .from("worker_ratings")
+          .select("booking_id, score, comment")
+          .in("booking_id", bookingIds),
+      ]);
+
+    const failed = [
+      profilesResult,
+      workersResult,
+      workerSkillsResult,
+      attendanceResult,
+      ratingsResult,
+    ].find((result) => result.error);
+
+    if (failed?.error) throw failed.error;
+
+    const profileMap = new Map(
+      (profilesResult.data || []).map((row) => [row.id, row])
+    );
+    const workerMap = new Map(
+      (workersResult.data || []).map((row) => [row.user_id, row])
+    );
+    const attendanceMap = new Map(
+      (attendanceResult.data || []).map((row) => [row.booking_id, row])
+    );
+    const ratingMap = new Map(
+      (ratingsResult.data || []).map((row) => [row.booking_id, row])
+    );
+
+    const skillNameMap = new Map(
+      skills.map((skill) => [Number(skill.id), skill.name])
+    );
+    const skillIdsByWorker = new Map();
+
+    for (const row of workerSkillsResult.data || []) {
+      const list = skillIdsByWorker.get(row.worker_id) || [];
+      list.push(Number(row.skill_id));
+      skillIdsByWorker.set(row.worker_id, list);
+    }
+
+    const publicStatsEntries = await Promise.all(
+      workerIds.map(async (workerId) => {
+        const result = await supabase.rpc("get_worker_public_stats", {
+          p_worker_id: workerId,
+        });
+        if (result.error) return [workerId, null];
+
+        const row = result.data?.[0] || {};
+        return [
+          workerId,
+          {
+            monthWorkedDays: Number(row.month_worked_days || 0),
+            monthWorkedMinutes: Number(row.month_worked_minutes || 0),
+            monthJobs: Number(row.month_jobs || 0),
+            activeJobs: Number(row.active_jobs || 0),
+            cancelledByEmployer: Number(row.cancelled_by_employer || 0),
+            attendanceRate: Number(row.attendance_rate ?? 100),
+            ratingAverage:
+              row.rating_average === null || row.rating_average === undefined
+                ? null
+                : Number(row.rating_average),
+            ratingCount: Number(row.rating_count || 0),
+            noShowCount: Number(row.no_show_count || 0),
+            unexcusedEarlyLeaveCount: Number(
+              row.unexcused_early_leave_count || 0
+            ),
+          },
+        ];
+      })
+    );
+
+    const publicStatsMap = new Map();
+    for (const [workerId, stats] of publicStatsEntries) {
+      publicStatsMap.set(workerId, stats);
+    }
+
+    const rows = bookingRows
+      .map((booking) => {
+        const profile = profileMap.get(booking.worker_id);
+        const worker = workerMap.get(booking.worker_id);
+        if (!profile || !worker) return null;
+
+        const skillNames = (skillIdsByWorker.get(booking.worker_id) || [])
+          .map((id) => skillNameMap.get(id))
+          .filter(Boolean)
+          .slice(0, 6);
+
+        return {
+          id: booking.worker_id,
+          bookingId: booking.id,
+          invitationId: booking.invitation_id,
+          bookingStatus: booking.status,
+          name: shortWorkerName(profile.display_name),
+          initials: workerInitials(profile.display_name),
+          city: profile.city,
+          yearsExperience: Number(worker.years_experience || 0),
+          attendanceRate: Number(worker.attendance_rate || 100),
+          ratingAverage:
+            worker.rating_average === null
+              ? null
+              : Number(worker.rating_average),
+          ratingCount: Number(worker.rating_count || 0),
+          noShowCount: Number(worker.no_show_count || 0),
+          unexcusedEarlyLeaveCount: Number(
+            worker.unexcused_early_leave_count || 0
+          ),
+          hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+          shortBio: worker.short_bio || "",
+          skillNames,
+          attendance: attendanceMap.get(booking.id) || null,
+          rating: ratingMap.get(booking.id) || null,
+          publicStats: publicStatsMap.get(booking.worker_id) || null,
+        };
+      })
+      .filter(Boolean);
+
+    setJobWorkers(rows);
+  }
+
+  async function openWorkerProfile(worker) {
+    setError("");
+
+    if (worker?.publicStats) {
+      setSelectedWorker(worker);
+      return;
+    }
+
+    try {
+      const result = await supabase.rpc("get_worker_public_stats", {
+        p_worker_id: worker.id,
+      });
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0] || {};
+      setSelectedWorker({
+        ...worker,
+        publicStats: {
+          monthWorkedDays: Number(row.month_worked_days || 0),
+          monthWorkedMinutes: Number(row.month_worked_minutes || 0),
+          monthJobs: Number(row.month_jobs || 0),
+          activeJobs: Number(row.active_jobs || 0),
+          cancelledByEmployer: Number(row.cancelled_by_employer || 0),
+          attendanceRate: Number(
+            row.attendance_rate ?? worker.attendanceRate ?? 100
+          ),
+          ratingAverage:
+            row.rating_average === null || row.rating_average === undefined
+              ? worker.ratingAverage ?? null
+              : Number(row.rating_average),
+          ratingCount: Number(row.rating_count || 0),
+          noShowCount: Number(row.no_show_count || worker.noShowCount || 0),
+          unexcusedEarlyLeaveCount: Number(
+            row.unexcused_early_leave_count ||
+              worker.unexcusedEarlyLeaveCount ||
+              0
+          ),
+        },
+      });
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti darbuotojo profilio.");
+    }
+  }
+
+  async function employerCheckInWorker(target) {
+    if (!target?.bookingId) return;
+
+    setAttendanceSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("employer_check_in_worker", {
+        p_booking_id: target.bookingId,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice(
+        `Patvirtinote, kad ${target.name} atvyko į darbą. Darbo dieną vis tiek reikės uždaryti pasibaigus darbo laikui.`
+      );
+
+      await Promise.all([
+        loadCurrentJobWorkers(currentJob?.id),
+        loadEmployerNotifications(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti darbuotojo atvykimo.");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  }
+
+  async function recordEmployerAttendance(
+    target,
+    outcome,
+    actualEndTime = null,
+    note = ""
+  ) {
+    if (!target?.bookingId) return;
+
+    setAttendanceSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("employer_record_attendance", {
+        p_booking_id: target.bookingId,
+        p_outcome: outcome,
+        p_actual_end_time: actualEndTime || null,
+        p_note: note.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+
+      const returnedAttendance = Array.isArray(result.data)
+        ? result.data[0]
+        : result.data;
+
+      setNotice(
+        outcome === "full_day"
+          ? "Darbo diena uždaryta."
+          : returnedAttendance?.dispute_status === "disputed"
+          ? "Sistema aptiko nesutapimą ir automatiškai sukūrė ginčą. Darbuotojo reitingas nekeičiamas iki sprendimo."
+          : "Darbo dienos rezultatas perduotas darbuotojui patvirtinti. Kol darbuotojas nepatvirtino arba ginčas neišspręstas, galutinis rezultatas nefiksuojamas."
+      );
+
+      setAttendanceTarget(null);
+      setAttendanceMode(null);
+      setAttendanceEndTime("");
+      setAttendanceNote("");
+
+      await Promise.all([
+        loadCurrentJobWorkers(currentJob?.id),
+        reloadJobs(company?.id),
+        loadEmployerStats(company?.id),
+        loadEmployerNotifications(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko uždaryti darbo dienos.");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  }
+
+  async function submitWorkerRating() {
+    if (!ratingTarget?.bookingId) return;
+
+    setRatingSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.from("worker_ratings").insert({
+        booking_id: ratingTarget.bookingId,
+        worker_id: ratingTarget.id,
+        rater_id: user.id,
+        score: Number(ratingScore),
+        comment: ratingComment.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Darbuotojo įvertinimas išsaugotas.");
+      setRatingTarget(null);
+      setRatingScore(5);
+      setRatingComment("");
+
+      await loadCurrentJobWorkers(currentJob?.id);
+    } catch (err) {
+      setError(
+        err?.message?.toLowerCase().includes("duplicate")
+          ? "Šį darbuotoją už šį darbą jau įvertinote."
+          : err?.message || "Nepavyko išsaugoti įvertinimo."
+      );
+    } finally {
+      setRatingSaving(false);
     }
   }
 
@@ -2667,6 +3827,33 @@ function EmployerDashboard({ user, onLogout }) {
       return;
     }
 
+    if (!form.endTime || form.endTime <= form.startTime) {
+      setError("Nurodykite teisingą darbo pabaigos laiką.");
+      return;
+    }
+
+    if (
+      editingConfirmedCount === 0 &&
+      (!form.breakStartTime || !form.breakEndTime)
+    ) {
+      setError("Nurodykite pietų pertraukos pradžią ir pabaigą.");
+      return;
+    }
+
+    if (
+      (form.breakStartTime || form.breakEndTime) &&
+      (
+        !form.breakStartTime ||
+        !form.breakEndTime ||
+        form.breakStartTime < form.startTime ||
+        form.breakEndTime > form.endTime ||
+        form.breakEndTime <= form.breakStartTime
+      )
+    ) {
+      setError("Pietų pertrauka turi būti darbo laiko ribose.");
+      return;
+    }
+
     if (form.description.trim().length < 10) {
       setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
       return;
@@ -2691,6 +3878,8 @@ function EmployerDashboard({ user, onLogout }) {
         work_date: form.workDate,
         start_time: form.startTime,
         end_time: form.endTime || null,
+        break_start_time: form.breakStartTime || null,
+        break_end_time: form.breakEndTime || null,
         workers_needed: Number(form.workersNeeded) || 1,
         title: form.title.trim(),
         description: form.description.trim() || null,
@@ -2707,7 +3896,7 @@ function EmployerDashboard({ user, onLogout }) {
           .update(payload)
           .eq("id", editingJobId)
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
@@ -2726,7 +3915,7 @@ function EmployerDashboard({ user, onLogout }) {
             status: "open",
           })
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
           )
           .single();
 
@@ -2769,7 +3958,9 @@ function EmployerDashboard({ user, onLogout }) {
         address: job.address_text || "",
         workDate: job.work_date,
         startTime: job.start_time?.slice(0, 5) || "08:00",
-        endTime: job.end_time?.slice(0, 5) || "",
+        endTime: job.end_time?.slice(0, 5) || "17:00",
+        breakStartTime: job.break_start_time?.slice(0, 5) || "",
+        breakEndTime: job.break_end_time?.slice(0, 5) || "",
         workersNeeded: job.workers_needed || 1,
         transportMode:
           job.transport_mode === "employer_pickup"
@@ -2780,7 +3971,10 @@ function EmployerDashboard({ user, onLogout }) {
         description: job.description || "",
       }));
 
-      await findMatches(job);
+      await Promise.all([
+        findMatches(job),
+        loadCurrentJobWorkers(job.id),
+      ]);
       await markEmployerJobRead(job.id);
       window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
@@ -2793,6 +3987,7 @@ function EmployerDashboard({ user, onLogout }) {
     setEditingConfirmedCount(0);
     setCurrentJob(null);
     setMatches([]);
+    setJobWorkers([]);
     setNotice("");
     setError("");
     setInvitedIds([]);
@@ -2805,6 +4000,8 @@ function EmployerDashboard({ user, onLogout }) {
       workDate: employerTomorrowISO(),
       startTime: "08:00",
       endTime: "17:00",
+      breakStartTime: "12:00",
+      breakEndTime: "12:30",
       workersNeeded: 1,
       transportMode: "self_arrival",
       payAmount: "",
@@ -3141,8 +4338,8 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}}
-        @media(max-width:620px){.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}}
+        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr 1fr}.ed-attendance-actions{grid-column:1/-1;justify-content:flex-start}}
+        @media(max-width:620px){.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}}
       `}</style>
 
       <header className="ed-topbar">
@@ -3347,6 +4544,29 @@ function EmployerDashboard({ user, onLogout }) {
                 onChange={(e) => updateField("endTime", e.target.value)}
               />
             </label>
+            <label className="ed-label">
+              Pietų pertrauka nuo *
+              <input
+                className="ed-input"
+                type="time"
+                required
+                value={form.breakStartTime}
+                disabled={editingConfirmedCount > 0}
+                onChange={(e) => updateField("breakStartTime", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label">
+              Pietų pertrauka iki *
+              <input
+                className="ed-input"
+                type="time"
+                required
+                value={form.breakEndTime}
+                disabled={editingConfirmedCount > 0}
+                onChange={(e) => updateField("breakEndTime", e.target.value)}
+              />
+            </label>
 
             <label className="ed-label">
               Atlygis į rankas (€) *
@@ -3468,6 +4688,270 @@ function EmployerDashboard({ user, onLogout }) {
               </div>
             )}
 
+            {jobWorkers.length > 0 && (
+              <div className="ed-attendance-panel">
+                <h2>Patvirtinti darbuotojai ir darbo diena</h2>
+                <p className="ed-sub" style={{ marginBottom: 0 }}>
+                  Pasibaigus darbo laikui uždarykite kiekvieno darbuotojo darbo
+                  dieną. Neigiamas pažymėjimas darbuotojo reitingo iškart
+                  nekeičia — darbuotojas gali jį patvirtinti arba ginčyti.
+                </p>
+
+                <div className="ed-attendance-list">
+                  {jobWorkers.map((worker) => {
+                    const attendance = worker.attendance || {};
+                    const ended = jobHasEnded(currentJob);
+                    const checkInOpen = jobCheckInWindowOpen(currentJob);
+                    const isConfirmed = worker.bookingStatus === "confirmed";
+                    const pendingNegative =
+                      !attendance.finalized_at &&
+                      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+                        attendance.employer_outcome
+                      );
+                    const disputed =
+                      attendance.dispute_status === "disputed";
+                    const canClose =
+                      isConfirmed &&
+                      ended &&
+                      !attendance.finalized_at &&
+                      !attendance.employer_outcome;
+
+                    return (
+                      <div
+                        className="ed-attendance-row"
+                        key={worker.bookingId}
+                      >
+                        <div className="ed-worker-id">
+                          <div className="ed-avatar">{worker.initials}</div>
+                          <div>
+                            <b>{worker.name}</b>
+                            <span>
+                              {worker.city} · {worker.yearsExperience} m. patirties
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="ed-attendance-meta">
+                          {attendance.worker_check_in_at && (
+                            <div>
+                              <b style={{ color: "#167a54" }}>
+                                ✓ Darbuotojas pažymėjo „Atvykau“
+                              </b>{" "}
+                              {new Date(
+                                attendance.worker_check_in_at
+                              ).toLocaleTimeString("lt-LT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+                          {attendance.employer_check_in_at && (
+                            <div>
+                              <b style={{ color: "#167a54" }}>
+                                ✓ Jūs patvirtinote darbuotojo atvykimą
+                              </b>{" "}
+                              {new Date(
+                                attendance.employer_check_in_at
+                              ).toLocaleTimeString("lt-LT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+
+                          {attendance.worker_workday_claim === "worked" &&
+                            !attendance.finalized_at && (
+                              <div>
+                                Darbuotojas pažymėjo, kad <b>dirbo šiame darbe</b>.
+                              </div>
+                            )}
+
+                          {attendance.finalized_at && (
+                            <>
+                              <span
+                                className={`ed-attendance-badge ${
+                                  attendance.final_outcome === "no_show" ||
+                                  attendance.final_outcome ===
+                                    "left_early_unexcused"
+                                    ? "red"
+                                    : "green"
+                                }`}
+                              >
+                                {attendanceOutcomeLabel(attendance)}
+                              </span>
+                              {attendance.worked_minutes > 0 && (
+                                <div style={{ marginTop: 5 }}>
+                                  Įskaityta:{" "}
+                                  <b>
+                                    {formatWorkedMinutes(
+                                      attendance.worked_minutes
+                                    )}
+                                  </b>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {pendingNegative && !disputed && (
+                            <>
+                              <span className="ed-attendance-badge orange">
+                                Laukiama darbuotojo patvirtinimo
+                              </span>
+                              {attendance.employer_note && (
+                                <div style={{ marginTop: 5 }}>
+                                  Jūsų komentaras: {attendance.employer_note}
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {disputed && (
+                            <>
+                              <span className="ed-attendance-badge red">
+                                Darbo dienos ginčas
+                              </span>
+                              <div style={{ marginTop: 5 }}>
+                                Kol ginčas neišspręstas, darbuotojo reitingas
+                                nekeičiamas.
+                              </div>
+                              {attendance.worker_response_note && (
+                                <div style={{ marginTop: 5 }}>
+                                  Darbuotojo paaiškinimas:{" "}
+                                  {attendance.worker_response_note}
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {canClose && (
+                            <span className="ed-attendance-badge orange">
+                              Neuždaryta darbo diena · reikia veiksmo
+                            </span>
+                          )}
+
+                          {!ended && isConfirmed && !attendance.finalized_at && (
+                            <span className="ed-attendance-badge muted">
+                              {checkInOpen
+                                ? "Darbo diena vyksta"
+                                : "Darbo diena dar neprasidėjo"}
+                            </span>
+                          )}
+
+                          {worker.bookingStatus === "cancelled_by_employer" && (
+                            <span className="ed-attendance-badge red">
+                              Darbas atšauktas darbdavio
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="ed-attendance-actions">
+                          <button
+                            className="ed-secondary"
+                            onClick={() => openWorkerProfile(worker)}
+                          >
+                            Profilis
+                          </button>
+
+                          {worker.invitationId && (
+                            <button
+                              className="ed-secondary"
+                              onClick={() =>
+                                setConversation({
+                                  invitationId: worker.invitationId,
+                                  title: `${worker.name} · ${currentJob.title}`,
+                                })
+                              }
+                            >
+                              Žinutė
+                            </button>
+                          )}
+
+                          {checkInOpen &&
+                            isConfirmed &&
+                            !attendance.finalized_at &&
+                            !attendance.employer_check_in_at && (
+                              <button
+                                className="ed-primary"
+                                disabled={attendanceSaving}
+                                onClick={() => employerCheckInWorker(worker)}
+                              >
+                                Patvirtinti, kad atvyko
+                              </button>
+                            )}
+
+                          {canClose && (
+                            <>
+                              <button
+                                className="ed-secondary"
+                                disabled={attendanceSaving}
+                                onClick={() =>
+                                  recordEmployerAttendance(
+                                    worker,
+                                    "full_day"
+                                  )
+                                }
+                              >
+                                Išdirbo visą dieną
+                              </button>
+
+                              <button
+                                className="ed-secondary"
+                                disabled={attendanceSaving}
+                                onClick={() => {
+                                  setAttendanceTarget(worker);
+                                  setAttendanceMode("left_early_agreed");
+                                  setAttendanceEndTime("");
+                                  setAttendanceNote("");
+                                }}
+                              >
+                                Išėjo anksčiau
+                              </button>
+
+                              {!attendance.employer_check_in_at && (
+                                <button
+                                  className="ed-danger"
+                                  disabled={attendanceSaving}
+                                  onClick={() => {
+                                    setAttendanceTarget(worker);
+                                    setAttendanceMode("no_show");
+                                    setAttendanceEndTime("");
+                                    setAttendanceNote("");
+                                  }}
+                                >
+                                  Neatvyko
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            !worker.rating && (
+                              <button
+                                className="ed-primary"
+                                onClick={() => {
+                                  setRatingTarget(worker);
+                                  setRatingScore(5);
+                                  setRatingComment("");
+                                }}
+                              >
+                                Įvertinti
+                              </button>
+                            )}
+
+                          {worker.rating && (
+                            <span className="ed-attendance-badge green">
+                              Įvertinta {worker.rating.score}/5
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="ed-results-head">
               <div>
                 <h2>2. Tinkami darbuotojai</h2>
@@ -3485,12 +4969,21 @@ function EmployerDashboard({ user, onLogout }) {
                       ? "Darbdavys paima darbuotoją"
                       : "Darbuotojas atvyksta pats"
                   }`}
+                  {currentJob.break_start_time &&
+                    currentJob.break_end_time
+                    ? ` · Pietūs ${currentJob.break_start_time.slice(
+                        0,
+                        5
+                      )}–${currentJob.break_end_time.slice(0, 5)}`
+                    : ""}
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <b>{matches.length} rasti</b>
                 <div className="ed-progress">
-                  {Number(currentJob.confirmedCount || 0)}/{currentJob.workers_needed} patvirtinti
+                  {currentJob.status === "completed"
+                    ? "Darbo diena užbaigta"
+                    : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
                 </div>
               </div>
             </div>
@@ -3529,7 +5022,7 @@ function EmployerDashboard({ user, onLogout }) {
                       <div className="ed-worker-actions">
                         <button
                           className="ed-secondary"
-                          onClick={() => setSelectedWorker(worker)}
+                          onClick={() => openWorkerProfile(worker)}
                         >
                           Profilis
                         </button>
@@ -3572,7 +5065,7 @@ function EmployerDashboard({ user, onLogout }) {
             ) : (
               <div className="ed-empty">
                 Šiuo metu pagal šiuos kriterijus laisvų darbuotojų nerasta.
-                Pabandykite kitą datą, laiką arba darbo tipą.
+                Pabandykite kitą datą arba laiką.
               </div>
             )}
           </section>
@@ -3620,6 +5113,15 @@ function EmployerDashboard({ user, onLogout }) {
                           ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
                           : ""}
                       </div>
+                      {jobHasEnded(job) &&
+                        Number(job.confirmedCount || 0) > 0 &&
+                        !["cancelled", "completed"].includes(job.status) && (
+                          <div style={{ marginTop: 7 }}>
+                            <span className="ed-attendance-badge orange">
+                              Neuždaryta darbo diena · patvirtinkite rezultatą
+                            </span>
+                          </div>
+                        )}
                       {unreadNews.length > 0 && (
                         <div className="ed-news">
                           <span className={`rs-alert ${newsPresentation.tone}`}>
@@ -3649,6 +5151,8 @@ function EmployerDashboard({ user, onLogout }) {
                     <span className="ed-status">
                       {job.status === "filled"
                         ? "Užpildyta"
+                        : job.status === "completed"
+                        ? "Įvykdyta"
                         : job.status === "cancelled"
                         ? "Atšaukta"
                         : job.status === "open"
@@ -3678,6 +5182,266 @@ function EmployerDashboard({ user, onLogout }) {
           )}
         </section>
       </main>
+
+      {attendanceTarget && attendanceMode && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !attendanceSaving) {
+              setAttendanceTarget(null);
+              setAttendanceMode(null);
+              setAttendanceEndTime("");
+              setAttendanceNote("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
+                <h2>
+                  {attendanceMode === "no_show"
+                    ? "Pažymėti, kad darbuotojas neatvyko?"
+                    : "Darbuotojas išėjo anksčiau"}
+                </h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={attendanceSaving}
+                onClick={() => {
+                  setAttendanceTarget(null);
+                  setAttendanceMode(null);
+                  setAttendanceEndTime("");
+                  setAttendanceNote("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#f6f8fa",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <b>{attendanceTarget.name}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {currentJob?.title} · {currentJob?.work_date}
+              </div>
+            </div>
+
+            {attendanceMode !== "no_show" && (
+              <>
+                <label className="ed-label" style={{ marginBottom: 14 }}>
+                  Ankstyvo išėjimo tipas *
+                  <select
+                    className="ed-select"
+                    value={attendanceMode}
+                    onChange={(e) => setAttendanceMode(e.target.value)}
+                  >
+                    <option value="left_early_agreed">
+                      Išėjo anksčiau – suderinta
+                    </option>
+                    <option value="left_early_unexcused">
+                      Išėjo anksčiau be pateisinamos priežasties
+                    </option>
+                  </select>
+                </label>
+
+                <label className="ed-label" style={{ marginBottom: 14 }}>
+                  Faktinis išėjimo laikas *
+                  <input
+                    className="ed-input"
+                    type="time"
+                    value={attendanceEndTime}
+                    onChange={(e) => setAttendanceEndTime(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+
+            <label className="ed-label">
+              {attendanceMode === "left_early_agreed"
+                ? "Pastaba"
+                : "Paaiškinimas *"}
+              <textarea
+                className="ed-textarea"
+                maxLength={1000}
+                value={attendanceNote}
+                onChange={(e) => setAttendanceNote(e.target.value)}
+                placeholder={
+                  attendanceMode === "no_show"
+                    ? "Trumpai parašykite, kodėl pažymite neatvykimą."
+                    : attendanceMode === "left_early_unexcused"
+                    ? "Trumpai aprašykite, kas įvyko."
+                    : "Pvz. Išėjimas buvo suderintas iš anksto."
+                }
+              />
+            </label>
+
+            {["no_show", "left_early_unexcused"].includes(attendanceMode) && (
+              <div className="ed-note err" style={{ marginTop: 14 }}>
+                Šis neigiamas pažymėjimas <b>darbuotojo reitingo iškart nemažina</b>.
+                Darbuotojas galės jį patvirtinti arba ginčyti. Ginčo metu
+                sankcijos sustabdomos.
+              </div>
+            )}
+
+            {attendanceMode === "left_early_agreed" && (
+              <div className="ed-note ok" style={{ marginTop: 14 }}>
+                Suderintas ankstyvas išėjimas darbuotojo patikimumo nemažina.
+                Į statistiką bus įskaitytas tik faktiškai dirbtas laikas.
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="ed-secondary"
+                disabled={attendanceSaving}
+                onClick={() => {
+                  setAttendanceTarget(null);
+                  setAttendanceMode(null);
+                  setAttendanceEndTime("");
+                  setAttendanceNote("");
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className={
+                  ["no_show", "left_early_unexcused"].includes(attendanceMode)
+                    ? "ed-danger"
+                    : "ed-primary"
+                }
+                disabled={
+                  attendanceSaving ||
+                  (attendanceMode !== "no_show" && !attendanceEndTime) ||
+                  (["no_show", "left_early_unexcused"].includes(attendanceMode) &&
+                    attendanceNote.trim().length < 5)
+                }
+                onClick={() =>
+                  recordEmployerAttendance(
+                    attendanceTarget,
+                    attendanceMode,
+                    attendanceEndTime || null,
+                    attendanceNote
+                  )
+                }
+              >
+                {attendanceSaving ? "Saugoma..." : "Patvirtinti rezultatą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ratingTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !ratingSaving) {
+              setRatingTarget(null);
+              setRatingScore(5);
+              setRatingComment("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
+                <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={ratingSaving}
+                onClick={() => {
+                  setRatingTarget(null);
+                  setRatingScore(5);
+                  setRatingComment("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <button
+                    key={score}
+                    type="button"
+                    className={
+                      Number(ratingScore) === score
+                        ? "ed-primary"
+                        : "ed-secondary"
+                    }
+                    style={{ minWidth: 48 }}
+                    onClick={() => setRatingScore(score)}
+                  >
+                    {score} ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="ed-label">
+              Komentaras
+              <textarea
+                className="ed-textarea"
+                maxLength={1000}
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                placeholder="Trumpas komentaras apie darbą su šiuo darbuotoju."
+              />
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="ed-secondary"
+                disabled={ratingSaving}
+                onClick={() => {
+                  setRatingTarget(null);
+                  setRatingScore(5);
+                  setRatingComment("");
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className="ed-primary"
+                disabled={ratingSaving}
+                onClick={submitWorkerRating}
+              >
+                {ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showReliabilityInfo && (
         <div
@@ -3874,20 +5638,6 @@ function EmployerDashboard({ user, onLogout }) {
             </div>
 
             <div className="reliability-score-box">
-              <div
-                className="reliability-score-ring"
-                style={{
-                  background: `conic-gradient(#1c9b67 ${Math.max(
-                    0,
-                    Math.min(100, Math.round(employerStats.reliabilityRate))
-                  )}%, #e6ebef 0)`,
-                }}
-              >
-                <div className="reliability-score-ring-inner">
-                  {Math.round(employerStats.reliabilityRate)}
-                </div>
-              </div>
-
               <div className="reliability-score-copy">
                 <strong>
                   Dabartinis patikimumas:{" "}
@@ -3910,31 +5660,43 @@ function EmployerDashboard({ user, onLogout }) {
               <div className="reliability-rule">
                 <div className="reliability-rule-icon">−10</div>
                 <p>
-                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys jį
-                  atšaukia, patikimumas sumažėja <b>10 taškų</b>.
+                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys visą
+                  darbą atšaukia, patikimumas sumažėja <b>10 taškų</b>.
                 </p>
               </div>
 
               <div className="reliability-rule">
                 <div className="reliability-rule-icon">0</div>
                 <p>
-                  Jei darbo dar <b>nė vienas darbuotojas nebuvo patvirtinęs</b>,
-                  jo pašalinimas patikimumo nemažina.
+                  Pažymėjus „Neatvyko“ ar „Išėjo anksčiau be pateisinamos
+                  priežasties“, darbuotojo reitingas <b>nesumažėja iškart</b>.
+                  Darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−20</div>
+                <p>
+                  Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
+                  darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
+                  patikimumas sumažėja <b>20 taškų</b>.
                 </p>
               </div>
 
               <div className="reliability-rule">
                 <div className="reliability-rule-icon">i</div>
                 <p>
-                  Atšaukimo priežastis išsaugoma ir ją mato darbą patvirtinę
-                  darbuotojai. Atšaukus darbą, jo pokalbis uždaromas.
+                  Patvirtintų nepagrįstų darbo dienos pažymėjimų istorija
+                  saugoma sistemoje. Šiuo metu jų:{" "}
+                  <b>{employerStats.falseAttendanceClaimCount}</b>.
                 </p>
               </div>
             </div>
 
             <div className="reliability-note">
-              <b>Svarbu:</b> reitingas mažėja tik tada, kai atšaukiamas jau
-              darbuotojo patvirtintas darbas.
+              <b>Svarbu:</b> nei darbdavys, nei darbuotojas negali vienašališkai
+              sugadinti kitos pusės reitingo ginčytinoje situacijoje. Ginčo metu
+              sankcijos sustabdomos iki sprendimo.
             </div>
 
             <div className="reliability-modal-actions">
@@ -4064,6 +5826,299 @@ function EmployerDashboard({ user, onLogout }) {
   );
 }
 
+
+function AdminDashboard({ onLogout }) {
+  const [loading, setLoading] = useState(true);
+  const [disputes, setDisputes] = useState([]);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [resolvingId, setResolvingId] = useState(null);
+
+  useEffect(() => {
+    loadDisputes();
+    const timer = setInterval(loadDisputes, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  async function loadDisputes() {
+    try {
+      const result = await supabase.rpc("get_attendance_disputes");
+      if (result.error) throw result.error;
+
+      const rows = result.data || [];
+      const withEvidence = await Promise.all(
+        rows.map(async (row) => {
+          if (!row.worker_evidence_path) return row;
+
+          const signedResult = await supabase.storage
+            .from("attendance-evidence")
+            .createSignedUrl(row.worker_evidence_path, 60 * 60);
+
+          return {
+            ...row,
+            evidenceUrl: signedResult.error
+              ? null
+              : signedResult.data?.signedUrl || null,
+          };
+        })
+      );
+
+      setDisputes(withEvidence);
+      setError("");
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbo dienos ginčų.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resolveDispute(dispute, resolution) {
+    const workerWon = resolution === "worker";
+    const finalOutcome = workerWon
+      ? dispute.employer_outcome === "no_show"
+        ? "full_day"
+        : dispute.employer_outcome === "left_early_unexcused"
+        ? "left_early_agreed"
+        : "full_day"
+      : dispute.employer_outcome;
+
+    const actualEndTime = ["left_early_agreed", "left_early_unexcused"].includes(
+      finalOutcome
+    )
+      ? dispute.actual_end_time
+      : null;
+
+    const question = workerWon
+      ? "Patvirtinti, kad ginčas išspręstas darbuotojo naudai? Jei darbdavio pažymėjimas nepasitvirtino, jo patikimumas sumažės 20 taškų."
+      : "Patvirtinti, kad ginčas išspręstas darbdavio naudai? Darbuotojui bus pritaikytas galutinis darbo dienos rezultatas.";
+
+    if (!window.confirm(question)) return;
+
+    setResolvingId(dispute.attendance_id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("admin_resolve_attendance_dispute", {
+        p_attendance_id: dispute.attendance_id,
+        p_resolution: resolution,
+        p_final_outcome: finalOutcome,
+        p_actual_end_time: actualEndTime || null,
+        p_note:
+          resolution === "worker"
+            ? "Ginčas peržiūrėtas ir išspręstas darbuotojo naudai."
+            : "Ginčas peržiūrėtas ir išspręstas darbdavio naudai.",
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Ginčas išspręstas ir abiem pusėms išsiųstas atnaujinimas.");
+      await loadDisputes();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išspręsti ginčo.");
+    } finally {
+      setResolvingId(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Kraunami darbo dienos ginčai...</b>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wd-page">
+      <style>{`
+        .admin-shell{width:min(1050px,calc(100% - 40px));margin:34px auto 70px;color:#102438}
+        .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
+        .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
+        .admin-head p{margin:8px 0 0;color:#6c7a88}
+        .admin-list{display:grid;gap:14px}.admin-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.045)}
+        .admin-card-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.admin-card h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
+        .admin-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}.admin-fact{background:#f6f8fa;border-radius:11px;padding:12px}.admin-fact span{display:block;color:#6c7a88;font-size:11px;margin-bottom:4px}.admin-fact b{font-size:14px}
+        .admin-note{margin-top:12px;padding:12px;border-radius:11px;background:#fff3e7;color:#8a531d;line-height:1.5;font-size:13px}.admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px}
+        .admin-ok,.admin-danger{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.admin-ok{border:0;background:#1c9b67;color:#fff}.admin-danger{border:1px solid #e8bbae;background:#fff;color:#b64d2a}.admin-ok:disabled,.admin-danger:disabled{opacity:.55;cursor:wait}
+        @media(max-width:650px){.admin-shell{width:min(100% - 24px,1050px)}.admin-head{align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr}.admin-card-head{flex-direction:column}}
+      `}</style>
+
+      <header className="wd-topbar">
+        <div className="wd-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+          <button className="btn ghost" onClick={onLogout}>
+            Atsijungti
+          </button>
+        </div>
+      </header>
+
+      <main className="admin-shell">
+        <div className="admin-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIUS</div>
+            <h1>Darbo dienos ginčai</h1>
+            <p>
+              Čia sprendžiamos situacijos, kai darbdavio ir darbuotojo parodymai
+              nesutampa. Iki sprendimo darbuotojo reitingas nekeičiamas.
+            </p>
+          </div>
+          <b>{disputes.length} neišspręsta</b>
+        </div>
+
+        {notice && <div className="wd-note ok">{notice}</div>}
+        {error && <div className="wd-note err">{error}</div>}
+
+        {disputes.length ? (
+          <div className="admin-list">
+            {disputes.map((dispute) => {
+              const busy = resolvingId === dispute.attendance_id;
+              return (
+                <section className="admin-card" key={dispute.attendance_id}>
+                  <div className="admin-card-head">
+                    <div>
+                      <div className="eyebrow">GINČAS</div>
+                      <h2>{dispute.job_title}</h2>
+                      <div style={{ color: "#6c7a88", marginTop: 5 }}>
+                        {dispute.work_date} ·{" "}
+                        {dispute.start_time?.slice(0, 5)}
+                        {dispute.end_time
+                          ? `–${dispute.end_time.slice(0, 5)}`
+                          : ""}
+                      </div>
+                    </div>
+                    <span className="wd-workday-status red">
+                      {attendanceOutcomeLabel({
+                        employer_outcome: dispute.employer_outcome,
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="admin-grid">
+                    <div className="admin-fact">
+                      <span>Darbuotojas</span>
+                      <b>{dispute.worker_name}</b>
+                    </div>
+                    <div className="admin-fact">
+                      <span>Darbdavys</span>
+                      <b>{dispute.company_name}</b>
+                    </div>
+                    <div className="admin-fact">
+                      <span>Darbuotojo „Atvykau“</span>
+                      <b>
+                        {dispute.worker_check_in_at
+                          ? new Date(
+                              dispute.worker_check_in_at
+                            ).toLocaleString("lt-LT", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })
+                          : "Nepažymėta"}
+                      </b>
+                    </div>
+                    <div className="admin-fact">
+                      <span>Darbdavio patvirtintas atvykimas</span>
+                      <b>
+                        {dispute.employer_check_in_at
+                          ? new Date(
+                              dispute.employer_check_in_at
+                            ).toLocaleString("lt-LT", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })
+                          : "Nepažymėta"}
+                      </b>
+                    </div>
+                    <div className="admin-fact">
+                      <span>Darbdavio faktinis išėjimo laikas</span>
+                      <b>
+                        {dispute.actual_end_time?.slice(0, 5) || "Nenurodyta"}
+                      </b>
+                    </div>
+                  </div>
+
+                  {dispute.employer_note && (
+                    <div className="admin-note">
+                      <b>Darbdavio paaiškinimas:</b>{" "}
+                      {dispute.employer_note}
+                    </div>
+                  )}
+
+                  {dispute.worker_response_note && (
+                    <div className="admin-note">
+                      <b>Darbuotojo paaiškinimas:</b>{" "}
+                      {dispute.worker_response_note}
+                    </div>
+                  )}
+
+                  {dispute.worker_workday_claim === "worked" && (
+                    <div className="admin-note">
+                      Darbuotojas sistemoje taip pat buvo pažymėjęs, kad{" "}
+                      <b>dirbo šiame darbe</b>.
+                    </div>
+                  )}
+
+                  {dispute.worker_evidence_path && (
+                    <div className="admin-note">
+                      <b>Darbuotojo pridėtas įrodymas:</b>{" "}
+                      {dispute.evidenceUrl ? (
+                        <a
+                          href={dispute.evidenceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: "#102438",
+                            fontWeight: 800,
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {dispute.worker_evidence_name || "Atidaryti failą"}
+                        </a>
+                      ) : (
+                        <span>
+                          {dispute.worker_evidence_name || "Failas pridėtas"},
+                          bet šiuo metu nepavyko sukurti saugios peržiūros nuorodos.
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="admin-actions">
+                    <button
+                      className="admin-danger"
+                      disabled={busy}
+                      onClick={() => resolveDispute(dispute, "employer")}
+                    >
+                      Darbdavio naudai
+                    </button>
+                    <button
+                      className="admin-ok"
+                      disabled={busy}
+                      onClick={() => resolveDispute(dispute, "worker")}
+                    >
+                      {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
+                    </button>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="wd-card">
+            Šiuo metu neišspręstų darbo dienos ginčų nėra.
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [accountRole, setAccountRole] = useState(null);
@@ -4144,6 +6199,10 @@ function App() {
 
   if (user && accountRole === "employer") {
     return <EmployerDashboard user={user} onLogout={logout} />;
+  }
+
+  if (user && accountRole === "admin") {
+    return <AdminDashboard onLogout={logout} />;
   }
 
   return (
