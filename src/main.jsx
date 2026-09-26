@@ -7470,27 +7470,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-reliability-title{
           display:block;
           width:100%;
+          margin-bottom:9px;
+        }
+        .ed-reliability-title-btn{
+          border:0;
+          background:transparent;
           color:#6c7a88;
           font-family:Inter,sans-serif;
           font-size:12px;
           line-height:1.25;
-          margin-bottom:9px;
-        }
-        .ed-info-btn{
-          border:0;
-          border-bottom:1px solid rgba(184,95,14,.28);
-          background:transparent;
-          color:#b85f0e;
-          font-family:Inter,sans-serif;
-          font-size:10px;
-          font-weight:800;
-          line-height:1.25;
           cursor:pointer;
-          padding:0 0 2px;
-          margin-top:9px;
-          box-sizing:border-box;
+          padding:0;
+          margin:0;
+          text-align:left;
         }
-        .ed-info-btn:hover{color:#8f4708;border-bottom-color:#8f4708}
+        .ed-reliability-title-btn:hover{
+          color:#102438;
+          text-decoration:underline;
+          text-underline-offset:3px;
+        }
+        .ed-reliability-title-btn:focus-visible{
+          outline:2px solid rgba(240,138,40,.35);
+          outline-offset:4px;
+          border-radius:4px;
+        }
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
@@ -7909,21 +7912,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-kpi ed-reliability-card">
               <div className="ed-reliability-copy">
                 <div className="ed-reliability-title">
-                  <span>Patikimumas</span>
+                  <button
+                    type="button"
+                    className="ed-reliability-title-btn"
+                    aria-label="Atidaryti darbdavio patikimumo paaiškinimą"
+                    onClick={() => setShowReliabilityInfo(true)}
+                  >
+                    Patikimumas
+                  </button>
                 </div>
 
                 <b className="ed-reliability-label">
                   {Math.round(employerStats.reliabilityRate)} / 100
                 </b>
-
-                <button
-                  type="button"
-                  className="ed-info-btn"
-                  aria-label="Kaip skaičiuojamas darbdavio patikimumas"
-                  onClick={() => setShowReliabilityInfo(true)}
-                >
-                  Kaip skaičiuojama?
-                </button>
               </div>
             </div>
           </div>
