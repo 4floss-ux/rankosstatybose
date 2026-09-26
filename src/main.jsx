@@ -1293,7 +1293,7 @@ function GroupConversationModal({
   jobId,
   title,
   user,
-  adminOverride = false,
+  senderMode = null,
 }) {
   const [messages, setMessages] = useState([]);
   const [names, setNames] = useState({});
@@ -1310,7 +1310,7 @@ function GroupConversationModal({
     loadMessages();
     const timer = setInterval(loadMessages, 3000);
     return () => clearInterval(timer);
-  }, [open, jobId, adminOverride]);
+  }, [open, jobId, senderMode]);
 
   async function loadMessages() {
     if (!messages.length) setLoading(true);
@@ -1320,7 +1320,7 @@ function GroupConversationModal({
       const [messagesResult, jobResult] = await Promise.all([
         supabase
           .from("job_group_messages")
-          .select("id, sender_id, body, created_at")
+          .select("id, sender_id, sender_context, sender_label, body, created_at")
           .eq("job_id", jobId)
           .order("created_at", { ascending: true }),
         supabase
@@ -1375,11 +1375,17 @@ function GroupConversationModal({
     setError("");
 
     try {
-      const result = await supabase.from("job_group_messages").insert({
-        job_id: jobId,
-        sender_id: user.id,
-        body,
-      });
+      const result = senderMode
+        ? await supabase.rpc("admin_send_job_chat_as_mode", {
+            p_job_id: jobId,
+            p_body: body,
+            p_mode: senderMode,
+          })
+        : await supabase.from("job_group_messages").insert({
+            job_id: jobId,
+            sender_id: user.id,
+            body,
+          });
 
       if (result.error) throw result.error;
 
@@ -1433,8 +1439,10 @@ function GroupConversationModal({
         </div>
 
         <div className="rs-group-note">
-          {adminOverride
-            ? "Administratoriaus režimas: matote visą šio darbo grupinio pokalbio istoriją ir galite rašyti darbo komandai."
+          {senderMode === "worker"
+            ? "Rašote darbuotojo režimu. Žinutė bus rodoma jūsų darbuotojo vardu."
+            : senderMode === "employer"
+            ? "Rašote darbdavio režimu. Žinutė bus rodoma jūsų įmonės vardu."
             : "Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai."}
         </div>
 
@@ -1454,9 +1462,9 @@ function GroupConversationModal({
                 key={message.id}
               >
                 <b>
-                  {message.sender_id === user.id
-                    ? "Jūs"
-                    : names[message.sender_id] || "Vartotojas"}
+                  {message.sender_label ||
+                    names[message.sender_id] ||
+                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
                 </b>
                 <p>{message.body}</p>
                 <time>
@@ -1477,18 +1485,6 @@ function GroupConversationModal({
         {conversationLocked && (
           <div className="rs-locked">
             <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
-            {cancellationReason && (
-              <div style={{ marginTop: 4 }}>
-                Atšaukimo priežastis: {cancellationReason}
-              </div>
-            )}
-          </div>
-        )}
-
-        {adminOverride && jobCancelled && (
-          <div className="rs-locked">
-            <b>Šis darbas atšauktas.</b> Administratorius gali tęsti pokalbį,
-            jei reikia administracinio paaiškinimo ar sprendimo.
             {cancellationReason && (
               <div style={{ marginTop: 4 }}>
                 Atšaukimo priežastis: {cancellationReason}
@@ -3847,6 +3843,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobId={groupConversation?.jobId}
         title={groupConversation?.title}
         user={user}
+        senderMode={onAdminReturn ? "worker" : null}
       />
     </div>
   );
@@ -7242,6 +7239,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobId={groupConversation?.jobId}
         title={groupConversation?.title}
         user={user}
+        senderMode={onAdminReturn ? "employer" : null}
       />
     </div>
   );
@@ -7912,15 +7910,7 @@ function AdminJobChatModal({ job, user, onClose }) {
                   }`}
                   key={message.message_id}
                 >
-                  <b>
-                    {mine
-                      ? "Jūs · Administratorius"
-                      : `${message.sender_name || "Vartotojas"}${
-                          message.sender_role === "admin"
-                            ? " · Administratorius"
-                            : ""
-                        }`}
-                  </b>
+                  <b>{message.sender_name || "Vartotojas"}</b>
                   <p>{message.body}</p>
                   <time>
                     {new Date(message.created_at).toLocaleString("lt-LT", {
