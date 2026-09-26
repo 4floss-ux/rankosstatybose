@@ -6685,43 +6685,38 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
         .ed-kpi span{display:block;font-size:12px;color:#6c7a88;line-height:1.35;min-height:34px}
-        .ed-kpi b{font-size:24px;line-height:1;margin-top:10px}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
+        .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:12px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
         .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
-        .ed-reliability-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+        .ed-reliability-copy{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start}
         .ed-reliability-title{
           display:flex;
           align-items:center;
-          gap:4px;
+          justify-content:space-between;
+          gap:8px;
+          width:100%;
           color:#6c7a88;
           font-family:Inter,sans-serif;
           font-size:12px;
           line-height:1.25;
-          margin-bottom:7px;
+          margin-bottom:9px;
         }
         .ed-info-btn{
-          width:15px;
-          height:15px;
-          min-width:15px;
-          min-height:15px;
-          border-radius:50%;
-          border:1px solid #bfc9d0;
+          border:1px solid #d5dfe6;
+          border-radius:999px;
           background:#fff;
-          color:#6c7a88;
+          color:#526374;
           font-family:Inter,sans-serif;
-          font-size:9px;
+          font-size:10px;
           font-weight:800;
-          line-height:13px;
-          text-align:center;
+          line-height:1;
           cursor:pointer;
-          padding:0;
+          padding:5px 8px;
           margin:0;
           box-sizing:border-box;
-          vertical-align:middle;
-          flex:0 0 auto;
+          white-space:nowrap;
         }
-        .ed-info-btn:hover{background:#f3f6f8;border-color:#aebbc5}
-        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:24px!important;line-height:1.05}
-        .ed-reliability-score-text{font-family:Inter,sans-serif;font-size:12px!important;color:#6c7a88!important;margin-top:6px!important}
+        .ed-info-btn:hover{background:#f3f6f8;border-color:#b8c6d0}
+        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
@@ -7144,26 +7139,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     type="button"
                     className="ed-info-btn"
                     aria-label="Kaip veikia darbdavio patikimumas"
-                    title="Kaip veikia darbdavio patikimumas"
                     onClick={() => setShowReliabilityInfo(true)}
                   >
-                    i
+                    Paaiškinimas
                   </button>
                 </div>
 
                 <b className="ed-reliability-label">
-                  {employerStats.reliabilityRate >= 90
-                    ? "Puikus"
-                    : employerStats.reliabilityRate >= 75
-                    ? "Geras"
-                    : employerStats.reliabilityRate >= 60
-                    ? "Vidutinis"
-                    : "Žemas"}
-                </b>
-
-                <small className="ed-reliability-score-text">
                   {Math.round(employerStats.reliabilityRate)} / 100
-                </small>
+                </b>
               </div>
             </div>
           </div>
