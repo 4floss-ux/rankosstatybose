@@ -1131,6 +1131,39 @@ function GroupConversationModal({ open, onClose, jobId, title, user }) {
 }
 
 function WorkerProfileModal({ worker, onClose }) {
+  const [ratingReviews, setRatingReviews] = useState([]);
+  const [ratingReviewsLoading, setRatingReviewsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!worker?.id) {
+      setRatingReviews([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRatingReviews() {
+      setRatingReviewsLoading(true);
+
+      const result = await supabase
+        .from("worker_ratings")
+        .select("id, score, comment, created_at")
+        .eq("worker_id", worker.id)
+        .order("created_at", { ascending: false });
+
+      if (!cancelled) {
+        setRatingReviews(result.error ? [] : result.data || []);
+        setRatingReviewsLoading(false);
+      }
+    }
+
+    loadRatingReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id]);
+
   if (!worker) return null;
 
   const stats = worker.publicStats || {};
@@ -1167,6 +1200,7 @@ function WorkerProfileModal({ worker, onClose }) {
           .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
           .rs-profile-stat span{display:block;font-size:11px;color:#6c7a88;margin-bottom:5px;line-height:1.3}.rs-profile-stat b{font-family:Manrope,Inter,sans-serif;font-size:18px}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
+          .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
           @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
           @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
         `}</style>
@@ -1233,7 +1267,7 @@ function WorkerProfileModal({ worker, onClose }) {
             <b>
               {ratingAverage === null || ratingAverage === undefined
                 ? "—"
-                : `${Number(ratingAverage).toFixed(1)} / 5`}
+                : `${Number(ratingAverage).toFixed(1)} / 10`}
             </b>
             <span style={{ marginTop: 4, marginBottom: 0 }}>
               {ratingCount ? `${ratingCount} vert.` : "Dar nėra vertinimų"}
@@ -1277,6 +1311,41 @@ function WorkerProfileModal({ worker, onClose }) {
             </div>
           </div>
         )}
+
+        <div className="rs-profile-section">
+          <b>Darbdavių atsiliepimai</b>
+
+          {ratingReviewsLoading ? (
+            <div style={{ marginTop: 10, color: "#6c7a88" }}>
+              Kraunami atsiliepimai...
+            </div>
+          ) : ratingReviews.length ? (
+            <div className="rs-review-list">
+              {ratingReviews.map((review) => (
+                <div className="rs-review" key={review.id}>
+                  <div className="rs-review-head">
+                    <span className="rs-review-score">
+                      {review.score} / 10
+                    </span>
+                    <span className="rs-review-date">
+                      {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                    </span>
+                  </div>
+
+                  <p>
+                    {review.comment?.trim()
+                      ? review.comment
+                      : "Darbdavys komentaro nepaliko."}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, color: "#6c7a88" }}>
+              Dar nėra darbdavių atsiliepimų.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2208,7 +2277,7 @@ function WorkerDashboard({ user, onLogout }) {
               <b>
                 {metrics.ratingAverage === null
                   ? "—"
-                  : `${metrics.ratingAverage.toFixed(1)} / 5`}
+                  : `${metrics.ratingAverage.toFixed(1)} / 10`}
               </b>
               <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
                 {metrics.ratingCount
@@ -3382,7 +3451,7 @@ function EmployerDashboard({ user, onLogout }) {
   const [attendanceNote, setAttendanceNote] = useState("");
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [ratingTarget, setRatingTarget] = useState(null);
-  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingScore, setRatingScore] = useState(null);
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSaving, setRatingSaving] = useState(false);
   const [conversation, setConversation] = useState(null);
@@ -4111,6 +4180,12 @@ function EmployerDashboard({ user, onLogout }) {
   async function submitWorkerRating() {
     if (!ratingTarget?.bookingId) return;
 
+    const numericScore = Number(ratingScore);
+    if (!Number.isInteger(numericScore) || numericScore < 1 || numericScore > 10) {
+      setError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
+      return;
+    }
+
     setRatingSaving(true);
     setNotice("");
     setError("");
@@ -4120,7 +4195,7 @@ function EmployerDashboard({ user, onLogout }) {
         booking_id: ratingTarget.bookingId,
         worker_id: ratingTarget.id,
         rater_id: user.id,
-        score: Number(ratingScore),
+        score: numericScore,
         comment: ratingComment.trim() || null,
       });
 
@@ -4128,7 +4203,7 @@ function EmployerDashboard({ user, onLogout }) {
 
       setNotice("Darbuotojo įvertinimas išsaugotas.");
       setRatingTarget(null);
-      setRatingScore(5);
+      setRatingScore(null);
       setRatingComment("");
 
       await loadCurrentJobWorkers(currentJob?.id);
@@ -5419,7 +5494,7 @@ function EmployerDashboard({ user, onLogout }) {
                             <b>
                               {worker.ratingAverage === null
                                 ? "—"
-                                : `${worker.ratingAverage.toFixed(1)} / 5`}
+                                : `${worker.ratingAverage.toFixed(1)} / 10`}
                             </b>
                           </div>
 
@@ -5486,7 +5561,7 @@ function EmployerDashboard({ user, onLogout }) {
                                 className="ed-primary"
                                 onClick={() => {
                                   setRatingTarget(worker);
-                                  setRatingScore(5);
+                                  setRatingScore(null);
                                   setRatingComment("");
                                 }}
                               >
@@ -5496,7 +5571,7 @@ function EmployerDashboard({ user, onLogout }) {
 
                           {worker.rating && (
                             <span className="ed-attendance-badge green">
-                              Įvertinta {worker.rating.score}/5
+                              Įvertinta {worker.rating.score}/10
                             </span>
                           )}
                         </div>
@@ -5975,7 +6050,7 @@ function EmployerDashboard({ user, onLogout }) {
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !ratingSaving) {
               setRatingTarget(null);
-              setRatingScore(5);
+              setRatingScore(null);
               setRatingComment("");
             }
           }}
@@ -5985,13 +6060,16 @@ function EmployerDashboard({ user, onLogout }) {
               <div>
                 <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
                 <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
+                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
+                  Pasirinkite bendrą įvertinimą nuo 1 iki 10.
+                </div>
               </div>
               <button
                 className="rs-close"
                 disabled={ratingSaving}
                 onClick={() => {
                   setRatingTarget(null);
-                  setRatingScore(5);
+                  setRatingScore(null);
                   setRatingComment("");
                 }}
               >
@@ -6007,7 +6085,7 @@ function EmployerDashboard({ user, onLogout }) {
                   flexWrap: "wrap",
                 }}
               >
-                {[1, 2, 3, 4, 5].map((score) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
                   <button
                     key={score}
                     type="button"
@@ -6016,23 +6094,23 @@ function EmployerDashboard({ user, onLogout }) {
                         ? "ed-primary"
                         : "ed-secondary"
                     }
-                    style={{ minWidth: 48 }}
+                    style={{ minWidth: 46 }}
                     onClick={() => setRatingScore(score)}
                   >
-                    {score} ★
+                    {score}
                   </button>
                 ))}
               </div>
             </div>
 
             <label className="ed-label">
-              Komentaras
+              Komentaras apie darbuotoją
               <textarea
                 className="ed-textarea"
                 maxLength={1000}
                 value={ratingComment}
                 onChange={(e) => setRatingComment(e.target.value)}
-                placeholder="Trumpas komentaras apie darbą su šiuo darbuotoju."
+                placeholder="Pvz. punktualus, gerai atliko užduotis, lengva susitarti..."
               />
             </label>
 
@@ -6049,7 +6127,7 @@ function EmployerDashboard({ user, onLogout }) {
                 disabled={ratingSaving}
                 onClick={() => {
                   setRatingTarget(null);
-                  setRatingScore(5);
+                  setRatingScore(null);
                   setRatingComment("");
                 }}
               >
@@ -6057,7 +6135,7 @@ function EmployerDashboard({ user, onLogout }) {
               </button>
               <button
                 className="ed-primary"
-                disabled={ratingSaving}
+                disabled={ratingSaving || !ratingScore}
                 onClick={submitWorkerRating}
               >
                 {ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}
