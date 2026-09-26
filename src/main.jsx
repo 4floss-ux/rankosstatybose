@@ -1868,21 +1868,20 @@ function CompanyTeamChatModal({
           .ctc-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:24px}
           .ctc-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.45}
           .ctc-close{width:38px;height:38px;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-size:21px;cursor:pointer;flex:0 0 auto}
-          .ctc-note{background:#edf8f3;color:#167a54;border-radius:11px;padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:12px}
           .ctc-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:10px}
-          .ctc-messages{display:grid;gap:10px;min-height:260px;max-height:430px;overflow:auto;padding:4px 2px 14px}
-          .ctc-empty{text-align:center;color:#7a8996;padding:52px 14px;font-size:13px}
-          .ctc-message{max-width:82%;padding:10px 12px;border-radius:13px;background:#f2f5f7}
-          .ctc-message.mine{margin-left:auto;background:#fff3e7}
-          .ctc-message b{display:block;font-size:12px;margin-bottom:4px}
+          .ctc-messages{display:grid;align-content:start;justify-items:start;gap:10px;min-height:260px;max-height:430px;overflow:auto;padding:8px 2px 14px}
+          .ctc-empty{justify-self:stretch;text-align:center;color:#7a8996;padding:52px 14px;font-size:13px}
+          .ctc-message{width:fit-content;max-width:min(72%,520px);padding:9px 12px;border-radius:13px;background:#f2f5f7}
+          .ctc-message.mine{justify-self:end;margin-left:0;background:#fff3e7}
+          .ctc-message b{display:block;font-size:12px;margin-bottom:3px}
           .ctc-role{font-weight:600;color:#7a8996}
-          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.48}
+          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}
           .ctc-message time{display:block;margin-top:5px;color:#8a98a6;font-size:10px}
-          .ctc-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e4ebf0;padding-top:14px}
-          .ctc-form textarea{min-height:50px;max-height:130px;resize:vertical;border:1px solid #dbe4ea;border-radius:11px;padding:11px 12px;font:inherit}
-          .ctc-form button{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}
+          .ctc-form{display:grid;grid-template-columns:1fr auto;align-items:end;gap:8px;border-top:1px solid #e4ebf0;padding-top:14px}
+          .ctc-form textarea{min-height:48px;max-height:110px;resize:vertical;border:1px solid #dbe4ea;border-radius:11px;padding:11px 12px;font:inherit;line-height:1.4}
+          .ctc-form button{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}
           .ctc-form button:disabled{opacity:.55;cursor:not-allowed}
-          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{max-height:calc(100vh - 20px);padding:17px}.ctc-head h2{font-size:21px}.ctc-message{max-width:92%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:42px}}
+          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{max-height:calc(100vh - 20px);padding:17px}.ctc-head h2{font-size:21px}.ctc-message{max-width:88%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
         `}</style>
 
         <div className="ctc-head">
@@ -1904,11 +1903,6 @@ function CompanyTeamChatModal({
           >
             ×
           </button>
-        </div>
-
-        <div className="ctc-note">
-          Čia galite tartis dėl darbų, darbuotojų, pamainų ar atsakomybių
-          neišeidami į Messenger, WhatsApp ar kitą programėlę.
         </div>
 
         {error && <div className="ctc-error">{error}</div>}
@@ -6980,62 +6974,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </button>
           </div>
         </div>
-
-        {planSummary && (
-          <div className="ed-plan-usage">
-            <div className="ed-plan-usage-copy">
-              <b>
-                {planSummary.plan_name} planas ·{" "}
-                {employerSubscriptionStatusLabel(
-                  planSummary.subscription_status
-                )}
-              </b>
-              <span>
-                {planSummary.unlimited_jobs
-                  ? "Darbo pasiūlymų skaičius neribojamas."
-                  : `Šį mėnesį panaudota ${Number(
-                      planSummary.jobs_used_this_month || 0
-                    )} iš ${Number(planSummary.jobs_limit || 5)} darbo pasiūlymų.`}
-              </span>
-            </div>
-
-            {planSummary.unlimited_jobs ? (
-              <button
-                className="ed-secondary"
-                type="button"
-                onClick={() => setShowPlans(true)}
-              >
-                Valdyti planą
-              </button>
-            ) : (
-              <div className="ed-plan-usage-meter">
-                <div className="ed-plan-usage-bar">
-                  <div
-                    className="ed-plan-usage-fill"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (Number(planSummary.jobs_used_this_month || 0) /
-                          Math.max(1, Number(planSummary.jobs_limit || 5))) *
-                          100
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <b>
-                  {Number(planSummary.jobs_remaining ?? 0)} liko
-                </b>
-                <button
-                  className="ed-secondary"
-                  type="button"
-                  onClick={() => setShowPlans(true)}
-                >
-                  Keisti planą
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         <section>
           <div style={{ marginBottom: 10 }}>
