@@ -6560,7 +6560,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <style>{`
         .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
-        .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
@@ -6572,6 +6572,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
+        .ed-profile-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+        .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
+        .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
+        .ed-profile-summary-card b{display:block;font-family:Manrope,Inter,sans-serif;font-size:16px;overflow-wrap:anywhere}
+        .ed-profile-summary-card small{display:block;color:#6c7a88;font-size:11px;margin-top:4px}
+        .ed-link-btn{border:0;background:transparent;color:#b85f0e;padding:0;margin-top:7px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
+        .ed-profile-readonly-note{margin-top:16px;border-radius:10px;background:#f4f6f8;color:#6c7a88;padding:11px 13px;font-size:12px}
         .ed-company-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
@@ -6658,12 +6665,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
         .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
         .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-team-modal{width:min(960px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
+        .ed-team-modal{width:min(980px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
         .ed-team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
         .ed-team-head h2{margin:3px 0 4px;font-family:Manrope,Inter,sans-serif;font-size:25px}
         .ed-team-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.5}
         .ed-team-seat{display:inline-flex;margin-top:9px;border-radius:999px;background:#eef3f6;color:#405264;padding:6px 9px;font-size:11px;font-weight:800}
-        .ed-team-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.8fr);gap:16px}
+        .ed-team-layout{display:grid;grid-template-columns:1fr;gap:16px}
         .ed-team-panel{border:1px solid #e4ebf0;border-radius:14px;padding:16px}
         .ed-team-panel h3{margin:0 0 5px;font-family:Manrope,Inter,sans-serif;font-size:17px}
         .ed-team-panel>p{margin:0 0 14px;color:#6c7a88;font-size:12px;line-height:1.45}
@@ -6681,9 +6688,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-role-card.active{border-color:#f08a28;background:#fff9f3;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
         .ed-team-role-card b{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:Manrope,Inter,sans-serif;font-size:14px;margin-bottom:5px}
         .ed-team-role-card b span{font-family:Inter,sans-serif;font-size:10px;color:#b85f0e;background:#fff0df;border-radius:999px;padding:4px 6px;white-space:nowrap}
-        .ed-team-role-card p{margin:0;color:#6c7a88;font-size:11px;line-height:1.45}
-        .ed-team-role-card ul{margin:9px 0 0;padding:0;list-style:none;display:grid;gap:5px}
-        .ed-team-role-card li{font-size:11px;line-height:1.35;color:#405264}
+        .ed-team-role-card p{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
+        .ed-team-role-card ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+        .ed-team-role-card li{font-size:12px;line-height:1.45;color:#405264}
         .ed-team-role-card li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:6px}
         .ed-team-role-summary{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:11px 12px}
         .ed-team-role-summary b{display:block;font-size:12px;margin-bottom:4px}
@@ -6728,7 +6735,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -6741,23 +6748,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </a>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {company && (
-              <div className="ed-company">
-                <div className="ed-company-icon">
-                  {workerInitials(company.name) || "Į"}
-                </div>
-                <div>
-                  <b>{company.name}</b>
-                  <span>
-                    {currentTeamMember
-                      ? `${currentTeamMember.display_name} · ${companyTeamRoleLabel(
-                          currentTeamMember.member_role
-                        )}`
-                      : company.city || "Miestas nenurodytas"}
-                  </span>
-                </div>
-              </div>
-            )}
             {company && planSummary && (
               <button
                 className="ed-plan-badge"
@@ -6769,24 +6759,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             )}
 
-            {company && planSummary && (
-              <button
-                className={`ed-team-btn ${
-                  planSummary.can_team_management ? "" : "locked"
-                }`}
-                type="button"
-                onClick={openCompanyTeam}
-              >
-                {planSummary.can_team_management
-                  ? `Komanda · ${Math.max(
-                      1,
-                      activeTeamMembers.length
-                    )}/5`
-                  : "Komanda · Pro"}
-              </button>
-            )}
-
-            {companyMemberRole === "owner" && (
+            {company && (
               <button
                 className="btn ghost"
                 type="button"
@@ -6794,9 +6767,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setShowCompanyEditor((current) => !current)
                 }
               >
-                {showCompanyEditor
-                  ? "Uždaryti redagavimą"
-                  : "Redaguoti informaciją"}
+                {showCompanyEditor ? "Uždaryti profilį" : "Profilis"}
               </button>
             )}
 
@@ -6818,16 +6789,68 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       </header>
 
       <main className="ed-shell">
-        {showCompanyEditor && companyMemberRole === "owner" && (
+        {showCompanyEditor && (
           <section className="ed-company-editor">
             <div className="ed-company-editor-head">
               <div>
-                <div className="eyebrow">ĮMONĖS INFORMACIJA</div>
-                <h2>Redaguoti informaciją</h2>
+                <div className="eyebrow">ĮMONĖS PROFILIS</div>
+                <h2>{company?.name || "Įmonės profilis"}</h2>
                 <p>
-                  Atnaujinkite duomenis, kuriuos naudojame jūsų darbdavio
-                  paskyroje ir darbuotojams pateikiamuose darbo pasiūlymuose.
+                  Čia matote įmonės paskyros informaciją, savo rolę, planą ir
+                  komandos užimtumą.
+                  {companyMemberRole === "owner"
+                    ? " Įmonės savininkas taip pat gali redaguoti informaciją."
+                    : " Įmonės informaciją gali redaguoti tik savininkas."}
                 </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                onClick={() => setShowCompanyEditor(false)}
+                aria-label="Uždaryti profilį"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="ed-profile-summary">
+              <div className="ed-profile-summary-card">
+                <span>Jūs prisijungę kaip</span>
+                <b>
+                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
+                </b>
+                <small>{companyTeamRoleLabel(companyMemberRole)}</small>
+              </div>
+
+              <div className="ed-profile-summary-card">
+                <span>Dabartinis planas</span>
+                <b>{planSummary?.plan_name || "Basic"}</b>
+                <button
+                  className="ed-link-btn"
+                  type="button"
+                  onClick={() => setShowPlans(true)}
+                >
+                  Peržiūrėti planus
+                </button>
+              </div>
+
+              <div className="ed-profile-summary-card">
+                <span>Komandos vietos</span>
+                <b>
+                  {planSummary?.can_team_management
+                    ? `${Math.max(1, activeTeamMembers.length)}/5`
+                    : "1/1"}
+                </b>
+                <button
+                  className="ed-link-btn"
+                  type="button"
+                  onClick={openCompanyTeam}
+                >
+                  {planSummary?.can_team_management
+                    ? "Valdyti komandą"
+                    : "Komanda · Business Pro"}
+                </button>
               </div>
             </div>
 
@@ -6838,6 +6861,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   className="ed-input"
                   value={companyForm.name}
                   maxLength={160}
+                  disabled={companyMemberRole !== "owner"}
                   onChange={(e) =>
                     updateCompanyField("name", e.target.value)
                   }
@@ -6858,6 +6882,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <CityAutocomplete
                   className="ed-input"
                   value={companyForm.city}
+                  disabled={companyMemberRole !== "owner"}
                   onChange={(value) =>
                     updateCompanyField("city", value)
                   }
@@ -6872,6 +6897,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   type="tel"
                   value={companyForm.phone}
                   maxLength={40}
+                  disabled={companyMemberRole !== "owner"}
                   onChange={(e) =>
                     updateCompanyField("phone", e.target.value)
                   }
@@ -6885,6 +6911,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   className="ed-textarea"
                   value={companyForm.description}
                   maxLength={1200}
+                  disabled={companyMemberRole !== "owner"}
                   onChange={(e) =>
                     updateCompanyField("description", e.target.value)
                   }
@@ -6893,25 +6920,31 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </label>
             </div>
 
-            <div className="ed-company-editor-actions">
-              <button
-                className="ed-secondary"
-                type="button"
-                disabled={companySaving}
-                onClick={() => setShowCompanyEditor(false)}
-              >
-                Atšaukti
-              </button>
+            {companyMemberRole === "owner" ? (
+              <div className="ed-company-editor-actions">
+                <button
+                  className="ed-secondary"
+                  type="button"
+                  disabled={companySaving}
+                  onClick={() => setShowCompanyEditor(false)}
+                >
+                  Uždaryti
+                </button>
 
-              <button
-                className="ed-primary"
-                type="button"
-                disabled={companySaving}
-                onClick={saveCompanyInformation}
-              >
-                {companySaving ? "Saugoma..." : "Išsaugoti"}
-              </button>
-            </div>
+                <button
+                  className="ed-primary"
+                  type="button"
+                  disabled={companySaving}
+                  onClick={saveCompanyInformation}
+                >
+                  {companySaving ? "Saugoma..." : "Išsaugoti pakeitimus"}
+                </button>
+              </div>
+            ) : (
+              <div className="ed-profile-readonly-note">
+                Įmonės duomenis gali keisti tik paskyros Savininkas.
+              </div>
+            )}
           </section>
         )}
 
