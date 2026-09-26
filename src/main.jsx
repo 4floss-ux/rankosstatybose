@@ -2490,11 +2490,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setOriginalSkills([...selectedSkills]);
       setForm((current) => ({ ...current, city: canonicalCity }));
-      setNotice("Visi profilio duomenys išsaugoti.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setShowProfileEditor(false);
+      setNotice("Profilio informacija atnaujinta.");
     } catch (err) {
       setError(err?.message || "Nepavyko išsaugoti duomenų.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
@@ -2554,6 +2553,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
         .wd-heading-actions{display:grid;justify-items:end;gap:10px}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .wd-profile-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,36,56,.045);margin-bottom:22px}
+        .wd-profile-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:4px}
+        .wd-profile-editor-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .wd-profile-editor-head p{margin:6px 0 0;color:#6c7a88;line-height:1.5}
+        .wd-profile-editor-close{border:0;background:#f1f4f6;color:#102438;border-radius:9px;width:38px;height:38px;flex:0 0 38px;font:inherit;font-size:20px;cursor:pointer}
+        .wd-profile-editor-section{padding:20px 0;border-top:1px solid #e8edf1}
+        .wd-profile-editor-section:first-of-type{margin-top:16px}
+        .wd-profile-editor-section h3{margin:0 0 6px;font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .wd-profile-editor-section>p{margin:0 0 14px;color:#6c7a88;font-size:13px;line-height:1.5}
+        .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
+        .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
+        .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
+        .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
         .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday h3{margin:0 0 5px;font-size:18px}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
@@ -2642,10 +2654,228 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               type="button"
               onClick={() => setShowProfileEditor((current) => !current)}
             >
-              {showProfileEditor ? "Uždaryti informaciją" : "Tvarkyti mano informaciją"}
+              {showProfileEditor
+                ? "Uždaryti redagavimą"
+                : "Tvarkyti mano informaciją"}
             </button>
           </div>
         </div>
+
+        {showProfileEditor && (
+          <section className="wd-profile-editor">
+            <div className="wd-profile-editor-head">
+              <div>
+                <div className="eyebrow">MANO INFORMACIJA</div>
+                <h2>Tvarkyti mano informaciją</h2>
+                <p>
+                  Atnaujinkite savo profilį, įgūdžius ir laiką, kada galite
+                  priimti darbo pasiūlymus.
+                </p>
+              </div>
+
+              <button
+                className="wd-profile-editor-close"
+                type="button"
+                disabled={saving}
+                onClick={() => setShowProfileEditor(false)}
+                aria-label="Uždaryti"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="wd-profile-editor-section">
+              <h3>Pagrindinė informacija</h3>
+
+              <div className="wd-grid-2">
+                <label className="wd-label">
+                  Vardas
+                  <input
+                    className="wd-input"
+                    value={form.displayName}
+                    onChange={(e) =>
+                      updateField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="wd-input"
+                    value={form.city}
+                    onChange={(value) => updateField("city", value)}
+                    placeholder="Pradėkite rašyti miestą"
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Telefonas
+                  <input
+                    className="wd-input"
+                    value={form.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="+370..."
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Kiek km galite nuvykti?
+                  <input
+                    className="wd-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    value={form.travelRadius}
+                    onChange={(e) =>
+                      updateField("travelRadius", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Patirtis statybose (metais)
+                  <input
+                    className="wd-input"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={form.yearsExperience}
+                    onChange={(e) =>
+                      updateField("yearsExperience", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-check wd-profile-editor-check">
+                  <input
+                    type="checkbox"
+                    checked={form.hasDrivingLicenseB}
+                    onChange={(e) =>
+                      updateField("hasDrivingLicenseB", e.target.checked)
+                    }
+                  />
+                  Turiu B kategorijos vairuotojo pažymėjimą
+                </label>
+              </div>
+
+              <label className="wd-label" style={{ marginTop: 16 }}>
+                Trumpai apie patirtį
+                <textarea
+                  className="wd-textarea"
+                  value={form.shortBio}
+                  onChange={(e) => updateField("shortBio", e.target.value)}
+                  placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
+                />
+              </label>
+            </div>
+
+            <div className="wd-profile-editor-section">
+              <h3>Kokius darbus mokate?</h3>
+              <p>
+                Pasirinkite visus darbus, kuriuos galite atlikti arba kuriuose
+                galite padėti.
+              </p>
+
+              <div className="wd-skills">
+                {skills.map((skill) => (
+                  <button
+                    type="button"
+                    key={skill.id}
+                    className={
+                      selectedSkills.includes(Number(skill.id))
+                        ? "wd-skill on"
+                        : "wd-skill"
+                    }
+                    onClick={() => toggleSkill(Number(skill.id))}
+                  >
+                    {skill.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="wd-profile-editor-section">
+              <h3>Kada galite dirbti?</h3>
+              <p>
+                Pažymėkite artimiausias dienas, kuriomis realiai galite priimti
+                darbo pasiūlymą.
+              </p>
+
+              <div className="wd-days">
+                {days.map((day) => {
+                  const state = availability[day.iso];
+
+                  return (
+                    <div className="wd-day" key={day.iso}>
+                      <div className="wd-day-date">
+                        <b>{day.weekday}</b>
+                        <span>{day.label}</span>
+                      </div>
+
+                      <label className="wd-toggle">
+                        <input
+                          type="checkbox"
+                          checked={state.available}
+                          onChange={(e) =>
+                            updateAvailability(day.iso, {
+                              available: e.target.checked,
+                            })
+                          }
+                        />
+                        {state.available ? "Laisvas" : "Užimtas"}
+                      </label>
+
+                      <input
+                        className="wd-time"
+                        type="time"
+                        disabled={!state.available}
+                        value={state.from}
+                        onChange={(e) =>
+                          updateAvailability(day.iso, {
+                            from: e.target.value,
+                          })
+                        }
+                      />
+
+                      <input
+                        className="wd-time"
+                        type="time"
+                        disabled={!state.available}
+                        value={state.to}
+                        onChange={(e) =>
+                          updateAvailability(day.iso, {
+                            to: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="wd-profile-editor-actions">
+              <button
+                className="wd-profile-editor-cancel"
+                type="button"
+                disabled={saving}
+                onClick={() => setShowProfileEditor(false)}
+              >
+                Atšaukti
+              </button>
+
+              <button
+                className="wd-save"
+                type="button"
+                disabled={saving}
+                onClick={saveEverything}
+              >
+                {saving ? "Saugoma..." : "Išsaugoti"}
+              </button>
+            </div>
+          </section>
+        )}
 
         <section>
           <div style={{ marginBottom: 10 }}>
@@ -3192,182 +3422,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          {showProfileEditor && (
-            <>
-          <section className="wd-card">
-            <h2>1. Pagrindinė informacija</h2>
-            <p className="wd-card-sub">
-              Nuotraukos nereikia — darbdaviai matys inicialus ir darbo informaciją.
-            </p>
-
-            <div className="wd-grid-2">
-              <label className="wd-label">
-                Vardas
-                <input
-                  className="wd-input"
-                  value={form.displayName}
-                  onChange={(e) => updateField("displayName", e.target.value)}
-                />
-              </label>
-
-              <label className="wd-label">
-                Miestas
-                <CityAutocomplete
-                  className="wd-input"
-                  value={form.city}
-                  onChange={(value) => updateField("city", value)}
-                  placeholder="Pradėkite rašyti miestą"
-                />
-              </label>
-
-              <label className="wd-label">
-                Telefonas
-                <input
-                  className="wd-input"
-                  value={form.phone}
-                  onChange={(e) => updateField("phone", e.target.value)}
-                  placeholder="+370..."
-                />
-              </label>
-
-              <label className="wd-label">
-                Kiek km galite nuvykti?
-                <input
-                  className="wd-input"
-                  type="number"
-                  min="0"
-                  max="300"
-                  value={form.travelRadius}
-                  onChange={(e) => updateField("travelRadius", e.target.value)}
-                />
-              </label>
-
-              <label className="wd-label">
-                Patirtis statybose (metais)
-                <input
-                  className="wd-input"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={form.yearsExperience}
-                  onChange={(e) => updateField("yearsExperience", e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div className="wd-checks">
-              <label className="wd-check">
-                <input
-                  type="checkbox"
-                  checked={form.hasDrivingLicenseB}
-                  onChange={(e) =>
-                    updateField("hasDrivingLicenseB", e.target.checked)
-                  }
-                />
-                Turiu B kategoriją
-              </label>
-            </div>
-
-            <label className="wd-label" style={{ marginTop: 18 }}>
-              Trumpai apie patirtį
-              <textarea
-                className="wd-textarea"
-                value={form.shortBio}
-                onChange={(e) => updateField("shortBio", e.target.value)}
-                placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
-              />
-            </label>
-          </section>
-
-          <section className="wd-card">
-            <h2>2. Kokius darbus mokate?</h2>
-            <p className="wd-card-sub">
-              Pasirinkite visus darbus, kuriuos galite atlikti arba kuriuose galite padėti.
-            </p>
-
-            <div className="wd-skills">
-              {skills.map((skill) => (
-                <button
-                  type="button"
-                  key={skill.id}
-                  className={
-                    selectedSkills.includes(Number(skill.id))
-                      ? "wd-skill on"
-                      : "wd-skill"
-                  }
-                  onClick={() => toggleSkill(Number(skill.id))}
-                >
-                  {skill.name}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="wd-card">
-            <h2>3. Kada galite dirbti?</h2>
-            <p className="wd-card-sub">
-              Pažymėkite artimiausias dienas, kuriomis realiai galite priimti darbo pasiūlymą.
-            </p>
-
-            <div className="wd-days">
-              {days.map((day) => {
-                const state = availability[day.iso];
-                return (
-                  <div className="wd-day" key={day.iso}>
-                    <div className="wd-day-date">
-                      <b>{day.weekday}</b>
-                      <span>{day.label}</span>
-                    </div>
-
-                    <label className="wd-toggle">
-                      <input
-                        type="checkbox"
-                        checked={state.available}
-                        onChange={(e) =>
-                          updateAvailability(day.iso, {
-                            available: e.target.checked,
-                          })
-                        }
-                      />
-                      {state.available ? "Laisvas" : "Užimtas"}
-                    </label>
-
-                    <input
-                      className="wd-time"
-                      type="time"
-                      disabled={!state.available}
-                      value={state.from}
-                      onChange={(e) =>
-                        updateAvailability(day.iso, { from: e.target.value })
-                      }
-                    />
-
-                    <input
-                      className="wd-time"
-                      type="time"
-                      disabled={!state.available}
-                      value={state.to}
-                      onChange={(e) =>
-                        updateAvailability(day.iso, { to: e.target.value })
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="wd-bottom">
-            <button
-              className="wd-save"
-              disabled={saving}
-              onClick={saveEverything}
-            >
-              {saving ? "Saugoma..." : "Išsaugoti viską"}
-            </button>
-          </div>
-            </>
-          )}
         </div>
       </main>
 
