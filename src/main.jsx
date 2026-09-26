@@ -7701,7 +7701,206 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
     </AdminSetupModal>
   );
 
-}function AdminDashboard({
+}
+function AdminJobChatModal({ job, user, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!job?.job_id) return undefined;
+
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const result = await supabase.rpc("get_admin_job_chat_messages", {
+          p_job_id: job.job_id,
+        });
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setMessages(result.data || []);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko įkelti darbo pokalbio.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [job?.job_id]);
+
+  async function sendMessage(e) {
+    e.preventDefault();
+
+    const body = textValue.trim();
+    if (!body || !job?.job_id || sending) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("admin_send_job_chat_message", {
+        p_job_id: job.job_id,
+        p_body: body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+
+      const refreshed = await supabase.rpc("get_admin_job_chat_messages", {
+        p_job_id: job.job_id,
+      });
+
+      if (refreshed.error) throw refreshed.error;
+      setMessages(refreshed.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!job) return null;
+
+  return (
+    <div
+      className="admin-chat-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose();
+      }}
+    >
+      <style>{`
+        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-chat-card{width:min(700px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:flex;flex-direction:column}
+        .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:13px}
+        .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .admin-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
+        .admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+        .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}
+        .admin-chat-messages{display:grid;gap:10px;min-height:180px;max-height:390px;overflow-y:auto;padding:3px 3px 13px}
+        .admin-chat-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+        .admin-chat-message.mine{margin-left:auto;background:#fff3e7}
+        .admin-chat-message.admin-other{background:#eef3f8}
+        .admin-chat-message b{display:block;font-size:12px;margin-bottom:4px}
+        .admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+        .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}
+        .admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
+        .admin-chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+        .admin-chat-form textarea{min-height:52px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit;color:#102438}
+        .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
+        .admin-chat-form button:disabled{opacity:.55;cursor:wait}
+        @media(max-width:560px){.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:94%}}
+      `}</style>
+
+      <div className="admin-chat-card">
+        <div className="admin-chat-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIUS · DARBO POKALBIS</div>
+            <h2>{job.title || "Darbo pokalbis"}</h2>
+            <div className="admin-chat-meta">
+              {job.company_name || "Įmonė"} · {job.city || "—"} ·{" "}
+              {job.work_date || "—"}
+            </div>
+          </div>
+
+          <button
+            className="rs-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+
+        <div
+          className={`admin-chat-info ${
+            job.status === "cancelled" ? "cancelled" : ""
+          }`}
+        >
+          {job.status === "cancelled"
+            ? "Darbas atšauktas. Administratorius vis tiek gali peržiūrėti istoriją ir rašyti administracinę žinutę."
+            : "Matote visą šio darbo grupinio pokalbio istoriją. Jūsų žinutė bus siunčiama kaip administratoriaus žinutė darbo komandai."}
+        </div>
+
+        {error && <div className="admin-chat-error">{error}</div>}
+
+        <div className="admin-chat-messages">
+          {loading ? (
+            <div className="admin-chat-empty">Kraunamas pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => {
+              const mine = message.sender_id === user?.id;
+              const adminOther =
+                !mine && String(message.sender_role || "") === "admin";
+
+              return (
+                <div
+                  className={`admin-chat-message ${
+                    mine ? "mine" : adminOther ? "admin-other" : ""
+                  }`}
+                  key={message.message_id}
+                >
+                  <b>
+                    {mine
+                      ? "Jūs · Administratorius"
+                      : `${message.sender_name || "Vartotojas"}${
+                          message.sender_role === "admin"
+                            ? " · Administratorius"
+                            : ""
+                        }`}
+                  </b>
+                  <p>{message.body}</p>
+                  <time>
+                    {new Date(message.created_at).toLocaleString("lt-LT", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </time>
+                </div>
+              );
+            })
+          ) : (
+            <div className="admin-chat-empty">
+              Šiame darbe žinučių dar nėra.
+            </div>
+          )}
+        </div>
+
+        <form className="admin-chat-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            maxLength={2000}
+            onChange={(e) => setTextValue(e.target.value)}
+            placeholder="Administratoriaus žinutė darbo komandai..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard({
   user,
   onLogout,
   onOpenWorker,
@@ -8342,13 +8541,13 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-toast.ok{background:#edf8f3;border:1px solid #bfe6d3;color:#146f4d}
         .admin-toast.err{background:#fff0ec;border:1px solid #efc4b7;color:#a6462b}
         .admin-toast button{border:0;background:transparent;color:inherit;font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 1px}
-        .admin-section{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.035)}
+        .admin-section{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.035)}
         .admin-section+.admin-section{margin-top:14px}
         .admin-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-section h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
         .admin-muted{color:#6c7a88;font-size:13px;line-height:1.5}
         .admin-list{display:grid;gap:10px}
-        .admin-row{display:grid;grid-template-columns:minmax(180px,1.25fr) repeat(3,minmax(120px,.8fr)) auto;gap:12px;align-items:center;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
+        .admin-row{width:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(240px,1.35fr) repeat(3,minmax(130px,.72fr)) minmax(110px,auto);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:12px;padding:13px 15px}
         .admin-row-title b{display:block;font-size:14px}.admin-row-title span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
         .admin-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}.admin-cell b{font-size:13px}
         .admin-pill{display:inline-flex;width:max-content;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}
@@ -8370,12 +8569,9 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
-        .admin-audit-section{width:100%;max-width:none;margin-left:0;margin-right:0}
-        .admin-audit-section .admin-row{grid-template-columns:minmax(260px,1.45fr) minmax(180px,.85fr) minmax(150px,.7fr) minmax(120px,.6fr) auto}
-        .admin-audit-section .admin-row-title{min-width:0}
-        .admin-audit-section .admin-row-title span{max-width:420px}
+        .admin-audit-section{width:100%;max-width:none;margin:0;box-sizing:border-box}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-audit-section .admin-row{grid-template-columns:1fr 1fr}.admin-audit-section .admin-row>:last-child{grid-column:1/-1}}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
         @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
       `}</style>
 
@@ -9152,17 +9348,10 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
           </section>
         )}
 
-      <GroupConversationModal
-        open={Boolean(adminConversation)}
-        onClose={() => setAdminConversation(null)}
-        jobId={adminConversation?.job_id}
-        title={
-          adminConversation
-            ? `${adminConversation.company_name} · ${adminConversation.title}`
-            : ""
-        }
+      <AdminJobChatModal
+        job={adminConversation}
         user={user}
-        adminOverride
+        onClose={() => setAdminConversation(null)}
       />
 
       {editor && (
