@@ -376,7 +376,13 @@ function CityAutocomplete({
   );
 }
 
-function AuthModal({ open, onClose, initialMode="login", initialRole="worker" }) {
+function AuthModal({
+  open,
+  onClose,
+  initialMode = "login",
+  initialRole = "worker",
+  teamInvite = null,
+}) {
   const [mode, setMode] = useState(initialMode);
   const [role, setRole] = useState(initialRole);
   const [form, setForm] = useState({
@@ -395,11 +401,19 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
   useEffect(() => {
     if (open) {
       setMode(initialMode);
-      setRole(initialRole);
+      setRole(teamInvite ? "employer" : initialRole);
       setMessage("");
       setSuccess(false);
+
+      if (teamInvite) {
+        setForm((current) => ({
+          ...current,
+          name: teamInvite.invited_name || current.name,
+          email: teamInvite.email || current.email,
+        }));
+      }
     }
-  }, [open, initialMode, initialRole]);
+  }, [open, initialMode, initialRole, teamInvite]);
 
   if (!open) return null;
 
@@ -441,7 +455,11 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
           throw new Error("Slaptažodis turi būti bent 8 simbolių.");
         }
 
-        if (role === "employer" && !form.companyName.trim()) {
+        if (
+          role === "employer" &&
+          !teamInvite &&
+          !form.companyName.trim()
+        ) {
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
@@ -454,17 +472,23 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
           email: form.email.trim(),
           password: form.password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: teamInvite?.token
+              ? companyTeamInviteLink(teamInvite.token)
+              : window.location.origin,
             data: {
-              role,
+              role: teamInvite ? "employer" : role,
               display_name: form.name.trim(),
               legal_name: form.name.trim(),
               city: canonicalCity,
               phone: form.phone.trim(),
               company_name:
-                role === "employer" ? form.companyName.trim() : "",
+                role === "employer" && !teamInvite
+                  ? form.companyName.trim()
+                  : "",
               company_code:
-                role === "employer" ? form.companyCode.trim() : "",
+                role === "employer" && !teamInvite
+                  ? form.companyCode.trim()
+                  : "",
             },
           },
         });
@@ -606,7 +630,7 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
           </button>
         </div>
 
-        {mode === "signup" && (
+        {mode === "signup" && !teamInvite && (
           <div style={{ ...twoColumns, marginBottom: 18 }}>
             <button
               type="button"
@@ -664,7 +688,7 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
                 </label>
               </div>
 
-              {role === "employer" && (
+              {role === "employer" && !teamInvite && (
                 <div style={twoColumns}>
                   <label style={labelStyle}>
                     Įmonės pavadinimas
@@ -699,6 +723,7 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
               onChange={setField("email")}
               placeholder="vardas@email.lt"
               autoComplete="email"
+              readOnly={Boolean(teamInvite)}
             />
           </label>
 
@@ -751,6 +776,193 @@ function AuthModal({ open, onClose, initialMode="login", initialRole="worker" })
               : "Sukurti paskyrą"}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+
+function TeamInvitePage({
+  invite,
+  loading,
+  error,
+  user,
+  accepting,
+  onLogin,
+  onSignup,
+  onAccept,
+  onCancel,
+}) {
+  const valid = Boolean(invite?.valid);
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f6f8fa",
+        display: "grid",
+        placeItems: "center",
+        padding: 20,
+        color: "#102438",
+      }}
+    >
+      <div
+        style={{
+          width: "min(640px,100%)",
+          background: "#fff",
+          border: "1px solid #e4ebf0",
+          borderRadius: 20,
+          boxShadow: "0 24px 70px rgba(16,36,56,.10)",
+          padding: 28,
+        }}
+      >
+        <a
+          className="brand"
+          href="/"
+          style={{ display: "inline-flex", marginBottom: 26 }}
+        >
+          <span className="logo-mark">⌂</span>
+          <span>
+            rankos<span>statybose</span>.lt
+          </span>
+        </a>
+
+        <div className="eyebrow">ĮMONĖS KOMANDOS KVIETIMAS</div>
+
+        {loading ? (
+          <div style={{ padding: "28px 0", color: "#6c7a88" }}>
+            Tikrinamas kvietimas...
+          </div>
+        ) : error || !invite ? (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              Kvietimo atidaryti nepavyko
+            </h1>
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              {error || "Kvietimo nuoroda nerasta."}
+            </p>
+            <button className="btn ghost" type="button" onClick={onCancel}>
+              Grįžti į pradžią
+            </button>
+          </>
+        ) : !valid ? (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              Kvietimas nebegalioja
+            </h1>
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              Paprašykite įmonės savininko atsiųsti naują komandos kvietimą.
+            </p>
+            <button className="btn ghost" type="button" onClick={onCancel}>
+              Grįžti į pradžią
+            </button>
+          </>
+        ) : (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              {invite.company_name} kviečia prisijungti
+            </h1>
+
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              Jums paruošta atskira darbdavio paskyra. Prisijungę dirbsite kaip{" "}
+              <b style={{ color: "#102438" }}>
+                {invite.invited_name} · {invite.company_name}
+              </b>
+              .
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                margin: "20px 0",
+              }}
+            >
+              <div
+                style={{
+                  background: "#f6f8fa",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <span
+                  style={{ display: "block", color: "#7a8996", fontSize: 11 }}
+                >
+                  EL. PAŠTAS
+                </span>
+                <b style={{ display: "block", marginTop: 5 }}>
+                  {invite.email}
+                </b>
+              </div>
+
+              <div
+                style={{
+                  background: "#f6f8fa",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <span
+                  style={{ display: "block", color: "#7a8996", fontSize: 11 }}
+                >
+                  ROLĖ
+                </span>
+                <b style={{ display: "block", marginTop: 5 }}>
+                  {companyTeamRoleLabel(invite.member_role)}
+                </b>
+              </div>
+            </div>
+
+            {!user ? (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button className="btn primary" type="button" onClick={onSignup}>
+                  Sukurti paskyrą
+                </button>
+                <button className="btn ghost" type="button" onClick={onLogin}>
+                  Jau turiu paskyrą
+                </button>
+              </div>
+            ) : (
+              <>
+                {String(user.email || "").toLowerCase() !==
+                  String(invite.email || "").toLowerCase() && (
+                  <div
+                    style={{
+                      background: "#fff0ec",
+                      color: "#9f4529",
+                      borderRadius: 10,
+                      padding: 12,
+                      marginBottom: 14,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Šis kvietimas skirtas <b>{invite.email}</b>, o dabar
+                    prisijungta kaip <b>{user.email}</b>.
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    className="btn primary"
+                    type="button"
+                    disabled={
+                      accepting ||
+                      String(user.email || "").toLowerCase() !==
+                        String(invite.email || "").toLowerCase()
+                    }
+                    onClick={onAccept}
+                  >
+                    {accepting ? "Jungiama..." : "Prisijungti prie komandos"}
+                  </button>
+                  <button className="btn ghost" type="button" onClick={onCancel}>
+                    Atšaukti
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1089,20 +1301,27 @@ function notificationPresentation(events = []) {
   return { tone: "orange", label: "● Yra naujienų" };
 }
 
-function ConversationModal({ open, onClose, invitationId, title, user }) {
+function ConversationModal({
+  open,
+  onClose,
+  invitationId,
+  title,
+  user,
+  senderMode = null,
+}) {
   const [messages, setMessages] = useState([]);
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversationLocked, setConversationLocked] = useState(false);
-  const [jobCancelled, setJobCancelled] = useState(false);
+  const [planLocked, setPlanLocked] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (open && invitationId) loadMessages();
-  }, [open, invitationId]);
+  }, [open, invitationId, senderMode]);
 
   async function loadMessages() {
     setLoading(true);
@@ -1111,7 +1330,7 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
       const [result, invitationResult] = await Promise.all([
         supabase
           .from("job_messages")
-          .select("id, sender_id, body, created_at")
+          .select("id, sender_id, sender_context, sender_label, body, created_at")
           .eq("invitation_id", invitationId)
           .order("created_at", { ascending: true }),
         supabase
@@ -1124,17 +1343,25 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
       if (result.error) throw result.error;
       if (invitationResult.error) throw invitationResult.error;
 
-      const jobResult = await supabase
-        .from("jobs")
-        .select("status, cancellation_reason")
-        .eq("id", invitationResult.data.job_id)
-        .single();
+      const [jobResult, chatPlanResult] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("status, cancellation_reason")
+          .eq("id", invitationResult.data.job_id)
+          .single(),
+        supabase.rpc("job_chat_enabled", {
+          p_job_id: invitationResult.data.job_id,
+        }),
+      ]);
 
       if (jobResult.error) throw jobResult.error;
+      if (chatPlanResult.error) throw chatPlanResult.error;
 
       const cancelled = jobResult.data?.status === "cancelled";
-      setJobCancelled(cancelled);
-      setConversationLocked(cancelled && !adminOverride);
+      const chatPlanLocked = !chatPlanResult.data;
+
+      setPlanLocked(chatPlanLocked);
+      setConversationLocked(cancelled || chatPlanLocked);
       setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = result.data || [];
@@ -1175,11 +1402,17 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
     setSending(true);
     setError("");
     try {
-      const result = await supabase.from("job_messages").insert({
-        invitation_id: invitationId,
-        sender_id: user.id,
-        body,
-      });
+      const result = senderMode
+        ? await supabase.rpc("admin_send_private_job_message_as_mode", {
+            p_invitation_id: invitationId,
+            p_body: body,
+            p_mode: senderMode,
+          })
+        : await supabase.from("job_messages").insert({
+            invitation_id: invitationId,
+            sender_id: user.id,
+            body,
+          });
 
       if (result.error) throw result.error;
 
@@ -1236,7 +1469,11 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
                 className={message.sender_id === user.id ? "rs-message mine" : "rs-message"}
                 key={message.id}
               >
-                <b>{message.sender_id === user.id ? "Jūs" : names[message.sender_id] || "Vartotojas"}</b>
+                <b>
+                  {message.sender_label ||
+                    names[message.sender_id] ||
+                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
+                </b>
                 <p>{message.body}</p>
                 <time>
                   {new Date(message.created_at).toLocaleString("lt-LT", {
@@ -1253,15 +1490,28 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
 
         {conversationLocked && (
           <div className="rs-locked">
-            <b>Šis darbas atšauktas — pokalbis uždarytas.</b>
-            {cancellationReason && (
-              <div style={{ marginTop: 4 }}>
-                Atšaukimo priežastis: {cancellationReason}
-              </div>
+            {planLocked ? (
+              <>
+                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
+                <div style={{ marginTop: 4 }}>
+                  Darbdavys naudoja Basic planą. Žinučių funkcija įtraukta į
+                  Business ir Business Pro planus.
+                </div>
+              </>
+            ) : (
+              <>
+                <b>Šis darbas atšauktas — pokalbis uždarytas.</b>
+                {cancellationReason && (
+                  <div style={{ marginTop: 4 }}>
+                    Atšaukimo priežastis: {cancellationReason}
+                  </div>
+                )}
+                <div style={{ marginTop: 4 }}>
+                  Ankstesnes žinutes galite perskaityti, tačiau naujų siųsti
+                  nebegalima.
+                </div>
+              </>
             )}
-            <div style={{ marginTop: 4 }}>
-              Ankstesnes žinutes galite perskaityti, tačiau naujų siųsti nebegalima.
-            </div>
           </div>
         )}
 
@@ -1301,6 +1551,7 @@ function GroupConversationModal({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversationLocked, setConversationLocked] = useState(false);
+  const [planLocked, setPlanLocked] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
 
@@ -1317,7 +1568,7 @@ function GroupConversationModal({
     setError("");
 
     try {
-      const [messagesResult, jobResult] = await Promise.all([
+      const [messagesResult, jobResult, chatPlanResult] = await Promise.all([
         supabase
           .from("job_group_messages")
           .select("id, sender_id, sender_context, sender_label, body, created_at")
@@ -1328,12 +1579,20 @@ function GroupConversationModal({
           .select("status, cancellation_reason")
           .eq("id", jobId)
           .single(),
+        supabase.rpc("job_chat_enabled", {
+          p_job_id: jobId,
+        }),
       ]);
 
       if (messagesResult.error) throw messagesResult.error;
       if (jobResult.error) throw jobResult.error;
+      if (chatPlanResult.error) throw chatPlanResult.error;
 
-      setConversationLocked(jobResult.data?.status === "cancelled");
+      const chatPlanLocked = !chatPlanResult.data;
+      setPlanLocked(chatPlanLocked);
+      setConversationLocked(
+        jobResult.data?.status === "cancelled" || chatPlanLocked
+      );
       setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = messagesResult.data || [];
@@ -1484,11 +1743,23 @@ function GroupConversationModal({
 
         {conversationLocked && (
           <div className="rs-locked">
-            <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
-            {cancellationReason && (
-              <div style={{ marginTop: 4 }}>
-                Atšaukimo priežastis: {cancellationReason}
-              </div>
+            {planLocked ? (
+              <>
+                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
+                <div style={{ marginTop: 4 }}>
+                  Darbdavys naudoja Basic planą. Bendri ir privatūs darbo
+                  pokalbiai įtraukti į Business ir Business Pro.
+                </div>
+              </>
+            ) : (
+              <>
+                <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
+                {cancellationReason && (
+                  <div style={{ marginTop: 4 }}>
+                    Atšaukimo priežastis: {cancellationReason}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -3927,6 +4198,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         invitationId={conversation?.invitationId}
         title={conversation?.title}
         user={user}
+        senderMode={onAdminReturn ? "worker" : null}
       />
 
       <GroupConversationModal
@@ -3947,36 +4219,43 @@ const EMPLOYER_PLANS = [
     key: "basic",
     name: "Basic",
     price: 0,
-    description: "Išbandyti platformą ir pradėti samdyti.",
+    description:
+      "Nemokamas planas įmonei, kuri nori išbandyti darbuotojų paiešką.",
     features: [
       "Iki 5 darbo pasiūlymų per mėnesį",
       "Darbuotojų paieška ir kvietimai",
-      "Darbo pokalbiai",
-      "Patikimumas ir darbuotojų įvertinimai",
+      "Darbuotojų patikimumas ir įvertinimai",
+      "1 įmonės vartotojas",
     ],
   },
   {
     key: "business",
     name: "Business",
     price: 29,
-    description: "Įmonei, kuri darbuotojų ieško reguliariai.",
+    description:
+      "Vienam įmonės atsakingam žmogui, kuris darbuotojų ieško reguliariai.",
     features: [
+      "Viskas, kas yra Basic plane",
       "Neribotas darbo pasiūlymų skaičius",
-      "Visa Basic funkcionalumo apimtis",
+      "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė įmonės statistika",
-      "Didesnė darbų istorijos apimtis",
+      "1 įmonės vartotojas",
     ],
   },
   {
     key: "business_pro",
     name: "Business Pro",
     price: 59,
-    description: "Augančiai įmonei ir komandiniam darbui.",
+    description:
+      "Business planas + pilnas darbų paskirstymas keliems įmonės žmonėms.",
     features: [
-      "Visa Business funkcionalumo apimtis",
-      "Neribotas darbo pasiūlymų skaičius",
-      "Iki 5 įmonės komandos vietų",
-      "Komandos valdymo teisės paruoštos Pro planui",
+      "Viskas, kas yra Business plane",
+      "Iki 5 atskirų įmonės vartotojų",
+      "Savininko, vadovo ir vadybininko rolės",
+      "„Mano darbai“ ir „Visi įmonės darbai“",
+      "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
+      "Atskira vadybininko darbų statistika",
+      "Žinutėse aiškiai rodoma, kuris įmonės žmogus rašo",
     ],
   },
 ];
@@ -3993,6 +4272,20 @@ function employerSubscriptionStatusLabel(status) {
   if (status === "cancelled") return "Nutraukta";
   return "Aktyvus";
 }
+
+function companyTeamRoleLabel(role) {
+  if (role === "owner") return "Savininkas";
+  if (role === "manager") return "Vadovas";
+  return "Vadybininkas";
+}
+
+function companyTeamInviteLink(token) {
+  if (!token) return "";
+  return `${window.location.origin}${window.location.pathname}?team_invite=${encodeURIComponent(
+    token
+  )}`;
+}
+
 
 function employerTomorrowISO() {
   const date = new Date();
@@ -4042,6 +4335,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planSummary, setPlanSummary] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamInvites, setTeamInvites] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamActionBusy, setTeamActionBusy] = useState(false);
+  const [lastTeamInviteLink, setLastTeamInviteLink] = useState("");
+  const [jobScope, setJobScope] = useState("mine");
+  const [teamInviteForm, setTeamInviteForm] = useState({
+    displayName: "",
+    email: "",
+    memberRole: "recruiter",
+  });
   const [companyForm, setCompanyForm] = useState({
     name: "",
     companyCode: "",
@@ -4105,6 +4410,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     payAmount: "",
     payUnit: "hour",
     description: "",
+    responsibleUserId: user.id,
   });
 
   useEffect(() => {
@@ -4119,7 +4425,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         await reloadJobs(company.id);
         await Promise.all([
           loadEmployerNotifications(),
-          loadEmployerStats(company.id),
+          loadEmployerStats(company.id, companyMemberRole),
         ]);
 
         if (currentJob?.id) {
@@ -4129,7 +4435,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             supabase
               .from("jobs")
               .select(
-                "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+                "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
               )
               .eq("id", currentJob.id)
               .single(),
@@ -4210,6 +4516,232 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  function teamMemberName(userId) {
+    return (
+      teamMembers.find((member) => member.user_id === userId)?.display_name ||
+      (userId === user.id ? "Aš" : "Komandos narys")
+    );
+  }
+
+  async function loadCompanyTeam(
+    companyId = company?.id,
+    role = companyMemberRole,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_team_management) {
+      setTeamMembers([]);
+      setTeamInvites([]);
+      return;
+    }
+
+    setTeamLoading(true);
+
+    try {
+      const membersResult = await supabase.rpc("get_company_team", {
+        p_company_id: companyId,
+      });
+
+      if (membersResult.error) throw membersResult.error;
+
+      setTeamMembers(membersResult.data || []);
+
+      if (role === "owner") {
+        const invitesResult = await supabase.rpc(
+          "get_company_team_invites",
+          { p_company_id: companyId }
+        );
+
+        if (invitesResult.error) throw invitesResult.error;
+        setTeamInvites(invitesResult.data || []);
+      } else {
+        setTeamInvites([]);
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti įmonės komandos.");
+    } finally {
+      setTeamLoading(false);
+    }
+  }
+
+  async function openCompanyTeam() {
+    if (!planSummary?.can_team_management) {
+      setShowPlans(true);
+      return;
+    }
+
+    setShowTeam(true);
+    setLastTeamInviteLink("");
+    await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
+  }
+
+  async function createTeamInvite() {
+    if (!company?.id || companyMemberRole !== "owner") return;
+
+    setTeamActionBusy(true);
+    setError("");
+    setNotice("");
+    setLastTeamInviteLink("");
+
+    try {
+      const result = await supabase.rpc("create_company_team_invite", {
+        p_company_id: company.id,
+        p_email: teamInviteForm.email.trim(),
+        p_display_name: teamInviteForm.displayName.trim(),
+        p_member_role: teamInviteForm.memberRole,
+      });
+
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0];
+      const link = companyTeamInviteLink(row?.token);
+      setLastTeamInviteLink(link);
+
+      try {
+        await navigator.clipboard.writeText(link);
+        setNotice("Kvietimas sukurtas. Nuoroda nukopijuota.");
+      } catch {
+        setNotice("Kvietimas sukurtas. Nukopijuokite nuorodą iš komandos lango.");
+      }
+
+      setTeamInviteForm({
+        displayName: "",
+        email: "",
+        memberRole: "recruiter",
+      });
+
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko sukurti komandos kvietimo.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function copyTeamInvite(token) {
+    const link = companyTeamInviteLink(token);
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice("Kvietimo nuoroda nukopijuota.");
+    } catch {
+      setLastTeamInviteLink(link);
+      setNotice("Kvietimo nuoroda paruošta kopijavimui.");
+    }
+  }
+
+  async function revokeTeamInvite(inviteId) {
+    if (!company?.id) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("revoke_company_team_invite", {
+        p_invite_id: inviteId,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Kvietimas atšauktas.");
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko atšaukti kvietimo.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function changeTeamMemberRole(member, memberRole) {
+    if (!company?.id || !member?.user_id) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc(
+        "update_company_team_member_role",
+        {
+          p_company_id: company.id,
+          p_user_id: member.user_id,
+          p_member_role: memberRole,
+        }
+      );
+
+      if (result.error) throw result.error;
+
+      setNotice("Komandos nario rolė atnaujinta.");
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pakeisti rolės.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function removeTeamMember(member) {
+    if (!company?.id || !member?.user_id) return;
+
+    const confirmed = window.confirm(
+      `Pašalinti ${member.display_name} iš įmonės komandos? Jo atsakingi darbai bus perduoti įmonės savininkui.`
+    );
+
+    if (!confirmed) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("remove_company_team_member", {
+        p_company_id: company.id,
+        p_user_id: member.user_id,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Komandos narys pašalintas.");
+      await Promise.all([
+        loadCompanyTeam(company.id, companyMemberRole, planSummary),
+        reloadJobs(company.id),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti komandos nario.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  function requireEmployerChatPlan() {
+    if (planSummary?.can_job_chat) return true;
+
+    setNotice(
+      "Darbo pokalbiai prieinami Business ir Business Pro planuose."
+    );
+    setShowPlans(true);
+    return false;
+  }
+
+  async function openEmployerPrivateConversation(invitationId, title) {
+    if (!requireEmployerChatPlan()) return;
+
+    if (currentJob?.id) {
+      await markEmployerJobRead(currentJob.id);
+    }
+
+    setConversation({
+      invitationId,
+      title,
+    });
+  }
+
+  function openEmployerGroupConversation(job) {
+    if (!requireEmployerChatPlan()) return;
+
+    setGroupConversation({
+      jobId: job.id,
+      title: job.title,
+    });
+  }
+
   async function loadCompanyPlan(companyId = company?.id) {
     if (!companyId) return null;
 
@@ -4284,7 +4816,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       const companyId = memberResult.data.company_id;
-      setCompanyMemberRole(memberResult.data.member_role || null);
+      const loadedMemberRole = memberResult.data.member_role || null;
+      setCompanyMemberRole(loadedMemberRole);
 
       const [
         companyResult,
@@ -4313,7 +4846,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           supabase
             .from("jobs")
             .select(
-              "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+              "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
             )
             .eq("company_id", companyId)
             .order("created_at", { ascending: false })
@@ -4342,10 +4875,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       });
       setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
-      setPlanSummary(planResult.data?.[0] || null);
+      const loadedPlan = planResult.data?.[0] || null;
+      setPlanSummary(loadedPlan);
+
       await Promise.all([
         loadEmployerNotifications(),
-        loadEmployerStats(companyId),
+        loadEmployerStats(companyId, loadedMemberRole),
+        loadedPlan?.can_team_management
+          ? loadCompanyTeam(companyId, loadedMemberRole, loadedPlan)
+          : Promise.resolve(),
       ]);
 
       setForm((current) => ({
@@ -4445,13 +4983,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function loadEmployerStats(companyId = company?.id) {
+  async function loadEmployerStats(
+    companyId = company?.id,
+    memberRole = companyMemberRole
+  ) {
     if (!companyId) return;
 
     const [jobsResult, companyResult, penaltiesResult] = await Promise.all([
       supabase
         .from("jobs")
-        .select("id, status, workers_needed, work_date")
+        .select(
+          "id, status, workers_needed, work_date, created_by, responsible_user_id"
+        )
         .eq("company_id", companyId),
       supabase
         .from("companies")
@@ -4470,7 +5013,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (companyResult.error) throw companyResult.error;
     if (penaltiesResult.error) throw penaltiesResult.error;
 
-    const jobRows = jobsResult.data || [];
+    const allJobRows = jobsResult.data || [];
+    const jobRows =
+      planSummary?.can_team_management && memberRole === "recruiter"
+        ? allJobRows.filter(
+            (job) =>
+              job.created_by === user.id ||
+              job.responsible_user_id === user.id
+          )
+        : allJobRows;
     const jobIds = jobRows.map((job) => job.id);
 
     let bookingRows = [];
@@ -4656,7 +5207,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const result = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
@@ -4670,7 +5221,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       try {
-        await loadEmployerStats(companyId);
+        await loadEmployerStats(companyId, companyMemberRole);
       } catch {
         // Statistikos klaida neturi blokuoti poreikių sąrašo.
       }
@@ -5385,6 +5936,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         pay_amount: Number(form.payAmount),
         pay_unit: form.payUnit,
         transport_mode: form.transportMode,
+        responsible_user_id:
+          planSummary?.can_team_management
+            ? form.responsibleUserId || user.id
+            : user.id,
       };
 
       let job;
@@ -5395,7 +5950,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .update(payload)
           .eq("id", editingJobId)
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
           )
           .single();
 
@@ -5414,7 +5969,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             status: "open",
           })
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
           )
           .single();
 
@@ -5470,6 +6025,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         payAmount: job.pay_amount ?? "",
         payUnit: job.pay_unit === "day" ? "day" : "hour",
         description: job.description || "",
+        responsibleUserId: job.responsible_user_id || job.created_by || user.id,
       }));
 
       await Promise.all([
@@ -5520,6 +6076,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       payAmount: "",
       payUnit: "hour",
       description: "",
+      responsibleUserId: user.id,
     });
     setShowJobForm(true);
     window.scrollTo({ top: 220, behavior: "smooth" });
@@ -5766,6 +6323,33 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  const canSeeAllCompanyJobs =
+    Boolean(planSummary?.can_team_management) &&
+    ["owner", "manager"].includes(companyMemberRole);
+
+  const visibleJobs =
+    planSummary?.can_team_management &&
+    (jobScope === "mine" || !canSeeAllCompanyJobs)
+      ? jobs.filter(
+          (job) =>
+            job.responsible_user_id === user.id ||
+            job.created_by === user.id
+        )
+      : jobs;
+
+  const activeTeamMembers = teamMembers.filter((member) => member.is_active);
+  const pendingTeamInvites = teamInvites.filter(
+    (invite) =>
+      invite.status === "pending" &&
+      new Date(invite.expires_at) > new Date()
+  );
+  const usedTeamSeats =
+    activeTeamMembers.length + pendingTeamInvites.length;
+
+  const currentTeamMember = activeTeamMembers.find(
+    (member) => member.user_id === user.id
+  );
+
   if (loading) {
     return (
       <div className="ed-loading">
@@ -5872,6 +6456,35 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-plan-card .ed-primary,.ed-plan-card .ed-secondary{width:100%;min-height:43px}
         .ed-plan-card.pro .ed-secondary{border-color:#526779;background:#fff;color:#102438}
         .ed-plan-footnote{margin-top:16px;color:#778694;font-size:12px;line-height:1.5}
+        .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
+        .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-team-modal{width:min(960px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
+        .ed-team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
+        .ed-team-head h2{margin:3px 0 4px;font-family:Manrope,Inter,sans-serif;font-size:25px}
+        .ed-team-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.5}
+        .ed-team-seat{display:inline-flex;margin-top:9px;border-radius:999px;background:#eef3f6;color:#405264;padding:6px 9px;font-size:11px;font-weight:800}
+        .ed-team-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.8fr);gap:16px}
+        .ed-team-panel{border:1px solid #e4ebf0;border-radius:14px;padding:16px}
+        .ed-team-panel h3{margin:0 0 5px;font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .ed-team-panel>p{margin:0 0 14px;color:#6c7a88;font-size:12px;line-height:1.45}
+        .ed-team-list{display:grid;gap:9px}
+        .ed-team-member{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #edf1f4;border-radius:11px;padding:12px}
+        .ed-team-member b{display:block;font-size:14px}.ed-team-member span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-team-member-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+        .ed-team-role-select{border:1px solid #dbe4ea;border-radius:8px;padding:8px 9px;background:#fff;font:inherit;font-size:12px;font-weight:700}
+        .ed-team-remove{border:1px solid #e8bbae;background:#fff;color:#b64d2a;border-radius:8px;padding:8px 9px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-team-invite-form{display:grid;gap:10px}.ed-team-invite-form .ed-input,.ed-team-invite-form .ed-select{min-height:42px}
+        .ed-team-invite-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+        .ed-team-invites{display:grid;gap:8px;margin-top:15px;padding-top:15px;border-top:1px solid #edf1f4}
+        .ed-team-invite{border:1px solid #edf1f4;border-radius:10px;padding:11px}
+        .ed-team-invite b{display:block;font-size:13px}.ed-team-invite span{display:block;color:#6c7a88;font-size:11px;margin-top:3px}
+        .ed-team-invite-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+        .ed-team-link{margin-top:12px;background:#f6f8fa;border-radius:10px;padding:11px;font-size:11px;overflow-wrap:anywhere;color:#405264}
+        .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+        .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+        .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
+        .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
         .ed-worker-id{display:flex;align-items:center;gap:11px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
@@ -5901,8 +6514,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:620px){.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -5922,7 +6535,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
                 <div>
                   <b>{company.name}</b>
-                  <span>{company.city || "Miestas nenurodytas"}</span>
+                  <span>
+                    {currentTeamMember
+                      ? `${currentTeamMember.display_name} · ${companyTeamRoleLabel(
+                          currentTeamMember.member_role
+                        )}`
+                      : company.city || "Miestas nenurodytas"}
+                  </span>
                 </div>
               </div>
             )}
@@ -5934,6 +6553,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 title="Peržiūrėti planą"
               >
                 Planas: <strong>{planSummary.plan_name}</strong>
+              </button>
+            )}
+
+            {company && planSummary && (
+              <button
+                className={`ed-team-btn ${
+                  planSummary.can_team_management ? "" : "locked"
+                }`}
+                type="button"
+                onClick={openCompanyTeam}
+              >
+                {planSummary.can_team_management
+                  ? `Komanda · ${Math.max(
+                      1,
+                      activeTeamMembers.length
+                    )}/5`
+                  : "Komanda · Pro"}
               </button>
             )}
 
@@ -6143,7 +6779,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <section>
           <div style={{ marginBottom: 10 }}>
-            <div className="eyebrow">ĮMONĖS STATISTIKA</div>
+            <div className="eyebrow">
+              {planSummary?.can_team_management &&
+              companyMemberRole === "recruiter"
+                ? "MANO DARBŲ STATISTIKA"
+                : "ĮMONĖS STATISTIKA"}
+            </div>
           </div>
 
           <div className="ed-kpis">
@@ -6259,6 +6900,39 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 placeholder="Pvz. Reikia 2 statybų pagalbinių rytoj"
               />
             </label>
+
+            {planSummary?.can_team_management && (
+              <label className="ed-label ed-span-2">
+                Atsakingas žmogus
+                <select
+                  className="ed-select"
+                  value={form.responsibleUserId}
+                  disabled={
+                    !["owner", "manager"].includes(companyMemberRole)
+                  }
+                  onChange={(e) =>
+                    updateField("responsibleUserId", e.target.value)
+                  }
+                >
+                  {activeTeamMembers.map((member) => (
+                    <option value={member.user_id} key={member.user_id}>
+                      {member.display_name} ·{" "}
+                      {companyTeamRoleLabel(member.member_role)}
+                    </option>
+                  ))}
+                </select>
+                <span
+                  style={{
+                    color: "#7a8996",
+                    fontSize: 11,
+                    fontWeight: 500,
+                  }}
+                >
+                  Vadybininkui naujas darbas automatiškai priskiriamas jam
+                  pačiam. Savininkas ir vadovas gali pakeisti atsakingą žmogų.
+                </span>
+              </label>
+            )}
 
             <label className="ed-label">
               Miestas
@@ -6599,13 +7273,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           <button
                             className="ed-secondary"
                             onClick={() =>
-                              setGroupConversation({
-                                jobId: currentJob.id,
-                                title: currentJob.title,
-                              })
+                              openEmployerGroupConversation(currentJob)
                             }
                           >
-                            Darbo pokalbis
+                            {planSummary?.can_job_chat
+                              ? "Darbo pokalbis"
+                              : "Darbo pokalbis · Business"}
                           </button>
 
                           {checkInOpen &&
@@ -6783,15 +7456,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         {invitationByWorker[worker.id] && (
                           <button
                             className="ed-secondary"
-                            onClick={async () => {
-                              await markEmployerJobRead(currentJob.id);
-                              setConversation({
-                                invitationId: invitationByWorker[worker.id].id,
-                                title: `${worker.name} · ${currentJob.title}`,
-                              });
-                            }}
+                            onClick={() =>
+                              openEmployerPrivateConversation(
+                                invitationByWorker[worker.id].id,
+                                `${worker.name} · ${currentJob.title}`
+                              )
+                            }
                           >
-                            Žinutė
+                            {planSummary?.can_job_chat
+                              ? "Žinutė"
+                              : "Žinutė · Business"}
                           </button>
                         )}
                       </div>
@@ -6809,14 +7483,53 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         <section className="ed-card">
-          <h2>Mano poreikiai</h2>
-          <p className="ed-sub">
-            Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas.
-          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h2 style={{ marginBottom: 6 }}>
+                {planSummary?.can_team_management
+                  ? jobScope === "mine"
+                    ? "Mano darbai"
+                    : "Visi įmonės darbai"
+                  : "Mano poreikiai"}
+              </h2>
+              <p className="ed-sub">
+                {planSummary?.can_team_management
+                  ? "Darbai atskiriami pagal atsakingą komandos narį, todėl vadybininkų sąrašai nesimaišo."
+                  : "Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas."}
+              </p>
+            </div>
 
-          {jobs.length ? (
+            {canSeeAllCompanyJobs && (
+              <div className="ed-job-scope">
+                <button
+                  className={jobScope === "mine" ? "active" : ""}
+                  type="button"
+                  onClick={() => setJobScope("mine")}
+                >
+                  Mano darbai
+                </button>
+                <button
+                  className={jobScope === "all" ? "active" : ""}
+                  type="button"
+                  onClick={() => setJobScope("all")}
+                >
+                  Visi įmonės darbai
+                </button>
+              </div>
+            )}
+          </div>
+
+          {visibleJobs.length ? (
             <div className="ed-jobs">
-              {jobs.map((job) => {
+              {visibleJobs.map((job) => {
                 const unreadNews = unreadEmployerNotifications(job.id);
                 const newsPresentation = notificationPresentation(unreadNews);
 
@@ -6850,6 +7563,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
                           : ""}
                       </div>
+                      {planSummary?.can_team_management && (
+                        <span className="ed-responsible">
+                          Atsakingas:{" "}
+                          {teamMemberName(
+                            job.responsible_user_id || job.created_by
+                          )}
+                        </span>
+                      )}
                       {jobHasEnded(job) &&
                         Number(job.confirmedCount || 0) > 0 &&
                         !["cancelled", "completed"].includes(job.status) && (
@@ -6915,7 +7636,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               })}
             </div>
           ) : (
-            <div className="ed-empty">Dar neturite sukurtų poreikių.</div>
+            <div className="ed-empty">
+              {planSummary?.can_team_management && jobScope === "mine"
+                ? "Šiuo metu neturite jums priskirtų darbų."
+                : "Dar neturite sukurtų poreikių."}
+            </div>
           )}
         </section>
       </main>
@@ -7243,6 +7968,274 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
+      {showTeam && (
+        <div
+          className="ed-team-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !teamActionBusy) {
+              setShowTeam(false);
+            }
+          }}
+        >
+          <div className="ed-team-modal">
+            <div className="ed-team-head">
+              <div>
+                <div className="eyebrow">BUSINESS PRO · ĮMONĖS KOMANDA</div>
+                <h2>{company?.name} komanda</h2>
+                <p>
+                  Kiekvienas žmogus jungiasi savo el. paštu. Darbai ir žinutės
+                  lieka aiškiai priskirti konkrečiam įmonės atstovui.
+                </p>
+                <span className="ed-team-seat">
+                  Panaudota {usedTeamSeats} iš 5 komandos vietų
+                </span>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={teamActionBusy}
+                onClick={() => setShowTeam(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="ed-team-layout">
+              <div className="ed-team-panel">
+                <h3>Komandos nariai</h3>
+                <p>
+                  Savininkas ir vadovas gali matyti visus įmonės darbus.
+                  Vadybininkas pagal nutylėjimą dirba tik su savo darbais.
+                </p>
+
+                {teamLoading ? (
+                  <div className="ed-empty compact">Kraunama komanda...</div>
+                ) : activeTeamMembers.length ? (
+                  <div className="ed-team-list">
+                    {activeTeamMembers.map((member) => (
+                      <div className="ed-team-member" key={member.user_id}>
+                        <div>
+                          <b>
+                            {member.display_name}
+                            {member.user_id === user.id ? " · Jūs" : ""}
+                          </b>
+                          <span>{member.email}</span>
+                          <span>
+                            {companyTeamRoleLabel(member.member_role)} ·{" "}
+                            {Number(member.jobs_responsible || 0)} atsakingi darbai
+                          </span>
+                        </div>
+
+                        <div className="ed-team-member-actions">
+                          {companyMemberRole === "owner" &&
+                          member.member_role !== "owner" ? (
+                            <>
+                              <select
+                                className="ed-team-role-select"
+                                value={member.member_role}
+                                disabled={teamActionBusy}
+                                onChange={(e) =>
+                                  changeTeamMemberRole(
+                                    member,
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                <option value="manager">Vadovas</option>
+                                <option value="recruiter">Vadybininkas</option>
+                              </select>
+
+                              <button
+                                className="ed-team-remove"
+                                type="button"
+                                disabled={teamActionBusy}
+                                onClick={() => removeTeamMember(member)}
+                              >
+                                Pašalinti
+                              </button>
+                            </>
+                          ) : (
+                            <span
+                              className="ed-opened-badge"
+                              style={{ margin: 0 }}
+                            >
+                              {companyTeamRoleLabel(member.member_role)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ed-empty compact">Komandos narių nerasta.</div>
+                )}
+              </div>
+
+              <div className="ed-team-panel">
+                {companyMemberRole === "owner" ? (
+                  <>
+                    <h3>Pakviesti žmogų</h3>
+                    <p>
+                      Įveskite vardą ir asmeninį darbo el. paštą. Sukursime
+                      vienkartinę 7 dienas galiojančią registracijos nuorodą.
+                    </p>
+
+                    <div className="ed-team-invite-form">
+                      <label className="ed-label">
+                        Vardas
+                        <input
+                          className="ed-input"
+                          value={teamInviteForm.displayName}
+                          maxLength={120}
+                          onChange={(e) =>
+                            setTeamInviteForm((current) => ({
+                              ...current,
+                              displayName: e.target.value,
+                            }))
+                          }
+                          placeholder="Pvz. Tomas"
+                        />
+                      </label>
+
+                      <label className="ed-label">
+                        El. paštas
+                        <input
+                          className="ed-input"
+                          type="email"
+                          value={teamInviteForm.email}
+                          onChange={(e) =>
+                            setTeamInviteForm((current) => ({
+                              ...current,
+                              email: e.target.value,
+                            }))
+                          }
+                          placeholder="tomas@imone.lt"
+                        />
+                      </label>
+
+                      <label className="ed-label">
+                        Rolė
+                        <select
+                          className="ed-select"
+                          value={teamInviteForm.memberRole}
+                          onChange={(e) =>
+                            setTeamInviteForm((current) => ({
+                              ...current,
+                              memberRole: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="recruiter">Vadybininkas</option>
+                          <option value="manager">Vadovas</option>
+                        </select>
+                      </label>
+
+                      <button
+                        className="ed-primary"
+                        type="button"
+                        disabled={
+                          teamActionBusy ||
+                          usedTeamSeats >= 5 ||
+                          !teamInviteForm.displayName.trim() ||
+                          !teamInviteForm.email.trim()
+                        }
+                        onClick={createTeamInvite}
+                      >
+                        {teamActionBusy
+                          ? "Kuriamas kvietimas..."
+                          : usedTeamSeats >= 5
+                          ? "Visos 5 vietos panaudotos"
+                          : "Sukurti kvietimą"}
+                      </button>
+                    </div>
+
+                    {lastTeamInviteLink && (
+                      <div className="ed-team-link">
+                        <b>Kvietimo nuoroda</b>
+                        <div style={{ marginTop: 5 }}>
+                          {lastTeamInviteLink}
+                        </div>
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          style={{ marginTop: 9 }}
+                          onClick={() =>
+                            navigator.clipboard
+                              .writeText(lastTeamInviteLink)
+                              .then(() =>
+                                setNotice("Kvietimo nuoroda nukopijuota.")
+                              )
+                              .catch(() => {})
+                          }
+                        >
+                          Kopijuoti
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="ed-team-invites">
+                      <h3 style={{ marginBottom: 0 }}>Laukiantys kvietimai</h3>
+
+                      {pendingTeamInvites.length ? (
+                        pendingTeamInvites.map((invite) => (
+                          <div className="ed-team-invite" key={invite.invite_id}>
+                            <b>{invite.display_name}</b>
+                            <span>
+                              {invite.email} ·{" "}
+                              {companyTeamRoleLabel(invite.member_role)}
+                            </span>
+                            <span>
+                              Galioja iki{" "}
+                              {new Date(invite.expires_at).toLocaleDateString(
+                                "lt-LT"
+                              )}
+                            </span>
+
+                            <div className="ed-team-invite-actions">
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                onClick={() => copyTeamInvite(invite.token)}
+                              >
+                                Kopijuoti nuorodą
+                              </button>
+                              <button
+                                className="ed-team-remove"
+                                type="button"
+                                disabled={teamActionBusy}
+                                onClick={() =>
+                                  revokeTeamInvite(invite.invite_id)
+                                }
+                              >
+                                Atšaukti
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ color: "#7a8996", fontSize: 12 }}>
+                          Laukiančių kvietimų nėra.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3>Komandos valdymas</h3>
+                    <p>
+                      Narius kviesti, keisti jų roles ir šalinti gali įmonės
+                      savininkas. Jūs galite matyti komandą ir dirbti pagal savo
+                      rolės teises.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPlans && (
         <div
           className="ed-plan-overlay"
@@ -7258,8 +8251,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className="eyebrow">DARBDAVIO PLANAI</div>
                 <h2>Pasirinkite pagal įmonės poreikį</h2>
                 <p>
-                  Basic leidžia išbandyti sistemą. Mokami planai skirti
-                  reguliariam darbuotojų samdymui ir augančiai komandai.
+                  Basic skirtas išbandyti paiešką. Business atrakina nuolatinį
+                  samdymą ir darbo pokalbius, o Business Pro prideda kelių
+                  įmonės žmonių darbų paskirstymą ir atsakomybių valdymą.
                 </p>
               </div>
 
@@ -7734,6 +8728,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         invitationId={conversation?.invitationId}
         title={conversation?.title}
         user={user}
+        senderMode={onAdminReturn ? "employer" : null}
       />
       <GroupConversationModal
         open={Boolean(groupConversation)}
@@ -10647,6 +11642,13 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
   const [adminMode, setAdminMode] = useState("admin");
+  const [teamInviteToken, setTeamInviteToken] = useState(() =>
+    new URLSearchParams(window.location.search).get("team_invite")
+  );
+  const [teamInvite, setTeamInvite] = useState(null);
+  const [teamInviteLoading, setTeamInviteLoading] = useState(false);
+  const [teamInviteError, setTeamInviteError] = useState("");
+  const [teamInviteAccepting, setTeamInviteAccepting] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -10663,6 +11665,42 @@ function App() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!teamInviteToken || !supabase) {
+      setTeamInvite(null);
+      setTeamInviteError("");
+      setTeamInviteLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTeamInviteLoading(true);
+    setTeamInviteError("");
+
+    supabase
+      .rpc("get_company_team_invite_public", {
+        p_token: teamInviteToken,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+
+        if (error) {
+          setTeamInvite(null);
+          setTeamInviteError(
+            error.message || "Nepavyko patikrinti komandos kvietimo."
+          );
+        } else {
+          setTeamInvite(data?.[0] || null);
+        }
+
+        setTeamInviteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamInviteToken]);
 
   useEffect(() => {
     if (!user || !supabase) {
@@ -10727,6 +11765,65 @@ function App() {
     setAuthOpen(true);
   };
 
+  const clearTeamInvite = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("team_invite");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setTeamInviteToken(null);
+    setTeamInvite(null);
+    setTeamInviteError("");
+  };
+
+  const openTeamInviteLogin = () => {
+    setAuthMode("login");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const openTeamInviteSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const acceptTeamInvite = async () => {
+    if (!teamInviteToken || !user) return;
+
+    setTeamInviteAccepting(true);
+    setTeamInviteError("");
+
+    try {
+      const result = await supabase.rpc("accept_company_team_invite", {
+        p_token: teamInviteToken,
+      });
+
+      if (result.error) throw result.error;
+
+      const profileResult = await supabase
+        .from("profiles")
+        .select("role, is_active, suspended_until, suspension_reason")
+        .eq("id", user.id)
+        .single();
+
+      if (profileResult.error) throw profileResult.error;
+
+      setAccountRole(profileResult.data?.role || "employer");
+      setAccountStatus({
+        isActive: profileResult.data?.is_active !== false,
+        suspendedUntil: profileResult.data?.suspended_until || null,
+        suspensionReason: profileResult.data?.suspension_reason || null,
+      });
+
+      clearTeamInvite();
+    } catch (err) {
+      setTeamInviteError(
+        err?.message || "Nepavyko prisijungti prie įmonės komandos."
+      );
+    } finally {
+      setTeamInviteAccepting(false);
+    }
+  };
+
   const logout = async () => {
     if (supabase) await supabase.auth.signOut();
   };
@@ -10748,6 +11845,36 @@ function App() {
         suspendedUntil={accountStatus.suspendedUntil}
         reason={accountStatus.suspensionReason}
       />
+    );
+  }
+
+  if (teamInviteToken) {
+    return (
+      <>
+        <TeamInvitePage
+          invite={teamInvite}
+          loading={teamInviteLoading}
+          error={teamInviteError}
+          user={user}
+          accepting={teamInviteAccepting}
+          onLogin={openTeamInviteLogin}
+          onSignup={openTeamInviteSignup}
+          onAccept={acceptTeamInvite}
+          onCancel={clearTeamInvite}
+        />
+
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode={authMode}
+          initialRole="employer"
+          teamInvite={
+            teamInvite
+              ? { ...teamInvite, token: teamInviteToken }
+              : null
+          }
+        />
+      </>
     );
   }
 
@@ -10979,57 +12106,61 @@ function App() {
 
             <div className="pricing">
               <article>
-                <h3>Starteris</h3>
+                <h3>Basic</h3>
                 <div className="price">
-                  49 €<span>/mėn.</span>
+                  0 €<span>/mėn.</span>
                 </div>
-                <p>Smulkiems projektams ir pavieniams poreikiams.</p>
+                <p>Išbandykite realų darbuotojų paieškos procesą be rizikos.</p>
                 <ul>
-                  <li>Iki 5 užklausų / mėn.</li>
-                  <li>Darbuotojų paieška</li>
-                  <li>El. pašto pagalba</li>
+                  <li>Iki 5 darbo pasiūlymų / mėn.</li>
+                  <li>Darbuotojų paieška ir kvietimai</li>
+                  <li>Darbo pokalbiai</li>
+                  <li>Patikimumas ir darbuotojų įvertinimai</li>
                 </ul>
                 <button className="btn ghost full" onClick={openEmployerSignup}>
-                  Rinktis planą
+                  Pradėti nemokamai
                 </button>
               </article>
 
               <article className="featured">
                 <div className="popular">POPULIARIAUSIAS</div>
-                <h3>Profesionalus</h3>
+                <h3>Business</h3>
                 <div className="price">
-                  99 €<span>/mėn.</span>
+                  29 €<span>/mėn.</span>
                 </div>
                 <p>Įmonėms, kurios darbuotojų ieško reguliariai.</p>
                 <ul>
-                  <li>Iki 20 užklausų / mėn.</li>
-                  <li>Išplėstiniai filtrai</li>
-                  <li>Atvykimo istorija</li>
+                  <li>Neriboti darbo pasiūlymai</li>
+                  <li>Visa Basic funkcionalumo apimtis</li>
+                  <li>Išplėstinė įmonės statistika</li>
+                  <li>Didesnė darbų istorijos apimtis</li>
                 </ul>
                 <button
                   className="btn primary full"
                   onClick={openEmployerSignup}
                 >
-                  Rinktis planą
+                  Rinktis Business
                 </button>
               </article>
 
               <article>
-                <h3>Verslui</h3>
+                <h3>Business Pro</h3>
                 <div className="price">
-                  199 €<span>/mėn.</span>
+                  59 €<span>/mėn.</span>
                 </div>
-                <p>Didelėms įmonėms ir keliems objektams.</p>
+                <p>Augančiai įmonei, kurioje darbuotojus samdo keli žmonės.</p>
                 <ul>
-                  <li>Neribotos užklausos</li>
-                  <li>Keli įmonės vartotojai</li>
-                  <li>Išplėstinės ataskaitos</li>
+                  <li>Visa Business funkcionalumo apimtis</li>
+                  <li>Iki 5 įmonės komandos paskyrų</li>
+                  <li>Vadovo ir vadybininko rolės</li>
+                  <li>Mano darbai / visi įmonės darbai</li>
+                  <li>Atsakingo žmogaus priskyrimas darbui</li>
                 </ul>
                 <button
                   className="btn ghost full"
                   onClick={openEmployerSignup}
                 >
-                  Susisiekti
+                  Rinktis Business Pro
                 </button>
               </article>
             </div>
