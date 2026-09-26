@@ -14459,6 +14459,252 @@ function SuspendedAccount({
   );
 }
 
+function PublicLandingPage({
+  onLogin,
+  onEmployerSignup,
+  onWorkerSignup,
+  pricingBillingCycle,
+  setPricingBillingCycle,
+}) {
+  const businessPlan = EMPLOYER_PLANS.find((item) => item.key === "business");
+  const proPlan = EMPLOYER_PLANS.find((item) => item.key === "business_pro");
+
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  return (
+    <div className="lp-page">
+      <style>{`
+        .lp-page{min-height:100vh;background:#fff;color:#102438;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .lp-page *{box-sizing:border-box}.lp-container{width:min(1180px,calc(100% - 40px));margin:0 auto}.lp-eyebrow{font-size:11px;line-height:1.2;font-weight:900;letter-spacing:.12em;color:#b85f0e;text-transform:uppercase}
+        .lp-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-bottom:1px solid #e7edf1}.lp-nav{height:72px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:28px}.lp-brand{display:inline-flex;align-items:center;gap:10px;color:#102438;text-decoration:none;font-family:Manrope,Inter,sans-serif;font-size:18px;font-weight:900;white-space:nowrap}.lp-brand span span{color:#f08a28}.lp-logo{width:34px;height:34px;border-radius:10px;background:#f08a28;color:#fff;display:grid;place-items:center;font-weight:900;box-shadow:0 7px 18px rgba(240,138,40,.2)}
+        .lp-links{display:flex;align-items:center;justify-content:center;gap:26px}.lp-links button{border:0;background:transparent;color:#526374;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:8px 0}.lp-links button:hover{color:#102438}.lp-nav-actions{display:flex;align-items:center;gap:9px}.lp-btn{border-radius:10px;padding:11px 15px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none}.lp-btn.primary{border:1px solid #f08a28;background:#f08a28;color:#fff;box-shadow:0 8px 18px rgba(240,138,40,.18)}.lp-btn.primary:hover{background:#dc7419;border-color:#dc7419}.lp-btn.secondary{border:1px solid #dbe4ea;background:#fff;color:#102438}.lp-btn.secondary:hover{border-color:#bdcad2;background:#f8fafb}.lp-btn.dark{border:1px solid #102438;background:#102438;color:#fff}.lp-btn.full{width:100%}
+        .lp-hero{position:relative;overflow:hidden;background:linear-gradient(180deg,#fbfdff 0%,#f5f8fa 100%);border-bottom:1px solid #e7edf1}.lp-hero:after{content:"";position:absolute;right:-120px;top:40px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(240,138,40,.09),rgba(240,138,40,0) 68%);pointer-events:none}.lp-hero-grid{position:relative;z-index:1;min-height:610px;display:grid;grid-template-columns:minmax(0,.92fr) minmax(500px,1.08fr);align-items:center;gap:56px;padding:74px 0 70px}.lp-hero-copy{max-width:560px}.lp-hero h1{font-family:Manrope,Inter,sans-serif;font-size:54px;line-height:1.04;letter-spacing:-.047em;margin:12px 0 18px;color:#102438}.lp-hero h1 span{color:#f08a28}.lp-lead{font-size:18px;line-height:1.65;color:#607180;margin:0;max-width:610px}.lp-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:27px}.lp-hero-note{display:flex;gap:20px;flex-wrap:wrap;margin-top:28px;padding-top:22px;border-top:1px solid #dfe7ed}.lp-hero-note div{display:flex;align-items:flex-start;gap:9px;color:#526374;font-size:12px;line-height:1.45;max-width:155px}.lp-check{width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:#eaf8f1;color:#167a54;display:grid;place-items:center;font-size:12px;font-weight:900}
+        .lp-product{background:#fff;border:1px solid #dfe7ed;border-radius:20px;box-shadow:0 24px 70px rgba(16,36,56,.12);overflow:hidden}.lp-product-top{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #e7edf1;background:#fbfcfd}.lp-product-top b{font-size:12px}.lp-demo-tag{font-size:10px;font-weight:900;color:#6c7a88;background:#eef3f6;border-radius:999px;padding:6px 8px}.lp-product-body{display:grid;grid-template-columns:156px 1fr;min-height:390px}.lp-demo-nav{background:#102438;color:#dce5ec;padding:18px 12px;display:grid;align-content:start;gap:6px}.lp-demo-nav div{border-radius:8px;padding:9px 10px;font-size:10px;font-weight:700}.lp-demo-nav .active{background:rgba(255,255,255,.11);color:#fff}.lp-demo-main{padding:18px;min-width:0}.lp-demo-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}.lp-demo-title h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:17px}.lp-demo-title p{margin:3px 0 0;color:#7a8996;font-size:10px}.lp-demo-filter{display:flex;gap:5px;flex-wrap:wrap}.lp-demo-filter span{border:1px solid #dfe7ed;border-radius:7px;padding:6px 8px;font-size:9px;color:#526374;background:#fff}.lp-demo-list{display:grid;gap:7px}.lp-demo-row{display:grid;grid-template-columns:32px minmax(0,1.3fr) minmax(85px,.75fr) 64px;gap:9px;align-items:center;padding:9px;border:1px solid #e7edf1;border-radius:10px;background:#fff}.lp-demo-avatar{width:32px;height:32px;border-radius:50%;background:#edf2f5;color:#526374;display:grid;place-items:center;font-size:9px;font-weight:900}.lp-demo-person b{display:block;font-size:10px}.lp-demo-person span{display:block;color:#7a8996;font-size:9px;margin-top:2px}.lp-demo-status{font-size:8px;font-weight:900;color:#167a54;background:#eaf8f1;border-radius:999px;padding:5px 6px;text-align:center}.lp-demo-action{border:0;border-radius:7px;background:#f08a28;color:#fff;padding:7px 6px;font-size:9px;font-weight:900}.lp-demo-footer{margin-top:10px;border-radius:10px;background:#fff7ef;border:1px solid #f5ddc8;padding:10px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.lp-demo-footer b{font-size:10px}.lp-demo-footer span{font-size:9px;color:#7a8996}
+        .lp-section{padding:78px 0}.lp-section.soft{background:#f7f9fb}.lp-section.orange-soft{background:#fff9f4}.lp-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-bottom:30px}.lp-section-head.compact{margin-bottom:22px}.lp-section-head h2{font-family:Manrope,Inter,sans-serif;font-size:36px;line-height:1.1;letter-spacing:-.035em;margin:7px 0 0}.lp-section-head p{margin:8px 0 0;color:#6c7a88;line-height:1.6;max-width:650px}.lp-section-head .lp-btn{flex:0 0 auto}
+        .lp-about-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:36px;align-items:stretch}.lp-about-copy{background:#102438;color:#fff;border-radius:18px;padding:28px;display:flex;flex-direction:column;justify-content:space-between}.lp-about-copy h2{font-family:Manrope,Inter,sans-serif;font-size:32px;line-height:1.13;letter-spacing:-.03em;margin:7px 0 14px}.lp-about-copy p{color:#d6e0e7;line-height:1.65;margin:0}.lp-about-badge{display:inline-flex;width:max-content;margin-top:24px;border-radius:999px;background:rgba(255,255,255,.1);padding:8px 10px;font-size:11px;font-weight:800}.lp-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.lp-card{border:1px solid #e0e7ec;background:#fff;border-radius:15px;padding:20px;min-width:0}.lp-card-icon{width:38px;height:38px;border-radius:11px;background:#fff2e7;color:#d96f15;display:grid;place-items:center;font-size:18px;font-weight:900;margin-bottom:15px}.lp-card h3{font-family:Manrope,Inter,sans-serif;font-size:17px;margin:0 0 7px}.lp-card p{margin:0;color:#6c7a88;font-size:13px;line-height:1.55}
+        .lp-pre-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.lp-pre-card{border:1px solid #e1e8ed;background:#fff;border-radius:15px;padding:18px;min-height:150px}.lp-pre-card strong{display:block;font-size:14px;margin:13px 0 6px}.lp-pre-card p{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}.lp-mini-icon{width:34px;height:34px;border-radius:50%;background:#fff2e7;color:#e17012;display:grid;place-items:center;font-size:16px;font-weight:900}
+        .lp-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.lp-step{position:relative;border:1px solid #e0e7ec;background:#fff;border-radius:16px;padding:22px;min-height:184px}.lp-step-no{width:36px;height:36px;border-radius:50%;background:#eef3f6;color:#102438;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-weight:900;margin-bottom:20px}.lp-step h3{font-family:Manrope,Inter,sans-serif;font-size:18px;margin:0 0 8px}.lp-step p{color:#6c7a88;font-size:13px;line-height:1.55;margin:0}.lp-chip-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}.lp-chip{border:1px solid #e1e8ed;background:#fff;border-radius:11px;padding:11px;text-align:center;font-size:11px;font-weight:900;color:#526374}.lp-chip b{color:#f08a28;margin-right:5px}
+        .lp-diff-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.lp-diff-card{border:1px solid #e1e8ed;background:#fff;border-radius:14px;padding:17px;min-height:175px}.lp-diff-card .lp-mini-icon{margin-bottom:12px}.lp-diff-card h3{font-family:Manrope,Inter,sans-serif;font-size:14px;margin:0 0 6px}.lp-diff-card p{margin:0;color:#6c7a88;font-size:11px;line-height:1.5}
+        .lp-audience{display:grid;grid-template-columns:1fr 1fr;gap:14px}.lp-audience-card{border-radius:17px;padding:24px;border:1px solid #e1e8ed;min-height:255px}.lp-audience-card.employer{background:linear-gradient(135deg,#fff7f0,#fff)}.lp-audience-card.worker{background:linear-gradient(135deg,#f2f8ff,#fff)}.lp-audience-card h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0 0 4px}.lp-audience-card>p{margin:0 0 18px;color:#6c7a88}.lp-audience-card ul{list-style:none;padding:0;margin:0;display:grid;gap:9px}.lp-audience-card li{position:relative;padding-left:23px;font-size:13px;color:#405264;line-height:1.45}.lp-audience-card li:before{content:"✓";position:absolute;left:0;top:0;color:#1c9b67;font-weight:900}
+        .lp-pricing-wrap{position:relative}.lp-billing{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin:0 0 24px}.lp-billing-toggle{display:flex;gap:4px;padding:4px;background:#eaf0f4;border-radius:11px}.lp-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:9px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer}.lp-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}.lp-saving{display:inline-flex;border-radius:999px;background:#eaf8f1;color:#167a54;padding:7px 10px;font-size:11px;font-weight:900}.lp-pricing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}.lp-plan{position:relative;border:1px solid #dde6ec;background:#fff;border-radius:18px;padding:24px;display:flex;flex-direction:column;min-height:530px}.lp-plan.featured{border:2px solid #f08a28;box-shadow:0 18px 44px rgba(240,138,40,.13)}.lp-plan-label{position:absolute;right:18px;top:-12px;border-radius:999px;background:#f08a28;color:#fff;padding:6px 9px;font-size:9px;font-weight:900}.lp-plan h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0}.lp-plan-desc{color:#6c7a88;font-size:12px;line-height:1.5;min-height:56px;margin:8px 0 0}.lp-price{font-family:Manrope,Inter,sans-serif;font-size:38px;letter-spacing:-.035em;font-weight:900;margin-top:17px}.lp-price span{font-family:Inter,sans-serif;font-size:12px;font-weight:700;color:#7a8996;letter-spacing:0}.lp-yearly{height:36px;margin-top:3px;color:#167a54;font-size:11px;font-weight:800;line-height:1.35}.lp-plan ul{list-style:none;padding:0;margin:18px 0 22px;display:grid;gap:9px;flex:1}.lp-plan li{position:relative;padding-left:23px;color:#405264;font-size:12px;line-height:1.42}.lp-plan li:before{content:"✓";position:absolute;left:0;color:#1c9b67;font-weight:900}.lp-plan .lp-btn{margin-top:auto}
+        .lp-trustbar{border-top:1px solid #e4ebf0;border-bottom:1px solid #e4ebf0;background:#fff}.lp-trustgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}.lp-trustitem{padding:20px 24px;display:flex;align-items:center;gap:12px}.lp-trustitem+.lp-trustitem{border-left:1px solid #e4ebf0}.lp-trustitem b{display:block;font-size:13px}.lp-trustitem span{display:block;color:#7a8996;font-size:11px;margin-top:2px;line-height:1.4}
+        .lp-faq-grid{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:50px;align-items:start}.lp-faq-copy h2{font-family:Manrope,Inter,sans-serif;font-size:34px;letter-spacing:-.035em;margin:7px 0 10px}.lp-faq-copy p{margin:0;color:#6c7a88;line-height:1.6}.lp-faq-list{display:grid;gap:8px}.lp-faq-list details{border:1px solid #e0e7ec;background:#fff;border-radius:11px;padding:0 14px}.lp-faq-list summary{cursor:pointer;list-style:none;padding:15px 0;font-size:13px;font-weight:900;display:flex;justify-content:space-between;gap:14px}.lp-faq-list summary::-webkit-details-marker{display:none}.lp-faq-list summary:after{content:"+";color:#f08a28;font-size:18px}.lp-faq-list details[open] summary:after{content:"−"}.lp-faq-list details p{margin:0;padding:0 0 15px;color:#6c7a88;font-size:12px;line-height:1.55}
+        .lp-final{padding:48px 0;background:#fff5ed;border-top:1px solid #f4dfcb}.lp-final-inner{display:flex;align-items:center;justify-content:space-between;gap:30px}.lp-final h2{font-family:Manrope,Inter,sans-serif;font-size:31px;margin:0 0 6px}.lp-final p{margin:0;color:#6c7a88}.lp-final-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+        .lp-footer{background:#102438;color:#fff;padding:42px 0 28px}.lp-footer-grid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:34px}.lp-footer .lp-brand{color:#fff}.lp-footer-copy{margin-top:12px;color:#9fb0bd;font-size:12px;line-height:1.55;max-width:290px}.lp-footer h4{margin:0 0 12px;font-size:12px}.lp-footer button{display:block;border:0;background:transparent;color:#b7c6d1;font:inherit;font-size:11px;cursor:pointer;padding:4px 0;text-align:left}.lp-footer button:hover{color:#fff}.lp-footer p{margin:4px 0;color:#b7c6d1;font-size:11px}.lp-footer-bottom{margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;gap:20px;color:#8296a5;font-size:10px}
+        @media(max-width:1040px){.lp-hero-grid{grid-template-columns:1fr;gap:34px;padding-top:58px}.lp-hero-copy{max-width:720px}.lp-product{max-width:820px}.lp-about-grid{grid-template-columns:1fr}.lp-diff-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lp-pre-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lp-chip-row{grid-template-columns:repeat(3,minmax(0,1fr))}.lp-footer-grid{grid-template-columns:1.4fr 1fr 1fr}.lp-footer-grid>div:last-child{grid-column:2/4}.lp-links{display:none}}
+        @media(max-width:760px){.lp-container{width:min(100% - 28px,1180px)}.lp-nav{grid-template-columns:1fr auto;height:auto;padding:13px 0}.lp-nav-actions .lp-btn.primary{display:none}.lp-hero-grid{min-height:0;padding:52px 0}.lp-hero h1{font-size:40px}.lp-lead{font-size:16px}.lp-product-body{grid-template-columns:1fr}.lp-demo-nav{display:none}.lp-demo-row{grid-template-columns:32px 1fr 60px}.lp-demo-status{display:none}.lp-section{padding:58px 0}.lp-section-head{align-items:flex-start;flex-direction:column}.lp-section-head h2{font-size:30px}.lp-three,.lp-steps,.lp-pricing,.lp-audience,.lp-faq-grid{grid-template-columns:1fr}.lp-pre-grid{grid-template-columns:1fr 1fr}.lp-diff-grid{grid-template-columns:1fr 1fr}.lp-chip-row{grid-template-columns:1fr 1fr}.lp-plan{min-height:0}.lp-trustgrid{grid-template-columns:1fr}.lp-trustitem+.lp-trustitem{border-left:0;border-top:1px solid #e4ebf0}.lp-final-inner{align-items:flex-start;flex-direction:column}.lp-final-actions{justify-content:flex-start}.lp-footer-grid{grid-template-columns:1fr 1fr}.lp-footer-grid>div:first-child,.lp-footer-grid>div:last-child{grid-column:1/-1}.lp-footer-bottom{flex-direction:column}}
+        @media(max-width:480px){.lp-nav-actions .lp-btn.secondary{padding:9px 11px}.lp-brand{font-size:16px}.lp-logo{width:31px;height:31px}.lp-hero h1{font-size:35px}.lp-hero-actions{display:grid}.lp-hero-actions .lp-btn{width:100%}.lp-pre-grid,.lp-diff-grid,.lp-chip-row{grid-template-columns:1fr}.lp-demo-row{grid-template-columns:30px 1fr 58px;padding:8px}.lp-about-copy{padding:22px}.lp-final-actions{width:100%;display:grid}.lp-footer-grid{grid-template-columns:1fr}.lp-footer-grid>div{grid-column:auto!important}}
+      `}</style>
+
+      <header className="lp-header">
+        <div className="lp-container lp-nav">
+          <a className="lp-brand" href="#top" aria-label="rankosstatybose.lt pradžia">
+            <span className="lp-logo">⌂</span>
+            <span>rankos<span>statybose</span>.lt</span>
+          </a>
+
+          <nav className="lp-links" aria-label="Pagrindinė navigacija">
+            <button type="button" onClick={() => scrollToSection("kaip")}>Kaip tai veikia</button>
+            <button type="button" onClick={() => scrollToSection("darbdaviams")}>Darbdaviams</button>
+            <button type="button" onClick={() => scrollToSection("darbuotojams")}>Darbuotojams</button>
+            <button type="button" onClick={() => scrollToSection("kainodara")}>Kainodara</button>
+          </nav>
+
+          <div className="lp-nav-actions">
+            <button className="lp-btn secondary" type="button" onClick={onLogin}>Prisijungti</button>
+            <button className="lp-btn primary" type="button" onClick={onEmployerSignup}>Pradėti darbdaviui</button>
+          </div>
+        </div>
+      </header>
+
+      <main id="top">
+        <section className="lp-hero">
+          <div className="lp-container lp-hero-grid">
+            <div className="lp-hero-copy">
+              <div className="lp-eyebrow">STATYBŲ PAGALBINIAI, KAI JŲ REIKIA</div>
+              <h1>Patikimi žmonės jūsų <span>objektui.</span></h1>
+              <p className="lp-lead">
+                Specializuota statybų darbuotojų platforma, kurioje darbdavys mato realų prieinamumą, aiškų patikimumą ir gali valdyti visą darbo eigą vienoje vietoje.
+              </p>
+
+              <div className="lp-hero-actions">
+                <button className="lp-btn primary" type="button" onClick={onEmployerSignup}>Ieškau darbuotojų →</button>
+                <button className="lp-btn secondary" type="button" onClick={onWorkerSignup}>Ieškau darbo</button>
+                <button className="lp-btn secondary" type="button" onClick={() => scrollToSection("kainodara")}>Peržiūrėti planus</button>
+              </div>
+
+              <div className="lp-hero-note">
+                <div><span className="lp-check">✓</span><span>Darbuotojams registracija nemokama</span></div>
+                <div><span className="lp-check">✓</span><span>Rodomi realiai aktyvūs darbuotojai</span></div>
+                <div><span className="lp-check">✓</span><span>Darbo atlygis matomas iš anksto</span></div>
+              </div>
+            </div>
+
+            <div className="lp-product" aria-label="Pavyzdinis darbdavio paieškos vaizdas">
+              <div className="lp-product-top">
+                <b>rankosstatybose.lt</b>
+                <span className="lp-demo-tag">PAVYZDINIS VAIZDAS</span>
+              </div>
+              <div className="lp-product-body">
+                <div className="lp-demo-nav">
+                  <div className="active">⌕ Darbuotojų paieška</div>
+                  <div>▤ Mano darbai</div>
+                  <div>☆ Darbuotojai favoritai</div>
+                  <div>◉ Pokalbiai</div>
+                  <div>⚙ Profilis</div>
+                </div>
+                <div className="lp-demo-main">
+                  <div className="lp-demo-title">
+                    <div><h3>Tinkami darbuotojai</h3><p>pagal vietą, datą ir prieinamumą</p></div>
+                    <div className="lp-demo-filter"><span>Vilnius</span><span>Rytoj</span></div>
+                  </div>
+                  <div className="lp-demo-list">
+                    {[
+                      ["DA","Darbuotojas A.","Vilnius","Laisvas"],
+                      ["DB","Darbuotojas B.","Vilnius","Laisvas"],
+                      ["DC","Darbuotojas C.","Vilnius","Laisvas"],
+                      ["DD","Darbuotojas D.","Vilnius","Laisvas"],
+                    ].map(([initials,name,city,status]) => (
+                      <div className="lp-demo-row" key={name}>
+                        <div className="lp-demo-avatar">{initials}</div>
+                        <div className="lp-demo-person"><b>{name}</b><span>{city} · aktyvus neseniai</span></div>
+                        <div className="lp-demo-status">{status}</div>
+                        <button className="lp-demo-action" type="button" onClick={onEmployerSignup}>Kviesti</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="lp-demo-footer">
+                    <div><b>Skubus poreikis?</b><br/><span>Business Pro gali rasti „Laisvas dabar“ kontaktus.</span></div>
+                    <button className="lp-btn primary" type="button" onClick={onEmployerSignup}>Skubiai!</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section" id="apie">
+          <div className="lp-container lp-about-grid">
+            <div className="lp-about-copy">
+              <div>
+                <div className="lp-eyebrow" style={{color:"#f6b170"}}>KAS MES ESAME</div>
+                <h2>Ne darbo skelbimų lenta, o statybų darbo organizavimo platforma.</h2>
+                <p>
+                  RankosStatybose.lt skirta statybų įmonėms, meistrams ir pagalbiniams darbuotojams. Tikslas paprastas: kuo mažiau chaoso ieškant žmogaus ir kuo daugiau aiškumo nuo kvietimo iki užbaigtos darbo dienos.
+                </p>
+              </div>
+              <span className="lp-about-badge">Specializuota statybų rinkai</span>
+            </div>
+
+            <div className="lp-three">
+              <article className="lp-card"><div className="lp-card-icon">ϟ</div><h3>Greitis</h3><p>Paieška pagal miestą, datą ir realų darbuotojo prieinamumą. Pro plane – ir „Skubiai!“ funkcija.</p></article>
+              <article className="lp-card"><div className="lp-card-icon">▤</div><h3>Aiškumas</h3><p>Darbo sąlygos, atlygis, pokalbiai, atvykimas ir rezultatas išlieka vienoje darbo istorijoje.</p></article>
+              <article className="lp-card"><div className="lp-card-icon">◇</div><h3>Patikimumas</h3><p>Atvykimo statistika, įvertinimai, ginčų istorija ir darbdavio reputacija padeda priimti sprendimą.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section soft" id="pries-registracija">
+          <div className="lp-container">
+            <div className="lp-section-head">
+              <div><div className="lp-eyebrow">PRIEŠ REGISTRACIJĄ</div><h2>Žmogus iškart supranta, ką gauna.</h2><p>Neslepiame pagrindinės produkto logikos už registracijos sienos. Darbdavys ir darbuotojas gali iš anksto įvertinti, ar platforma jiems tinka.</p></div>
+            </div>
+            <div className="lp-pre-grid">
+              <article className="lp-pre-card"><div className="lp-mini-icon">€</div><strong>Matomas atlygis</strong><p>Darbuotojas dar prieš priimdamas kvietimą mato, kiek mokama į rankas ir už kokį laikotarpį.</p></article>
+              <article className="lp-pre-card"><div className="lp-mini-icon">◉</div><strong>Tik aktyvūs žmonės</strong><p>Darbdavio paieškoje pirmenybė teikiama neseniai aktyviems ir grafiką patvirtinusiems darbuotojams.</p></article>
+              <article className="lp-pre-card"><div className="lp-mini-icon">☆</div><strong>Patikimumo sistema</strong><p>Business planuose darbdavys gali vertinti atvykimo istoriją, įvertinimus ir realią darbo patirtį.</p></article>
+              <article className="lp-pre-card"><div className="lp-mini-icon">✓</div><strong>Aiškios taisyklės</strong><p>Atšaukimai, neatvykimas, ginčai ir darbo dienos uždarymas turi aiškią sisteminę eigą.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section" id="kaip">
+          <div className="lp-container">
+            <div className="lp-section-head"><div><div className="lp-eyebrow">KAIP TAI VEIKIA</div><h2>Nuo poreikio iki užbaigtos darbo dienos.</h2><p>Platforma nepalieka darbdavio ties darbuotojo kontaktu – ji padeda suvaldyti visą procesą.</p></div></div>
+            <div className="lp-steps">
+              <article className="lp-step"><div className="lp-step-no">1</div><h3>Sukuriate darbo pasiūlymą</h3><p>Nurodote miestą, datą, laiką, žmonių skaičių, atvykimo būdą, atlyginimą ir darbo aprašymą.</p></article>
+              <article className="lp-step"><div className="lp-step-no">2</div><h3>Randate tinkamus darbuotojus</h3><p>Sistema atrenka tuo metu laisvus ir vietą bei grafiką atitinkančius žmones. Galite kviesti individualiai arba iš favoritų.</p></article>
+              <article className="lp-step"><div className="lp-step-no">3</div><h3>Valdote ir uždarote darbą</h3><p>Patvirtinate atvykimą, bendraujate darbo pokalbyje, uždarote dieną, vertinate darbuotoją ir kaupiate statistiką.</p></article>
+            </div>
+            <div className="lp-chip-row">
+              <div className="lp-chip"><b>ϟ</b>Skubiai!</div><div className="lp-chip"><b>◉</b>Darbo pokalbiai</div><div className="lp-chip"><b>☆</b>Darbuotojai favoritai</div><div className="lp-chip"><b>♟</b>Komandos modulis</div><div className="lp-chip"><b>◇</b>Ginčų sprendimas</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section soft" id="isskirtinumas">
+          <div className="lp-container">
+            <div className="lp-section-head"><div><div className="lp-eyebrow">KUO IŠSISKIRIAME</div><h2>Funkcijos sukurtos ne CV rinkai, o realiam objektui.</h2></div></div>
+            <div className="lp-diff-grid">
+              <article className="lp-diff-card"><div className="lp-mini-icon">ϟ</div><h3>„Skubiai!“</h3><p>Business Pro darbdavys gali matyti darbuotojus, kurie patys įjungė „Laisvas dabar“, ir greitai nukopijuoti jų kontaktą.</p></article>
+              <article className="lp-diff-card"><div className="lp-mini-icon">☆</div><h3>Darbuotojai favoritai</h3><p>Po gero darbo patikusį žmogų galima išsisaugoti ir kituose darbuose vienu veiksmu kviesti tinkamus favoritus.</p></article>
+              <article className="lp-diff-card"><div className="lp-mini-icon">◉</div><h3>Darbo pokalbiai</h3><p>Privatūs ir bendri darbo pokalbiai susieti su konkrečiu darbu, todėl informacija nepasimeta skirtinguose kanaluose.</p></article>
+              <article className="lp-diff-card"><div className="lp-mini-icon">♟</div><h3>Įmonės komanda</h3><p>Business Pro leidžia savininkui, vadovams ir vadybininkams pasidalinti darbus bei turėti vidinį komandos pokalbį.</p></article>
+              <article className="lp-diff-card"><div className="lp-mini-icon">◇</div><h3>Ginčų eiga</h3><p>Neatvykimo ar darbo dienos nesutarimai gali būti ginčijami, o administratoriaus sprendimas palieka aiškią istoriją.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section" id="darbdaviams">
+          <div className="lp-container">
+            <div className="lp-section-head"><div><div className="lp-eyebrow">KAM TINKA</div><h2>Vertė abiem darbo pusėms.</h2></div></div>
+            <div className="lp-audience">
+              <article className="lp-audience-card employer"><h3>Darbdaviams</h3><p>Statybų įmonėms, meistrams ir rangovams.</p><ul><li>Greita paieška pagal realų prieinamumą ir vietą</li><li>Patikimumo istorija ir darbuotojų įvertinimai Business planuose</li><li>Darbuotojų favoritai pakartotiniam kvietimui</li><li>Darbo dienos uždarymas ir sukaupta reali statistika</li><li>Business Pro komanda ir „Skubiai!“ funkcija</li></ul><div style={{marginTop:20}}><button className="lp-btn primary" type="button" onClick={onEmployerSignup}>Sukurti darbdavio paskyrą</button></div></article>
+              <article className="lp-audience-card worker" id="darbuotojams"><h3>Darbuotojams</h3><p>Žmonėms, ieškantiems statybų pagalbinio darbo.</p><ul><li>Registracija ir darbo pasiūlymų gavimas nemokamas</li><li>Aiškus atlygis dar prieš priimant kvietimą</li><li>Galimybė pažymėti, kada galite dirbti</li><li>Darbdavio patikimumas ir atsiliepimai po išspręstų ginčų</li><li>„Laisvas dabar“ režimas skubiems pasiūlymams</li></ul><div style={{marginTop:20}}><button className="lp-btn dark" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></article>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-section soft" id="kainodara">
+          <div className="lp-container lp-pricing-wrap">
+            <div className="lp-section-head compact"><div><div className="lp-eyebrow">KAINODARA</div><h2>Planai pagal jūsų darbo tempą.</h2><p>Pradėkite nuo Basic ir pereikite aukščiau tik tada, kai reikia daugiau darbo pasiūlymų, pokalbių, statistikos ar komandos funkcijų.</p></div></div>
+            <div className="lp-billing"><div className="lp-billing-toggle"><button type="button" className={pricingBillingCycle === "monthly" ? "active" : ""} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button type="button" className={pricingBillingCycle === "yearly" ? "active" : ""} onClick={() => setPricingBillingCycle("yearly")}>Už metus</button></div><span className="lp-saving">Mokant už metus · −20%</span></div>
+
+            <div className="lp-pricing">
+              <article className="lp-plan"><h3>Basic</h3><p className="lp-plan-desc">Išbandykite pagrindinę darbuotojų paiešką be mėnesinio mokesčio.</p><div className="lp-price">0 € <span>/ mėn.</span></div><div className="lp-yearly"/><ul><li>Iki 5 darbo pasiūlymų per mėnesį</li><li>Darbuotojų paieška pagal vietą ir laiką</li><li>Kvietimų ir darbo dienos valdymas</li><li>1 įmonės vartotojas</li><li>Be darbuotojų patikimumo ir darbo pokalbių</li></ul><button className="lp-btn secondary full" type="button" onClick={onEmployerSignup}>Pradėti nemokamai</button></article>
+
+              <article className="lp-plan featured"><span className="lp-plan-label">POPULIARIAUSIAS</span><h3>Business</h3><p className="lp-plan-desc">Įmonėms, kurios darbuotojų ieško reguliariai ir nori daugiau patikimumo bei komunikacijos.</p><div className="lp-price">{pricingBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualPrice(businessPlan))} €` : "29 €"} <span>{pricingBillingCycle === "yearly" ? "/ metus" : "/ mėn."}</span></div><div className="lp-yearly">{pricingBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualMonthlyEquivalent(businessPlan))} € / mėn. · sutaupote ${formatPlanPrice(employerPlanAnnualSavings(businessPlan))} €` : ""}</div><ul><li>Visa Basic funkcionalumo apimtis</li><li>Iki 25 darbo pasiūlymų per mėnesį</li><li>Darbuotojų patikimumas ir įvertinimai</li><li>Darbuotojai favoritai</li><li>Privatūs ir bendri darbo pokalbiai</li><li>Išplėstinė įmonės statistika</li><li>1 įmonės vartotojas</li></ul><button className="lp-btn primary full" type="button" onClick={onEmployerSignup}>Rinktis Business</button></article>
+
+              <article className="lp-plan"><h3>Business Pro</h3><p className="lp-plan-desc">Komandai ir intensyviai darbuotojų paieškai, kai svarbus greitis ir kelių žmonių darbas vienoje paskyroje.</p><div className="lp-price">{pricingBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualPrice(proPlan))} €` : "59 €"} <span>{pricingBillingCycle === "yearly" ? "/ metus" : "/ mėn."}</span></div><div className="lp-yearly">{pricingBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualMonthlyEquivalent(proPlan))} € / mėn. · sutaupote ${formatPlanPrice(employerPlanAnnualSavings(proPlan))} €` : ""}</div><ul><li>Visa Business funkcionalumo apimtis</li><li>Neribotas darbo pasiūlymų skaičius</li><li>Iki 5 įmonės vartotojų</li><li>Savininko, vadovo ir vadybininko rolės</li><li>„Skubiai!“ laisvų darbuotojų kontaktų paieška</li><li>Vidinis įmonės komandos pokalbis</li><li>Darbų priskyrimas ir perskirstymas</li></ul><button className="lp-btn secondary full" type="button" onClick={onEmployerSignup}>Rinktis Business Pro</button></article>
+            </div>
+          </div>
+        </section>
+
+        <div className="lp-trustbar"><div className="lp-container lp-trustgrid"><div className="lp-trustitem"><div className="lp-mini-icon">€</div><div><b>Aiškus atlygis</b><span>Darbuotojas žino siūlomą sumą prieš priimdamas darbą.</span></div></div><div className="lp-trustitem"><div className="lp-mini-icon">◇</div><div><b>Abipusė reputacija</b><span>Patikimumas kuriamas ir darbuotojui, ir darbdaviui.</span></div></div><div className="lp-trustitem"><div className="lp-mini-icon">✓</div><div><b>Visa eiga vienoje vietoje</b><span>Kvietimai, pokalbiai, atvykimas, uždarymas ir vertinimai.</span></div></div></div></div>
+
+        <section className="lp-section" id="duk">
+          <div className="lp-container lp-faq-grid">
+            <div className="lp-faq-copy"><div className="lp-eyebrow">DAŽNIAUSIAI KLAUSIAMA</div><h2>Ką verta žinoti prieš registruojantis?</h2><p>Trumpi atsakymai į svarbiausius klausimus apie paiešką, kainodarą ir tai, kaip platformoje kuriamas patikimumas.</p></div>
+            <div className="lp-faq-list">
+              <details><summary>Kaip atrenkami darbuotojai?</summary><p>Darbo paieškoje tikrinamas darbuotojo prieinamumas pasirinktai datai ir laikui, vieta bei kelionės spindulys, aktyvumas, grafiko patvirtinimas, esami persidengiantys darbai ir paskyros apribojimai.</p></details>
+              <details><summary>Ar darbuotojas mato atlyginimą?</summary><p>Taip. Darbo kvietime rodoma siūloma suma į rankas ir mokėjimo tipas, todėl darbuotojas gali apsispręsti dar prieš priimdamas pasiūlymą.</p></details>
+              <details><summary>Kuo skiriasi Business ir Business Pro?</summary><p>Business prideda darbuotojų patikimumą, favoritų sąrašą, pokalbius ir išplėstinę statistiką. Business Pro papildomai turi neribotus darbus, iki 5 įmonės vartotojų, komandos roles, vidinį pokalbį ir „Skubiai!“ funkciją.</p></details>
+              <details><summary>Ar darbuotojui platforma mokama?</summary><p>Ne. Darbuotojo registracija, prieinamumo žymėjimas ir darbo kvietimų gavimas yra nemokami.</p></details>
+              <details><summary>Kas vyksta, jei kyla ginčas?</summary><p>Darbo dienos rezultatas turi aiškią eigą: darbuotojas gali ginčyti neigiamą žymėjimą, pateikti paaiškinimą ar įrodymą, o administratorius gali priimti galutinį sprendimą. Sprendimo istorija išlieka sistemoje.</p></details>
+            </div>
+          </div>
+        </section>
+
+        <section className="lp-final"><div className="lp-container lp-final-inner"><div><div className="lp-eyebrow">PASIRUOŠĘ PRADĖTI?</div><h2>Raskite žmogų objektui arba gaukite darbo pasiūlymų.</h2><p>Registracija užtrunka kelias minutes. Darbuotojams – nemokamai.</p></div><div className="lp-final-actions"><button className="lp-btn secondary" type="button" onClick={() => scrollToSection("kainodara")}>Peržiūrėti planus</button><button className="lp-btn primary" type="button" onClick={onEmployerSignup}>Pradėti darbdaviui →</button><button className="lp-btn dark" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
+      </main>
+
+      <footer className="lp-footer">
+        <div className="lp-container">
+          <div className="lp-footer-grid">
+            <div><a className="lp-brand" href="#top"><span className="lp-logo">⌂</span><span>rankos<span>statybose</span>.lt</span></a><p className="lp-footer-copy">Specializuota platforma statybų pagalbinių darbuotojų paieškai, darbo dienos valdymui ir patikimos darbo istorijos kūrimui.</p></div>
+            <div><h4>Produktas</h4><button type="button" onClick={() => scrollToSection("kaip")}>Kaip tai veikia</button><button type="button" onClick={() => scrollToSection("isskirtinumas")}>Kuo išsiskiriame</button><button type="button" onClick={() => scrollToSection("kainodara")}>Kainodara</button></div>
+            <div><h4>Paskyros</h4><button type="button" onClick={onEmployerSignup}>Darbdaviams</button><button type="button" onClick={onWorkerSignup}>Darbuotojams</button><button type="button" onClick={onLogin}>Prisijungti</button></div>
+            <div><h4>Informacija</h4><button type="button" onClick={() => scrollToSection("duk")}>Dažniausi klausimai</button><p>Privatumo ir naudojimo sąlygas pateiksime prieš viešą paleidimą.</p></div>
+          </div>
+          <div className="lp-footer-bottom"><span>© 2026 rankosstatybose.lt</span><span>Statybų darbuotojai, kai jų reikia.</span></div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [accountRole, setAccountRole] = useState(null);
@@ -14749,11 +14995,12 @@ function App() {
 
   return (
     <>
-      <Header
+      <PublicLandingPage
         onLogin={openLogin}
         onEmployerSignup={openEmployerSignup}
-        user={user}
-        onLogout={logout}
+        onWorkerSignup={openWorkerSignup}
+        pricingBillingCycle={pricingBillingCycle}
+        setPricingBillingCycle={setPricingBillingCycle}
       />
 
       <AuthModal
@@ -14762,346 +15009,6 @@ function App() {
         initialMode={authMode}
         initialRole={authRole}
       />
-
-      <main>
-        <section className="hero">
-          <div className="container hero-grid">
-            <div>
-              <div className="eyebrow">
-                STATYBŲ PAGALBINIAI, KAI JŲ REIKIA
-              </div>
-
-              <h1>
-                Reikia papildomų
-                <br />
-                rankų objekte?
-              </h1>
-
-              <p className="lead">
-                Raskite statybų pagalbinius pagal vietą, datą ir prieinamumą.
-                Jokio CV siuntimo, jokio chaoso — tik realiai laisvi
-                darbuotojai.
-              </p>
-
-              <SearchBox onEmployerSignup={openEmployerSignup} />
-            </div>
-
-            <WorkersPanel onEmployerSignup={openEmployerSignup} />
-          </div>
-        </section>
-
-        <section className="feature-strip">
-          <div className="container features">
-            <div>
-              <Icon>▣</Icon>
-              <h3>Darbuotojai žymi savo užimtumą</h3>
-              <p>Matote tik tuos, kurie realiai laisvi norimą dieną.</p>
-            </div>
-            <div>
-              <Icon>▥</Icon>
-              <h3>Matote atvykimo istoriją</h3>
-              <p>Rinkitės patikimus darbuotojus pagal realius duomenis.</p>
-            </div>
-            <div>
-              <Icon>◉</Icon>
-              <h3>Kviečiate tik laisvus darbuotojus</h3>
-              <p>Nėra nereikalingo susirašinėjimo ir laukimo.</p>
-            </div>
-            <div>
-              <Icon>ϟ</Icon>
-              <h3>Greitas pakaitinio suradimas</h3>
-              <p>Jei žmogus neatvyksta, pakaitalą randate greičiau.</p>
-            </div>
-          </div>
-        </section>
-
-        <section id="kaip" className="section">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <div className="eyebrow">PAPRASTAS PROCESAS</div>
-                <h2>Kaip tai veikia?</h2>
-              </div>
-            </div>
-
-            <div className="steps">
-              <article>
-                <span>1</span>
-                <h3>Pateikiate poreikį</h3>
-                <p>
-                  Nurodote miestą, datą, darbo tipą ir kiek žmonių reikia.
-                </p>
-              </article>
-              <article>
-                <span>2</span>
-                <h3>Gaunate tinkamus darbuotojus</h3>
-                <p>
-                  Sistema parodo tik tuos, kurie tuo metu laisvi ir atitinka
-                  poreikį.
-                </p>
-              </article>
-              <article>
-                <span>3</span>
-                <h3>Patvirtinate ir pradedate darbus</h3>
-                <p>
-                  Pakviečiate, gaunate patvirtinimą ir viską valdote vienoje
-                  vietoje.
-                </p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section id="darbdaviams" className="section dashboard-section">
-          <div className="container dash-grid">
-            <div>
-              <div className="eyebrow">DARBDAVIAMS</div>
-              <h2>Darbdavio darbo skydelis</h2>
-              <p className="lead small-lead">
-                Užklausos, darbuotojai ir atvykimo statistika vienoje vietoje.
-                Be papildomo administravimo.
-              </p>
-              <button className="btn primary" onClick={openEmployerSignup}>
-                Pateikti užklausą →
-              </button>
-            </div>
-
-            <div className="dashboard-card">
-              <div className="kpis">
-                <div>
-                  <span>Aktyvūs šiandien</span>
-                  <strong>12</strong>
-                </div>
-                <div>
-                  <span>Atviri poreikiai</span>
-                  <strong>3</strong>
-                </div>
-                <div>
-                  <span>Vid. atvykimas</span>
-                  <strong>96%</strong>
-                </div>
-              </div>
-
-              <div className="bookings">
-                <h3>Artimiausi užsakymai</h3>
-                <div className="booking">
-                  <b>Rytoj</b>
-                  <span>Vilnius · Betonavimo pagalba</span>
-                  <em>3 žmonės</em>
-                  <i>Patvirtinta</i>
-                </div>
-                <div className="booking">
-                  <b>09-29</b>
-                  <span>Kaunas · Medžiagų nešiojimas</span>
-                  <em>2 žmonės</em>
-                  <i className="pending">Laukiama</i>
-                </div>
-                <div className="booking">
-                  <b>10-01</b>
-                  <span>Vilnius · Tvarkymas</span>
-                  <em>4 žmonės</em>
-                  <i>Patvirtinta</i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="darbuotojams" className="section">
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <div className="eyebrow">DARBUOTOJAMS</div>
-                <h2>Registracija darbuotojams nemokama</h2>
-                <p>
-                  Pažymėkite, kada galite dirbti, ir gaukite tinkamus darbų
-                  pasiūlymus.
-                </p>
-              </div>
-              <button className="btn primary" onClick={openWorkerSignup}>
-                Registruotis nemokamai
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section id="kainodara" className="section pricing-section">
-          <style>{`
-            .public-billing-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:4px 0 24px}
-            .public-billing-toggle{display:flex;gap:4px;padding:4px;background:#eaf0f4;border-radius:11px}
-            .public-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
-            .public-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
-            .public-billing-save{display:inline-flex;border-radius:999px;background:#eaf8f1;color:#167a54;padding:7px 10px;font-size:11px;font-weight:900}
-            .public-yearly-detail{margin-top:5px;min-height:32px;color:#167a54;font-size:12px;font-weight:800;line-height:1.35}
-            .pricing .featured .public-yearly-detail{color:#167a54}
-          `}</style>
-          <div className="container">
-            <div className="section-head">
-              <div>
-                <div className="eyebrow">KAINODARA</div>
-                <h2>Paprasti planai darbdaviams</h2>
-              </div>
-            </div>
-
-            <div className="public-billing-row">
-              <div className="public-billing-toggle">
-                <button
-                  type="button"
-                  className={
-                    pricingBillingCycle === "monthly" ? "active" : ""
-                  }
-                  onClick={() => setPricingBillingCycle("monthly")}
-                >
-                  Kas mėnesį
-                </button>
-                <button
-                  type="button"
-                  className={
-                    pricingBillingCycle === "yearly" ? "active" : ""
-                  }
-                  onClick={() => setPricingBillingCycle("yearly")}
-                >
-                  Už metus
-                </button>
-              </div>
-
-              <span className="public-billing-save">
-                Mokant už metus · −20%
-              </span>
-            </div>
-
-            <div className="pricing">
-              <article>
-                <h3>Basic</h3>
-                <div className="price">
-                  0 €<span>/mėn.</span>
-                </div>
-                <div className="public-yearly-detail" />
-                <p>Išbandykite realų darbuotojų paieškos procesą be rizikos.</p>
-                <ul>
-                  <li>Iki 5 darbo pasiūlymų / mėn.</li>
-                  <li>Darbuotojų paieška ir kvietimai</li>
-                  <li>1 įmonės vartotojas</li>
-                </ul>
-                <button className="btn ghost full" onClick={openEmployerSignup}>
-                  Pradėti nemokamai
-                </button>
-              </article>
-
-              <article className="featured">
-                <div className="popular">POPULIARIAUSIAS</div>
-                <h3>Business</h3>
-                <div className="price">
-                  {pricingBillingCycle === "yearly"
-                    ? formatPlanPrice(
-                        employerPlanAnnualPrice(
-                          EMPLOYER_PLANS.find((item) => item.key === "business")
-                        )
-                      )
-                    : "29"}{" "}
-                  €<span>
-                    {pricingBillingCycle === "yearly" ? "/metus" : "/mėn."}
-                  </span>
-                </div>
-                <div className="public-yearly-detail">
-                  {pricingBillingCycle === "yearly"
-                    ? `${formatPlanPrice(
-                        employerPlanAnnualMonthlyEquivalent(
-                          EMPLOYER_PLANS.find((item) => item.key === "business")
-                        )
-                      )} € / mėn. · sutaupote ${formatPlanPrice(
-                        employerPlanAnnualSavings(
-                          EMPLOYER_PLANS.find((item) => item.key === "business")
-                        )
-                      )} €`
-                    : ""}
-                </div>
-                <p>Įmonėms, kurios darbuotojų ieško reguliariai.</p>
-                <ul>
-                  <li>Visa Basic funkcionalumo apimtis</li>
-                  <li>Iki 25 darbo pasiūlymų / mėn.</li>
-                  <li>Darbuotojų patikimumas ir įvertinimai</li>
-                  <li>„Darbuotojai favoritai“ patikusiems darbuotojams</li>
-                  <li>Privatūs ir bendri darbo pokalbiai</li>
-                  <li>Išplėstinė įmonės statistika</li>
-                  <li>1 įmonės vartotojas</li>
-                </ul>
-                <button
-                  className="btn primary full"
-                  onClick={openEmployerSignup}
-                >
-                  Rinktis Business
-                </button>
-              </article>
-
-              <article>
-                <h3>Business Pro</h3>
-                <div className="price">
-                  {pricingBillingCycle === "yearly"
-                    ? formatPlanPrice(
-                        employerPlanAnnualPrice(
-                          EMPLOYER_PLANS.find(
-                            (item) => item.key === "business_pro"
-                          )
-                        )
-                      )
-                    : "59"}{" "}
-                  €<span>
-                    {pricingBillingCycle === "yearly" ? "/metus" : "/mėn."}
-                  </span>
-                </div>
-                <div className="public-yearly-detail">
-                  {pricingBillingCycle === "yearly"
-                    ? `${formatPlanPrice(
-                        employerPlanAnnualMonthlyEquivalent(
-                          EMPLOYER_PLANS.find(
-                            (item) => item.key === "business_pro"
-                          )
-                        )
-                      )} € / mėn. · sutaupote ${formatPlanPrice(
-                        employerPlanAnnualSavings(
-                          EMPLOYER_PLANS.find(
-                            (item) => item.key === "business_pro"
-                          )
-                        )
-                      )} €`
-                    : ""}
-                </div>
-                <p>Augančiai įmonei, kurioje darbuotojus samdo keli žmonės.</p>
-                <ul>
-                  <li>Visa Business funkcionalumo apimtis</li>
-                  <li>Neribotas darbo pasiūlymų skaičius</li>
-                  <li>Iki 5 atskirų įmonės vartotojų</li>
-                  <li>Savininko, vadovo ir vadybininko rolės</li>
-                  <li>Mano darbai / visi įmonės darbai</li>
-                  <li>Atsakingo žmogaus priskyrimas ir darbų perskirstymas</li>
-                  <li>„Skubiai!“ laisvų darbuotojų kontaktų paieška</li>
-                  <li>Vidinis įmonės komandos pokalbis</li>
-                </ul>
-                <button
-                  className="btn ghost full"
-                  onClick={openEmployerSignup}
-                >
-                  Rinktis Business Pro
-                </button>
-              </article>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <div className="container footer">
-          <div className="brand inverse">
-            <span className="logo-mark">⌂</span>
-            <span>
-              rankos<span>statybose</span>.lt
-            </span>
-          </div>
-          <span>Statybų darbuotojai, kai jų reikia.</span>
-          <span>© 2026 rankosstatybose.lt</span>
-        </div>
-      </footer>
     </>
   );
 }
