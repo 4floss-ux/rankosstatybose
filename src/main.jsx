@@ -1096,6 +1096,7 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversationLocked, setConversationLocked] = useState(false);
+  const [jobCancelled, setJobCancelled] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
 
@@ -1131,7 +1132,9 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
 
       if (jobResult.error) throw jobResult.error;
 
-      setConversationLocked(jobResult.data?.status === "cancelled");
+      const cancelled = jobResult.data?.status === "cancelled";
+      setJobCancelled(cancelled);
+      setConversationLocked(cancelled && !adminOverride);
       setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = result.data || [];
@@ -1284,7 +1287,14 @@ function ConversationModal({ open, onClose, invitationId, title, user }) {
 }
 
 
-function GroupConversationModal({ open, onClose, jobId, title, user }) {
+function GroupConversationModal({
+  open,
+  onClose,
+  jobId,
+  title,
+  user,
+  adminOverride = false,
+}) {
   const [messages, setMessages] = useState([]);
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
@@ -1300,7 +1310,7 @@ function GroupConversationModal({ open, onClose, jobId, title, user }) {
     loadMessages();
     const timer = setInterval(loadMessages, 3000);
     return () => clearInterval(timer);
-  }, [open, jobId]);
+  }, [open, jobId, adminOverride]);
 
   async function loadMessages() {
     if (!messages.length) setLoading(true);
@@ -1423,7 +1433,9 @@ function GroupConversationModal({ open, onClose, jobId, title, user }) {
         </div>
 
         <div className="rs-group-note">
-          Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai.
+          {adminOverride
+            ? "Administratoriaus režimas: matote visą šio darbo grupinio pokalbio istoriją ir galite rašyti darbo komandai."
+            : "Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai."}
         </div>
 
         {error && <div className="rs-error">{error}</div>}
@@ -1465,6 +1477,18 @@ function GroupConversationModal({ open, onClose, jobId, title, user }) {
         {conversationLocked && (
           <div className="rs-locked">
             <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
+            {cancellationReason && (
+              <div style={{ marginTop: 4 }}>
+                Atšaukimo priežastis: {cancellationReason}
+              </div>
+            )}
+          </div>
+        )}
+
+        {adminOverride && jobCancelled && (
+          <div className="rs-locked">
+            <b>Šis darbas atšauktas.</b> Administratorius gali tęsti pokalbį,
+            jei reikia administracinio paaiškinimo ar sprendimo.
             {cancellationReason && (
               <div style={{ marginTop: 4 }}>
                 Atšaukimo priežastis: {cancellationReason}
@@ -7704,6 +7728,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
   const [resolvingId, setResolvingId] = useState(null);
   const [deletingRatingId, setDeletingRatingId] = useState(null);
   const [editor, setEditor] = useState(null);
+  const [adminConversation, setAdminConversation] = useState(null);
   const [editorForm, setEditorForm] = useState({});
   const [editorSaving, setEditorSaving] = useState(false);
 
@@ -8345,7 +8370,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
-        .admin-audit-section{max-width:1160px;margin-left:auto;margin-right:auto}
+        .admin-audit-section{width:100%;max-width:none;margin-left:0;margin-right:0}
         .admin-audit-section .admin-row{grid-template-columns:minmax(260px,1.45fr) minmax(180px,.85fr) minmax(150px,.7fr) minmax(120px,.6fr) auto}
         .admin-audit-section .admin-row-title{min-width:0}
         .admin-audit-section .admin-row-title span{max-width:420px}
@@ -8875,8 +8900,8 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
               <div>
                 <h2>Visi darbai</h2>
                 <div className="admin-muted">
-                  Administratorius gali redaguoti visus pagrindinius darbo
-                  duomenis arba visiškai pašalinti netinkamą darbo pasiūlymą.
+                  Administratorius gali redaguoti darbo duomenis, atidaryti
+                  visą darbo pokalbį, rašyti darbo komandai arba pašalinti darbą.
                 </div>
               </div>
               <b>{jobs.length}</b>
@@ -8914,10 +8939,18 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
                     <div className="admin-row-actions">
                       <button
                         className="admin-small-btn"
+                        onClick={() => setAdminConversation(job)}
+                      >
+                        Darbo pokalbis
+                      </button>
+
+                      <button
+                        className="admin-small-btn"
                         onClick={() => openJobEditor(job)}
                       >
                         Redaguoti
                       </button>
+
                       <button
                         className="admin-small-btn danger"
                         onClick={() => openJobDelete(job)}
@@ -9118,6 +9151,19 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
             )}
           </section>
         )}
+
+      <GroupConversationModal
+        open={Boolean(adminConversation)}
+        onClose={() => setAdminConversation(null)}
+        jobId={adminConversation?.job_id}
+        title={
+          adminConversation
+            ? `${adminConversation.company_name} · ${adminConversation.title}`
+            : ""
+        }
+        user={user}
+        adminOverride
+      />
 
       {editor && (
         <div
