@@ -9843,6 +9843,132 @@ function AdminJobChatModal({ job, user, onClose }) {
   );
 }
 
+
+function AdminCompanyTeamChatModal({ chat, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!chat?.company_id) return undefined;
+
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const result = await supabase.rpc(
+          "get_admin_company_team_chat_messages",
+          { p_company_id: chat.company_id }
+        );
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setMessages(result.data || []);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, 4000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [chat?.company_id]);
+
+  if (!chat) return null;
+
+  return (
+    <div
+      className="admin-team-chat-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-team-chat-card{width:min(760px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:flex;flex-direction:column}
+        .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+        .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .admin-team-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
+        .admin-team-chat-note{background:#f6f8fa;color:#526374;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
+        .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
+        .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:260px;max-height:520px;overflow:auto;padding:4px 2px 8px}
+        .admin-team-chat-message{width:fit-content;max-width:min(78%,560px);border-radius:12px;padding:10px 12px;background:#f2f5f7}
+        .admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:4px}
+        .admin-team-chat-role{font-weight:600;color:#7a8996}
+        .admin-team-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+        .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}
+        @media(max-width:560px){.admin-team-chat-message{max-width:94%}.admin-team-chat-card{padding:17px}}
+      `}</style>
+
+      <div className="admin-team-chat-card">
+        <div className="admin-team-chat-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIUS · KOMANDOS POKALBIS</div>
+            <h2>{chat.company_name || "Įmonės komanda"}</h2>
+            <div className="admin-team-chat-meta">
+              {employerPlanName(chat.plan_key)} ·{" "}
+              {Number(chat.active_members || 0)} komandos nariai ·{" "}
+              {Number(chat.message_count || 0)} žinutės
+            </div>
+          </div>
+
+          <button className="rs-close" type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="admin-team-chat-note">
+          Tik skaitymui. Čia administratorius mato vidinį įmonės komandos
+          susirašinėjimą, bet iš šios skilties žinučių siųsti negali.
+        </div>
+
+        {error && <div className="admin-team-chat-error">{error}</div>}
+
+        <div className="admin-team-chat-messages">
+          {loading && !messages.length ? (
+            <div className="admin-team-chat-empty">Kraunamas pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div className="admin-team-chat-message" key={message.id}>
+                <b>
+                  {message.sender_label || "Komandos narys"}{" "}
+                  <span className="admin-team-chat-role">
+                    · {companyTeamRoleLabel(message.sender_role)}
+                  </span>
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="admin-team-chat-empty">
+              Šios įmonės komandos pokalbyje žinučių nėra.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function AdminDashboard({
   user,
   onLogout,
@@ -9859,6 +9985,7 @@ function AdminDashboard({
   const [jobs, setJobs] = useState([]);
   const [ratings, setRatings] = useState([]);
   const [files, setFiles] = useState([]);
+  const [teamChats, setTeamChats] = useState([]);
   const [auditLog, setAuditLog] = useState([]);
   const [actionDialog, setActionDialog] = useState(null);
   const [actionDays, setActionDays] = useState(7);
@@ -9871,6 +9998,7 @@ function AdminDashboard({
   const [deletingRatingId, setDeletingRatingId] = useState(null);
   const [editor, setEditor] = useState(null);
   const [adminConversation, setAdminConversation] = useState(null);
+  const [adminTeamConversation, setAdminTeamConversation] = useState(null);
   const [editorForm, setEditorForm] = useState({});
   const [editorSaving, setEditorSaving] = useState(false);
 
@@ -9880,6 +10008,7 @@ function AdminDashboard({
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
+    ["teamChats", "Komandų pokalbiai"],
     ["ratings", "Atsiliepimai"],
     ["files", "Failai"],
     ["audit", "Veiksmų istorija"],
@@ -9930,6 +10059,7 @@ function AdminDashboard({
         jobsResult,
         ratingsResult,
         filesResult,
+        teamChatsResult,
         auditResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
@@ -9939,6 +10069,7 @@ function AdminDashboard({
         supabase.rpc("get_admin_jobs"),
         supabase.rpc("get_admin_ratings"),
         supabase.rpc("get_admin_files"),
+        supabase.rpc("get_admin_company_team_chats"),
         supabase.rpc("get_admin_audit_log"),
       ]);
 
@@ -9950,6 +10081,7 @@ function AdminDashboard({
         jobsResult,
         ratingsResult,
         filesResult,
+        teamChatsResult,
         auditResult,
       ].find((result) => result.error);
 
@@ -9984,6 +10116,7 @@ function AdminDashboard({
       setJobs(jobsResult.data || []);
       setRatings(ratingsResult.data || []);
       setFiles(fileRows);
+      setTeamChats(teamChatsResult.data || []);
       setAuditLog(auditResult.data || []);
       setError("");
     } catch (err) {
@@ -10595,7 +10728,7 @@ function AdminDashboard({
             <h1>Svetainės suvestinė ir valdymas</h1>
             <p>
               Čia matote realų sistemos naudojimą, ginčus, vartotojus, darbus,
-              atsiliepimus ir įkeltus failus.
+              įmonių komandų pokalbius, atsiliepimus ir įkeltus failus.
             </p>
           </div>
 
@@ -11142,6 +11275,78 @@ function AdminDashboard({
           </section>
         )}
 
+        {activeTab === "teamChats" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Įmonių komandų pokalbiai</h2>
+                <div className="admin-muted">
+                  Vidinis Business Pro įmonių susirašinėjimas. Administratorius
+                  gali peržiūrėti pokalbių istoriją, tačiau iš šios skilties
+                  žinučių nesiunčia.
+                </div>
+              </div>
+              <b>{teamChats.length}</b>
+            </div>
+
+            {teamChats.length ? (
+              <div className="admin-list">
+                {teamChats.map((chat) => (
+                  <div className="admin-row" key={chat.company_id}>
+                    <div className="admin-row-title">
+                      <b>{chat.company_name || "Įmonė"}</b>
+                      <span>
+                        Paskutinė žinutė:{" "}
+                        {chat.last_sender_label || "Komandos narys"}
+                        {chat.last_sender_role
+                          ? ` · ${companyTeamRoleLabel(chat.last_sender_role)}`
+                          : ""}
+                      </span>
+                      {chat.last_message_preview && (
+                        <span style={{ color: "#405264", marginTop: 6 }}>
+                          „{chat.last_message_preview}“
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Planas</span>
+                      <b>{employerPlanName(chat.plan_key)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Komandos narių</span>
+                      <b>{Number(chat.active_members || 0)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Žinučių</span>
+                      <b>{Number(chat.message_count || 0)}</b>
+                    </div>
+
+                    <div className="admin-row-actions">
+                      <span className="admin-pill gray">
+                        {formatAdminDate(chat.last_message_at)}
+                      </span>
+                      <button
+                        className="admin-small-btn"
+                        type="button"
+                        onClick={() => setAdminTeamConversation(chat)}
+                      >
+                        Skaityti pokalbį
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">
+                Įmonių komandų pokalbių dar nėra.
+              </div>
+            )}
+          </section>
+        )}
+
         {activeTab === "ratings" && (
           <section className="admin-section">
             <div className="admin-section-head">
@@ -11331,6 +11536,11 @@ function AdminDashboard({
         job={adminConversation}
         user={user}
         onClose={() => setAdminConversation(null)}
+      />
+
+      <AdminCompanyTeamChatModal
+        chat={adminTeamConversation}
+        onClose={() => setAdminTeamConversation(null)}
       />
 
       {editor && (
