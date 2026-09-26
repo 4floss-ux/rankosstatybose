@@ -2344,6 +2344,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
   const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
   const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
+  const [employerReviewOpportunities, setEmployerReviewOpportunities] = useState([]);
+  const [employerReviewTarget, setEmployerReviewTarget] = useState(null);
+  const [employerReviewScore, setEmployerReviewScore] = useState(null);
+  const [employerReviewComment, setEmployerReviewComment] = useState("");
+  const [employerReviewSaving, setEmployerReviewSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [attendanceBusy, setAttendanceBusy] = useState(false);
@@ -2388,7 +2393,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      Promise.all([loadInvitations(), loadWorkerStats()]).catch(() => {
+      Promise.all([
+        loadInvitations(),
+        loadWorkerStats(),
+        loadEmployerReviewOpportunities(),
+      ]).catch(() => {
         // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
       });
     }, 5000);
@@ -2543,7 +2552,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )
       );
 
-      await Promise.all([loadInvitations(), loadWorkerStats()]);
+      await Promise.all([
+        loadInvitations(),
+        loadWorkerStats(),
+        loadEmployerReviewOpportunities(),
+      ]);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
     } finally {
@@ -2642,6 +2655,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }));
   }
 
+  async function loadEmployerReviewOpportunities() {
+    const result = await supabase.rpc(
+      "get_worker_employer_review_opportunities"
+    );
+
+    if (result.error) throw result.error;
+    setEmployerReviewOpportunities(result.data || []);
+  }
+
   async function loadInvitations() {
     const [invitationResult, bookingResult, notificationResult] = await Promise.all([
       supabase
@@ -2707,6 +2729,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       companies = companiesResult.data || [];
     }
 
+    let companyReviewSummaries = [];
+    if (companyIds.length) {
+      const reviewSummaryResult = await supabase.rpc(
+        "get_worker_company_review_summaries",
+        { p_company_ids: companyIds }
+      );
+
+      if (reviewSummaryResult.error) throw reviewSummaryResult.error;
+      companyReviewSummaries = reviewSummaryResult.data || [];
+    }
+
     let attendanceRows = [];
     const bookingIds = bookingRows.map((row) => row.id);
     if (bookingIds.length) {
@@ -2723,6 +2756,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
     const companyMap = new Map(companies.map((company) => [company.id, company]));
+    const companyReviewSummaryMap = new Map(
+      companyReviewSummaries.map((row) => [row.company_id, row])
+    );
     const attendanceMap = new Map(
       attendanceRows.map((row) => [row.booking_id, row])
     );
@@ -2741,6 +2777,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             companyCancelledConfirmed: Number(
               company?.cancelled_confirmed_count ?? 0
             ),
+            companyDisputeReviewCount: Number(
+              companyReviewSummaryMap.get(job?.company_id)?.review_count || 0
+            ),
+            companyLatestDisputeReview:
+              companyReviewSummaryMap.get(job?.company_id)
+                ?.latest_review_comment || "",
           };
         })
     );
@@ -2761,6 +2803,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             ...booking,
             job,
             companyName: company?.name || "Darbdavys",
+            companyDisputeReviewCount: Number(
+              companyReviewSummaryMap.get(job?.company_id)?.review_count || 0
+            ),
+            companyLatestDisputeReview:
+              companyReviewSummaryMap.get(job?.company_id)
+                ?.latest_review_comment || "",
             attendance: attendanceMap.get(booking.id) || null,
           };
         })
@@ -2838,6 +2886,57 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  function openEmployerReview(opportunity) {
+    setEmployerReviewTarget(opportunity);
+    setEmployerReviewScore(null);
+    setEmployerReviewComment("");
+    setError("");
+  }
+
+  async function submitEmployerReview() {
+    if (!employerReviewTarget?.attendance_id) return;
+
+    const score = Number(employerReviewScore);
+    const comment = employerReviewComment.trim();
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      setError("Pasirinkite įvertinimą nuo 1 iki 10.");
+      return;
+    }
+
+    if (comment.length < 10) {
+      setError("Atsiliepimas turi būti bent 10 simbolių.");
+      return;
+    }
+
+    setEmployerReviewSaving(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("submit_employer_review", {
+        p_attendance_id: employerReviewTarget.attendance_id,
+        p_score: score,
+        p_comment: comment,
+      });
+
+      if (result.error) throw result.error;
+
+      setEmployerReviewTarget(null);
+      setEmployerReviewScore(null);
+      setEmployerReviewComment("");
+      setNotice(
+        "Atsiliepimas apie darbdavį paskelbtas. Jį matys įmonė ir darbuotojai, gavę šios įmonės darbo kvietimus."
+      );
+
+      await loadEmployerReviewOpportunities();
+      await loadInvitations();
+    } catch (err) {
+      setError(err?.message || "Nepavyko paskelbti atsiliepimo.");
+    } finally {
+      setEmployerReviewSaving(false);
+    }
+  }
+
   async function respondToInvitation(invitationId, status) {
     setRespondingInvitation(invitationId);
     setNotice("");
@@ -2912,23 +3011,31 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
-      const result = await supabase.rpc("get_job_contact", {
-        p_job_id: item.job.id,
-      });
+      const [contactResult, reviewsResult] = await Promise.all([
+        supabase.rpc("get_job_contact", {
+          p_job_id: item.job.id,
+        }),
+        supabase.rpc("get_company_worker_reviews", {
+          p_company_id: item.job.company_id,
+        }),
+      ]);
 
-      if (result.error) throw result.error;
+      if (contactResult.error) throw contactResult.error;
+      if (reviewsResult.error) throw reviewsResult.error;
 
-      const contact = result.data?.[0] || {};
+      const contact = contactResult.data?.[0] || {};
 
       setWorkdayDetailsTarget({
         ...item,
         companyName: contact.company_name || item.companyName,
         companyPhone: contact.phone || "",
+        companyReviews: reviewsResult.data || [],
       });
     } catch (err) {
       setWorkdayDetailsTarget({
         ...item,
         companyPhone: "",
+        companyReviews: [],
       });
       setError(err?.message || "Nepavyko įkelti darbo kontaktų.");
     }
@@ -3745,6 +3852,66 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </section>
 
+        {employerReviewOpportunities.length > 0 && (
+          <section
+            className="wd-card"
+            style={{
+              borderColor: "#f3c38f",
+              background: "#fffaf5",
+              marginBottom: 18,
+            }}
+          >
+            <div className="eyebrow">GINČAS IŠSPRĘSTAS JŪSŲ NAUDAI</div>
+            <h2 style={{ marginTop: 6 }}>
+              Galite palikti atsiliepimą apie darbdavį
+            </h2>
+            <p className="wd-card-sub">
+              Atsiliepimas bus rodomas įmonės profilyje ir darbuotojams,
+              gavusiems šios įmonės darbo kvietimus.
+            </p>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {employerReviewOpportunities.map((opportunity) => (
+                <div
+                  key={opportunity.attendance_id}
+                  style={{
+                    border: "1px solid #ead7c4",
+                    background: "#fff",
+                    borderRadius: 12,
+                    padding: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 14,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <b>{opportunity.company_name}</b>
+                    <div
+                      style={{
+                        color: "#6c7a88",
+                        fontSize: 13,
+                        marginTop: 4,
+                      }}
+                    >
+                      {opportunity.job_title} · {opportunity.work_date}
+                    </div>
+                  </div>
+
+                  <button
+                    className="wd-accept"
+                    type="button"
+                    onClick={() => openEmployerReview(opportunity)}
+                  >
+                    Palikti atsiliepimą
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {notice && <div className="wd-note ok">{notice}</div>}
         {error && <div className="wd-note err">{error}</div>}
         {metrics.restrictedUntil &&
@@ -4126,6 +4293,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             Patikimumas:{" "}
                             {Math.round(invitation.companyReliability)} / 100
                           </span>
+                          {invitation.companyDisputeReviewCount > 0 && (
+                            <span
+                              style={{
+                                color: "#b85f0e",
+                                fontWeight: 800,
+                              }}
+                            >
+                              Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
+                              {invitation.companyDisputeReviewCount}
+                            </span>
+                          )}
                         </div>
 
                         {job.status === "cancelled" && (
@@ -4295,6 +4473,78 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {workdayDetailsTarget.companyReviews?.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #f0d1b2",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fffaf5",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      color: "#102438",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Atsiliepimai po darbuotojų laimėtų ginčų
+                  </div>
+
+                  <div style={{ display: "grid", gap: 9 }}>
+                    {workdayDetailsTarget.companyReviews.map((review) => (
+                      <div
+                        key={review.id}
+                        style={{
+                          background: "#fff",
+                          border: "1px solid #eadfd5",
+                          borderRadius: 10,
+                          padding: 11,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            flexWrap: "wrap",
+                            marginBottom: 5,
+                          }}
+                        >
+                          <b>{review.score} / 10</b>
+                          <span
+                            style={{
+                              color: "#7a8996",
+                              fontSize: 11,
+                            }}
+                          >
+                            {review.work_date || ""}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            color: "#6c7a88",
+                            fontSize: 11,
+                            marginBottom: 5,
+                          }}
+                        >
+                          {review.job_title}
+                        </div>
+                        <div
+                          style={{
+                            lineHeight: 1.5,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {review.comment}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -4475,7 +4725,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     className="wd-decline"
                     type="button"
-                    disabled={busy}
+                    disabled={
+                      respondingInvitation === workdayDetailsTarget.id
+                    }
                     onClick={async () => {
                       const invitationId = workdayDetailsTarget.id;
                       setWorkdayDetailsTarget(null);
@@ -4530,6 +4782,147 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 onClick={() => setWorkdayDetailsTarget(null)}
               >
                 Uždaryti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {employerReviewTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !employerReviewSaving) {
+              setEmployerReviewTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">ATSILIEPIMAS APIE DARBDAVĮ</div>
+                <h2>Jūs laimėjote ginčą</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={employerReviewSaving}
+                onClick={() => setEmployerReviewTarget(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#fffaf5",
+                border: "1px solid #f0d1b2",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+                lineHeight: 1.5,
+              }}
+            >
+              <b>{employerReviewTarget.company_name}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {employerReviewTarget.job_title} ·{" "}
+                {employerReviewTarget.work_date}
+              </div>
+              <div style={{ marginTop: 8, color: "#526374" }}>
+                Ginčas oficialiai išspręstas jūsų naudai. Galite pasidalinti
+                savo patirtimi, kad kiti darbuotojai turėtų daugiau informacijos
+                prieš priimdami šios įmonės darbo pasiūlymą.
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <b>Įvertinimas</b>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(10, minmax(34px,1fr))",
+                  gap: 6,
+                  marginTop: 9,
+                }}
+              >
+                {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                  (score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setEmployerReviewScore(score)}
+                      style={{
+                        border:
+                          employerReviewScore === score
+                            ? "1px solid #f08a28"
+                            : "1px solid #dbe4ea",
+                        background:
+                          employerReviewScore === score ? "#fff3e7" : "#fff",
+                        color: "#102438",
+                        borderRadius: 9,
+                        minHeight: 40,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {score}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            <label style={{ display: "grid", gap: 7, fontWeight: 700 }}>
+              Atsiliepimas *
+              <textarea
+                className="wd-textarea"
+                maxLength={1500}
+                value={employerReviewComment}
+                onChange={(e) => setEmployerReviewComment(e.target.value)}
+                placeholder="Trumpai ir konkrečiai aprašykite, kas nutiko ir ką kiti darbuotojai turėtų žinoti."
+                style={{ minHeight: 120 }}
+              />
+              <span
+                style={{
+                  color: "#7a8996",
+                  fontSize: 11,
+                  fontWeight: 500,
+                }}
+              >
+                {employerReviewComment.trim().length}/1500 · mažiausiai 10
+                simbolių
+              </span>
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="wd-decline"
+                type="button"
+                disabled={employerReviewSaving}
+                onClick={() => setEmployerReviewTarget(null)}
+              >
+                Vėliau
+              </button>
+              <button
+                className="wd-accept"
+                type="button"
+                disabled={
+                  employerReviewSaving ||
+                  !employerReviewScore ||
+                  employerReviewComment.trim().length < 10
+                }
+                onClick={submitEmployerReview}
+              >
+                {employerReviewSaving
+                  ? "Skelbiama..."
+                  : "Paskelbti atsiliepimą"}
               </button>
             </div>
           </div>
@@ -4849,6 +5242,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {confirmInvitation.companyCancelledConfirmed > 0
                   ? ` · atšauktų patvirtintų darbų: ${confirmInvitation.companyCancelledConfirmed}`
                   : ""}
+                {confirmInvitation.companyDisputeReviewCount > 0 && (
+                  <>
+                    <br />
+                    <span style={{ color: "#b85f0e", fontWeight: 800 }}>
+                      Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
+                      {confirmInvitation.companyDisputeReviewCount}
+                    </span>
+                  </>
+                )}
                 <br />
                 {confirmInvitation.job?.work_date} ·{" "}
                 {confirmInvitation.job?.start_time?.slice(0, 5)}
@@ -5154,6 +5556,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     falseAttendanceClaimCount: 0,
   });
   const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
+  const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -5212,6 +5615,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         await Promise.all([
           loadEmployerNotifications(),
           loadEmployerStats(company.id, companyMemberRole),
+          loadCompanyWorkerReviews(company.id),
           loadCompanyTeamChatUnread(company.id, planSummary),
         ]);
 
@@ -5736,6 +6140,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function loadCompanyWorkerReviews(companyId = company?.id) {
+    if (!companyId) {
+      setCompanyWorkerReviews([]);
+      return [];
+    }
+
+    const result = await supabase.rpc("get_company_worker_reviews", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const rows = result.data || [];
+    setCompanyWorkerReviews(rows);
+    return rows;
+  }
+
   async function loadEmployerDashboard() {
     setLoading(true);
     setError("");
@@ -5825,6 +6246,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       await Promise.all([
         loadEmployerNotifications(),
         loadEmployerStats(companyId, loadedMemberRole),
+        loadCompanyWorkerReviews(companyId),
         loadedPlan?.can_team_management
           ? loadCompanyTeam(companyId, loadedMemberRole, loadedPlan)
           : Promise.resolve(),
@@ -7458,6 +7880,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-link-btn{border:0;background:transparent;color:#b85f0e;padding:0;margin-top:7px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
         .ed-profile-readonly-note{margin-top:16px;border-radius:10px;background:#f4f6f8;color:#6c7a88;padding:11px 13px;font-size:12px}
         .ed-company-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .ed-company-reviews{margin-top:18px;border-top:1px solid #e4ebf0;padding-top:18px}
+        .ed-company-reviews-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+        .ed-company-reviews-head h3{margin:0;font-size:17px}.ed-company-reviews-head span{color:#6c7a88;font-size:12px}
+        .ed-company-review-list{display:grid;gap:9px}
+        .ed-company-review{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:12px}
+        .ed-company-review-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:5px}
+        .ed-company-review-top b{font-size:13px}.ed-company-review-top span{font-size:11px;color:#7a8996}
+        .ed-company-review-meta{font-size:11px;color:#7a8996;margin-bottom:6px}
+        .ed-company-review p{margin:0;line-height:1.5;color:#405264;font-size:13px;white-space:pre-wrap}
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
         .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
@@ -7790,6 +8221,45 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..."
                 />
               </label>
+            </div>
+
+            <div className="ed-company-reviews">
+              <div className="ed-company-reviews-head">
+                <div>
+                  <h3>Atsiliepimai apie įmonę</h3>
+                  <span>
+                    Atsiliepimus gali palikti tik darbuotojai, kurių ginčas
+                    oficialiai išspręstas jų naudai.
+                  </span>
+                </div>
+                <b>{companyWorkerReviews.length}</b>
+              </div>
+
+              {companyWorkerReviews.length ? (
+                <div className="ed-company-review-list">
+                  {companyWorkerReviews.map((review) => (
+                    <div className="ed-company-review" key={review.id}>
+                      <div className="ed-company-review-top">
+                        <b>
+                          {review.worker_name || "Darbuotojas"} · {review.score} / 10
+                        </b>
+                        <span>
+                          {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                        </span>
+                      </div>
+                      <div className="ed-company-review-meta">
+                        {review.job_title}
+                        {review.work_date ? ` · ${review.work_date}` : ""}
+                      </div>
+                      <p>{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ed-profile-readonly-note">
+                  Atsiliepimų po darbuotojų laimėtų ginčų dar nėra.
+                </div>
+              )}
             </div>
 
             {companyMemberRole === "owner" ? (
