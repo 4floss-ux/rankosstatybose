@@ -3361,6 +3361,7 @@ function EmployerDashboard({ user, onLogout }) {
     missingWorkers: 0,
     completedJobs: 0,
     cancelledJobs: 0,
+    monthlyWorkersUsed: 0,
     reliabilityRate: 100,
     cancelledConfirmedCount: 0,
     falseAttendanceClaimCount: 0,
@@ -3612,23 +3613,88 @@ function EmployerDashboard({ user, onLogout }) {
     const jobRows = jobsResult.data || [];
     const jobIds = jobRows.map((job) => job.id);
 
-    let confirmedBookings = [];
+    let bookingRows = [];
+    let attendanceRows = [];
+
     if (jobIds.length) {
       const bookingsResult = await supabase
         .from("bookings")
-        .select("job_id, status")
-        .in("job_id", jobIds)
-        .eq("status", "confirmed");
+        .select("id, worker_id, job_id, status")
+        .in("job_id", jobIds);
 
       if (bookingsResult.error) throw bookingsResult.error;
-      confirmedBookings = bookingsResult.data || [];
+      bookingRows = bookingsResult.data || [];
+
+      const bookingIds = bookingRows.map((booking) => booking.id);
+
+      if (bookingIds.length) {
+        const attendanceResult = await supabase
+          .from("attendance")
+          .select("booking_id, final_outcome, finalized_at")
+          .in("booking_id", bookingIds)
+          .not("finalized_at", "is", null);
+
+        if (attendanceResult.error) throw attendanceResult.error;
+        attendanceRows = attendanceResult.data || [];
+      }
     }
 
     const confirmedByJob = {};
-    for (const booking of confirmedBookings) {
+    for (const booking of bookingRows) {
+      if (booking.status !== "confirmed") continue;
+
       confirmedByJob[booking.job_id] =
         (confirmedByJob[booking.job_id] || 0) + 1;
     }
+
+    const attendanceByBooking = new Map(
+      attendanceRows.map((attendance) => [
+        attendance.booking_id,
+        attendance,
+      ])
+    );
+
+    const jobById = new Map(
+      jobRows.map((job) => [job.id, job])
+    );
+
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+
+    const nextMonthDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1
+    );
+    const nextMonthStart = `${nextMonthDate.getFullYear()}-${String(
+      nextMonthDate.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+
+    const monthlyWorkerIds = new Set();
+
+    for (const booking of bookingRows) {
+      const job = jobById.get(booking.job_id);
+      const attendance = attendanceByBooking.get(booking.id);
+
+      if (!job || !attendance?.finalized_at) continue;
+
+      const worked =
+        attendance.final_outcome === "full_day" ||
+        attendance.final_outcome === "left_early_agreed" ||
+        attendance.final_outcome === "left_early_unexcused";
+
+      if (
+        worked &&
+        job.work_date >= monthStart &&
+        job.work_date < nextMonthStart
+      ) {
+        monthlyWorkerIds.add(booking.worker_id);
+      }
+    }
+
+    const monthlyWorkersUsed = monthlyWorkerIds.size;
 
     const today = localDateISO(new Date());
 
@@ -3663,6 +3729,7 @@ function EmployerDashboard({ user, onLogout }) {
       missingWorkers,
       completedJobs,
       cancelledJobs: jobRows.filter((job) => job.status === "cancelled").length,
+      monthlyWorkersUsed,
       reliabilityRate: Number(companyResult.data?.reliability_rate ?? 100),
       cancelledConfirmedCount: Number(
         companyResult.data?.cancelled_confirmed_count || 0
@@ -4967,6 +5034,11 @@ function EmployerDashboard({ user, onLogout }) {
             <div className="ed-kpi">
               <span>Atšaukti darbai</span>
               <b>{employerStats.cancelledJobs}</b>
+            </div>
+
+            <div className="ed-kpi">
+              <span>Panaudoti darbuotojai / mėn.</span>
+              <b>{employerStats.monthlyWorkersUsed}</b>
             </div>
 
             <div className="ed-kpi ed-reliability-card">
