@@ -8345,8 +8345,12 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
+        .admin-audit-section{max-width:1160px;margin-left:auto;margin-right:auto}
+        .admin-audit-section .admin-row{grid-template-columns:minmax(260px,1.45fr) minmax(180px,.85fr) minmax(150px,.7fr) minmax(120px,.6fr) auto}
+        .admin-audit-section .admin-row-title{min-width:0}
+        .admin-audit-section .admin-row-title span{max-width:420px}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
-        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-audit-section .admin-row{grid-template-columns:1fr 1fr}.admin-audit-section .admin-row>:last-child{grid-column:1/-1}}
         @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
       `}</style>
 
@@ -8395,9 +8399,8 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
             <div className="eyebrow">ADMINISTRATORIAUS VALDYMO CENTRAS</div>
             <h1>Svetainės suvestinė ir valdymas</h1>
             <p>
-              Prisijungta kaip {user?.email || "administratorius"}. Čia matote
-              realų sistemos naudojimą, ginčus, vartotojus, darbus, atsiliepimus
-              ir įkeltus failus.
+              Čia matote realų sistemos naudojimą, ginčus, vartotojus, darbus,
+              atsiliepimus ir įkeltus failus.
             </p>
           </div>
 
@@ -9052,7 +9055,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
 
 
         {activeTab === "audit" && (
-          <section className="admin-section">
+          <section className="admin-section admin-audit-section">
             <div className="admin-section-head">
               <div>
                 <h2>Administratoriaus veiksmų istorija</h2>
