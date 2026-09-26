@@ -7849,7 +7849,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (result.error) throw result.error;
 
       await loadSavedWorkers(company.id, planSummary);
-      setNotice(`${worker.name || "Darbuotojas"} pridėtas į „Mano komandą“.`);
+      setNotice(`${worker.name || "Darbuotojas"} pridėtas į darbuotojų favoritus.`);
     } catch (err) {
       setError(err?.message || "Nepavyko pridėti darbuotojo į komandą.");
     } finally {
@@ -7875,7 +7875,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (result.error) throw result.error;
 
       await loadSavedWorkers(company.id, planSummary);
-      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš „Mano komandos“.`);
+      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš darbuotojų favoritų.`);
     } catch (err) {
       setError(err?.message || "Nepavyko pašalinti darbuotojo iš komandos.");
     } finally {
