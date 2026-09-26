@@ -1792,6 +1792,7 @@ function CompanyTeamChatModal({
   companyId,
   companyName,
   user,
+  onRead = null,
 }) {
   const [messages, setMessages] = useState([]);
   const [textValue, setTextValue] = useState("");
@@ -1818,6 +1819,13 @@ function CompanyTeamChatModal({
 
       if (result.error) throw result.error;
       setMessages(result.data || []);
+
+      const readResult = await supabase.rpc("mark_company_team_chat_read", {
+        p_company_id: companyId,
+      });
+
+      if (readResult.error) throw readResult.error;
+      onRead?.();
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
     } finally {
@@ -4512,6 +4520,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planActionBusy, setPlanActionBusy] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [showTeamChat, setShowTeamChat] = useState(false);
+  const [teamChatUnread, setTeamChatUnread] = useState(0);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamInvites, setTeamInvites] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
@@ -4602,6 +4611,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         await Promise.all([
           loadEmployerNotifications(),
           loadEmployerStats(company.id, companyMemberRole),
+          loadCompanyTeamChatUnread(company.id, planSummary),
         ]);
 
         if (currentJob?.id) {
@@ -4656,7 +4666,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [company?.id, currentJob?.id]);
+  }, [company?.id, currentJob?.id, planSummary?.can_team_chat, companyMemberRole]);
 
   async function loadEmployerNotifications() {
     const result = await supabase
@@ -4673,8 +4683,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return employerNotifications.filter((item) => item.job_id === jobId);
   }
 
-  async function markEmployerJobRead(jobId) {
-    const ids = unreadEmployerNotifications(jobId).map((item) => item.id);
+  function unreadEmployerGroupChatNotifications(jobId) {
+    return employerNotifications.filter(
+      (item) =>
+        item.job_id === jobId &&
+        item.event_type === "message" &&
+        !item.invitation_id
+    );
+  }
+
+  function unreadEmployerPrivateChatNotifications(invitationId) {
+    return employerNotifications.filter(
+      (item) =>
+        item.invitation_id === invitationId &&
+        item.event_type === "message"
+    );
+  }
+
+  async function markEmployerNotificationIdsRead(ids) {
     if (!ids.length) return;
 
     const result = await supabase
@@ -4692,11 +4718,51 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  async function markEmployerGroupChatRead(jobId) {
+    const ids = unreadEmployerGroupChatNotifications(jobId).map(
+      (item) => item.id
+    );
+    await markEmployerNotificationIdsRead(ids);
+  }
+
+  async function markEmployerPrivateChatRead(invitationId) {
+    const ids = unreadEmployerPrivateChatNotifications(invitationId).map(
+      (item) => item.id
+    );
+    await markEmployerNotificationIdsRead(ids);
+  }
+
+  async function markEmployerJobRead(jobId) {
+    const ids = unreadEmployerNotifications(jobId).map((item) => item.id);
+    await markEmployerNotificationIdsRead(ids);
+  }
+
   function teamMemberName(userId) {
     return (
       teamMembers.find((member) => member.user_id === userId)?.display_name ||
       (userId === user.id ? "Aš" : "Komandos narys")
     );
+  }
+
+  async function loadCompanyTeamChatUnread(
+    companyId = company?.id,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_team_chat) {
+      setTeamChatUnread(0);
+      return 0;
+    }
+
+    const result = await supabase.rpc(
+      "get_company_team_chat_unread_count",
+      { p_company_id: companyId }
+    );
+
+    if (result.error) throw result.error;
+
+    const count = Number(result.data || 0);
+    setTeamChatUnread(count);
+    return count;
   }
 
   async function loadCompanyTeam(
@@ -4750,7 +4816,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
   }
 
-  function openCompanyTeamChat() {
+  async function openCompanyTeamChat() {
     if (!planSummary?.can_team_chat) {
       setNotice(
         "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane."
@@ -4759,6 +4825,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
+    if (company?.id) {
+      const readResult = await supabase.rpc("mark_company_team_chat_read", {
+        p_company_id: company.id,
+      });
+
+      if (readResult.error) {
+        setError(readResult.error.message);
+        return;
+      }
+    }
+
+    setTeamChatUnread(0);
     setShowTeamChat(true);
   }
 
@@ -4911,9 +4989,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openEmployerPrivateConversation(invitationId, title) {
     if (!requireEmployerChatPlan()) return;
 
-    if (currentJob?.id) {
-      await markEmployerJobRead(currentJob.id);
-    }
+    await markEmployerPrivateChatRead(invitationId);
 
     setConversation({
       invitationId,
@@ -4921,8 +4997,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     });
   }
 
-  function openEmployerGroupConversation(job) {
+  async function openEmployerGroupConversation(job) {
     if (!requireEmployerChatPlan()) return;
+
+    await markEmployerGroupChatRead(job.id);
 
     setGroupConversation({
       jobId: job.id,
@@ -5071,6 +5149,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadEmployerStats(companyId, loadedMemberRole),
         loadedPlan?.can_team_management
           ? loadCompanyTeam(companyId, loadedMemberRole, loadedPlan)
+          : Promise.resolve(),
+        loadedPlan?.can_team_chat
+          ? loadCompanyTeamChatUnread(companyId, loadedPlan)
           : Promise.resolve(),
       ]);
 
@@ -6559,9 +6640,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
-        .ed-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+        .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:8px;min-width:220px}
+        .ed-heading-actions>button{width:100%}
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
+        .ed-chat-alert-btn{position:relative}
+        .ed-chat-alert{position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 0 0 3px #fff}
         .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
@@ -6729,7 +6813,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -6954,7 +7038,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           <div className="ed-heading-actions">
             <button
-              className={`ed-secondary ed-team-chat-btn ${
+              className="ed-primary"
+              type="button"
+              onClick={openNewJobForm}
+            >
+              + Sukurti darbo pasiūlymą
+            </button>
+
+            <button
+              className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
                 planSummary?.can_team_chat ? "" : "locked"
               }`}
               type="button"
@@ -6963,14 +7055,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               {planSummary?.can_team_chat
                 ? "Komandos pokalbis"
                 : "Komandos pokalbis · Pro"}
-            </button>
 
-            <button
-              className="ed-primary"
-              type="button"
-              onClick={openNewJobForm}
-            >
-              + Sukurti darbo pasiūlymą
+              {planSummary?.can_team_chat && teamChatUnread > 0 && (
+                <span
+                  className="ed-chat-alert"
+                  title="Nauja žinutė komandos pokalbyje"
+                >
+                  {Math.min(9, teamChatUnread)}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -7469,7 +7562,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </button>
 
                           <button
-                            className="ed-secondary"
+                            className="ed-secondary ed-chat-alert-btn"
                             onClick={() =>
                               openEmployerGroupConversation(currentJob)
                             }
@@ -7477,6 +7570,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             {planSummary?.can_job_chat
                               ? "Darbo pokalbis"
                               : "Darbo pokalbis · Business"}
+                            {unreadEmployerGroupChatNotifications(
+                              currentJob.id
+                            ).length > 0 && (
+                              <span
+                                className="ed-chat-alert"
+                                title="Nauja žinutė darbo pokalbyje"
+                              >
+                                {Math.min(
+                                  9,
+                                  unreadEmployerGroupChatNotifications(
+                                    currentJob.id
+                                  ).length
+                                )}
+                              </span>
+                            )}
                           </button>
 
                           {checkInOpen &&
@@ -7653,7 +7761,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                         {invitationByWorker[worker.id] && (
                           <button
-                            className="ed-secondary"
+                            className="ed-secondary ed-chat-alert-btn"
                             onClick={() =>
                               openEmployerPrivateConversation(
                                 invitationByWorker[worker.id].id,
@@ -7664,6 +7772,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             {planSummary?.can_job_chat
                               ? "Žinutė"
                               : "Žinutė · Business"}
+                            {unreadEmployerPrivateChatNotifications(
+                              invitationByWorker[worker.id].id
+                            ).length > 0 && (
+                              <span
+                                className="ed-chat-alert"
+                                title="Nauja privati žinutė"
+                              >
+                                {Math.min(
+                                  9,
+                                  unreadEmployerPrivateChatNotifications(
+                                    invitationByWorker[worker.id].id
+                                  ).length
+                                )}
+                              </span>
+                            )}
                           </button>
                         )}
                       </div>
@@ -8992,6 +9115,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         companyId={company?.id}
         companyName={company?.name}
         user={user}
+        onRead={() => setTeamChatUnread(0)}
       />
 
       <WorkerProfileModal
