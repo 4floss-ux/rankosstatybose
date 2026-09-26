@@ -4438,7 +4438,6 @@ const EMPLOYER_PLANS = [
       "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
       "Atskira vadybininko darbų statistika",
       "Vidinis įmonės komandos pokalbis platformoje",
-      "Žinutėse aiškiai rodoma, kuris įmonės žmogus rašo",
     ],
   },
 ];
@@ -5791,6 +5790,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function submitWorkerRating() {
     if (!ratingTarget?.bookingId) return;
 
+    const responsibleUserId =
+      currentJob?.responsible_user_id || currentJob?.created_by || null;
+
+    if (!responsibleUserId || responsibleUserId !== user.id) {
+      setError(
+        "Darbuotoją už šį darbą gali įvertinti ir atsiliepimą palikti tik atsakingas žmogus, kuris kuravo darbą."
+      );
+      return;
+    }
+
     const numericScore = Number(ratingScore);
     if (!Number.isInteger(numericScore) || numericScore < 1 || numericScore > 10) {
       setError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
@@ -5819,9 +5828,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       await loadCurrentJobWorkers(currentJob?.id);
     } catch (err) {
+      const message = String(err?.message || "").toLowerCase();
+
       setError(
-        err?.message?.toLowerCase().includes("duplicate")
-          ? "Šį darbuotoją už šį darbą jau įvertinote."
+        message.includes("duplicate")
+          ? "Šis darbuotojas už šį darbą jau įvertintas."
+          : message.includes("row-level security") ||
+            message.includes("policy")
+          ? "Šį darbuotoją gali įvertinti tik už darbą atsakingas žmogus."
           : err?.message || "Nepavyko išsaugoti įvertinimo."
       );
     } finally {
@@ -6598,6 +6612,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     Boolean(planSummary?.can_team_management) &&
     ["owner", "manager"].includes(companyMemberRole);
 
+  const currentJobResponsibleUserId =
+    currentJob?.responsible_user_id || currentJob?.created_by || null;
+
+  const canRateCurrentJob =
+    Boolean(currentJobResponsibleUserId) &&
+    currentJobResponsibleUserId === user.id;
+
   const visibleJobs =
     planSummary?.can_team_management &&
     (jobScope === "mine" || !canSeeAllCompanyJobs)
@@ -6770,7 +6791,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-role-card ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
         .ed-team-role-card li{font-size:12px;line-height:1.45;color:#405264}
         .ed-team-role-card li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:6px}
-        .ed-team-role-summary{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:11px 12px}
+        .ed-team-role-summary{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:11px 12px;margin-top:12px}
         .ed-team-role-summary b{display:block;font-size:12px;margin-bottom:4px}
         .ed-team-role-summary span{display:block;color:#6c7a88;font-size:11px;line-height:1.45}
         .ed-team-invite-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -6785,7 +6806,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
-        .ed-worker-id{display:flex;align-items:center;gap:11px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
+        .ed-worker-id{display:flex;align-items:flex-start;gap:0}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
@@ -6794,13 +6815,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-list{display:grid;gap:9px;margin-top:14px}
         .ed-attendance-row{display:grid;grid-template-columns:minmax(220px,1.35fr) minmax(210px,.9fr) auto;gap:18px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:14px 15px}
-        .ed-member-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .ed-worker-main{display:flex;flex-direction:column;gap:4px}.ed-worker-main b{display:block}.ed-worker-main span{font-size:13px;color:#6c7a88}.ed-member-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .ed-member-metric{padding:8px 10px;border-radius:10px;background:#f6f8fa}
         .ed-member-metric span{display:block;color:#6c7a88;font-size:11px;margin-bottom:3px}
         .ed-member-metric b{font-family:Manrope,Inter,sans-serif;font-size:17px}
-        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
         .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
-        .ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
+        .ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
         .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
@@ -6875,7 +6896,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <h2>{company?.name || "Įmonės profilis"}</h2>
                 <p>
                   Čia matote įmonės paskyros informaciją, savo rolę, planą ir
-                  komandos užimtumą.
+                  pagrindinius komandos nustatymus.
                   {companyMemberRole === "owner"
                     ? " Įmonės savininkas taip pat gali redaguoti informaciją."
                     : " Įmonės informaciją gali redaguoti tik savininkas."}
@@ -7259,103 +7280,117 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               />
             </label>
 
-            <label className="ed-label">
-              Data
-              <input
-                className="ed-input"
-                type="date"
-                value={form.workDate}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("workDate", e.target.value)}
-              />
-            </label>
+<label className="ed-label">
+  Data
+  <input
+    className="ed-input"
+    type="date"
+    value={form.workDate}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("workDate", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label">
-              Nuo
-              <input
-                className="ed-input"
-                type="time"
-                value={form.startTime}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("startTime", e.target.value)}
-              />
-            </label>
+<label className="ed-label">
+  Nuo
+  <input
+    className="ed-input"
+    type="time"
+    value={form.startTime}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("startTime", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label">
-              Iki
-              <input
-                className="ed-input"
-                type="time"
-                value={form.endTime}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("endTime", e.target.value)}
-              />
-            </label>
-            <label className="ed-label">
-              Pietų pertrauka nuo *
-              <input
-                className="ed-input"
-                type="time"
-                required
-                value={form.breakStartTime}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("breakStartTime", e.target.value)}
-              />
-            </label>
+<label className="ed-label">
+  Iki
+  <input
+    className="ed-input"
+    type="time"
+    value={form.endTime}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("endTime", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label">
-              Pietų pertrauka iki *
-              <input
-                className="ed-input"
-                type="time"
-                required
-                value={form.breakEndTime}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("breakEndTime", e.target.value)}
-              />
-            </label>
+<label className="ed-label">
+  Pietų pertrauka nuo *
+  <input
+    className="ed-input"
+    type="time"
+    required
+    value={form.breakStartTime}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("breakStartTime", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label">
-              Atlygis į rankas (€) *
-              <input
-                className="ed-input"
-                type="number"
-                min="0.01"
-                step="0.5"
-                required
-                value={form.payAmount}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("payAmount", e.target.value)}
-                placeholder={form.payUnit === "day" ? "Pvz. 90" : "Pvz. 12"}
-              />
-            </label>
+<label className="ed-label">
+  Pietų pertrauka iki *
+  <input
+    className="ed-input"
+    type="time"
+    required
+    value={form.breakEndTime}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("breakEndTime", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label">
-              Mokėjimo tipas *
-              <select
-                className="ed-select"
-                required
-                value={form.payUnit}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("payUnit", e.target.value)}
-              >
-                <option value="hour">Už valandą</option>
-                <option value="day">Už dieną</option>
-              </select>
-            </label>
+<label className="ed-label">
+  Žmonių skaičius
+  <input
+    className="ed-input"
+    type="number"
+    min="1"
+    max="20"
+    value={form.workersNeeded}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("workersNeeded", e.target.value)}
+  />
+</label>
 
-            <label className="ed-label ed-span-2">
-              Atvykimas į darbo vietą *
-              <select
-                className="ed-select"
-                value={form.transportMode}
-                disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("transportMode", e.target.value)}
-              >
-                <option value="self_arrival">Darbuotojas atvyksta pats</option>
-                <option value="employer_pickup">Darbdavys paima darbuotoją</option>
-              </select>
-            </label>
+<label className="ed-label">
+  Atlygis į rankas (€) *
+  <input
+    className="ed-input"
+    type="number"
+    min="1"
+    step="0.01"
+    required
+    value={form.hourlyRate}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("hourlyRate", e.target.value)}
+    placeholder="Pvz. 12"
+  />
+</label>
+
+<label className="ed-label">
+  Mokėjimo tipas *
+  <select
+    className="ed-select"
+    required
+    value={form.payType}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("payType", e.target.value)}
+  >
+    <option value="hour">Už valandą</option>
+    <option value="day">Už dieną</option>
+  </select>
+</label>
+
+<label className="ed-label ed-span-2">
+  Atvykimas į darbo vietą *
+  <select
+    className="ed-select"
+    value={form.transportMode}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("transportMode", e.target.value)}
+  >
+    <option value="self_arrival">Darbuotojas atvyksta pats</option>
+    <option value="employer_pickup">Darbdavys paima darbuotoją</option>
+  </select>
+</label>
 
             <label className="ed-label ed-span-4">
               Darbo aprašymas *
@@ -7464,8 +7499,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         key={worker.bookingId}
                       >
                         <div className="ed-worker-id">
-                          <div className="ed-avatar">{worker.initials}</div>
-                          <div>
+                          <div className="ed-worker-main">
                             <b>{worker.name}</b>
                             <span>
                               {worker.city} · {worker.yearsExperience} m. patirties
@@ -7622,7 +7656,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                           {attendance.finalized_at &&
                             attendance.final_outcome !== "no_show" &&
-                            !worker.rating && (
+                            !worker.rating &&
+                            canRateCurrentJob && (
                               <button
                                 className="ed-primary"
                                 onClick={() => {
@@ -7633,6 +7668,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               >
                                 Įvertinti
                               </button>
+                            )}
+
+                          {attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            !worker.rating &&
+                            !canRateCurrentJob && (
+                              <span className="ed-attendance-badge muted">
+                                Vertina atsakingas:{" "}
+                                {teamMemberName(currentJobResponsibleUserId)}
+                              </span>
                             )}
 
                           {worker.rating && (
@@ -7821,11 +7866,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     : "Visi įmonės darbai"
                   : "Mano poreikiai"}
               </h2>
-              <p className="ed-sub">
-                {planSummary?.can_team_management
-                  ? "Darbai atskiriami pagal atsakingą komandos narį, todėl vadybininkų sąrašai nesimaišo."
-                  : "Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas."}
-              </p>
+              {!planSummary?.can_team_management && (
+                <p className="ed-sub">
+                  Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas.
+                </p>
+              )}
             </div>
 
             {canSeeAllCompanyJobs && (
@@ -8205,7 +8250,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
                 <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
                 <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
-                  Pasirinkite bendrą įvertinimą nuo 1 iki 10.
+                  Pasirinkite bendrą įvertinimą nuo 1 iki 10. Vertinimą ir
+                  komentarą paliekate kaip už šį darbą atsakingas žmogus.
                 </div>
               </div>
               <button
@@ -8641,11 +8687,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-plan-head">
               <div>
                 <div className="eyebrow">DARBDAVIO PLANAI</div>
-                <h2>Pasirinkite pagal įmonės poreikį</h2>
+                <h2>Rinkitės planą pagal savo prioritetus</h2>
                 <p>
-                  Basic skirtas išbandyti paiešką. Business atrakina nuolatinį
-                  samdymą ir darbo pokalbius, o Business Pro prideda kelių
-                  įmonės žmonių darbų paskirstymą ir atsakomybių valdymą.
+                  Jei norite tik išbandyti sistemą – rinkitės Basic. Jei
+                  darbuotojų ieškote nuolat – Business. Jei dirbate komandoje ir
+                  norite pasiskirstyti darbus, vidinį komandos pokalbį bei
+                  daugiau valdymo – Business Pro.
                 </p>
               </div>
 
