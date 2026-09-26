@@ -1979,7 +1979,12 @@ function CompanyTeamChatModal({
   );
 }
 
-function WorkerProfileModal({ worker, jobId, onClose }) {
+function WorkerProfileModal({
+  worker,
+  jobId,
+  canViewWorkerMetrics = false,
+  onClose,
+}) {
   const [ratingReviews, setRatingReviews] = useState([]);
   const [ratingReviewsLoading, setRatingReviewsLoading] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
@@ -1988,8 +1993,9 @@ function WorkerProfileModal({ worker, jobId, onClose }) {
   const [phoneCopied, setPhoneCopied] = useState(false);
 
   useEffect(() => {
-    if (!worker?.id) {
+    if (!worker?.id || !canViewWorkerMetrics) {
       setRatingReviews([]);
+      setRatingReviewsLoading(false);
       return;
     }
 
@@ -2015,7 +2021,7 @@ function WorkerProfileModal({ worker, jobId, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [worker?.id]);
+  }, [worker?.id, canViewWorkerMetrics]);
 
   useEffect(() => {
     if (!worker?.id || !jobId) {
@@ -2110,6 +2116,8 @@ function WorkerProfileModal({ worker, jobId, onClose }) {
           .rs-profile-phone{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
           .rs-profile-phone button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
           .rs-profile-contact-error{margin-top:6px;font-size:11px;color:#b64d2a}
+          .rs-profile-plan-lock{grid-column:1/-1;border:1px dashed #d7e0e7;background:#f8fafb;border-radius:12px;padding:13px 14px;color:#526374;font-size:12px;line-height:1.5}
+          .rs-profile-plan-lock b{display:block;color:#102438;font-size:13px;margin-bottom:3px}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
           @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
@@ -2204,29 +2212,39 @@ function WorkerProfileModal({ worker, jobId, onClose }) {
             <span>Darbdavio atšaukti</span>
             <b>{Number(stats.cancelledByEmployer || 0)}</b>
           </div>
-          <div className="rs-profile-stat">
-            <span>Atvykimo patikimumas</span>
-            <b>{Math.round(attendanceRate)}%</b>
-          </div>
-          <div className="rs-profile-stat">
-            <span>Darbdavių įvertinimas</span>
-            <b>
-              {ratingAverage === null || ratingAverage === undefined
-                ? "—"
-                : `${Number(ratingAverage).toFixed(1)} / 10`}
-            </b>
-            <span style={{ marginTop: 4, marginBottom: 0 }}>
-              {ratingCount ? `${ratingCount} vert.` : "Dar nėra vertinimų"}
-            </span>
-          </div>
-          <div className="rs-profile-stat">
-            <span>Neatvykimai</span>
-            <b>{noShows}</b>
-          </div>
-          <div className="rs-profile-stat">
-            <span>Nepagrįsti ankstyvi išėjimai</span>
-            <b>{earlyLeaves}</b>
-          </div>
+          {canViewWorkerMetrics ? (
+            <>
+              <div className="rs-profile-stat">
+                <span>Atvykimo patikimumas</span>
+                <b>{Math.round(attendanceRate)}%</b>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Darbdavių įvertinimas</span>
+                <b>
+                  {ratingAverage === null || ratingAverage === undefined
+                    ? "—"
+                    : `${Number(ratingAverage).toFixed(1)} / 10`}
+                </b>
+                <span style={{ marginTop: 4, marginBottom: 0 }}>
+                  {ratingCount ? `${ratingCount} vert.` : "Dar nėra vertinimų"}
+                </span>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Neatvykimai</span>
+                <b>{noShows}</b>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Nepagrįsti ankstyvi išėjimai</span>
+                <b>{earlyLeaves}</b>
+              </div>
+            </>
+          ) : (
+            <div className="rs-profile-plan-lock">
+              <b>Patikimumas ir įvertinimai · Business</b>
+              Šie darbuotojo rodikliai prieinami Business ir Business Pro
+              planuose.
+            </div>
+          )}
         </div>
 
         {worker.hasDrivingLicenseB && (
@@ -2258,40 +2276,42 @@ function WorkerProfileModal({ worker, jobId, onClose }) {
           </div>
         )}
 
-        <div className="rs-profile-section">
-          <b>Darbdavių atsiliepimai</b>
+        {canViewWorkerMetrics && (
+          <div className="rs-profile-section">
+            <b>Darbdavių atsiliepimai</b>
 
-          {ratingReviewsLoading ? (
-            <div style={{ marginTop: 10, color: "#6c7a88" }}>
-              Kraunami atsiliepimai...
-            </div>
-          ) : ratingReviews.length ? (
-            <div className="rs-review-list">
-              {ratingReviews.map((review) => (
-                <div className="rs-review" key={review.id}>
-                  <div className="rs-review-head">
-                    <span className="rs-review-score">
-                      {review.score} / 10
-                    </span>
-                    <span className="rs-review-date">
-                      {new Date(review.created_at).toLocaleDateString("lt-LT")}
-                    </span>
+            {ratingReviewsLoading ? (
+              <div style={{ marginTop: 10, color: "#6c7a88" }}>
+                Kraunami atsiliepimai...
+              </div>
+            ) : ratingReviews.length ? (
+              <div className="rs-review-list">
+                {ratingReviews.map((review) => (
+                  <div className="rs-review" key={review.id}>
+                    <div className="rs-review-head">
+                      <span className="rs-review-score">
+                        {review.score} / 10
+                      </span>
+                      <span className="rs-review-date">
+                        {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                      </span>
+                    </div>
+
+                    <p>
+                      {review.comment?.trim()
+                        ? review.comment
+                        : "Darbdavys komentaro nepaliko."}
+                    </p>
                   </div>
-
-                  <p>
-                    {review.comment?.trim()
-                      ? review.comment
-                      : "Darbdavys komentaro nepaliko."}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ marginTop: 10, color: "#6c7a88" }}>
-              Dar nėra darbdavių atsiliepimų.
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ marginTop: 10, color: "#6c7a88" }}>
+                Dar nėra darbdavių atsiliepimų.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -4956,7 +4976,6 @@ const EMPLOYER_PLANS = [
     features: [
       "Iki 5 darbo pasiūlymų per mėnesį",
       "Darbuotojų paieška ir kvietimai",
-      "Darbuotojų patikimumas ir įvertinimai",
       "1 įmonės vartotojas",
     ],
   },
@@ -4969,6 +4988,7 @@ const EMPLOYER_PLANS = [
     features: [
       "Viskas, kas yra Basic plane",
       "Iki 25 darbo pasiūlymų per mėnesį",
+      "Darbuotojų patikimumas ir įvertinimai",
       "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė įmonės statistika",
       "1 įmonės vartotojas",
@@ -6096,12 +6116,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .from("profiles")
           .select("id, display_name, city")
           .in("id", workerIds),
-        supabase
-          .from("worker_profiles")
-          .select(
-            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, rating_count, short_bio, travel_radius_km, no_show_count, restricted_until, unexcused_early_leave_count"
-          )
-          .in("user_id", workerIds),
+        supabase.rpc("get_employer_worker_profiles", {
+          p_job_id: jobId,
+          p_worker_ids: workerIds,
+        }),
         supabase
           .from("worker_skills")
           .select("worker_id, skill_id")
@@ -6168,16 +6186,28 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             monthJobs: Number(row.month_jobs || 0),
             activeJobs: Number(row.active_jobs || 0),
             cancelledByEmployer: Number(row.cancelled_by_employer || 0),
-            attendanceRate: Number(row.attendance_rate ?? 100),
+            attendanceRate:
+              row.attendance_rate === null ||
+              row.attendance_rate === undefined
+                ? null
+                : Number(row.attendance_rate),
             ratingAverage:
               row.rating_average === null || row.rating_average === undefined
                 ? null
                 : Number(row.rating_average),
-            ratingCount: Number(row.rating_count || 0),
-            noShowCount: Number(row.no_show_count || 0),
-            unexcusedEarlyLeaveCount: Number(
-              row.unexcused_early_leave_count || 0
-            ),
+            ratingCount:
+              row.rating_count === null || row.rating_count === undefined
+                ? null
+                : Number(row.rating_count),
+            noShowCount:
+              row.no_show_count === null || row.no_show_count === undefined
+                ? null
+                : Number(row.no_show_count),
+            unexcusedEarlyLeaveCount:
+              row.unexcused_early_leave_count === null ||
+              row.unexcused_early_leave_count === undefined
+                ? null
+                : Number(row.unexcused_early_leave_count),
           },
         ];
       })
@@ -6208,16 +6238,29 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           initials: workerInitials(profile.display_name),
           city: profile.city,
           yearsExperience: Number(worker.years_experience || 0),
-          attendanceRate: Number(worker.attendance_rate || 100),
+          attendanceRate:
+            worker.attendance_rate === null ||
+            worker.attendance_rate === undefined
+              ? null
+              : Number(worker.attendance_rate),
           ratingAverage:
-            worker.rating_average === null
+            worker.rating_average === null ||
+            worker.rating_average === undefined
               ? null
               : Number(worker.rating_average),
-          ratingCount: Number(worker.rating_count || 0),
-          noShowCount: Number(worker.no_show_count || 0),
-          unexcusedEarlyLeaveCount: Number(
-            worker.unexcused_early_leave_count || 0
-          ),
+          ratingCount:
+            worker.rating_count === null || worker.rating_count === undefined
+              ? null
+              : Number(worker.rating_count),
+          noShowCount:
+            worker.no_show_count === null || worker.no_show_count === undefined
+              ? null
+              : Number(worker.no_show_count),
+          unexcusedEarlyLeaveCount:
+            worker.unexcused_early_leave_count === null ||
+            worker.unexcused_early_leave_count === undefined
+              ? null
+              : Number(worker.unexcused_early_leave_count),
           hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
           shortBio: worker.short_bio || "",
           avatarUrl: workerAvatarUrl(worker.avatar_path),
@@ -6255,20 +6298,31 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           monthJobs: Number(row.month_jobs || 0),
           activeJobs: Number(row.active_jobs || 0),
           cancelledByEmployer: Number(row.cancelled_by_employer || 0),
-          attendanceRate: Number(
-            row.attendance_rate ?? worker.attendanceRate ?? 100
-          ),
-          ratingAverage:
-            row.rating_average === null || row.rating_average === undefined
+          attendanceRate: canViewWorkerMetrics
+            ? row.attendance_rate === null ||
+              row.attendance_rate === undefined
+              ? worker.attendanceRate ?? null
+              : Number(row.attendance_rate)
+            : null,
+          ratingAverage: canViewWorkerMetrics
+            ? row.rating_average === null ||
+              row.rating_average === undefined
               ? worker.ratingAverage ?? null
-              : Number(row.rating_average),
-          ratingCount: Number(row.rating_count || 0),
-          noShowCount: Number(row.no_show_count || worker.noShowCount || 0),
-          unexcusedEarlyLeaveCount: Number(
-            row.unexcused_early_leave_count ||
-              worker.unexcusedEarlyLeaveCount ||
-              0
-          ),
+              : Number(row.rating_average)
+            : null,
+          ratingCount: canViewWorkerMetrics
+            ? Number(row.rating_count || 0)
+            : null,
+          noShowCount: canViewWorkerMetrics
+            ? Number(row.no_show_count || worker.noShowCount || 0)
+            : null,
+          unexcusedEarlyLeaveCount: canViewWorkerMetrics
+            ? Number(
+                row.unexcused_early_leave_count ||
+                  worker.unexcusedEarlyLeaveCount ||
+                  0
+              )
+            : null,
         },
       });
     } catch (err) {
@@ -6359,6 +6413,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function submitWorkerRating() {
     if (!ratingTarget?.bookingId) return;
+
+    if (!canViewWorkerMetrics) {
+      setError(
+        "Darbuotojų vertinimai prieinami tik Business ir Business Pro planuose."
+      );
+      return;
+    }
 
     const responsibleUserId =
       currentJob?.responsible_user_id || currentJob?.created_by || null;
@@ -6502,12 +6563,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .in("role", ["worker", "admin"])
           .eq("is_active", true)
           .in("id", workerIds),
-        supabase
-          .from("worker_profiles")
-          .select(
-            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, avatar_path, travel_radius_km, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
-          )
-          .in("user_id", workerIds),
+        supabase.rpc("get_employer_worker_profiles", {
+          p_job_id: job.id,
+          p_worker_ids: workerIds,
+        }),
         supabase
           .from("worker_skills")
           .select("worker_id, skill_id")
@@ -6640,7 +6699,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             city: profile.city,
             hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
             yearsExperience: Number(worker.years_experience || 0),
-            attendanceRate: Number(worker.attendance_rate || 0),
+            attendanceRate:
+              worker.attendance_rate === null ||
+              worker.attendance_rate === undefined
+                ? null
+                : Number(worker.attendance_rate),
             completedJobs: Number(worker.completed_jobs || 0),
             shortBio: worker.short_bio || "",
             avatarUrl: workerAvatarUrl(worker.avatar_path),
@@ -7236,7 +7299,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const currentJobResponsibleUserId =
     currentJob?.responsible_user_id || currentJob?.created_by || null;
 
+  const canViewWorkerMetrics = Boolean(
+    planSummary?.can_advanced_analytics
+  );
+
   const canRateCurrentJob =
+    canViewWorkerMetrics &&
     Boolean(currentJobResponsibleUserId) &&
     currentJobResponsibleUserId === user.id;
 
@@ -7422,6 +7490,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
+        .ed-worker.ed-worker-basic{grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) minmax(210px,1.35fr)}
         .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
@@ -8166,23 +8235,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                         </div>
 
-                        <div className="ed-member-metrics">
-                          <div className="ed-member-metric">
-                            <span>Atvykimo patikimumas</span>
-                            <b>{Math.round(worker.attendanceRate)}%</b>
+                        {canViewWorkerMetrics && (
+                          <div className="ed-member-metrics">
+                            <div className="ed-member-metric">
+                              <span>Atvykimo patikimumas</span>
+                              <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                            </div>
+
+                            <div className="ed-member-metric">
+                              <span>Darbdavių įvertinimas</span>
+                              <b>
+                                {worker.ratingAverage === null
+                                  ? "—"
+                                  : `${worker.ratingAverage.toFixed(1)} / 10`}
+                              </b>
+                            </div>
                           </div>
-
-                          <div className="ed-member-metric">
-                            <span>Darbdavių įvertinimas</span>
-                            <b>
-                              {worker.ratingAverage === null
-                                ? "—"
-                                : `${worker.ratingAverage.toFixed(1)} / 10`}
-                            </b>
-                          </div>
-
-
-                        </div>
+                        )}
 
                         <div className="ed-attendance-actions">
                           <button
@@ -8267,7 +8336,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </button>
                             )}
 
-                          {attendance.finalized_at &&
+                          {canViewWorkerMetrics &&
+                            attendance.finalized_at &&
                             attendance.final_outcome !== "no_show" &&
                             !worker.rating &&
                             !canRateCurrentJob && (
@@ -8277,7 +8347,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </span>
                             )}
 
-                          {worker.rating && (
+                          {canViewWorkerMetrics && worker.rating && (
                             <span className="ed-attendance-badge green">
                               Įvertinta {worker.rating.score}/10
                             </span>
@@ -8321,7 +8391,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   .map((worker) => {
                   const invited = invitedIds.includes(worker.id);
                   return (
-                    <div className="ed-worker" key={worker.id}>
+                    <div
+                      className={
+                        canViewWorkerMetrics
+                          ? "ed-worker"
+                          : "ed-worker ed-worker-basic"
+                      }
+                      key={worker.id}
+                    >
                       <div className="ed-worker-id">
                         <div className="ed-avatar">
                           {worker.avatarUrl ? (
@@ -8356,10 +8433,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         ))}
                       </div>
 
-                      <div className="ed-metric">
-                        <b>{Math.round(worker.attendanceRate)}%</b>
-                        <span>atvykimas</span>
-                      </div>
+                      {canViewWorkerMetrics && (
+                        <div className="ed-metric">
+                          <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                          <span>atvykimas</span>
+                        </div>
+                      )}
 
                       <div className="ed-worker-actions">
                         <button
@@ -8814,7 +8893,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
-      {ratingTarget && (
+      {ratingTarget && canViewWorkerMetrics && (
         <div
           className="rs-modal-overlay"
           onMouseDown={(e) => {
@@ -9749,6 +9828,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <WorkerProfileModal
         worker={selectedWorker}
         jobId={currentJob?.id || null}
+        canViewWorkerMetrics={canViewWorkerMetrics}
         onClose={() => setSelectedWorker(null)}
       />
 
@@ -13354,8 +13434,7 @@ function App() {
                 <ul>
                   <li>Iki 5 darbo pasiūlymų / mėn.</li>
                   <li>Darbuotojų paieška ir kvietimai</li>
-                  <li>Darbo pokalbiai</li>
-                  <li>Patikimumas ir darbuotojų įvertinimai</li>
+                  <li>1 įmonės vartotojas</li>
                 </ul>
                 <button className="btn ghost full" onClick={openEmployerSignup}>
                   Pradėti nemokamai
@@ -13370,10 +13449,12 @@ function App() {
                 </div>
                 <p>Įmonėms, kurios darbuotojų ieško reguliariai.</p>
                 <ul>
-                  <li>Neriboti darbo pasiūlymai</li>
                   <li>Visa Basic funkcionalumo apimtis</li>
+                  <li>Iki 25 darbo pasiūlymų / mėn.</li>
+                  <li>Darbuotojų patikimumas ir įvertinimai</li>
+                  <li>Privatūs ir bendri darbo pokalbiai</li>
                   <li>Išplėstinė įmonės statistika</li>
-                  <li>Didesnė darbų istorijos apimtis</li>
+                  <li>1 įmonės vartotojas</li>
                 </ul>
                 <button
                   className="btn primary full"
@@ -13391,10 +13472,12 @@ function App() {
                 <p>Augančiai įmonei, kurioje darbuotojus samdo keli žmonės.</p>
                 <ul>
                   <li>Visa Business funkcionalumo apimtis</li>
-                  <li>Iki 5 įmonės komandos paskyrų</li>
-                  <li>Vadovo ir vadybininko rolės</li>
+                  <li>Neribotas darbo pasiūlymų skaičius</li>
+                  <li>Iki 5 atskirų įmonės vartotojų</li>
+                  <li>Savininko, vadovo ir vadybininko rolės</li>
                   <li>Mano darbai / visi įmonės darbai</li>
-                  <li>Atsakingo žmogaus priskyrimas darbui</li>
+                  <li>Atsakingo žmogaus priskyrimas ir darbų perskirstymas</li>
+                  <li>Vidinis įmonės komandos pokalbis</li>
                 </ul>
                 <button
                   className="btn ghost full"
