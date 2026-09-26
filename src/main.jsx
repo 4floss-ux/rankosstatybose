@@ -1754,6 +1754,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [groupConversation, setGroupConversation] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [needsAvailabilityConfirm, setNeedsAvailabilityConfirm] = useState(false);
+  const [confirmingAvailability, setConfirmingAvailability] = useState(false);
   const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
   const [workerAttendanceMode, setWorkerAttendanceMode] = useState(null);
   const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
@@ -1808,11 +1810,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return () => clearInterval(timer);
   }, [user.id]);
 
+  useEffect(() => {
+    const timer = window.setInterval(async () => {
+      try {
+        await supabase.rpc("worker_touch_activity");
+      } catch {
+        // Aktyvumo atnaujinimas neturi trukdyti naudotis paskyra.
+      }
+    }, 30 * 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [user.id]);
+
   async function loadDashboard() {
     setLoading(true);
     setError("");
 
     try {
+      const activityResult = await supabase.rpc("worker_touch_activity");
+      if (activityResult.error) throw activityResult.error;
+
       const start = days[0].iso;
       const end = days[days.length - 1].iso;
 
@@ -1837,7 +1854,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
           )
           .eq("user_id", user.id)
           .single(),
@@ -1872,6 +1889,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const profile = profileResult.data;
       const privateData = privateResult.data;
       const worker = workerResult.data;
+
+      const availabilityConfirmedAt = worker?.availability_confirmed_at
+        ? new Date(worker.availability_confirmed_at).getTime()
+        : 0;
+      const activityWindowMs = 72 * 60 * 60 * 1000;
+
+      setNeedsAvailabilityConfirm(
+        !availabilityConfirmedAt ||
+          Date.now() - availabilityConfirmedAt > activityWindowMs
+      );
 
       setForm({
         displayName: profile?.display_name || "",
@@ -2400,6 +2427,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function confirmCurrentAvailability() {
+    setConfirmingAvailability(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("worker_confirm_availability");
+      if (result.error) throw result.error;
+
+      setNeedsAvailabilityConfirm(false);
+      setNotice(
+        "Grafikas patvirtintas. Darbdaviai vėl gali matyti jūsų profilį paieškoje."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti grafiko.");
+    } finally {
+      setConfirmingAvailability(false);
+    }
+  }
+
   async function saveEverything() {
     setSaving(true);
     setNotice("");
@@ -2484,6 +2531,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (availabilityResult.error) throw availabilityResult.error;
 
+      const confirmResult = await supabase.rpc("worker_confirm_availability");
+      if (confirmResult.error) throw confirmResult.error;
+
+      setNeedsAvailabilityConfirm(false);
       setOriginalSkills([...selectedSkills]);
       setForm((current) => ({ ...current, city: canonicalCity }));
       setShowProfileEditor(false);
@@ -2582,6 +2633,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
         .wd-save:disabled{opacity:.6;cursor:wait}
         .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:18px}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a}
+        .wd-availability-alert{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff8ed;border:1px solid #f1cf9e;border-radius:14px;padding:16px 18px;margin-bottom:20px}
+        .wd-availability-alert b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#8a531d;margin-bottom:4px}
+        .wd-availability-alert span{display:block;color:#6f5a42;font-size:13px;line-height:1.5;max-width:650px}
+        .wd-availability-alert-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
         .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}
         .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
         @keyframes wdspin{to{transform:rotate(360deg)}}
@@ -2595,6 +2650,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
           .wd-workday{grid-template-columns:1fr}.wd-workday-actions{justify-content:flex-start}
           .wd-heading-actions{justify-items:start}
+          .wd-availability-alert{align-items:stretch;flex-direction:column}
+          .wd-availability-alert-actions{justify-content:flex-start}
           .wd-bottom{bottom:10px}
           .wd-save{width:100%}
         }
@@ -2871,6 +2928,41 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
           </section>
+        )}
+
+        {needsAvailabilityConfirm && (
+          <div className="wd-availability-alert">
+            <div>
+              <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
+              <span>
+                Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų
+                darbuotojų paieškoje. Tai padeda rodyti tik realiai aktyvius
+                žmones.
+              </span>
+            </div>
+
+            <div className="wd-availability-alert-actions">
+              <button
+                className="wd-profile-editor-cancel"
+                type="button"
+                disabled={confirmingAvailability}
+                onClick={() => setShowProfileEditor(true)}
+              >
+                Keisti grafiką
+              </button>
+
+              <button
+                className="wd-save"
+                type="button"
+                disabled={confirmingAvailability}
+                onClick={confirmCurrentAvailability}
+              >
+                {confirmingAvailability
+                  ? "Patvirtinama..."
+                  : "Patvirtinti dabartinį grafiką"}
+              </button>
+            </div>
+          </div>
         )}
 
         <section>
@@ -3855,6 +3947,19 @@ function employerTomorrowISO() {
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + 1);
   return localDateISO(date);
+}
+
+function workerRecentActivityLabel(value) {
+  if (!value) return "";
+
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return "";
+
+  const hours = Math.max(0, (Date.now() - timestamp) / (60 * 60 * 1000));
+
+  if (hours < 24) return "Aktyvus šiandien";
+  if (hours < 48) return "Aktyvus vakar";
+  return "Aktyvus per 3 d.";
 }
 
 function shortWorkerName(name) {
@@ -4876,7 +4981,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
+            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
           )
           .in("user_id", workerIds),
         supabase
@@ -4982,6 +5087,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             return null;
           }
 
+          const activityCutoff = Date.now() - 72 * 60 * 60 * 1000;
+          const lastActiveAt = worker.last_active_at
+            ? new Date(worker.last_active_at).getTime()
+            : 0;
+          const availabilityConfirmedAt = worker.availability_confirmed_at
+            ? new Date(worker.availability_confirmed_at).getTime()
+            : 0;
+
+          if (
+            !lastActiveAt ||
+            !availabilityConfirmedAt ||
+            lastActiveAt < activityCutoff ||
+            availabilityConfirmedAt < activityCutoff
+          ) {
+            return null;
+          }
+
           const skillNames = (skillIdsByWorker.get(workerId) || [])
             .map((id) => skillNameMap.get(id))
             .filter(Boolean)
@@ -5003,6 +5125,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 ? null
                 : Math.round(distanceKm * 10) / 10,
             noShowCount: Number(worker.no_show_count || 0),
+            lastActiveAt: worker.last_active_at,
+            activityLabel: workerRecentActivityLabel(worker.last_active_at),
             ratingAverage:
               worker.rating_average === null
                 ? null
@@ -6294,6 +6418,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-results-head">
               <div>
                 <h2>Kiti laisvi darbuotojai</h2>
+                <p style={{ marginBottom: 4 }}>
+                  Rodomi tik per paskutines 72 val. aktyvūs ir savo grafiką
+                  patvirtinę darbuotojai.
+                </p>
                 <p>
                   {currentJob.city} · {currentJob.work_date} ·{" "}
                   {currentJob.start_time?.slice(0, 5)}
@@ -6351,6 +6479,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               ? ` · ${worker.distanceKm} km nuo darbo`
                               : ""}
                           </span>
+                          {worker.activityLabel && (
+                            <div className="ed-worker-status">
+                              <span className="ed-attendance-badge green">
+                                {worker.activityLabel}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
