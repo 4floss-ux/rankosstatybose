@@ -4966,6 +4966,28 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 }
 
 
+const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
+
+function employerPlanAnnualPrice(plan) {
+  return Math.round(Number(plan?.price || 0) * 12 * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
+}
+
+function employerPlanAnnualSavings(plan) {
+  return Math.round(Number(plan?.price || 0) * 12 * EMPLOYER_ANNUAL_DISCOUNT * 100) / 100;
+}
+
+function employerPlanAnnualMonthlyEquivalent(plan) {
+  return Math.round(Number(plan?.price || 0) * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
+}
+
+function formatPlanPrice(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("lt-LT", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 const EMPLOYER_PLANS = [
   {
     key: "basic",
@@ -5096,6 +5118,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planSummary, setPlanSummary] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
+  const [planBillingCycle, setPlanBillingCycle] = useState("monthly");
   const [showTeam, setShowTeam] = useState(false);
   const [showTeamChat, setShowTeamChat] = useState(false);
   const [teamChatUnread, setTeamChatUnread] = useState(0);
@@ -5628,9 +5651,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (result.error) throw result.error;
 
+      const billingInterval =
+        planKey === "basic" ? "monthly" : planBillingCycle;
+
+      const billingResult = await supabase.rpc(
+        "set_company_billing_preference",
+        {
+          p_company_id: company.id,
+          p_billing_interval: billingInterval,
+        }
+      );
+
+      if (billingResult.error) throw billingResult.error;
+
+      setCompany((current) =>
+        current
+          ? { ...current, billing_interval: billingInterval }
+          : current
+      );
+
       await loadCompanyPlan(company.id);
       setNotice(
-        `${employerPlanName(planKey)} planas aktyvuotas testavimui.`
+        `${employerPlanName(planKey)} planas aktyvuotas testavimui · ${
+          billingInterval === "yearly" ? "metinis" : "mėnesinis"
+        } atsiskaitymas.`
       );
       setShowPlans(false);
     } catch (err) {
@@ -5640,15 +5684,56 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  function requestPaidPlan(planKey) {
+  async function requestPaidPlan(planKey) {
     const plan = EMPLOYER_PLANS.find((item) => item.key === planKey);
-    if (!plan) return;
+    if (!plan || !company?.id) return;
 
-    setNotice(
-      `${plan.name} (${plan.price} € / mėn.) paruoštas prenumeratai. ` +
-        "Kortelės apmokėjimo tiekėją prijungsime kaip atskirą paskutinį žingsnį."
-    );
-    setShowPlans(false);
+    if (companyMemberRole !== "owner") {
+      setError("Planą ir atsiskaitymo laikotarpį gali keisti tik įmonės savininkas.");
+      return;
+    }
+
+    const billingInterval =
+      plan.price === 0 ? "monthly" : planBillingCycle;
+
+    setPlanActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const billingResult = await supabase.rpc(
+        "set_company_billing_preference",
+        {
+          p_company_id: company.id,
+          p_billing_interval: billingInterval,
+        }
+      );
+
+      if (billingResult.error) throw billingResult.error;
+
+      setCompany((current) =>
+        current
+          ? { ...current, billing_interval: billingInterval }
+          : current
+      );
+
+      const priceText =
+        plan.price === 0
+          ? "0 €"
+          : billingInterval === "yearly"
+          ? `${formatPlanPrice(employerPlanAnnualPrice(plan))} € / metus`
+          : `${formatPlanPrice(plan.price)} € / mėn.`;
+
+      setNotice(
+        `${plan.name} · ${priceText} pasirinkimas paruoštas prenumeratai. ` +
+          "Kortelės apmokėjimo tiekėją prijungsime kaip atskirą paskutinį žingsnį."
+      );
+      setShowPlans(false);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti atsiskaitymo pasirinkimo.");
+    } finally {
+      setPlanActionBusy(false);
+    }
   }
 
   async function loadEmployerDashboard() {
@@ -5683,7 +5768,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           supabase
             .from("companies")
             .select(
-              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count, billing_interval"
             )
             .eq("id", companyId)
             .single(),
@@ -5720,6 +5805,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (failed?.error) throw failed.error;
 
       setCompany(companyResult.data);
+      setPlanBillingCycle(
+        companyResult.data?.billing_interval === "yearly"
+          ? "yearly"
+          : "monthly"
+      );
       setCompanyForm({
         name: companyResult.data?.name || "",
         companyCode: companyResult.data?.company_code || "",
@@ -7378,10 +7468,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
         .ed-reliability-copy{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start}
         .ed-reliability-title{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:8px;
+          display:block;
           width:100%;
           color:#6c7a88;
           font-family:Inter,sans-serif;
@@ -7390,21 +7477,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           margin-bottom:9px;
         }
         .ed-info-btn{
-          border:1px solid #d5dfe6;
-          border-radius:999px;
-          background:#fff;
-          color:#526374;
+          border:0;
+          border-bottom:1px solid rgba(184,95,14,.28);
+          background:transparent;
+          color:#b85f0e;
           font-family:Inter,sans-serif;
           font-size:10px;
           font-weight:800;
-          line-height:1;
+          line-height:1.25;
           cursor:pointer;
-          padding:5px 8px;
-          margin:0;
+          padding:0 0 2px;
+          margin-top:9px;
           box-sizing:border-box;
-          white-space:nowrap;
         }
-        .ed-info-btn:hover{background:#f3f6f8;border-color:#b8c6d0}
+        .ed-info-btn:hover{color:#8f4708;border-bottom-color:#8f4708}
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
@@ -7431,6 +7517,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
         .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
         .ed-plan-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:26px}.ed-plan-head p{margin:0;color:#6c7a88}
+        .ed-billing-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:12px 14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
+        .ed-billing-row>span{font-size:12px;color:#526374;font-weight:800}
+        .ed-billing-toggle{display:flex;align-items:center;gap:4px;padding:4px;background:#eaf0f4;border-radius:10px}
+        .ed-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 12px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+        .ed-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-billing-discount{display:inline-flex;align-items:center;border-radius:999px;background:#eaf8f1;color:#167a54;padding:6px 9px;font-size:10px;font-weight:900}
         .ed-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
         .ed-plan-card{border:1px solid #e1e8ed;border-radius:16px;padding:20px;display:flex;flex-direction:column;min-height:390px;background:#fff}
         .ed-plan-card.current{border-color:#f08a28;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
@@ -7438,6 +7530,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-plan-card .eyebrow{margin-bottom:6px}.ed-plan-card.pro .eyebrow{color:#f5a04c}
         .ed-plan-card h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0}
         .ed-plan-price{font-family:Manrope,Inter,sans-serif;font-size:31px;font-weight:900;margin:12px 0 2px}.ed-plan-price small{font:600 12px Inter,sans-serif;color:#7a8996}.ed-plan-card.pro .ed-plan-price small{color:#b7c2cc}
+        .ed-plan-yearly{min-height:30px;margin:5px 0 2px;color:#167a54;font-size:11px;font-weight:800;line-height:1.4}.ed-plan-card.pro .ed-plan-yearly{color:#65d5aa}
         .ed-plan-desc{font-size:13px;color:#6c7a88;min-height:40px;line-height:1.5}.ed-plan-card.pro .ed-plan-desc{color:#c7d0d8}
         .ed-plan-features{display:grid;gap:9px;margin:17px 0 20px;padding:0;list-style:none;flex:1}.ed-plan-features li{font-size:13px;line-height:1.4}.ed-plan-features li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:7px}.ed-plan-card.pro .ed-plan-features li:before{color:#65d5aa}
         .ed-plan-current{display:inline-flex;width:max-content;background:#fff3e7;color:#b85f0e;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:9px}
@@ -7817,19 +7910,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-reliability-copy">
                 <div className="ed-reliability-title">
                   <span>Patikimumas</span>
-                  <button
-                    type="button"
-                    className="ed-info-btn"
-                    aria-label="Kaip veikia darbdavio patikimumas"
-                    onClick={() => setShowReliabilityInfo(true)}
-                  >
-                    Paaiškinimas
-                  </button>
                 </div>
 
                 <b className="ed-reliability-label">
                   {Math.round(employerStats.reliabilityRate)} / 100
                 </b>
+
+                <button
+                  type="button"
+                  className="ed-info-btn"
+                  aria-label="Kaip skaičiuojamas darbdavio patikimumas"
+                  onClick={() => setShowReliabilityInfo(true)}
+                >
+                  Kaip skaičiuojama?
+                </button>
               </div>
             </div>
           </div>
@@ -9366,10 +9460,50 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <div className="ed-billing-row">
+              <span>Atsiskaitymo laikotarpis</span>
+
+              <div className="ed-billing-toggle">
+                <button
+                  type="button"
+                  className={planBillingCycle === "monthly" ? "active" : ""}
+                  onClick={() => setPlanBillingCycle("monthly")}
+                >
+                  Kas mėnesį
+                </button>
+                <button
+                  type="button"
+                  className={planBillingCycle === "yearly" ? "active" : ""}
+                  onClick={() => setPlanBillingCycle("yearly")}
+                >
+                  Už metus
+                </button>
+              </div>
+
+              <span className="ed-billing-discount">
+                Metams · 20% pigiau
+              </span>
+            </div>
+
             <div className="ed-plan-grid">
               {EMPLOYER_PLANS.map((plan) => {
-                const current = planSummary?.plan_key === plan.key;
+                const samePlan = planSummary?.plan_key === plan.key;
+                const selectedBilling =
+                  plan.price === 0 ? "monthly" : planBillingCycle;
+                const currentBilling =
+                  company?.billing_interval === "yearly"
+                    ? "yearly"
+                    : "monthly";
+                const current =
+                  samePlan &&
+                  (plan.price === 0 || currentBilling === selectedBilling);
                 const isPro = plan.key === "business_pro";
+                const shownPrice =
+                  plan.price === 0
+                    ? 0
+                    : planBillingCycle === "yearly"
+                    ? employerPlanAnnualPrice(plan)
+                    : plan.price;
 
                 return (
                   <div
@@ -9387,9 +9521,29 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </div>
                     <h3>{plan.name}</h3>
                     <div className="ed-plan-price">
-                      {plan.price} €{" "}
-                      <small>{plan.price ? "/ mėn." : "/ mėn."}</small>
+                      {formatPlanPrice(shownPrice)} €{" "}
+                      <small>
+                        {plan.price === 0
+                          ? "/ mėn."
+                          : planBillingCycle === "yearly"
+                          ? "/ metus"
+                          : "/ mėn."}
+                      </small>
                     </div>
+
+                    {plan.price > 0 && planBillingCycle === "yearly" ? (
+                      <div className="ed-plan-yearly">
+                        {formatPlanPrice(
+                          employerPlanAnnualMonthlyEquivalent(plan)
+                        )}{" "}
+                        € / mėn. · sutaupote{" "}
+                        {formatPlanPrice(employerPlanAnnualSavings(plan))} € per
+                        metus
+                      </div>
+                    ) : (
+                      <div className="ed-plan-yearly" />
+                    )}
+
                     <div className="ed-plan-desc">{plan.description}</div>
 
                     {current && (
@@ -9431,6 +9585,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       >
                         {plan.price === 0
                           ? "Pasirinkti Basic"
+                          : samePlan
+                          ? planBillingCycle === "yearly"
+                            ? "Keisti į metinį atsiskaitymą"
+                            : "Keisti į mėnesinį atsiskaitymą"
                           : `Pasirinkti ${plan.name}`}
                       </button>
                     )}
@@ -9440,9 +9598,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="ed-plan-footnote">
-              Kainos nurodytos už vieną mėnesį. Mokėjimų sluoksniui DB jau
-              paruoštos prenumeratos būsenos, laikotarpiai ir išorinio
-              mokėjimų tiekėjo identifikatoriai. Kortelės apmokėjimo tiekėjas
+              Business ir Business Pro galima apmokėti kas mėnesį arba iš karto
+              už 12 mėnesių. Metiniam atsiskaitymui taikoma 20% nuolaida.
+              Pasirinktas atsiskaitymo laikotarpis jau saugomas įmonės
+              prenumeratos nustatymuose; kortelės apmokėjimo tiekėjas
               prijungiamas atskirai prieš viešą mokamų planų paleidimą.
             </div>
           </div>
@@ -12961,6 +13120,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
+  const [pricingBillingCycle, setPricingBillingCycle] = useState("monthly");
   const [adminMode, setAdminMode] = useState("admin");
   const [teamInviteToken, setTeamInviteToken] = useState(() =>
     new URLSearchParams(window.location.search).get("team_invite")
@@ -13416,6 +13576,15 @@ function App() {
         </section>
 
         <section id="kainodara" className="section pricing-section">
+          <style>{`
+            .public-billing-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:4px 0 24px}
+            .public-billing-toggle{display:flex;gap:4px;padding:4px;background:#eaf0f4;border-radius:11px}
+            .public-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+            .public-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+            .public-billing-save{display:inline-flex;border-radius:999px;background:#eaf8f1;color:#167a54;padding:7px 10px;font-size:11px;font-weight:900}
+            .public-yearly-detail{margin-top:5px;min-height:32px;color:#167a54;font-size:12px;font-weight:800;line-height:1.35}
+            .pricing .featured .public-yearly-detail{color:#167a54}
+          `}</style>
           <div className="container">
             <div className="section-head">
               <div>
@@ -13424,12 +13593,40 @@ function App() {
               </div>
             </div>
 
+            <div className="public-billing-row">
+              <div className="public-billing-toggle">
+                <button
+                  type="button"
+                  className={
+                    pricingBillingCycle === "monthly" ? "active" : ""
+                  }
+                  onClick={() => setPricingBillingCycle("monthly")}
+                >
+                  Kas mėnesį
+                </button>
+                <button
+                  type="button"
+                  className={
+                    pricingBillingCycle === "yearly" ? "active" : ""
+                  }
+                  onClick={() => setPricingBillingCycle("yearly")}
+                >
+                  Už metus
+                </button>
+              </div>
+
+              <span className="public-billing-save">
+                Mokant už metus · −20%
+              </span>
+            </div>
+
             <div className="pricing">
               <article>
                 <h3>Basic</h3>
                 <div className="price">
                   0 €<span>/mėn.</span>
                 </div>
+                <div className="public-yearly-detail" />
                 <p>Išbandykite realų darbuotojų paieškos procesą be rizikos.</p>
                 <ul>
                   <li>Iki 5 darbo pasiūlymų / mėn.</li>
@@ -13445,7 +13642,29 @@ function App() {
                 <div className="popular">POPULIARIAUSIAS</div>
                 <h3>Business</h3>
                 <div className="price">
-                  29 €<span>/mėn.</span>
+                  {pricingBillingCycle === "yearly"
+                    ? formatPlanPrice(
+                        employerPlanAnnualPrice(
+                          EMPLOYER_PLANS.find((item) => item.key === "business")
+                        )
+                      )
+                    : "29"}{" "}
+                  €<span>
+                    {pricingBillingCycle === "yearly" ? "/metus" : "/mėn."}
+                  </span>
+                </div>
+                <div className="public-yearly-detail">
+                  {pricingBillingCycle === "yearly"
+                    ? `${formatPlanPrice(
+                        employerPlanAnnualMonthlyEquivalent(
+                          EMPLOYER_PLANS.find((item) => item.key === "business")
+                        )
+                      )} € / mėn. · sutaupote ${formatPlanPrice(
+                        employerPlanAnnualSavings(
+                          EMPLOYER_PLANS.find((item) => item.key === "business")
+                        )
+                      )} €`
+                    : ""}
                 </div>
                 <p>Įmonėms, kurios darbuotojų ieško reguliariai.</p>
                 <ul>
@@ -13467,7 +13686,35 @@ function App() {
               <article>
                 <h3>Business Pro</h3>
                 <div className="price">
-                  59 €<span>/mėn.</span>
+                  {pricingBillingCycle === "yearly"
+                    ? formatPlanPrice(
+                        employerPlanAnnualPrice(
+                          EMPLOYER_PLANS.find(
+                            (item) => item.key === "business_pro"
+                          )
+                        )
+                      )
+                    : "59"}{" "}
+                  €<span>
+                    {pricingBillingCycle === "yearly" ? "/metus" : "/mėn."}
+                  </span>
+                </div>
+                <div className="public-yearly-detail">
+                  {pricingBillingCycle === "yearly"
+                    ? `${formatPlanPrice(
+                        employerPlanAnnualMonthlyEquivalent(
+                          EMPLOYER_PLANS.find(
+                            (item) => item.key === "business_pro"
+                          )
+                        )
+                      )} € / mėn. · sutaupote ${formatPlanPrice(
+                        employerPlanAnnualSavings(
+                          EMPLOYER_PLANS.find(
+                            (item) => item.key === "business_pro"
+                          )
+                        )
+                      )} €`
+                    : ""}
                 </div>
                 <p>Augančiai įmonei, kurioje darbuotojus samdo keli žmonės.</p>
                 <ul>
