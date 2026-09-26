@@ -1785,6 +1785,185 @@ function GroupConversationModal({
   );
 }
 
+
+function CompanyTeamChatModal({
+  open,
+  onClose,
+  companyId,
+  companyName,
+  user,
+}) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open || !companyId) return;
+
+    loadMessages();
+    const timer = setInterval(loadMessages, 3000);
+    return () => clearInterval(timer);
+  }, [open, companyId]);
+
+  async function loadMessages() {
+    if (!messages.length) setLoading(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_company_team_messages", {
+        p_company_id: companyId,
+      });
+
+      if (result.error) throw result.error;
+      setMessages(result.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+
+    const body = textValue.trim();
+    if (!body || sending || !companyId) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("send_company_team_message", {
+        p_company_id: companyId,
+        p_body: body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="ctc-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose();
+      }}
+    >
+      <div className="ctc-modal">
+        <style>{`
+          .ctc-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+          .ctc-modal{width:min(700px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
+          .ctc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+          .ctc-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:24px}
+          .ctc-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.45}
+          .ctc-close{width:38px;height:38px;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-size:21px;cursor:pointer;flex:0 0 auto}
+          .ctc-note{background:#edf8f3;color:#167a54;border-radius:11px;padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:12px}
+          .ctc-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:10px}
+          .ctc-messages{display:grid;gap:10px;min-height:260px;max-height:430px;overflow:auto;padding:4px 2px 14px}
+          .ctc-empty{text-align:center;color:#7a8996;padding:52px 14px;font-size:13px}
+          .ctc-message{max-width:82%;padding:10px 12px;border-radius:13px;background:#f2f5f7}
+          .ctc-message.mine{margin-left:auto;background:#fff3e7}
+          .ctc-message b{display:block;font-size:12px;margin-bottom:4px}
+          .ctc-role{font-weight:600;color:#7a8996}
+          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.48}
+          .ctc-message time{display:block;margin-top:5px;color:#8a98a6;font-size:10px}
+          .ctc-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e4ebf0;padding-top:14px}
+          .ctc-form textarea{min-height:50px;max-height:130px;resize:vertical;border:1px solid #dbe4ea;border-radius:11px;padding:11px 12px;font:inherit}
+          .ctc-form button{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}
+          .ctc-form button:disabled{opacity:.55;cursor:not-allowed}
+          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{max-height:calc(100vh - 20px);padding:17px}.ctc-head h2{font-size:21px}.ctc-message{max-width:92%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:42px}}
+        `}</style>
+
+        <div className="ctc-head">
+          <div>
+            <div className="eyebrow">BUSINESS PRO · KOMANDOS POKALBIS</div>
+            <h2>{companyName || "Įmonės komanda"}</h2>
+            <p>
+              Vidinis pokalbis tik jūsų įmonės Savininkui, Vadovams ir
+              Vadybininkams.
+            </p>
+          </div>
+
+          <button
+            className="ctc-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="ctc-note">
+          Čia galite tartis dėl darbų, darbuotojų, pamainų ar atsakomybių
+          neišeidami į Messenger, WhatsApp ar kitą programėlę.
+        </div>
+
+        {error && <div className="ctc-error">{error}</div>}
+
+        <div className="ctc-messages">
+          {loading && !messages.length ? (
+            <div className="ctc-empty">Kraunamas komandos pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={
+                  message.sender_id === user.id
+                    ? "ctc-message mine"
+                    : "ctc-message"
+                }
+                key={message.id}
+              >
+                <b>
+                  {message.sender_label || "Komandos narys"}{" "}
+                  <span className="ctc-role">
+                    · {companyTeamRoleLabel(message.sender_role)}
+                  </span>
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="ctc-empty">
+              Komandos pokalbis dar tuščias. Parašykite pirmą žinutę.
+            </div>
+          )}
+        </div>
+
+        <form className="ctc-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            maxLength={2000}
+            placeholder="Parašykite komandai..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function WorkerProfileModal({ worker, onClose }) {
   const [ratingReviews, setRatingReviews] = useState([]);
   const [ratingReviewsLoading, setRatingReviewsLoading] = useState(false);
@@ -4256,6 +4435,7 @@ const EMPLOYER_PLANS = [
       "„Mano darbai“ ir „Visi įmonės darbai“",
       "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
       "Atskira vadybininko darbų statistika",
+      "Vidinis įmonės komandos pokalbis platformoje",
       "Žinutėse aiškiai rodoma, kuris įmonės žmogus rašo",
     ],
   },
@@ -4337,6 +4517,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
+  const [showTeamChat, setShowTeamChat] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamInvites, setTeamInvites] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
@@ -4573,6 +4754,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setShowTeam(true);
     setLastTeamInviteLink("");
     await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
+  }
+
+  function openCompanyTeamChat() {
+    if (!planSummary?.can_team_chat) {
+      setNotice(
+        "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setShowTeamChat(true);
   }
 
   async function createTeamInvite() {
@@ -6372,6 +6565,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
+        .ed-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+        .ed-team-chat-btn{position:relative}
+        .ed-team-chat-btn.locked{border-style:dashed}
         .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
@@ -6532,7 +6728,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -6729,13 +6925,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </p>
           </div>
 
-          <button
-            className="ed-primary"
-            type="button"
-            onClick={openNewJobForm}
-          >
-            + Sukurti darbo pasiūlymą
-          </button>
+          <div className="ed-heading-actions">
+            <button
+              className={`ed-secondary ed-team-chat-btn ${
+                planSummary?.can_team_chat ? "" : "locked"
+              }`}
+              type="button"
+              onClick={openCompanyTeamChat}
+            >
+              {planSummary?.can_team_chat
+                ? "Komandos pokalbis"
+                : "Komandos pokalbis · Pro"}
+            </button>
+
+            <button
+              className="ed-primary"
+              type="button"
+              onClick={openNewJobForm}
+            >
+              + Sukurti darbo pasiūlymą
+            </button>
+          </div>
         </div>
 
         {planSummary && (
@@ -8804,6 +9014,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
       )}
+
+      <CompanyTeamChatModal
+        open={showTeamChat}
+        onClose={() => setShowTeamChat(false)}
+        companyId={company?.id}
+        companyName={company?.name}
+        user={user}
+      />
 
       <WorkerProfileModal
         worker={selectedWorker}
