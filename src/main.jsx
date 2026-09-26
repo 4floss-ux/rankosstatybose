@@ -4794,8 +4794,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       ] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, display_name, city")
-          .eq("role", "worker")
+          .select("id, display_name, city, role, suspended_until")
+          .in("role", ["worker", "admin"])
           .eq("is_active", true)
           .in("id", workerIds),
         supabase
@@ -4859,6 +4859,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           const worker = workerMap.get(workerId);
           const slot = availabilityMap.get(workerId);
           if (!profile || !worker || !slot) return null;
+
+          if (
+            profile.suspended_until &&
+            new Date(profile.suspended_until) > new Date()
+          ) {
+            return null;
+          }
 
           const workerCityKey = normalizeCityKey(profile.city);
           const workerLocation =
@@ -7164,6 +7171,69 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
 
 
+
+function AdminSetupModal({
+  eyebrow,
+  title,
+  description,
+  error,
+  onClose,
+  children,
+}) {
+  return (
+    <div
+      className="admin-setup-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-setup-card{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:24px;color:#102438}
+        .admin-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+        .admin-setup-head h2{font-family:Manrope,Inter,sans-serif;margin:4px 0 0;font-size:25px}
+        .admin-setup-head p{margin:7px 0 0;color:#6c7a88;line-height:1.5;max-width:620px}
+        .admin-setup-close{border:0;background:#f1f4f6;color:#102438;border-radius:9px;width:38px;height:38px;font:inherit;font-size:20px;cursor:pointer}
+        .admin-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .admin-setup-wide{grid-column:1/-1}
+        .admin-setup-label{display:grid;gap:6px;font-size:13px;font-weight:800;color:#526374}
+        .admin-setup-input{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:11px 12px;font:inherit;color:#102438;background:#fff;outline:none}
+        .admin-setup-input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-setup-textarea{min-height:105px;resize:vertical}
+        .admin-setup-check{display:flex;align-items:center;gap:9px;min-height:44px;color:#102438;font-size:13px;font-weight:800}
+        .admin-setup-error{margin-bottom:14px;border-radius:10px;padding:11px 12px;background:#fff0ec;color:#b64d2a;font-size:13px;font-weight:700}
+        .admin-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+        .admin-setup-cancel,.admin-setup-save{border-radius:10px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer}
+        .admin-setup-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438}
+        .admin-setup-save{border:0;background:#f08a28;color:#fff}
+        .admin-setup-save:disabled,.admin-setup-cancel:disabled{opacity:.55;cursor:wait}
+        @media(max-width:620px){.admin-setup-grid{grid-template-columns:1fr}.admin-setup-wide{grid-column:auto}.admin-setup-card{padding:18px}}
+      `}</style>
+
+      <div className="admin-setup-card">
+        <div className="admin-setup-head">
+          <div>
+            <div className="eyebrow">{eyebrow}</div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+          <button
+            className="admin-setup-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            ×
+          </button>
+        </div>
+
+        {error && <div className="admin-setup-error">{error}</div>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
   const [checking, setChecking] = useState(true);
   const [ready, setReady] = useState(false);
@@ -7284,160 +7354,127 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
   }
 
   return (
-    <div className="wd-page">
-      <header className="wd-topbar">
-        <div className="wd-topbar-inner">
-          <a className="brand" href="#">
-            <span className="logo-mark">⌂</span>
-            <span>
-              rankos<span>statybose</span>.lt
-            </span>
-          </a>
-          <div style={{ display: "flex", gap: 9 }}>
-            <button className="btn ghost" onClick={onAdminReturn}>
-              ← Administravimas
-            </button>
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
+    <AdminSetupModal
+      eyebrow="ADMIN · DARBUOTOJO REŽIMAS"
+      title="Aktyvuoti darbuotojo profilį"
+      description="Administratoriaus rolė išliks. Užpildykite informaciją ir galėsite naudotis sistema taip pat kaip darbuotojas."
+      error={error}
+      onClose={onAdminReturn}
+    >
+      <div className="admin-setup-grid">
+        <label className="admin-setup-label">
+          Vardas
+          <input
+            className="admin-setup-input"
+            value={form.displayName}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, displayName: e.target.value }))
+            }
+          />
+        </label>
 
-      <main className="wd-shell">
-        <section className="wd-card" style={{ maxWidth: 760, margin: "0 auto" }}>
-          <div className="eyebrow">ADMIN · DARBUOTOJO REŽIMAS</div>
-          <h2 style={{ marginTop: 6 }}>Aktyvuoti darbuotojo profilį</h2>
-          <p className="wd-card-sub">
-            Administratoriaus rolė išliks. Šie duomenys leis jums naudotis
-            svetaine ir kaip darbuotojui.
-          </p>
+        <label className="admin-setup-label">
+          Miestas
+          <CityAutocomplete
+            className="admin-setup-input"
+            value={form.city}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, city: value }))
+            }
+          />
+        </label>
 
-          {error && <div className="wd-note err">{error}</div>}
+        <label className="admin-setup-label">
+          Telefonas
+          <input
+            className="admin-setup-input"
+            value={form.phone}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, phone: e.target.value }))
+            }
+            placeholder="+370..."
+          />
+        </label>
 
-          <div className="wd-grid-2">
-            <label className="wd-label">
-              Vardas
-              <input
-                className="wd-input"
-                value={form.displayName}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    displayName: e.target.value,
-                  }))
-                }
-              />
-            </label>
+        <label className="admin-setup-label">
+          Kiek km galite nuvykti?
+          <input
+            className="admin-setup-input"
+            type="number"
+            min="0"
+            max="300"
+            value={form.travelRadius}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, travelRadius: e.target.value }))
+            }
+          />
+        </label>
 
-            <label className="wd-label">
-              Miestas
-              <CityAutocomplete
-                className="wd-input"
-                value={form.city}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, city: value }))
-                }
-              />
-            </label>
+        <label className="admin-setup-label">
+          Patirtis statybose (metais)
+          <input
+            className="admin-setup-input"
+            type="number"
+            min="0"
+            step="0.5"
+            value={form.yearsExperience}
+            onChange={(e) =>
+              setForm((current) => ({
+                ...current,
+                yearsExperience: e.target.value,
+              }))
+            }
+          />
+        </label>
 
-            <label className="wd-label">
-              Telefonas
-              <input
-                className="wd-input"
-                value={form.phone}
-                onChange={(e) =>
-                  setForm((current) => ({ ...current, phone: e.target.value }))
-                }
-                placeholder="+370..."
-              />
-            </label>
+        <label className="admin-setup-check">
+          <input
+            type="checkbox"
+            checked={form.hasDrivingLicenseB}
+            onChange={(e) =>
+              setForm((current) => ({
+                ...current,
+                hasDrivingLicenseB: e.target.checked,
+              }))
+            }
+          />
+          Turiu B kategorijos vairuotojo pažymėjimą
+        </label>
 
-            <label className="wd-label">
-              Kiek km galite nuvykti?
-              <input
-                className="wd-input"
-                type="number"
-                min="0"
-                max="300"
-                value={form.travelRadius}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    travelRadius: e.target.value,
-                  }))
-                }
-              />
-            </label>
+        <label className="admin-setup-label admin-setup-wide">
+          Trumpai apie save
+          <textarea
+            className="admin-setup-input admin-setup-textarea"
+            value={form.shortBio}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, shortBio: e.target.value }))
+            }
+          />
+        </label>
+      </div>
 
-            <label className="wd-label">
-              Patirtis statybose (metais)
-              <input
-                className="wd-input"
-                type="number"
-                min="0"
-                step="0.5"
-                value={form.yearsExperience}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    yearsExperience: e.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label
-              className="wd-label"
-              style={{ alignContent: "end", paddingBottom: 10 }}
-            >
-              <span>
-                <input
-                  type="checkbox"
-                  checked={form.hasDrivingLicenseB}
-                  onChange={(e) =>
-                    setForm((current) => ({
-                      ...current,
-                      hasDrivingLicenseB: e.target.checked,
-                    }))
-                  }
-                />{" "}
-                Turiu B kategorijos vairuotojo pažymėjimą
-              </span>
-            </label>
-          </div>
-
-          <label className="wd-label" style={{ marginTop: 14 }}>
-            Trumpai apie save
-            <textarea
-              className="wd-input"
-              style={{ minHeight: 100, resize: "vertical" }}
-              value={form.shortBio}
-              onChange={(e) =>
-                setForm((current) => ({
-                  ...current,
-                  shortBio: e.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
-            <button
-              className="wd-save"
-              disabled={saving}
-              onClick={activateWorkerMode}
-            >
-              {saving ? "Aktyvuojama..." : "Aktyvuoti darbuotojo režimą"}
-            </button>
-          </div>
-        </section>
-      </main>
-    </div>
+      <div className="admin-setup-actions">
+        <button
+          className="admin-setup-cancel"
+          type="button"
+          disabled={saving}
+          onClick={onAdminReturn}
+        >
+          Atšaukti
+        </button>
+        <button
+          className="admin-setup-save"
+          type="button"
+          disabled={saving}
+          onClick={activateWorkerMode}
+        >
+          {saving ? "Aktyvuojama..." : "Aktyvuoti darbuotojo režimą"}
+        </button>
+      </div>
+    </AdminSetupModal>
   );
-}
 
-function AdminEmployerGateway({ user, onAdminReturn, onLogout }) {
+}function AdminEmployerGateway({ user, onAdminReturn, onLogout }) {
   const [checking, setChecking] = useState(true);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -7553,122 +7590,94 @@ function AdminEmployerGateway({ user, onAdminReturn, onLogout }) {
   }
 
   return (
-    <div className="wd-page">
-      <header className="wd-topbar">
-        <div className="wd-topbar-inner">
-          <a className="brand" href="#">
-            <span className="logo-mark">⌂</span>
-            <span>
-              rankos<span>statybose</span>.lt
-            </span>
-          </a>
-          <div style={{ display: "flex", gap: 9 }}>
-            <button className="btn ghost" onClick={onAdminReturn}>
-              ← Administravimas
-            </button>
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
+    <AdminSetupModal
+      eyebrow="ADMIN · DARBDAVIO REŽIMAS"
+      title="Užregistruoti savo įmonę"
+      description="Administratoriaus rolė išliks. Užpildykite įmonės informaciją ir galėsite kurti darbus kaip įprastas darbdavys."
+      error={error}
+      onClose={onAdminReturn}
+    >
+      <div className="admin-setup-grid">
+        <label className="admin-setup-label">
+          Įmonės pavadinimas
+          <input
+            className="admin-setup-input"
+            value={form.companyName}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, companyName: e.target.value }))
+            }
+            placeholder="UAB ..."
+          />
+        </label>
 
-      <main className="wd-shell">
-        <section className="wd-card" style={{ maxWidth: 760, margin: "0 auto" }}>
-          <div className="eyebrow">ADMIN · DARBDAVIO REŽIMAS</div>
-          <h2 style={{ marginTop: 6 }}>Užregistruoti savo įmonę</h2>
-          <p className="wd-card-sub">
-            Administratoriaus rolė išliks. Įmonė bus naudojama tik jūsų
-            darbdavio režimui ir darbo pasiūlymų testavimui / kūrimui.
-          </p>
+        <label className="admin-setup-label">
+          Įmonės kodas
+          <input
+            className="admin-setup-input"
+            value={form.companyCode}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, companyCode: e.target.value }))
+            }
+          />
+        </label>
 
-          {error && <div className="wd-note err">{error}</div>}
+        <label className="admin-setup-label">
+          Miestas
+          <CityAutocomplete
+            className="admin-setup-input"
+            value={form.city}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, city: value }))
+            }
+          />
+        </label>
 
-          <div className="wd-grid-2">
-            <label className="wd-label">
-              Įmonės pavadinimas
-              <input
-                className="wd-input"
-                value={form.companyName}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    companyName: e.target.value,
-                  }))
-                }
-                placeholder="UAB ..."
-              />
-            </label>
+        <label className="admin-setup-label">
+          Telefonas
+          <input
+            className="admin-setup-input"
+            value={form.phone}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, phone: e.target.value }))
+            }
+            placeholder="+370..."
+          />
+        </label>
 
-            <label className="wd-label">
-              Įmonės kodas
-              <input
-                className="wd-input"
-                value={form.companyCode}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    companyCode: e.target.value,
-                  }))
-                }
-              />
-            </label>
+        <label className="admin-setup-label admin-setup-wide">
+          Trumpai apie įmonę
+          <textarea
+            className="admin-setup-input admin-setup-textarea"
+            value={form.description}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, description: e.target.value }))
+            }
+          />
+        </label>
+      </div>
 
-            <label className="wd-label">
-              Miestas
-              <CityAutocomplete
-                className="wd-input"
-                value={form.city}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, city: value }))
-                }
-              />
-            </label>
-
-            <label className="wd-label">
-              Telefonas
-              <input
-                className="wd-input"
-                value={form.phone}
-                onChange={(e) =>
-                  setForm((current) => ({ ...current, phone: e.target.value }))
-                }
-                placeholder="+370..."
-              />
-            </label>
-          </div>
-
-          <label className="wd-label" style={{ marginTop: 14 }}>
-            Trumpai apie įmonę
-            <textarea
-              className="wd-input"
-              style={{ minHeight: 110, resize: "vertical" }}
-              value={form.description}
-              onChange={(e) =>
-                setForm((current) => ({
-                  ...current,
-                  description: e.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
-            <button
-              className="wd-save"
-              disabled={saving}
-              onClick={activateEmployerMode}
-            >
-              {saving ? "Kuriama..." : "Aktyvuoti darbdavio režimą"}
-            </button>
-          </div>
-        </section>
-      </main>
-    </div>
+      <div className="admin-setup-actions">
+        <button
+          className="admin-setup-cancel"
+          type="button"
+          disabled={saving}
+          onClick={onAdminReturn}
+        >
+          Atšaukti
+        </button>
+        <button
+          className="admin-setup-save"
+          type="button"
+          disabled={saving}
+          onClick={activateEmployerMode}
+        >
+          {saving ? "Kuriama..." : "Aktyvuoti darbdavio režimą"}
+        </button>
+      </div>
+    </AdminSetupModal>
   );
-}
 
-function AdminDashboard({
+}function AdminDashboard({
   user,
   onLogout,
   onOpenWorker,
@@ -7684,6 +7693,12 @@ function AdminDashboard({
   const [jobs, setJobs] = useState([]);
   const [ratings, setRatings] = useState([]);
   const [files, setFiles] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [actionDialog, setActionDialog] = useState(null);
+  const [actionDays, setActionDays] = useState(7);
+  const [actionReason, setActionReason] = useState("");
+  const [actionConfirm, setActionConfirm] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resolvingId, setResolvingId] = useState(null);
@@ -7700,6 +7715,7 @@ function AdminDashboard({
     ["jobs", "Darbai"],
     ["ratings", "Atsiliepimai"],
     ["files", "Failai"],
+    ["audit", "Veiksmų istorija"],
   ];
 
   useEffect(() => {
@@ -7737,6 +7753,7 @@ function AdminDashboard({
         jobsResult,
         ratingsResult,
         filesResult,
+        auditResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
         supabase.rpc("get_attendance_disputes"),
@@ -7745,6 +7762,7 @@ function AdminDashboard({
         supabase.rpc("get_admin_jobs"),
         supabase.rpc("get_admin_ratings"),
         supabase.rpc("get_admin_files"),
+        supabase.rpc("get_admin_audit_log"),
       ]);
 
       const failed = [
@@ -7755,6 +7773,7 @@ function AdminDashboard({
         jobsResult,
         ratingsResult,
         filesResult,
+        auditResult,
       ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
@@ -7788,6 +7807,7 @@ function AdminDashboard({
       setJobs(jobsResult.data || []);
       setRatings(ratingsResult.data || []);
       setFiles(fileRows);
+      setAuditLog(auditResult.data || []);
       setError("");
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti administratoriaus duomenų.");
@@ -8033,6 +8053,206 @@ function AdminDashboard({
     }
   }
 
+  function isCurrentlySuspended(record) {
+    if (!record?.suspended_until) return false;
+    const until = new Date(record.suspended_until);
+    return !Number.isNaN(until.getTime()) && until > new Date();
+  }
+
+  function openAccountAction(type, record, role) {
+    const userId = role === "worker" ? record.user_id : record.owner_id;
+    const name =
+      role === "worker"
+        ? record.display_name || record.email || "Darbuotojas"
+        : record.company_name || record.display_name || record.email || "Darbdavys";
+
+    setActionDialog({
+      type,
+      role,
+      userId,
+      companyId: role === "employer" ? record.company_id : null,
+      name,
+      email: record.email || "",
+    });
+    setActionDays(7);
+    setActionReason(
+      type === "unsuspend"
+        ? "Administratoriaus sprendimu suspendavimas panaikintas."
+        : ""
+    );
+    setActionConfirm("");
+  }
+
+  function openJobDelete(job) {
+    setActionDialog({
+      type: "deleteJob",
+      jobId: job.job_id,
+      name: job.title || "Darbas",
+      companyId: job.company_id || null,
+    });
+    setActionDays(7);
+    setActionReason("");
+    setActionConfirm("");
+  }
+
+  async function removeStorageRows(rows) {
+    const unique = new Map();
+
+    for (const row of rows || []) {
+      if (!row?.bucket_id || !row?.storage_path) continue;
+      unique.set(`${row.bucket_id}:${row.storage_path}`, row);
+    }
+
+    const grouped = new Map();
+
+    for (const row of unique.values()) {
+      if (!grouped.has(row.bucket_id)) grouped.set(row.bucket_id, []);
+      grouped.get(row.bucket_id).push(row.storage_path);
+    }
+
+    for (const [bucketId, paths] of grouped.entries()) {
+      if (!paths.length) continue;
+      const result = await supabase.storage.from(bucketId).remove(paths);
+      if (result.error) throw result.error;
+    }
+  }
+
+  async function performAdminAction() {
+    if (!actionDialog) return;
+
+    const destructive =
+      actionDialog.type === "deleteAccount" ||
+      actionDialog.type === "deleteJob";
+
+    if (actionDialog.type === "suspend") {
+      const days = Number(actionDays);
+
+      if (!Number.isInteger(days) || days < 1 || days > 3650) {
+        setError("Suspendavimo trukmė turi būti nuo 1 iki 3650 dienų.");
+        return;
+      }
+    }
+
+    if (
+      actionDialog.type !== "unsuspend" &&
+      actionReason.trim().length < 5
+    ) {
+      setError("Įrašykite aiškią priežastį (bent 5 simboliai).");
+      return;
+    }
+
+    if (destructive && actionConfirm.trim().toUpperCase() !== "ISTRINTI") {
+      setError('Norėdami patvirtinti trynimą, įrašykite „ISTRINTI“.');
+      return;
+    }
+
+    setActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      if (actionDialog.type === "suspend") {
+        const result = await supabase.rpc("admin_suspend_user", {
+          p_user_id: actionDialog.userId,
+          p_days: Number(actionDays),
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        setNotice(
+          `${actionDialog.name} paskyra suspenduota ${Number(actionDays)} d.`
+        );
+      }
+
+      if (actionDialog.type === "unsuspend") {
+        const result = await supabase.rpc("admin_unsuspend_user", {
+          p_user_id: actionDialog.userId,
+          p_reason: actionReason.trim() || null,
+        });
+
+        if (result.error) throw result.error;
+        setNotice(`${actionDialog.name} suspendavimas panaikintas.`);
+      }
+
+      if (actionDialog.type === "deleteAccount") {
+        const targetJobIds = new Set();
+
+        if (actionDialog.role === "employer" && actionDialog.companyId) {
+          for (const job of jobs) {
+            if (job.company_id === actionDialog.companyId) {
+              targetJobIds.add(job.job_id);
+            }
+          }
+        }
+
+        const relatedFiles = files.filter(
+          (file) =>
+            file.owner_user_id === actionDialog.userId ||
+            (file.job_id && targetJobIds.has(file.job_id))
+        );
+
+        const result = await supabase.rpc("admin_delete_user_account", {
+          p_user_id: actionDialog.userId,
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        let cleanupWarning = "";
+        try {
+          await removeStorageRows(relatedFiles);
+        } catch {
+          cleanupWarning =
+            " Paskyra pašalinta, bet dalies failų automatiškai išvalyti nepavyko.";
+        }
+
+        setEditor(null);
+        setNotice(
+          `${actionDialog.name} paskyra visiškai pašalinta.${cleanupWarning}`
+        );
+      }
+
+      if (actionDialog.type === "deleteJob") {
+        const relatedFiles = files.filter(
+          (file) => file.job_id === actionDialog.jobId
+        );
+
+        const result = await supabase.rpc("admin_delete_job", {
+          p_job_id: actionDialog.jobId,
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        let cleanupWarning = "";
+        try {
+          await removeStorageRows(relatedFiles);
+        } catch {
+          cleanupWarning =
+            " Darbas pašalintas, bet dalies susijusių failų automatiškai išvalyti nepavyko.";
+        }
+
+        if (editor?.type === "job" && editor.id === actionDialog.jobId) {
+          setEditor(null);
+        }
+
+        setNotice(
+          `Darbas „${actionDialog.name}“ ištrintas.${cleanupWarning}`
+        );
+      }
+
+      setActionDialog(null);
+      setActionReason("");
+      setActionConfirm("");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Administratoriaus veiksmo atlikti nepavyko.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   function formatAdminDate(value) {
     if (!value) return "—";
 
@@ -8094,7 +8314,9 @@ function AdminDashboard({
         .admin-pill.green{background:#edf8f3;color:#167a54}.admin-pill.orange{background:#fff3e7;color:#b85f0e}.admin-pill.red{background:#fff0ec;color:#b64d2a}.admin-pill.gray{background:#f1f4f6;color:#667788}
         .admin-small-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .admin-small-btn.danger{color:#b64d2a;border-color:#e8bbae}
+        .admin-small-btn.warning{color:#b85f0e;border-color:#efc88e}
         .admin-small-btn:disabled{opacity:.55;cursor:wait}
+        .admin-row-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
         .admin-dispute{border:1px solid #e4ebf0;border-radius:14px;padding:18px}.admin-dispute+.admin-dispute{margin-top:10px}
         .admin-dispute-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
         .admin-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.admin-fact{background:#f6f8fa;border-radius:10px;padding:11px}.admin-fact span{display:block;color:#6c7a88;font-size:10px;margin-bottom:4px}.admin-fact b{font-size:13px}
@@ -8188,6 +8410,10 @@ function AdminDashboard({
                 <b>{Number(stats.totalWorkers || 0)}</b>
               </div>
               <div className="admin-kpi">
+                <span>Suspenduoti darbuotojai</span>
+                <b>{Number(stats.suspendedWorkers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
                 <span>Realūs darbuotojai su patvirtintu darbu</span>
                 <b>{Number(stats.realWorkers || 0)}</b>
               </div>
@@ -8203,6 +8429,10 @@ function AdminDashboard({
               <div className="admin-kpi">
                 <span>Darbdavių paskyros</span>
                 <b>{Number(stats.totalEmployers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Suspenduoti darbdaviai</span>
+                <b>{Number(stats.suspendedEmployers || 0)}</b>
               </div>
               <div className="admin-kpi">
                 <span>Darbdaviai, kurie jau sukūrė darbą</span>
@@ -8436,8 +8666,8 @@ function AdminDashboard({
               <div>
                 <h2>Darbuotojai</h2>
                 <div className="admin-muted">
-                  Paskyros, aktyvumas, patikimumas, įvertinimai ir pagrindinių
-                  profilio duomenų redagavimas.
+                  Profiliai, aktyvumas, suspendavimai, patikimumas ir pagrindinių
+                  duomenų redagavimas.
                 </div>
               </div>
               <b>{workers.length}</b>
@@ -8445,47 +8675,106 @@ function AdminDashboard({
 
             {workers.length ? (
               <div className="admin-list">
-                {workers.map((worker) => (
-                  <div className="admin-row" key={worker.user_id}>
-                    <div className="admin-row-title">
-                      <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
-                      <span>
-                        {worker.email || "—"} · {worker.city || "Miestas nenurodytas"}
-                      </span>
+                {workers.map((worker) => {
+                  const suspended = isCurrentlySuspended(worker);
+                  const isSelf = worker.user_id === user?.id;
+
+                  return (
+                    <div className="admin-row" key={worker.user_id}>
+                      <div className="admin-row-title">
+                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
+                        <span>
+                          {worker.email || "—"} ·{" "}
+                          {worker.city || "Miestas nenurodytas"}
+                        </span>
+                        {suspended && (
+                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
+                            Suspenduota iki {formatAdminDate(worker.suspended_until)}
+                            {worker.suspension_reason
+                              ? ` · ${worker.suspension_reason}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Patikimumas</span>
+                        <b>{Math.round(Number(worker.attendance_rate ?? 100))}%</b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Įvertinimas</span>
+                        <b>
+                          {worker.rating_average === null
+                            ? "—"
+                            : `${Number(worker.rating_average).toFixed(1)} / 10`}
+                        </b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Suspendavimų istorija</span>
+                        <b>{Number(worker.suspension_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-row-actions">
+                        <span
+                          className={`admin-pill ${
+                            suspended
+                              ? "red"
+                              : worker.is_active
+                              ? "green"
+                              : "gray"
+                          }`}
+                        >
+                          {suspended
+                            ? "Suspenduotas"
+                            : worker.is_active
+                            ? "Aktyvus"
+                            : "Išjungtas"}
+                        </span>
+
+                        <button
+                          className="admin-small-btn"
+                          onClick={() => openWorkerEditor(worker)}
+                        >
+                          Redaguoti
+                        </button>
+
+                        {!isSelf && (
+                          <>
+                            <button
+                              className="admin-small-btn"
+                              onClick={() =>
+                                openAccountAction(
+                                  suspended ? "unsuspend" : "suspend",
+                                  worker,
+                                  "worker"
+                                )
+                              }
+                            >
+                              {suspended
+                                ? "Nuimti suspendavimą"
+                                : "Suspenduoti"}
+                            </button>
+
+                            <button
+                              className="admin-small-btn danger"
+                              onClick={() =>
+                                openAccountAction(
+                                  "deleteAccount",
+                                  worker,
+                                  "worker"
+                                )
+                              }
+                            >
+                              Ištrinti paskyrą
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="admin-cell">
-                      <span>Patikimumas</span>
-                      <b>{Math.round(Number(worker.attendance_rate ?? 100))}%</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Įvertinimas</span>
-                      <b>
-                        {worker.rating_average === null
-                          ? "—"
-                          : `${Number(worker.rating_average).toFixed(1)} / 10`}
-                      </b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Realiai dirbta dienų</span>
-                      <b>{Number(worker.worked_days || 0)}</b>
-                    </div>
-                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                      <span
-                        className={`admin-pill ${
-                          worker.is_active ? "green" : "red"
-                        }`}
-                      >
-                        {worker.is_active ? "Aktyvus" : "Išjungtas"}
-                      </span>
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => openWorkerEditor(worker)}
-                      >
-                        Redaguoti
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="admin-empty">Darbuotojų dar nėra.</div>
@@ -8499,8 +8788,8 @@ function AdminDashboard({
               <div>
                 <h2>Darbdaviai ir įmonės</h2>
                 <div className="admin-muted">
-                  Įmonės informacija, paskyros aktyvumas, patikimumas,
-                  atšaukimai ir patvirtinimo būsena.
+                  Įmonės informacija, suspendavimai, patikimumas, atšaukimai ir
+                  patvirtinimo būsena.
                 </div>
               </div>
               <b>{employers.length}</b>
@@ -8508,43 +8797,108 @@ function AdminDashboard({
 
             {employers.length ? (
               <div className="admin-list">
-                {employers.map((employer) => (
-                  <div className="admin-row" key={employer.company_id || employer.owner_id}>
-                    <div className="admin-row-title">
-                      <b>{employer.company_name || "Įmonė"}</b>
-                      <span>
-                        {employer.email || "—"} · {employer.city || "Miestas nenurodytas"}
-                      </span>
+                {employers.map((employer) => {
+                  const suspended = isCurrentlySuspended(employer);
+                  const isSelf = employer.owner_id === user?.id;
+
+                  return (
+                    <div
+                      className="admin-row"
+                      key={employer.company_id || employer.owner_id}
+                    >
+                      <div className="admin-row-title">
+                        <b>{employer.company_name || "Įmonė"}</b>
+                        <span>
+                          {employer.email || "—"} ·{" "}
+                          {employer.city || "Miestas nenurodytas"}
+                        </span>
+                        {suspended && (
+                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
+                            Suspenduota iki{" "}
+                            {formatAdminDate(employer.suspended_until)}
+                            {employer.suspension_reason
+                              ? ` · ${employer.suspension_reason}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Patikimumas</span>
+                        <b>
+                          {Number(employer.reliability_rate ?? 100).toFixed(0)} / 100
+                        </b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Darbų</span>
+                        <b>{Number(employer.jobs_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Suspendavimų istorija</span>
+                        <b>{Number(employer.suspension_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-row-actions">
+                        <span
+                          className={`admin-pill ${
+                            suspended
+                              ? "red"
+                              : employer.is_verified
+                              ? "green"
+                              : "gray"
+                          }`}
+                        >
+                          {suspended
+                            ? "Suspenduotas"
+                            : employer.is_verified
+                            ? "Patvirtinta"
+                            : "Nepatvirtinta"}
+                        </span>
+
+                        <button
+                          className="admin-small-btn"
+                          onClick={() => openEmployerEditor(employer)}
+                        >
+                          Redaguoti
+                        </button>
+
+                        {!isSelf && employer.account_role !== "admin" && (
+                          <>
+                            <button
+                              className="admin-small-btn"
+                              onClick={() =>
+                                openAccountAction(
+                                  suspended ? "unsuspend" : "suspend",
+                                  employer,
+                                  "employer"
+                                )
+                              }
+                            >
+                              {suspended
+                                ? "Nuimti suspendavimą"
+                                : "Suspenduoti"}
+                            </button>
+
+                            <button
+                              className="admin-small-btn danger"
+                              onClick={() =>
+                                openAccountAction(
+                                  "deleteAccount",
+                                  employer,
+                                  "employer"
+                                )
+                              }
+                            >
+                              Ištrinti paskyrą
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="admin-cell">
-                      <span>Patikimumas</span>
-                      <b>{Number(employer.reliability_rate ?? 100).toFixed(0)} / 100</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Darbų</span>
-                      <b>{Number(employer.jobs_count || 0)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Atšaukti su patvirtintais</span>
-                      <b>{Number(employer.cancelled_confirmed_count || 0)}</b>
-                    </div>
-                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                      <span
-                        className={`admin-pill ${
-                          employer.is_verified ? "green" : "gray"
-                        }`}
-                      >
-                        {employer.is_verified ? "Patvirtinta" : "Nepatvirtinta"}
-                      </span>
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => openEmployerEditor(employer)}
-                      >
-                        Redaguoti
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="admin-empty">Darbdavių dar nėra.</div>
@@ -8558,8 +8912,8 @@ function AdminDashboard({
               <div>
                 <h2>Visi darbai</h2>
                 <div className="admin-muted">
-                  Administratoriaus peržiūra ir pagrindinių darbo pasiūlymo
-                  duomenų koregavimas.
+                  Administratorius gali redaguoti visus pagrindinius darbo
+                  duomenis arba visiškai pašalinti netinkamą darbo pasiūlymą.
                 </div>
               </div>
               <b>{jobs.length}</b>
@@ -8575,10 +8929,12 @@ function AdminDashboard({
                         {job.company_name} · {job.city} · {job.work_date}
                       </span>
                     </div>
+
                     <div className="admin-cell">
                       <span>Būsena</span>
                       <b>{job.status}</b>
                     </div>
+
                     <div className="admin-cell">
                       <span>Žmonių</span>
                       <b>
@@ -8586,16 +8942,26 @@ function AdminDashboard({
                         {Number(job.workers_needed || 0)}
                       </b>
                     </div>
+
                     <div className="admin-cell">
                       <span>Atlygis</span>
                       <b>{formatNetPay(job.pay_amount, job.pay_unit)}</b>
                     </div>
-                    <button
-                      className="admin-small-btn"
-                      onClick={() => openJobEditor(job)}
-                    >
-                      Redaguoti
-                    </button>
+
+                    <div className="admin-row-actions">
+                      <button
+                        className="admin-small-btn"
+                        onClick={() => openJobEditor(job)}
+                      >
+                        Redaguoti
+                      </button>
+                      <button
+                        className="admin-small-btn danger"
+                        onClick={() => openJobDelete(job)}
+                      >
+                        Ištrinti darbą
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -8723,6 +9089,72 @@ function AdminDashboard({
           </section>
         )}
       </main>
+
+
+        {activeTab === "audit" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Administratoriaus veiksmų istorija</h2>
+                <div className="admin-muted">
+                  Suspendavimai, suspendavimo panaikinimai ir negrįžtami
+                  trynimai registruojami audito istorijoje.
+                </div>
+              </div>
+              <b>{auditLog.length}</b>
+            </div>
+
+            {auditLog.length ? (
+              <div className="admin-list">
+                {auditLog.map((item) => (
+                  <div className="admin-row" key={item.audit_id}>
+                    <div className="admin-row-title">
+                      <b>
+                        {item.action === "suspend_user"
+                          ? "Paskyra suspenduota"
+                          : item.action === "unsuspend_user"
+                          ? "Suspendavimas panaikintas"
+                          : item.action === "delete_user_account"
+                          ? "Paskyra ištrinta"
+                          : item.action === "delete_job"
+                          ? "Darbas ištrintas"
+                          : item.action}
+                      </b>
+                      <span>
+                        {item.target_email || item.target_user_id || "—"}
+                        {item.target_role ? ` · ${item.target_role}` : ""}
+                      </span>
+                      {item.reason && (
+                        <span style={{ color: "#405264", marginTop: 6 }}>
+                          {item.reason}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Administratorius</span>
+                      <b>{item.admin_name || item.admin_email || "—"}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Data</span>
+                      <b>{formatAdminDate(item.created_at)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Veiksmas</span>
+                      <b>{item.action}</b>
+                    </div>
+
+                    <span className="admin-pill gray">Auditas</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Administratoriaus veiksmų dar nėra.</div>
+            )}
+          </section>
+        )}
 
       {editor && (
         <div
@@ -9108,6 +9540,23 @@ function AdminDashboard({
             )}
 
             <div className="admin-actions">
+              {editor.type === "job" && (
+                <button
+                  className="admin-small-btn danger"
+                  disabled={editorSaving}
+                  onClick={() =>
+                    openJobDelete({
+                      job_id: editor.id,
+                      title: editorForm.title || "Darbas",
+                      company_id: null,
+                    })
+                  }
+                  style={{ marginRight: "auto" }}
+                >
+                  Ištrinti darbą
+                </button>
+              )}
+
               <button
                 className="admin-small-btn"
                 disabled={editorSaving}
@@ -9131,6 +9580,234 @@ function AdminDashboard({
           </div>
         </div>
       )}
+
+      {actionDialog && (
+        <div
+          className="admin-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !actionBusy) {
+              setActionDialog(null);
+            }
+          }}
+        >
+          <div className="admin-modal" style={{ width: "min(600px,100%)" }}>
+            <div className="admin-modal-head">
+              <div>
+                <div className="eyebrow">
+                  {actionDialog.type === "suspend"
+                    ? "PASKYROS SUSPENDAVIMAS"
+                    : actionDialog.type === "unsuspend"
+                    ? "SUSPENDAVIMO PANAIKINIMAS"
+                    : actionDialog.type === "deleteJob"
+                    ? "DARBO TRYNIMAS"
+                    : "PASKYROS TRYNIMAS"}
+                </div>
+                <h2>
+                  {actionDialog.type === "suspend"
+                    ? `Suspenduoti: ${actionDialog.name}`
+                    : actionDialog.type === "unsuspend"
+                    ? `Nuimti suspendavimą: ${actionDialog.name}`
+                    : actionDialog.type === "deleteJob"
+                    ? `Ištrinti darbą: ${actionDialog.name}`
+                    : `Visiškai ištrinti: ${actionDialog.name}`}
+                </h2>
+              </div>
+
+              <button
+                className="rs-close"
+                disabled={actionBusy}
+                onClick={() => setActionDialog(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            {actionDialog.type === "suspend" && (
+              <label className="admin-label">
+                Kiek dienų suspenduoti?
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={actionDays}
+                  onChange={(e) => setActionDays(e.target.value)}
+                />
+              </label>
+            )}
+
+            <label className="admin-label" style={{ marginTop: 13 }}>
+              {actionDialog.type === "unsuspend" ? "Pastaba" : "Priežastis *"}
+              <textarea
+                className="admin-input admin-textarea"
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                placeholder={
+                  actionDialog.type === "suspend"
+                    ? "Pvz. Pakartotinis neatvykimas ir taisyklių pažeidimas..."
+                    : actionDialog.type === "deleteAccount"
+                    ? "Pvz. Pakartotiniai rimti pažeidimai..."
+                    : actionDialog.type === "deleteJob"
+                    ? "Kodėl šis darbo pasiūlymas šalinamas?"
+                    : "Administratoriaus pastaba..."
+                }
+              />
+            </label>
+
+            {(actionDialog.type === "deleteAccount" ||
+              actionDialog.type === "deleteJob") && (
+              <div
+                className="admin-note"
+                style={{ background: "#fff0ec", color: "#9f4529" }}
+              >
+                <b>Negrįžtamas veiksmas.</b>{" "}
+                {actionDialog.type === "deleteAccount"
+                  ? "Bus pašalinta paskyra ir su ja susiję sistemos duomenys."
+                  : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."}
+
+                <label className="admin-label" style={{ marginTop: 12 }}>
+                  Patvirtinimui įrašykite ISTRINTI
+                  <input
+                    className="admin-input"
+                    value={actionConfirm}
+                    onChange={(e) => setActionConfirm(e.target.value)}
+                    placeholder="ISTRINTI"
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="admin-actions">
+              <button
+                className="admin-small-btn"
+                disabled={actionBusy}
+                onClick={() => setActionDialog(null)}
+              >
+                Atšaukti
+              </button>
+
+              <button
+                className={`admin-small-btn ${
+                  actionDialog.type === "deleteAccount" ||
+                  actionDialog.type === "deleteJob"
+                    ? "danger"
+                    : ""
+                }`}
+                disabled={actionBusy}
+                onClick={performAdminAction}
+                style={
+                  actionDialog.type === "deleteAccount" ||
+                  actionDialog.type === "deleteJob"
+                    ? undefined
+                    : {
+                        background: "#102438",
+                        color: "#fff",
+                        borderColor: "#102438",
+                      }
+                }
+              >
+                {actionBusy
+                  ? "Vykdoma..."
+                  : actionDialog.type === "suspend"
+                  ? "Suspenduoti"
+                  : actionDialog.type === "unsuspend"
+                  ? "Nuimti suspendavimą"
+                  : actionDialog.type === "deleteJob"
+                  ? "Ištrinti darbą"
+                  : "Ištrinti paskyrą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function SuspendedAccount({
+  onLogout,
+  suspendedUntil,
+  reason,
+  disabled = false,
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f6f8fa",
+        display: "grid",
+        placeItems: "center",
+        padding: 20,
+        color: "#102438",
+      }}
+    >
+      <div
+        style={{
+          width: "min(620px,100%)",
+          background: "#fff",
+          border: "1px solid #e4ebf0",
+          borderRadius: 18,
+          padding: 26,
+          boxShadow: "0 18px 55px rgba(16,36,56,.10)",
+        }}
+      >
+        <div className="eyebrow">
+          {disabled ? "PASKYRA IŠJUNGTA" : "PASKYRA SUSPENDUOTA"}
+        </div>
+
+        <h1
+          style={{
+            fontFamily: "Manrope,Inter,sans-serif",
+            margin: "6px 0 10px",
+            fontSize: 28,
+          }}
+        >
+          {disabled
+            ? "Šios paskyros naudojimas išjungtas"
+            : "Šios paskyros naudojimas laikinai sustabdytas"}
+        </h1>
+
+        <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+          {disabled
+            ? "Administratoriaus sprendimu ši paskyra šiuo metu negali naudotis platformos funkcijomis."
+            : `Paskyra suspenduota iki ${
+                suspendedUntil
+                  ? new Date(suspendedUntil).toLocaleString("lt-LT", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : "nurodyto termino"
+              }.`}
+        </p>
+
+        {reason && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 13,
+              borderRadius: 10,
+              background: "#fff3e7",
+              color: "#8a531d",
+              lineHeight: 1.5,
+            }}
+          >
+            <b>Priežastis:</b> {reason}
+          </div>
+        )}
+
+        <div
+          style={{
+            marginTop: 20,
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button className="btn ghost" onClick={onLogout}>
+            Atsijungti
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -9138,6 +9815,11 @@ function AdminDashboard({
 function App() {
   const [user, setUser] = useState(null);
   const [accountRole, setAccountRole] = useState(null);
+  const [accountStatus, setAccountStatus] = useState({
+    isActive: true,
+    suspendedUntil: null,
+    suspensionReason: null,
+  });
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
@@ -9162,6 +9844,11 @@ function App() {
   useEffect(() => {
     if (!user || !supabase) {
       setAccountRole(null);
+      setAccountStatus({
+        isActive: true,
+        suspendedUntil: null,
+        suspensionReason: null,
+      });
       return;
     }
 
@@ -9169,7 +9856,7 @@ function App() {
 
     supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_active, suspended_until, suspension_reason")
       .eq("id", user.id)
       .single()
       .then(({ data, error }) => {
@@ -9179,6 +9866,11 @@ function App() {
             setAccountRole(null);
           } else {
             setAccountRole(data?.role || null);
+            setAccountStatus({
+              isActive: data?.is_active !== false,
+              suspendedUntil: data?.suspended_until || null,
+              suspensionReason: data?.suspension_reason || null,
+            });
           }
         }
       });
@@ -9215,6 +9907,26 @@ function App() {
   const logout = async () => {
     if (supabase) await supabase.auth.signOut();
   };
+
+  const accountIsSuspended =
+    accountRole !== "admin" &&
+    accountStatus.suspendedUntil &&
+    new Date(accountStatus.suspendedUntil) > new Date();
+
+  if (
+    user &&
+    accountRole !== "admin" &&
+    (!accountStatus.isActive || accountIsSuspended)
+  ) {
+    return (
+      <SuspendedAccount
+        onLogout={logout}
+        disabled={!accountStatus.isActive}
+        suspendedUntil={accountStatus.suspendedUntil}
+        reason={accountStatus.suspensionReason}
+      />
+    );
+  }
 
   if (user && accountRole === "worker") {
     return <WorkerDashboard user={user} onLogout={logout} />;
