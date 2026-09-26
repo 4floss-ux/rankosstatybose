@@ -644,6 +644,41 @@ function timeRangesOverlap(a, b) {
   return aStart < bEnd && aEnd > bStart;
 }
 
+function normalizeCityKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function distanceKmBetweenPoints(a, b) {
+  if (!a || !b) return null;
+
+  const lat1 = Number(a.latitude);
+  const lon1 = Number(a.longitude);
+  const lat2 = Number(b.latitude);
+  const lon2 = Number(b.longitude);
+
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
+
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
 function notificationPresentation(events = []) {
   const types = events.map((event) => event.event_type);
 
@@ -4118,30 +4153,38 @@ function EmployerDashboard({ user, onLogout }) {
         return;
       }
 
-      const [profilesResult, workersResult, workerSkillsResult] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("id, display_name, city")
-            .eq("role", "worker")
-            .eq("is_active", true)
-            .in("id", workerIds),
-          supabase
-            .from("worker_profiles")
-            .select(
-              "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
-            )
-            .in("user_id", workerIds),
-          supabase
-            .from("worker_skills")
-            .select("worker_id, skill_id")
-            .in("worker_id", workerIds),
-        ]);
+      const [
+        profilesResult,
+        workersResult,
+        workerSkillsResult,
+        cityLocationsResult,
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, display_name, city")
+          .eq("role", "worker")
+          .eq("is_active", true)
+          .in("id", workerIds),
+        supabase
+          .from("worker_profiles")
+          .select(
+            "user_id, has_driving_license_b, years_experience, attendance_rate, completed_jobs, rating_average, short_bio, travel_radius_km, no_show_count, restricted_until"
+          )
+          .in("user_id", workerIds),
+        supabase
+          .from("worker_skills")
+          .select("worker_id, skill_id")
+          .in("worker_id", workerIds),
+        supabase
+          .from("city_locations")
+          .select("city_key, name, latitude, longitude"),
+      ]);
 
       const failed = [
         profilesResult,
         workersResult,
         workerSkillsResult,
+        cityLocationsResult,
       ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
@@ -4155,6 +4198,16 @@ function EmployerDashboard({ user, onLogout }) {
       const availabilityMap = new Map(
         suitableAvailability.map((row) => [row.worker_id, row])
       );
+
+      const cityLocationMap = new Map(
+        (cityLocationsResult.data || []).map((row) => [
+          row.city_key,
+          row,
+        ])
+      );
+
+      const jobCityKey = normalizeCityKey(job.city);
+      const jobLocation = cityLocationMap.get(jobCityKey) || null;
 
       const skillIdsByWorker = new Map();
       for (const row of workerSkillsResult.data || []) {
@@ -4174,9 +4227,35 @@ function EmployerDashboard({ user, onLogout }) {
           const slot = availabilityMap.get(workerId);
           if (!profile || !worker || !slot) return null;
 
+          const workerCityKey = normalizeCityKey(profile.city);
+          const workerLocation =
+            cityLocationMap.get(workerCityKey) || null;
+
+          let distanceKm = null;
+
+          if (workerCityKey && workerCityKey === jobCityKey) {
+            distanceKm = 0;
+          } else if (jobLocation && workerLocation) {
+            distanceKm = distanceKmBetweenPoints(
+              jobLocation,
+              workerLocation
+            );
+          } else {
+            // Saugus fallback: jei miesto koordinačių nežinome,
+            // skirtingo miesto darbuotojo nerodome.
+            return null;
+          }
+
+          const rawTravelRadius = Number(worker.travel_radius_km);
+          const workerTravelRadius = Number.isFinite(rawTravelRadius)
+            ? Math.max(0, rawTravelRadius)
+            : 30;
+
+          const allowedDistanceKm = Math.min(30, workerTravelRadius);
+
           if (
-            String(profile.city || "").trim().toLowerCase() !==
-            String(job.city || "").trim().toLowerCase()
+            distanceKm === null ||
+            distanceKm > allowedDistanceKm
           ) {
             return null;
           }
@@ -4204,6 +4283,10 @@ function EmployerDashboard({ user, onLogout }) {
             completedJobs: Number(worker.completed_jobs || 0),
             shortBio: worker.short_bio || "",
             travelRadiusKm: Number(worker.travel_radius_km || 0),
+            distanceKm:
+              distanceKm === null
+                ? null
+                : Math.round(distanceKm * 10) / 10,
             noShowCount: Number(worker.no_show_count || 0),
             ratingAverage:
               worker.rating_average === null
@@ -4215,7 +4298,22 @@ function EmployerDashboard({ user, onLogout }) {
           };
         })
         .filter(Boolean)
-        .sort((a, b) => b.attendanceRate - a.attendanceRate);
+        .sort((a, b) => {
+          const distanceA =
+            a.distanceKm === null ? Number.POSITIVE_INFINITY : a.distanceKm;
+          const distanceB =
+            b.distanceKm === null ? Number.POSITIVE_INFINITY : b.distanceKm;
+
+          if (distanceA !== distanceB) {
+            return distanceA - distanceB;
+          }
+
+          if (b.attendanceRate !== a.attendanceRate) {
+            return b.attendanceRate - a.attendanceRate;
+          }
+
+          return (b.ratingAverage || 0) - (a.ratingAverage || 0);
+        });
 
       setMatches(combined);
 
@@ -5141,11 +5239,6 @@ function EmployerDashboard({ user, onLogout }) {
             {jobWorkers.length > 0 && (
               <div className="ed-attendance-panel">
                 <h2>Patvirtinti darbuotojai ir darbo diena</h2>
-                <p className="ed-sub" style={{ marginBottom: 0 }}>
-                  Kiekvieno darbuotojo eilutėje matote jo patikimumą,
-                  darbdavių įvertinimą ir darbo dienos būseną. „Darbo pokalbis“
-                  yra bendras visai šio darbo komandai.
-                </p>
 
                 <div className="ed-attendance-list">
                   {jobWorkers.map((worker) => {
@@ -5396,6 +5489,9 @@ function EmployerDashboard({ user, onLogout }) {
                           <b>{worker.name}</b>
                           <span>
                             {worker.city} · {worker.yearsExperience} m. patirties
+                            {worker.distanceKm !== null
+                              ? ` · ${worker.distanceKm} km nuo darbo`
+                              : ""}
                           </span>
                         </div>
                       </div>
