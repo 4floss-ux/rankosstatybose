@@ -6898,14 +6898,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </p>
               </div>
 
-              <button
-                className="rs-close"
-                type="button"
-                onClick={() => setShowCompanyEditor(false)}
-                aria-label="Uždaryti profilį"
-              >
-                ×
-              </button>
             </div>
 
             <div className="ed-profile-summary">
@@ -7679,32 +7671,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="ed-results-head">
               <div>
-                <h2>Kiti laisvi darbuotojai</h2>
-                <p style={{ marginBottom: 4 }}>
+                <h2>Kviesti laisvus darbuotojus pagal jūsų parinktis</h2>
+                <p>
                   Rodomi tik per paskutines 72 val. aktyvūs ir savo grafiką
                   patvirtinę darbuotojai.
-                </p>
-                <p>
-                  {currentJob.city} · {currentJob.work_date} ·{" "}
-                  {currentJob.start_time?.slice(0, 5)}
-                  {currentJob.end_time
-                    ? `–${currentJob.end_time.slice(0, 5)}`
-                    : ""}
-                  {currentJob.pay_amount
-                    ? ` · ${formatNetPay(currentJob.pay_amount, currentJob.pay_unit)}`
-                    : ""}
-                  {` · ${
-                    currentJob.transport_mode === "employer_pickup"
-                      ? "Darbdavys paima darbuotoją"
-                      : "Darbuotojas atvyksta pats"
-                  }`}
-                  {currentJob.break_start_time &&
-                    currentJob.break_end_time
-                    ? ` · Pietūs ${currentJob.break_start_time.slice(
-                        0,
-                        5
-                      )}–${currentJob.break_end_time.slice(0, 5)}`
-                    : ""}
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
