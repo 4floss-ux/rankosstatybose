@@ -1715,7 +1715,7 @@ function WorkerProfileModal({ worker, onClose }) {
   );
 }
 
-function WorkerDashboard({ user, onLogout }) {
+function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2576,9 +2576,20 @@ function WorkerDashboard({ user, onLogout }) {
               rankos<span>statybose</span>.lt
             </span>
           </a>
-          <button className="btn ghost" onClick={onLogout}>
-            Atsijungti
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {onAdminReturn && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={onAdminReturn}
+              >
+                ← Administravimas
+              </button>
+            )}
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
         </div>
       </header>
 
@@ -3788,7 +3799,7 @@ function workerInitials(name) {
     .join("");
 }
 
-function EmployerDashboard({ user, onLogout }) {
+function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -5561,6 +5572,16 @@ function EmployerDashboard({ user, onLogout }) {
               </button>
             )}
 
+            {onAdminReturn && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={onAdminReturn}
+              >
+                ← Administravimas
+              </button>
+            )}
+
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -7142,48 +7163,637 @@ function EmployerDashboard({ user, onLogout }) {
 }
 
 
-function AdminDashboard({ onLogout }) {
+
+function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
+  const [checking, setChecking] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    displayName: "",
+    city: "Vilnius",
+    phone: "",
+    travelRadius: 30,
+    hasDrivingLicenseB: false,
+    yearsExperience: 0,
+    shortBio: "",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkWorkerMode() {
+      setChecking(true);
+      setError("");
+
+      try {
+        const [profileResult, privateResult, workerResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("display_name, city")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("worker_profiles")
+            .select("user_id")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (privateResult.error) throw privateResult.error;
+        if (workerResult.error) throw workerResult.error;
+
+        if (cancelled) return;
+
+        setForm((current) => ({
+          ...current,
+          displayName: profileResult.data?.display_name || "",
+          city: profileResult.data?.city || "Vilnius",
+          phone: privateResult.data?.phone || "",
+        }));
+
+        setReady(Boolean(workerResult.data?.user_id));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko patikrinti darbuotojo režimo.");
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }
+
+    checkWorkerMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  async function activateWorkerMode() {
+    setSaving(true);
+    setError("");
+
+    try {
+      const city = await canonicalCityName(form.city);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const result = await supabase.rpc("admin_register_worker_mode", {
+        p_display_name: form.displayName.trim(),
+        p_city: city,
+        p_phone: form.phone.trim() || null,
+        p_travel_radius_km: Number(form.travelRadius) || 0,
+        p_has_driving_license_b: Boolean(form.hasDrivingLicenseB),
+        p_years_experience: Number(form.yearsExperience) || 0,
+        p_short_bio: form.shortBio.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+      setReady(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko aktyvuoti darbuotojo režimo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (checking) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Tikrinamas darbuotojo režimas...</b>
+      </div>
+    );
+  }
+
+  if (ready) {
+    return (
+      <WorkerDashboard
+        user={user}
+        onLogout={onLogout}
+        onAdminReturn={onAdminReturn}
+      />
+    );
+  }
+
+  return (
+    <div className="wd-page">
+      <header className="wd-topbar">
+        <div className="wd-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+          <div style={{ display: "flex", gap: 9 }}>
+            <button className="btn ghost" onClick={onAdminReturn}>
+              ← Administravimas
+            </button>
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="wd-shell">
+        <section className="wd-card" style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div className="eyebrow">ADMIN · DARBUOTOJO REŽIMAS</div>
+          <h2 style={{ marginTop: 6 }}>Aktyvuoti darbuotojo profilį</h2>
+          <p className="wd-card-sub">
+            Administratoriaus rolė išliks. Šie duomenys leis jums naudotis
+            svetaine ir kaip darbuotojui.
+          </p>
+
+          {error && <div className="wd-note err">{error}</div>}
+
+          <div className="wd-grid-2">
+            <label className="wd-label">
+              Vardas
+              <input
+                className="wd-input"
+                value={form.displayName}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    displayName: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="wd-label">
+              Miestas
+              <CityAutocomplete
+                className="wd-input"
+                value={form.city}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, city: value }))
+                }
+              />
+            </label>
+
+            <label className="wd-label">
+              Telefonas
+              <input
+                className="wd-input"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((current) => ({ ...current, phone: e.target.value }))
+                }
+                placeholder="+370..."
+              />
+            </label>
+
+            <label className="wd-label">
+              Kiek km galite nuvykti?
+              <input
+                className="wd-input"
+                type="number"
+                min="0"
+                max="300"
+                value={form.travelRadius}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    travelRadius: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="wd-label">
+              Patirtis statybose (metais)
+              <input
+                className="wd-input"
+                type="number"
+                min="0"
+                step="0.5"
+                value={form.yearsExperience}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    yearsExperience: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label
+              className="wd-label"
+              style={{ alignContent: "end", paddingBottom: 10 }}
+            >
+              <span>
+                <input
+                  type="checkbox"
+                  checked={form.hasDrivingLicenseB}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      hasDrivingLicenseB: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Turiu B kategorijos vairuotojo pažymėjimą
+              </span>
+            </label>
+          </div>
+
+          <label className="wd-label" style={{ marginTop: 14 }}>
+            Trumpai apie save
+            <textarea
+              className="wd-input"
+              style={{ minHeight: 100, resize: "vertical" }}
+              value={form.shortBio}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  shortBio: e.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+            <button
+              className="wd-save"
+              disabled={saving}
+              onClick={activateWorkerMode}
+            >
+              {saving ? "Aktyvuojama..." : "Aktyvuoti darbuotojo režimą"}
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function AdminEmployerGateway({ user, onAdminReturn, onLogout }) {
+  const [checking, setChecking] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    companyName: "",
+    companyCode: "",
+    city: "Vilnius",
+    phone: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkEmployerMode() {
+      setChecking(true);
+      setError("");
+
+      try {
+        const [memberResult, profileResult, privateResult] = await Promise.all([
+          supabase
+            .from("company_members")
+            .select("company_id")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("city")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
+
+        if (memberResult.error) throw memberResult.error;
+        if (profileResult.error) throw profileResult.error;
+        if (privateResult.error) throw privateResult.error;
+
+        if (cancelled) return;
+
+        setReady(Boolean(memberResult.data?.company_id));
+        setForm((current) => ({
+          ...current,
+          city: profileResult.data?.city || "Vilnius",
+          phone: privateResult.data?.phone || "",
+        }));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko patikrinti darbdavio režimo.");
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }
+
+    checkEmployerMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  async function activateEmployerMode() {
+    setSaving(true);
+    setError("");
+
+    try {
+      const city = await canonicalCityName(form.city);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const result = await supabase.rpc("admin_register_employer_mode", {
+        p_company_name: form.companyName.trim(),
+        p_company_code: form.companyCode.trim() || null,
+        p_city: city,
+        p_phone: form.phone.trim() || null,
+        p_description: form.description.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+      setReady(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko aktyvuoti darbdavio režimo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (checking) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Tikrinamas darbdavio režimas...</b>
+      </div>
+    );
+  }
+
+  if (ready) {
+    return (
+      <EmployerDashboard
+        user={user}
+        onLogout={onLogout}
+        onAdminReturn={onAdminReturn}
+      />
+    );
+  }
+
+  return (
+    <div className="wd-page">
+      <header className="wd-topbar">
+        <div className="wd-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+          <div style={{ display: "flex", gap: 9 }}>
+            <button className="btn ghost" onClick={onAdminReturn}>
+              ← Administravimas
+            </button>
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="wd-shell">
+        <section className="wd-card" style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div className="eyebrow">ADMIN · DARBDAVIO REŽIMAS</div>
+          <h2 style={{ marginTop: 6 }}>Užregistruoti savo įmonę</h2>
+          <p className="wd-card-sub">
+            Administratoriaus rolė išliks. Įmonė bus naudojama tik jūsų
+            darbdavio režimui ir darbo pasiūlymų testavimui / kūrimui.
+          </p>
+
+          {error && <div className="wd-note err">{error}</div>}
+
+          <div className="wd-grid-2">
+            <label className="wd-label">
+              Įmonės pavadinimas
+              <input
+                className="wd-input"
+                value={form.companyName}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    companyName: e.target.value,
+                  }))
+                }
+                placeholder="UAB ..."
+              />
+            </label>
+
+            <label className="wd-label">
+              Įmonės kodas
+              <input
+                className="wd-input"
+                value={form.companyCode}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    companyCode: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="wd-label">
+              Miestas
+              <CityAutocomplete
+                className="wd-input"
+                value={form.city}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, city: value }))
+                }
+              />
+            </label>
+
+            <label className="wd-label">
+              Telefonas
+              <input
+                className="wd-input"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((current) => ({ ...current, phone: e.target.value }))
+                }
+                placeholder="+370..."
+              />
+            </label>
+          </div>
+
+          <label className="wd-label" style={{ marginTop: 14 }}>
+            Trumpai apie įmonę
+            <textarea
+              className="wd-input"
+              style={{ minHeight: 110, resize: "vertical" }}
+              value={form.description}
+              onChange={(e) =>
+                setForm((current) => ({
+                  ...current,
+                  description: e.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+            <button
+              className="wd-save"
+              disabled={saving}
+              onClick={activateEmployerMode}
+            >
+              {saving ? "Kuriama..." : "Aktyvuoti darbdavio režimą"}
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function AdminDashboard({
+  user,
+  onLogout,
+  onOpenWorker,
+  onOpenEmployer,
+}) {
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({});
   const [disputes, setDisputes] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [employers, setEmployers] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [ratings, setRatings] = useState([]);
+  const [files, setFiles] = useState([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resolvingId, setResolvingId] = useState(null);
+  const [deletingRatingId, setDeletingRatingId] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [editorForm, setEditorForm] = useState({});
+  const [editorSaving, setEditorSaving] = useState(false);
+
+  const tabs = [
+    ["overview", "Suvestinė"],
+    ["disputes", `Ginčai${disputes.length ? ` (${disputes.length})` : ""}`],
+    ["workers", "Darbuotojai"],
+    ["employers", "Darbdaviai"],
+    ["jobs", "Darbai"],
+    ["ratings", "Atsiliepimai"],
+    ["files", "Failai"],
+  ];
 
   useEffect(() => {
-    loadDisputes();
-    const timer = setInterval(loadDisputes, 10000);
+    loadAdminData();
+
+    const timer = setInterval(() => {
+      loadAdminData(true).catch(() => {});
+    }, 30000);
+
     return () => clearInterval(timer);
   }, []);
 
-  async function loadDisputes() {
+  async function createSafeFileUrl(bucketId, storagePath) {
+    if (!bucketId || !storagePath) return null;
+
+    const signedResult = await supabase.storage
+      .from(bucketId)
+      .createSignedUrl(storagePath, 60 * 60);
+
+    return signedResult.error
+      ? null
+      : signedResult.data?.signedUrl || null;
+  }
+
+  async function loadAdminData(silent = false) {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+
     try {
-      const result = await supabase.rpc("get_attendance_disputes");
-      if (result.error) throw result.error;
+      const [
+        statsResult,
+        disputesResult,
+        workersResult,
+        employersResult,
+        jobsResult,
+        ratingsResult,
+        filesResult,
+      ] = await Promise.all([
+        supabase.rpc("get_admin_dashboard_stats"),
+        supabase.rpc("get_attendance_disputes"),
+        supabase.rpc("get_admin_workers"),
+        supabase.rpc("get_admin_employers"),
+        supabase.rpc("get_admin_jobs"),
+        supabase.rpc("get_admin_ratings"),
+        supabase.rpc("get_admin_files"),
+      ]);
 
-      const rows = result.data || [];
-      const withEvidence = await Promise.all(
-        rows.map(async (row) => {
-          if (!row.worker_evidence_path) return row;
+      const failed = [
+        statsResult,
+        disputesResult,
+        workersResult,
+        employersResult,
+        jobsResult,
+        ratingsResult,
+        filesResult,
+      ].find((result) => result.error);
 
-          const signedResult = await supabase.storage
-            .from("attendance-evidence")
-            .createSignedUrl(row.worker_evidence_path, 60 * 60);
+      if (failed?.error) throw failed.error;
 
-          return {
-            ...row,
-            evidenceUrl: signedResult.error
-              ? null
-              : signedResult.data?.signedUrl || null,
-          };
-        })
+      const disputeRows = await Promise.all(
+        (disputesResult.data || []).map(async (row) => ({
+          ...row,
+          evidenceUrl: row.worker_evidence_path
+            ? await createSafeFileUrl(
+                "attendance-evidence",
+                row.worker_evidence_path
+              )
+            : null,
+        }))
       );
 
-      setDisputes(withEvidence);
+      const fileRows = await Promise.all(
+        (filesResult.data || []).map(async (row) => ({
+          ...row,
+          signedUrl: await createSafeFileUrl(
+            row.bucket_id,
+            row.storage_path
+          ),
+        }))
+      );
+
+      setStats(statsResult.data || {});
+      setDisputes(disputeRows);
+      setWorkers(workersResult.data || []);
+      setEmployers(employersResult.data || []);
+      setJobs(jobsResult.data || []);
+      setRatings(ratingsResult.data || []);
+      setFiles(fileRows);
       setError("");
     } catch (err) {
-      setError(err?.message || "Nepavyko įkelti darbo dienos ginčų.");
+      setError(err?.message || "Nepavyko įkelti administratoriaus duomenų.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -7204,8 +7814,8 @@ function AdminDashboard({ onLogout }) {
       : null;
 
     const question = workerWon
-      ? "Patvirtinti, kad ginčas išspręstas darbuotojo naudai? Jei darbdavio pažymėjimas nepasitvirtino, jo patikimumas sumažės 20 taškų."
-      : "Patvirtinti, kad ginčas išspręstas darbdavio naudai? Darbuotojui bus pritaikytas galutinis darbo dienos rezultatas.";
+      ? "Patvirtinti sprendimą darbuotojo naudai? Jei darbdavio neigiamas pažymėjimas nepasitvirtino, darbdavio patikimumui bus pritaikyta sistemos numatyta bauda."
+      : "Patvirtinti sprendimą darbdavio naudai? Darbuotojui bus pritaikytas galutinis darbo dienos rezultatas.";
 
     if (!window.confirm(question)) return;
 
@@ -7227,8 +7837,8 @@ function AdminDashboard({ onLogout }) {
 
       if (result.error) throw result.error;
 
-      setNotice("Ginčas išspręstas ir abiem pusėms išsiųstas atnaujinimas.");
-      await loadDisputes();
+      setNotice("Ginčas išspręstas.");
+      await loadAdminData(true);
     } catch (err) {
       setError(err?.message || "Nepavyko išspręsti ginčo.");
     } finally {
@@ -7236,200 +7846,1291 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  function openWorkerEditor(worker) {
+    setEditor({ type: "worker", id: worker.user_id });
+    setEditorForm({
+      displayName: worker.display_name || "",
+      legalName: worker.legal_name || "",
+      phone: worker.phone || "",
+      city: worker.city || "",
+      isActive: Boolean(worker.is_active),
+      travelRadiusKm: Number(worker.travel_radius_km ?? 30),
+      hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+      yearsExperience: Number(worker.years_experience || 0),
+      shortBio: worker.short_bio || "",
+    });
+  }
+
+  function openEmployerEditor(employer) {
+    setEditor({
+      type: "employer",
+      id: employer.company_id,
+      ownerId: employer.owner_id,
+    });
+    setEditorForm({
+      displayName: employer.display_name || "",
+      phone: employer.phone || "",
+      name: employer.company_name || "",
+      companyCode: employer.company_code || "",
+      vatCode: employer.vat_code || "",
+      city: employer.city || "",
+      description: employer.description || "",
+      isVerified: Boolean(employer.is_verified),
+      ownerActive: Boolean(employer.is_active),
+    });
+  }
+
+  function openJobEditor(job) {
+    setEditor({ type: "job", id: job.job_id });
+    setEditorForm({
+      title: job.title || "",
+      city: job.city || "",
+      addressText: job.address_text || "",
+      workDate: job.work_date || "",
+      startTime: job.start_time?.slice(0, 5) || "08:00",
+      endTime: job.end_time?.slice(0, 5) || "17:00",
+      breakStartTime: job.break_start_time?.slice(0, 5) || "",
+      breakEndTime: job.break_end_time?.slice(0, 5) || "",
+      workersNeeded: Number(job.workers_needed || 1),
+      payAmount: job.pay_amount ?? "",
+      payUnit: job.pay_unit === "day" ? "day" : "hour",
+      transportMode:
+        job.transport_mode === "employer_pickup"
+          ? "employer_pickup"
+          : "self_arrival",
+      description: job.description || "",
+    });
+  }
+
+  function updateEditorField(key, value) {
+    setEditorForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveEditor() {
+    if (!editor) return;
+
+    setEditorSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      if (editor.type === "worker") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const [profileResult, contactResult] = await Promise.all([
+          supabase.rpc("admin_update_worker", {
+            p_user_id: editor.id,
+            p_display_name: editorForm.displayName.trim(),
+            p_city: city,
+            p_is_active: Boolean(editorForm.isActive),
+            p_travel_radius_km: Number(editorForm.travelRadiusKm) || 0,
+            p_has_driving_license_b: Boolean(
+              editorForm.hasDrivingLicenseB
+            ),
+            p_years_experience: Number(editorForm.yearsExperience) || 0,
+            p_short_bio: editorForm.shortBio.trim() || null,
+          }),
+          supabase.rpc("admin_update_account_contact", {
+            p_user_id: editor.id,
+            p_display_name: editorForm.displayName.trim(),
+            p_legal_name: editorForm.legalName.trim() || null,
+            p_phone: editorForm.phone.trim() || null,
+          }),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (contactResult.error) throw contactResult.error;
+      }
+
+      if (editor.type === "employer") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const [companyResult, contactResult] = await Promise.all([
+          supabase.rpc("admin_update_company", {
+            p_company_id: editor.id,
+            p_name: editorForm.name.trim(),
+            p_company_code: editorForm.companyCode.trim() || null,
+            p_vat_code: editorForm.vatCode.trim() || null,
+            p_city: city,
+            p_description: editorForm.description.trim() || null,
+            p_is_verified: Boolean(editorForm.isVerified),
+            p_owner_active: Boolean(editorForm.ownerActive),
+          }),
+          supabase.rpc("admin_update_account_contact", {
+            p_user_id: editor.ownerId,
+            p_display_name: editorForm.displayName.trim(),
+            p_legal_name: null,
+            p_phone: editorForm.phone.trim() || null,
+          }),
+        ]);
+
+        if (companyResult.error) throw companyResult.error;
+        if (contactResult.error) throw contactResult.error;
+      }
+
+      if (editor.type === "job") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const result = await supabase.rpc("admin_update_job", {
+          p_job_id: editor.id,
+          p_title: editorForm.title.trim(),
+          p_city: city,
+          p_address_text: editorForm.addressText.trim() || null,
+          p_work_date: editorForm.workDate,
+          p_start_time: editorForm.startTime,
+          p_end_time: editorForm.endTime,
+          p_break_start_time: editorForm.breakStartTime || null,
+          p_break_end_time: editorForm.breakEndTime || null,
+          p_workers_needed: Number(editorForm.workersNeeded) || 1,
+          p_pay_amount: Number(editorForm.payAmount),
+          p_pay_unit: editorForm.payUnit,
+          p_transport_mode: editorForm.transportMode,
+          p_description: editorForm.description.trim() || null,
+        });
+
+        if (result.error) throw result.error;
+      }
+
+      setEditor(null);
+      setNotice("Pakeitimai išsaugoti.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti pakeitimų.");
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  async function deleteRating(rating) {
+    if (
+      !window.confirm(
+        `Pašalinti ${rating.worker_name} įvertinimą ${rating.score}/10?`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingRatingId(rating.rating_id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("admin_delete_worker_rating", {
+        p_rating_id: rating.rating_id,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Atsiliepimas pašalintas ir darbuotojo vidurkis perskaičiuotas.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti atsiliepimo.");
+    } finally {
+      setDeletingRatingId(null);
+    }
+  }
+
+  function formatAdminDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString("lt-LT", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  }
+
+  function bytesLabel(value) {
+    const bytes = Number(value);
+    if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
   if (loading) {
     return (
       <div className="ed-loading">
         <div className="ed-spinner" />
-        <b>Kraunami darbo dienos ginčai...</b>
+        <b>Kraunamas administratoriaus skydelis...</b>
       </div>
     );
   }
 
   return (
-    <div className="wd-page">
+    <div className="admin-page">
       <style>{`
-        .admin-shell{width:min(1050px,calc(100% - 40px));margin:34px auto 70px;color:#102438}
-        .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
+        .admin-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .admin-topbar{min-height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:100}
+        .admin-topbar-inner{width:min(1280px,calc(100% - 40px));margin:auto;display:flex;justify-content:space-between;align-items:center;gap:18px}
+        .admin-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+        .admin-mode{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .admin-mode.primary{border-color:#f08a28;background:#f08a28;color:#fff}
+        .admin-shell{width:min(1280px,calc(100% - 40px));margin:28px auto 70px}
+        .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
         .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
-        .admin-head p{margin:8px 0 0;color:#6c7a88}
-        .admin-list{display:grid;gap:14px}.admin-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.045)}
-        .admin-card-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.admin-card h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
-        .admin-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}.admin-fact{background:#f6f8fa;border-radius:11px;padding:12px}.admin-fact span{display:block;color:#6c7a88;font-size:11px;margin-bottom:4px}.admin-fact b{font-size:14px}
-        .admin-note{margin-top:12px;padding:12px;border-radius:11px;background:#fff3e7;color:#8a531d;line-height:1.5;font-size:13px}.admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px}
-        .admin-ok,.admin-danger{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.admin-ok{border:0;background:#1c9b67;color:#fff}.admin-danger{border:1px solid #e8bbae;background:#fff;color:#b64d2a}.admin-ok:disabled,.admin-danger:disabled{opacity:.55;cursor:wait}
-        @media(max-width:650px){.admin-shell{width:min(100% - 24px,1050px)}.admin-head{align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr}.admin-card-head{flex-direction:column}}
+        .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
+        .admin-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+        .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
+        .admin-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+        .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:108px;display:flex;flex-direction:column;justify-content:space-between}
+        .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;margin-top:10px}
+        .admin-section{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.035)}
+        .admin-section+.admin-section{margin-top:14px}
+        .admin-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+        .admin-section h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
+        .admin-muted{color:#6c7a88;font-size:13px;line-height:1.5}
+        .admin-list{display:grid;gap:10px}
+        .admin-row{display:grid;grid-template-columns:minmax(180px,1.25fr) repeat(3,minmax(120px,.8fr)) auto;gap:12px;align-items:center;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
+        .admin-row-title b{display:block;font-size:14px}.admin-row-title span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
+        .admin-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}.admin-cell b{font-size:13px}
+        .admin-pill{display:inline-flex;width:max-content;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}
+        .admin-pill.green{background:#edf8f3;color:#167a54}.admin-pill.orange{background:#fff3e7;color:#b85f0e}.admin-pill.red{background:#fff0ec;color:#b64d2a}.admin-pill.gray{background:#f1f4f6;color:#667788}
+        .admin-small-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .admin-small-btn.danger{color:#b64d2a;border-color:#e8bbae}
+        .admin-small-btn:disabled{opacity:.55;cursor:wait}
+        .admin-dispute{border:1px solid #e4ebf0;border-radius:14px;padding:18px}.admin-dispute+.admin-dispute{margin-top:10px}
+        .admin-dispute-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+        .admin-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.admin-fact{background:#f6f8fa;border-radius:10px;padding:11px}.admin-fact span{display:block;color:#6c7a88;font-size:10px;margin-bottom:4px}.admin-fact b{font-size:13px}
+        .admin-note{margin-top:10px;padding:11px;border-radius:10px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
+        .admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
+        .admin-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:9000;display:grid;place-items:center;padding:20px}
+        .admin-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28)}
+        .admin-modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:17px}.admin-modal-head h2{margin:2px 0 0;font-family:Manrope,Inter,sans-serif;font-size:22px}
+        .admin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-wide{grid-column:1/-1}
+        .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
+        .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
+        .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}}
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}}
       `}</style>
 
-      <header className="wd-topbar">
-        <div className="wd-topbar-inner">
+      <header className="admin-topbar">
+        <div className="admin-topbar-inner">
           <a className="brand" href="#">
             <span className="logo-mark">⌂</span>
             <span>
               rankos<span>statybose</span>.lt
             </span>
           </a>
-          <button className="btn ghost" onClick={onLogout}>
-            Atsijungti
-          </button>
+
+          <div className="admin-top-actions">
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenWorker}
+            >
+              Darbuotojo režimas
+            </button>
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenEmployer}
+            >
+              Darbdavio režimas
+            </button>
+            <button
+              className="admin-mode primary"
+              type="button"
+              disabled={refreshing}
+              onClick={() => loadAdminData(true)}
+            >
+              {refreshing ? "Atnaujinama..." : "Atnaujinti"}
+            </button>
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="admin-shell">
         <div className="admin-head">
           <div>
-            <div className="eyebrow">ADMINISTRATORIUS</div>
-            <h1>Darbo dienos ginčai</h1>
+            <div className="eyebrow">ADMINISTRATORIAUS VALDYMO CENTRAS</div>
+            <h1>Svetainės suvestinė ir valdymas</h1>
             <p>
-              Čia sprendžiamos situacijos, kai darbdavio ir darbuotojo parodymai
-              nesutampa. Iki sprendimo darbuotojo reitingas nekeičiamas.
+              Prisijungta kaip {user?.email || "administratorius"}. Čia matote
+              realų sistemos naudojimą, ginčus, vartotojus, darbus, atsiliepimus
+              ir įkeltus failus.
             </p>
           </div>
-          <b>{disputes.length} neišspręsta</b>
+
+          <span className="admin-pill green">Administratorius</span>
+        </div>
+
+        <div className="admin-tabs">
+          {tabs.map(([key, label]) => (
+            <button
+              key={key}
+              className={`admin-tab ${activeTab === key ? "active" : ""}`}
+              onClick={() => setActiveTab(key)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {notice && <div className="wd-note ok">{notice}</div>}
         {error && <div className="wd-note err">{error}</div>}
 
-        {disputes.length ? (
-          <div className="admin-list">
-            {disputes.map((dispute) => {
-              const busy = resolvingId === dispute.attendance_id;
-              return (
-                <section className="admin-card" key={dispute.attendance_id}>
-                  <div className="admin-card-head">
-                    <div>
-                      <div className="eyebrow">GINČAS</div>
-                      <h2>{dispute.job_title}</h2>
-                      <div style={{ color: "#6c7a88", marginTop: 5 }}>
-                        {dispute.work_date} ·{" "}
-                        {dispute.start_time?.slice(0, 5)}
-                        {dispute.end_time
-                          ? `–${dispute.end_time.slice(0, 5)}`
-                          : ""}
+        {activeTab === "overview" && (
+          <>
+            <div className="admin-kpis">
+              <div className="admin-kpi">
+                <span>Darbuotojų paskyros</span>
+                <b>{Number(stats.totalWorkers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Realūs darbuotojai su patvirtintu darbu</span>
+                <b>{Number(stats.realWorkers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Realiai jau dirbę darbuotojai</span>
+                <b>{Number(stats.workedWorkers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Laisvi per artimiausias 30 d.</span>
+                <b>{Number(stats.availableWorkers30d || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Darbdavių paskyros</span>
+                <b>{Number(stats.totalEmployers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Darbdaviai, kurie jau sukūrė darbą</span>
+                <b>{Number(stats.realEmployers || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Įmonės</span>
+                <b>{Number(stats.totalCompanies || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Patvirtintos įmonės</span>
+                <b>{Number(stats.verifiedCompanies || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Visi darbo pasiūlymai</span>
+                <b>{Number(stats.totalJobs || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Aktyvūs darbai</span>
+                <b>{Number(stats.openJobs || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Įvykdyti darbai</span>
+                <b>{Number(stats.completedJobs || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Atšaukti darbai</span>
+                <b>{Number(stats.cancelledJobs || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Panaudoti darbuotojai šį mėnesį</span>
+                <b>{Number(stats.workersUsedThisMonth || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Nauji darbai šį mėnesį</span>
+                <b>{Number(stats.jobsThisMonth || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Darbuotojų įvertinimo vidurkis</span>
+                <b>
+                  {Number(stats.workerRatingCount || 0)
+                    ? `${Number(stats.workerRatingAverage || 0).toFixed(1)} / 10`
+                    : "—"}
+                </b>
+              </div>
+              <div className="admin-kpi">
+                <span>Darbdavių patikimumo vidurkis</span>
+                <b>{Number(stats.employerReliabilityAverage || 0).toFixed(1)} / 100</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Neišspręsti ginčai</span>
+                <b>{Number(stats.unresolvedDisputes || 0)}</b>
+              </div>
+              <div className="admin-kpi">
+                <span>Įkelti failai</span>
+                <b>{Number(stats.uploadedFiles || 0)}</b>
+              </div>
+            </div>
+
+            <section className="admin-section" style={{ marginTop: 16 }}>
+              <div className="admin-section-head">
+                <div>
+                  <h2>Naudojimo santrauka</h2>
+                  <div className="admin-muted">
+                    „Realus darbuotojas“ čia reiškia žmogų, kuris turi
+                    patvirtintą / įvykusį užsakymą. „Realus darbdavys“ – įmonės
+                    savininką, kuris jau sukūrė bent vieną darbo pasiūlymą.
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-kpis">
+                <div className="admin-kpi">
+                  <span>Darbuotojų registracijos šį mėnesį</span>
+                  <b>{Number(stats.workersRegisteredThisMonth || 0)}</b>
+                </div>
+                <div className="admin-kpi">
+                  <span>Darbdavių registracijos šį mėnesį</span>
+                  <b>{Number(stats.employersRegisteredThisMonth || 0)}</b>
+                </div>
+                <div className="admin-kpi">
+                  <span>Patvirtinti darbuotojų užsakymai</span>
+                  <b>{Number(stats.confirmedBookings || 0)}</b>
+                </div>
+                <div className="admin-kpi">
+                  <span>Darbuotojų atsiliepimų skaičius</span>
+                  <b>{Number(stats.workerRatingCount || 0)}</b>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === "disputes" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbo dienos ginčai</h2>
+                <div className="admin-muted">
+                  Įvertinkite abiejų pusių informaciją ir įrodymus. Kol ginčas
+                  neišspręstas, darbuotojo reitingas nekeičiamas.
+                </div>
+              </div>
+              <span className={`admin-pill ${disputes.length ? "red" : "green"}`}>
+                {disputes.length} neišspręsta
+              </span>
+            </div>
+
+            {disputes.length ? (
+              disputes.map((dispute) => {
+                const busy = resolvingId === dispute.attendance_id;
+                return (
+                  <div className="admin-dispute" key={dispute.attendance_id}>
+                    <div className="admin-dispute-head">
+                      <div>
+                        <div className="eyebrow">GINČAS</div>
+                        <h2>{dispute.job_title}</h2>
+                        <div className="admin-muted">
+                          {dispute.work_date} · {dispute.start_time?.slice(0, 5)}
+                          {dispute.end_time
+                            ? `–${dispute.end_time.slice(0, 5)}`
+                            : ""}
+                        </div>
+                      </div>
+                      <span className="admin-pill red">
+                        {attendanceOutcomeLabel({
+                          employer_outcome: dispute.employer_outcome,
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="admin-facts">
+                      <div className="admin-fact">
+                        <span>Darbuotojas</span>
+                        <b>{dispute.worker_name}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbdavys</span>
+                        <b>{dispute.company_name}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbuotojo „Atvykau“</span>
+                        <b>{formatAdminDate(dispute.worker_check_in_at)}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbdavio atvykimo patvirtinimas</span>
+                        <b>{formatAdminDate(dispute.employer_check_in_at)}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Faktinis išėjimo laikas</span>
+                        <b>{dispute.actual_end_time?.slice(0, 5) || "—"}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbuotojo dienos pareiškimas</span>
+                        <b>{dispute.worker_workday_claim || "—"}</b>
                       </div>
                     </div>
-                    <span className="wd-workday-status red">
-                      {attendanceOutcomeLabel({
-                        employer_outcome: dispute.employer_outcome,
-                      })}
-                    </span>
+
+                    {dispute.employer_note && (
+                      <div className="admin-note">
+                        <b>Darbdavio paaiškinimas:</b> {dispute.employer_note}
+                      </div>
+                    )}
+
+                    {dispute.worker_response_note && (
+                      <div className="admin-note">
+                        <b>Darbuotojo paaiškinimas:</b>{" "}
+                        {dispute.worker_response_note}
+                      </div>
+                    )}
+
+                    {dispute.worker_evidence_path && (
+                      <div className="admin-note">
+                        <b>Darbuotojo įrodymas:</b>{" "}
+                        {dispute.evidenceUrl ? (
+                          <a
+                            className="admin-file-link"
+                            href={dispute.evidenceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {dispute.worker_evidence_name || "Atidaryti failą"}
+                          </a>
+                        ) : (
+                          <span>
+                            {dispute.worker_evidence_name || "Failas įkeltas"} ·
+                            saugios peržiūros nuorodos sukurti nepavyko
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="admin-actions">
+                      <button
+                        className="admin-small-btn danger"
+                        disabled={busy}
+                        onClick={() => resolveDispute(dispute, "employer")}
+                      >
+                        Darbdavio naudai
+                      </button>
+                      <button
+                        className="admin-small-btn"
+                        style={{
+                          background: "#1c9b67",
+                          color: "#fff",
+                          borderColor: "#1c9b67",
+                        }}
+                        disabled={busy}
+                        onClick={() => resolveDispute(dispute, "worker")}
+                      >
+                        {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
+                      </button>
+                    </div>
                   </div>
+                );
+              })
+            ) : (
+              <div className="admin-empty">
+                Šiuo metu neišspręstų ginčų nėra.
+              </div>
+            )}
+          </section>
+        )}
 
-                  <div className="admin-grid">
-                    <div className="admin-fact">
-                      <span>Darbuotojas</span>
-                      <b>{dispute.worker_name}</b>
+        {activeTab === "workers" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbuotojai</h2>
+                <div className="admin-muted">
+                  Paskyros, aktyvumas, patikimumas, įvertinimai ir pagrindinių
+                  profilio duomenų redagavimas.
+                </div>
+              </div>
+              <b>{workers.length}</b>
+            </div>
+
+            {workers.length ? (
+              <div className="admin-list">
+                {workers.map((worker) => (
+                  <div className="admin-row" key={worker.user_id}>
+                    <div className="admin-row-title">
+                      <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
+                      <span>
+                        {worker.email || "—"} · {worker.city || "Miestas nenurodytas"}
+                      </span>
                     </div>
-                    <div className="admin-fact">
-                      <span>Darbdavys</span>
-                      <b>{dispute.company_name}</b>
+                    <div className="admin-cell">
+                      <span>Patikimumas</span>
+                      <b>{Math.round(Number(worker.attendance_rate ?? 100))}%</b>
                     </div>
-                    <div className="admin-fact">
-                      <span>Darbuotojo „Atvykau“</span>
+                    <div className="admin-cell">
+                      <span>Įvertinimas</span>
                       <b>
-                        {dispute.worker_check_in_at
-                          ? new Date(
-                              dispute.worker_check_in_at
-                            ).toLocaleString("lt-LT", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "Nepažymėta"}
+                        {worker.rating_average === null
+                          ? "—"
+                          : `${Number(worker.rating_average).toFixed(1)} / 10`}
                       </b>
                     </div>
-                    <div className="admin-fact">
-                      <span>Darbdavio patvirtintas atvykimas</span>
-                      <b>
-                        {dispute.employer_check_in_at
-                          ? new Date(
-                              dispute.employer_check_in_at
-                            ).toLocaleString("lt-LT", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "Nepažymėta"}
-                      </b>
+                    <div className="admin-cell">
+                      <span>Realiai dirbta dienų</span>
+                      <b>{Number(worker.worked_days || 0)}</b>
                     </div>
-                    <div className="admin-fact">
-                      <span>Darbdavio faktinis išėjimo laikas</span>
-                      <b>
-                        {dispute.actual_end_time?.slice(0, 5) || "Nenurodyta"}
-                      </b>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <span
+                        className={`admin-pill ${
+                          worker.is_active ? "green" : "red"
+                        }`}
+                      >
+                        {worker.is_active ? "Aktyvus" : "Išjungtas"}
+                      </span>
+                      <button
+                        className="admin-small-btn"
+                        onClick={() => openWorkerEditor(worker)}
+                      >
+                        Redaguoti
+                      </button>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbuotojų dar nėra.</div>
+            )}
+          </section>
+        )}
 
-                  {dispute.employer_note && (
-                    <div className="admin-note">
-                      <b>Darbdavio paaiškinimas:</b>{" "}
-                      {dispute.employer_note}
+        {activeTab === "employers" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbdaviai ir įmonės</h2>
+                <div className="admin-muted">
+                  Įmonės informacija, paskyros aktyvumas, patikimumas,
+                  atšaukimai ir patvirtinimo būsena.
+                </div>
+              </div>
+              <b>{employers.length}</b>
+            </div>
+
+            {employers.length ? (
+              <div className="admin-list">
+                {employers.map((employer) => (
+                  <div className="admin-row" key={employer.company_id || employer.owner_id}>
+                    <div className="admin-row-title">
+                      <b>{employer.company_name || "Įmonė"}</b>
+                      <span>
+                        {employer.email || "—"} · {employer.city || "Miestas nenurodytas"}
+                      </span>
                     </div>
-                  )}
-
-                  {dispute.worker_response_note && (
-                    <div className="admin-note">
-                      <b>Darbuotojo paaiškinimas:</b>{" "}
-                      {dispute.worker_response_note}
+                    <div className="admin-cell">
+                      <span>Patikimumas</span>
+                      <b>{Number(employer.reliability_rate ?? 100).toFixed(0)} / 100</b>
                     </div>
-                  )}
-
-                  {dispute.worker_workday_claim === "worked" && (
-                    <div className="admin-note">
-                      Darbuotojas sistemoje taip pat buvo pažymėjęs, kad{" "}
-                      <b>dirbo šiame darbe</b>.
+                    <div className="admin-cell">
+                      <span>Darbų</span>
+                      <b>{Number(employer.jobs_count || 0)}</b>
                     </div>
-                  )}
+                    <div className="admin-cell">
+                      <span>Atšaukti su patvirtintais</span>
+                      <b>{Number(employer.cancelled_confirmed_count || 0)}</b>
+                    </div>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <span
+                        className={`admin-pill ${
+                          employer.is_verified ? "green" : "gray"
+                        }`}
+                      >
+                        {employer.is_verified ? "Patvirtinta" : "Nepatvirtinta"}
+                      </span>
+                      <button
+                        className="admin-small-btn"
+                        onClick={() => openEmployerEditor(employer)}
+                      >
+                        Redaguoti
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbdavių dar nėra.</div>
+            )}
+          </section>
+        )}
 
-                  {dispute.worker_evidence_path && (
-                    <div className="admin-note">
-                      <b>Darbuotojo pridėtas įrodymas:</b>{" "}
-                      {dispute.evidenceUrl ? (
-                        <a
-                          href={dispute.evidenceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            color: "#102438",
-                            fontWeight: 800,
-                            textDecoration: "underline",
-                          }}
-                        >
-                          {dispute.worker_evidence_name || "Atidaryti failą"}
-                        </a>
-                      ) : (
-                        <span>
-                          {dispute.worker_evidence_name || "Failas pridėtas"},
-                          bet šiuo metu nepavyko sukurti saugios peržiūros nuorodos.
+        {activeTab === "jobs" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Visi darbai</h2>
+                <div className="admin-muted">
+                  Administratoriaus peržiūra ir pagrindinių darbo pasiūlymo
+                  duomenų koregavimas.
+                </div>
+              </div>
+              <b>{jobs.length}</b>
+            </div>
+
+            {jobs.length ? (
+              <div className="admin-list">
+                {jobs.map((job) => (
+                  <div className="admin-row" key={job.job_id}>
+                    <div className="admin-row-title">
+                      <b>{job.title}</b>
+                      <span>
+                        {job.company_name} · {job.city} · {job.work_date}
+                      </span>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Būsena</span>
+                      <b>{job.status}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Žmonių</span>
+                      <b>
+                        {Number(job.confirmed_workers || 0)} /{" "}
+                        {Number(job.workers_needed || 0)}
+                      </b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Atlygis</span>
+                      <b>{formatNetPay(job.pay_amount, job.pay_unit)}</b>
+                    </div>
+                    <button
+                      className="admin-small-btn"
+                      onClick={() => openJobEditor(job)}
+                    >
+                      Redaguoti
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "ratings" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbuotojų atsiliepimai</h2>
+                <div className="admin-muted">
+                  Matomi visi darbdavių palikti balai ir komentarai. Administratorius
+                  gali pašalinti netinkamą ar piktnaudžiaujantį atsiliepimą.
+                </div>
+              </div>
+              <b>{ratings.length}</b>
+            </div>
+
+            {ratings.length ? (
+              <div className="admin-list">
+                {ratings.map((rating) => (
+                  <div className="admin-row" key={rating.rating_id}>
+                    <div className="admin-row-title">
+                      <b>
+                        {rating.worker_name} · {rating.score} / 10
+                      </b>
+                      <span>
+                        {rating.company_name} · {rating.job_title}
+                      </span>
+                      {rating.comment && (
+                        <span style={{ color: "#405264", marginTop: 7 }}>
+                          „{rating.comment}“
                         </span>
                       )}
                     </div>
-                  )}
-
-                  <div className="admin-actions">
+                    <div className="admin-cell">
+                      <span>Data</span>
+                      <b>{formatAdminDate(rating.created_at)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Darbdavys</span>
+                      <b>{rating.company_name}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Darbas</span>
+                      <b>{rating.job_title}</b>
+                    </div>
                     <button
-                      className="admin-danger"
-                      disabled={busy}
-                      onClick={() => resolveDispute(dispute, "employer")}
+                      className="admin-small-btn danger"
+                      disabled={deletingRatingId === rating.rating_id}
+                      onClick={() => deleteRating(rating)}
                     >
-                      Darbdavio naudai
-                    </button>
-                    <button
-                      className="admin-ok"
-                      disabled={busy}
-                      onClick={() => resolveDispute(dispute, "worker")}
-                    >
-                      {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
+                      {deletingRatingId === rating.rating_id
+                        ? "Šalinama..."
+                        : "Pašalinti"}
                     </button>
                   </div>
-                </section>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="wd-card">
-            Šiuo metu neišspręstų darbo dienos ginčų nėra.
-          </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Atsiliepimų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "files" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Įkelti failai</h2>
+                <div className="admin-muted">
+                  Administratoriui rodomas visų sistemos Storage bucketų failų
+                  sąrašas. Šiuo metu naudojami ginčų įrodymų failai; atsiradus
+                  kitoms įkėlimo funkcijoms, jų failai taip pat pateks čia.
+                </div>
+              </div>
+              <b>{files.length}</b>
+            </div>
+
+            {files.length ? (
+              <div className="admin-list">
+                {files.map((file) => (
+                  <div className="admin-row" key={file.object_id}>
+                    <div className="admin-row-title">
+                      <b>{file.file_name || file.storage_path}</b>
+                      <span>
+                        {file.bucket_id} · {file.owner_name || "Savininkas nenustatytas"}
+                      </span>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Įkelta</span>
+                      <b>{formatAdminDate(file.uploaded_at)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Dydis</span>
+                      <b>{bytesLabel(file.size_bytes)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Susijęs darbas</span>
+                      <b>{file.job_title || "—"}</b>
+                    </div>
+                    {file.signedUrl ? (
+                      <a
+                        className="admin-small-btn"
+                        href={file.signedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ textDecoration: "none" }}
+                      >
+                        Atidaryti
+                      </a>
+                    ) : (
+                      <span className="admin-pill gray">Peržiūra negalima</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Įkeltų failų šiuo metu nėra.</div>
+            )}
+          </section>
         )}
       </main>
+
+      {editor && (
+        <div
+          className="admin-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !editorSaving) {
+              setEditor(null);
+            }
+          }}
+        >
+          <div className="admin-modal">
+            <div className="admin-modal-head">
+              <div>
+                <div className="eyebrow">ADMINISTRATORIAUS REDAGAVIMAS</div>
+                <h2>
+                  {editor.type === "worker"
+                    ? "Darbuotojo informacija"
+                    : editor.type === "employer"
+                    ? "Darbdavio informacija"
+                    : "Darbo pasiūlymas"}
+                </h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={editorSaving}
+                onClick={() => setEditor(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            {editor.type === "worker" && (
+              <div className="admin-grid-2">
+                <label className="admin-label">
+                  Rodomas vardas
+                  <input
+                    className="admin-input"
+                    value={editorForm.displayName}
+                    onChange={(e) =>
+                      updateEditorField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Teisinis vardas / pavardė
+                  <input
+                    className="admin-input"
+                    value={editorForm.legalName}
+                    onChange={(e) =>
+                      updateEditorField("legalName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Telefonas
+                  <input
+                    className="admin-input"
+                    value={editorForm.phone}
+                    onChange={(e) =>
+                      updateEditorField("phone", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Kelionės spindulys, km
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    value={editorForm.travelRadiusKm}
+                    onChange={(e) =>
+                      updateEditorField("travelRadiusKm", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Patirtis, metais
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editorForm.yearsExperience}
+                    onChange={(e) =>
+                      updateEditorField("yearsExperience", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.hasDrivingLicenseB}
+                      onChange={(e) =>
+                        updateEditorField(
+                          "hasDrivingLicenseB",
+                          e.target.checked
+                        )
+                      }
+                    />{" "}
+                    B kategorija
+                  </span>
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.isActive}
+                      onChange={(e) =>
+                        updateEditorField("isActive", e.target.checked)
+                      }
+                    />{" "}
+                    Paskyra aktyvi
+                  </span>
+                </label>
+                <label className="admin-label admin-wide">
+                  Aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.shortBio}
+                    onChange={(e) =>
+                      updateEditorField("shortBio", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            {editor.type === "employer" && (
+              <div className="admin-grid-2">
+                <label className="admin-label">
+                  Paskyros vardas
+                  <input
+                    className="admin-input"
+                    value={editorForm.displayName}
+                    onChange={(e) =>
+                      updateEditorField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Telefonas
+                  <input
+                    className="admin-input"
+                    value={editorForm.phone}
+                    onChange={(e) =>
+                      updateEditorField("phone", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Įmonės pavadinimas
+                  <input
+                    className="admin-input"
+                    value={editorForm.name}
+                    onChange={(e) => updateEditorField("name", e.target.value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Įmonės kodas
+                  <input
+                    className="admin-input"
+                    value={editorForm.companyCode}
+                    onChange={(e) =>
+                      updateEditorField("companyCode", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  PVM kodas
+                  <input
+                    className="admin-input"
+                    value={editorForm.vatCode}
+                    onChange={(e) =>
+                      updateEditorField("vatCode", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.isVerified}
+                      onChange={(e) =>
+                        updateEditorField("isVerified", e.target.checked)
+                      }
+                    />{" "}
+                    Įmonė patvirtinta
+                  </span>
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.ownerActive}
+                      onChange={(e) =>
+                        updateEditorField("ownerActive", e.target.checked)
+                      }
+                    />{" "}
+                    Savininko paskyra aktyvi
+                  </span>
+                </label>
+                <label className="admin-label admin-wide">
+                  Įmonės aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.description}
+                    onChange={(e) =>
+                      updateEditorField("description", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            {editor.type === "job" && (
+              <div className="admin-grid-2">
+                <label className="admin-label admin-wide">
+                  Pavadinimas
+                  <input
+                    className="admin-input"
+                    value={editorForm.title}
+                    onChange={(e) => updateEditorField("title", e.target.value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Adresas
+                  <input
+                    className="admin-input"
+                    value={editorForm.addressText}
+                    onChange={(e) =>
+                      updateEditorField("addressText", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Data
+                  <input
+                    className="admin-input"
+                    type="date"
+                    value={editorForm.workDate}
+                    onChange={(e) =>
+                      updateEditorField("workDate", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Žmonių skaičius
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editorForm.workersNeeded}
+                    onChange={(e) =>
+                      updateEditorField("workersNeeded", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pradžia
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.startTime}
+                    onChange={(e) =>
+                      updateEditorField("startTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pabaiga
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.endTime}
+                    onChange={(e) =>
+                      updateEditorField("endTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pietų pradžia
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.breakStartTime}
+                    onChange={(e) =>
+                      updateEditorField("breakStartTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pietų pabaiga
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.breakEndTime}
+                    onChange={(e) =>
+                      updateEditorField("breakEndTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Atlygis
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editorForm.payAmount}
+                    onChange={(e) =>
+                      updateEditorField("payAmount", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Atlygio vienetas
+                  <select
+                    className="admin-input"
+                    value={editorForm.payUnit}
+                    onChange={(e) =>
+                      updateEditorField("payUnit", e.target.value)
+                    }
+                  >
+                    <option value="hour">Už valandą</option>
+                    <option value="day">Už dieną</option>
+                  </select>
+                </label>
+                <label className="admin-label admin-wide">
+                  Atvykimas
+                  <select
+                    className="admin-input"
+                    value={editorForm.transportMode}
+                    onChange={(e) =>
+                      updateEditorField("transportMode", e.target.value)
+                    }
+                  >
+                    <option value="self_arrival">
+                      Darbuotojas atvyksta pats
+                    </option>
+                    <option value="employer_pickup">
+                      Darbdavys paima darbuotoją
+                    </option>
+                  </select>
+                </label>
+                <label className="admin-label admin-wide">
+                  Aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.description}
+                    onChange={(e) =>
+                      updateEditorField("description", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="admin-actions">
+              <button
+                className="admin-small-btn"
+                disabled={editorSaving}
+                onClick={() => setEditor(null)}
+              >
+                Atšaukti
+              </button>
+              <button
+                className="admin-small-btn"
+                style={{
+                  background: "#f08a28",
+                  color: "#fff",
+                  borderColor: "#f08a28",
+                }}
+                disabled={editorSaving}
+                onClick={saveEditor}
+              >
+                {editorSaving ? "Saugoma..." : "Išsaugoti"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7440,6 +9141,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
+  const [adminMode, setAdminMode] = useState("admin");
 
   useEffect(() => {
     if (!supabase) return;
@@ -7486,6 +9188,12 @@ function App() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!user || accountRole !== "admin") {
+      setAdminMode("admin");
+    }
+  }, [user?.id, accountRole]);
+
   const openLogin = () => {
     setAuthMode("login");
     setAuthRole("worker");
@@ -7517,7 +9225,34 @@ function App() {
   }
 
   if (user && accountRole === "admin") {
-    return <AdminDashboard onLogout={logout} />;
+    if (adminMode === "worker") {
+      return (
+        <AdminWorkerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    if (adminMode === "employer") {
+      return (
+        <AdminEmployerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    return (
+      <AdminDashboard
+        user={user}
+        onLogout={logout}
+        onOpenWorker={() => setAdminMode("worker")}
+        onOpenEmployer={() => setAdminMode("employer")}
+      />
+    );
   }
 
   return (
