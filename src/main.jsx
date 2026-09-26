@@ -2098,7 +2098,7 @@ function WorkerDashboard({ user, onLogout }) {
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
@@ -4872,7 +4872,7 @@ function EmployerDashboard({ user, onLogout }) {
         .ed-member-metric{padding:8px 10px;border-radius:10px;background:#f6f8fa}
         .ed-member-metric span{display:block;color:#6c7a88;font-size:11px;margin-bottom:3px}
         .ed-member-metric b{font-family:Manrope,Inter,sans-serif;font-size:17px}
-        .ed-member-status{grid-column:1/-1;margin-top:2px}
+        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
         .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
         .ed-attendance-badge{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
         .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
@@ -5271,6 +5271,68 @@ function EmployerDashboard({ user, onLogout }) {
                             <span>
                               {worker.city} · {worker.yearsExperience} m. patirties
                             </span>
+
+                            <div className="ed-worker-status">
+                              {attendance.worker_check_in_at && (
+                                <span className="ed-attendance-badge green">
+                                  ✓ Darbuotojas pažymėjo „Atvykau“
+                                </span>
+                              )}
+
+                              {attendance.employer_check_in_at && (
+                                <span className="ed-attendance-badge green">
+                                  ✓ Atvykimą patvirtinote
+                                </span>
+                              )}
+
+                              {attendance.finalized_at && (
+                                <span
+                                  className={`ed-attendance-badge ${
+                                    attendance.final_outcome === "no_show" ||
+                                    attendance.final_outcome ===
+                                      "left_early_unexcused"
+                                      ? "red"
+                                      : "green"
+                                  }`}
+                                >
+                                  {attendanceOutcomeLabel(attendance)}
+                                  {attendance.worked_minutes > 0
+                                    ? ` · ${formatWorkedMinutes(
+                                        attendance.worked_minutes
+                                      )}`
+                                    : ""}
+                                </span>
+                              )}
+
+                              {pendingNegative && !disputed && (
+                                <span className="ed-attendance-badge orange">
+                                  Laukiama darbuotojo patvirtinimo
+                                </span>
+                              )}
+
+                              {disputed && (
+                                <span className="ed-attendance-badge red">
+                                  Ginčas · reitingas nekeičiamas
+                                </span>
+                              )}
+
+                              {canClose && (
+                                <span className="ed-attendance-badge orange">
+                                  Neuždaryta darbo diena
+                                </span>
+                              )}
+
+                              {!ended &&
+                                isConfirmed &&
+                                !attendance.finalized_at &&
+                                !attendance.employer_check_in_at && (
+                                  <span className="ed-attendance-badge muted">
+                                    {checkInOpen
+                                      ? "Darbo diena vyksta"
+                                      : "Darbo diena dar neprasidėjo"}
+                                  </span>
+                                )}
+                            </div>
                           </div>
                         </div>
 
@@ -5289,67 +5351,7 @@ function EmployerDashboard({ user, onLogout }) {
                             </b>
                           </div>
 
-                          <div className="ed-member-status">
-                            {attendance.worker_check_in_at && (
-                              <span className="ed-attendance-badge green">
-                                ✓ Darbuotojas pažymėjo „Atvykau“
-                              </span>
-                            )}
 
-                            {attendance.employer_check_in_at && (
-                              <span className="ed-attendance-badge green">
-                                ✓ Atvykimą patvirtinote
-                              </span>
-                            )}
-
-                            {attendance.finalized_at && (
-                              <span
-                                className={`ed-attendance-badge ${
-                                  attendance.final_outcome === "no_show" ||
-                                  attendance.final_outcome ===
-                                    "left_early_unexcused"
-                                    ? "red"
-                                    : "green"
-                                }`}
-                              >
-                                {attendanceOutcomeLabel(attendance)}
-                                {attendance.worked_minutes > 0
-                                  ? ` · ${formatWorkedMinutes(
-                                      attendance.worked_minutes
-                                    )}`
-                                  : ""}
-                              </span>
-                            )}
-
-                            {pendingNegative && !disputed && (
-                              <span className="ed-attendance-badge orange">
-                                Laukiama darbuotojo patvirtinimo
-                              </span>
-                            )}
-
-                            {disputed && (
-                              <span className="ed-attendance-badge red">
-                                Ginčas · reitingas nekeičiamas
-                              </span>
-                            )}
-
-                            {canClose && (
-                              <span className="ed-attendance-badge orange">
-                                Neuždaryta darbo diena
-                              </span>
-                            )}
-
-                            {!ended &&
-                              isConfirmed &&
-                              !attendance.finalized_at &&
-                              !attendance.employer_check_in_at && (
-                                <span className="ed-attendance-badge muted">
-                                  {checkInOpen
-                                    ? "Darbo diena vyksta"
-                                    : "Darbo diena dar neprasidėjo"}
-                                </span>
-                              )}
-                          </div>
                         </div>
 
                         <div className="ed-attendance-actions">
