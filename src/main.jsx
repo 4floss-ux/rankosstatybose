@@ -2349,6 +2349,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [employerReviewScore, setEmployerReviewScore] = useState(null);
   const [employerReviewComment, setEmployerReviewComment] = useState("");
   const [employerReviewSaving, setEmployerReviewSaving] = useState(false);
+  const [showUrgentAvailability, setShowUrgentAvailability] = useState(false);
+  const [urgentSaving, setUrgentSaving] = useState(false);
+  const [urgentAvailability, setUrgentAvailability] = useState({
+    city: "",
+    until: null,
+  });
+  const [urgentForm, setUrgentForm] = useState({
+    city: "",
+    hours: "4",
+  });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [attendanceBusy, setAttendanceBusy] = useState(false);
@@ -2449,7 +2459,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_available_until"
           )
           .eq("user_id", user.id)
           .single(),
@@ -2507,6 +2517,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       });
       setAvatarFile(null);
       setAvatarPreview("");
+
+      setUrgentAvailability({
+        city: worker?.urgent_city || "",
+        until: worker?.urgent_available_until || null,
+      });
+      setUrgentForm({
+        city: worker?.urgent_city || profile?.city || "Vilnius",
+        hours: "4",
+      });
 
       setMetrics({
         attendanceRate: Number(worker?.attendance_rate ?? 100),
@@ -2566,6 +2585,79 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function urgentAvailabilityIsActive() {
+    if (!urgentAvailability.until) return false;
+    return new Date(urgentAvailability.until).getTime() > Date.now();
+  }
+
+  async function enableUrgentAvailability() {
+    const city = urgentForm.city.trim();
+
+    if (!city) {
+      setError("Nurodykite miestą, kuriame šiuo metu galite dirbti.");
+      return;
+    }
+
+    if (!form.phone.trim()) {
+      setError(
+        "Prieš įjungdami režimą „Laisvas dabar“ profilyje pridėkite telefono numerį."
+      );
+      return;
+    }
+
+    setUrgentSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const canonicalCity = await canonicalCityName(city);
+
+      const result = await supabase.rpc("worker_set_urgent_availability", {
+        p_city: canonicalCity,
+        p_hours: Number(urgentForm.hours),
+      });
+
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0] || {};
+      setUrgentAvailability({
+        city: row.urgent_city || canonicalCity,
+        until: row.urgent_available_until || null,
+      });
+      setUrgentForm((current) => ({
+        ...current,
+        city: row.urgent_city || canonicalCity,
+      }));
+      setShowUrgentAvailability(false);
+      setNotice(
+        "Režimas „Laisvas dabar“ įjungtas. Business ir Business Pro darbdaviai šiame mieste gali matyti jūsų telefono numerį iki pasirinkto laiko."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko įjungti režimo „Laisvas dabar“.");
+    } finally {
+      setUrgentSaving(false);
+    }
+  }
+
+  async function disableUrgentAvailability() {
+    setUrgentSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("worker_clear_urgent_availability");
+      if (result.error) throw result.error;
+
+      setUrgentAvailability({ city: "", until: null });
+      setShowUrgentAvailability(false);
+      setNotice("Režimas „Laisvas dabar“ išjungtas.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko išjungti režimo „Laisvas dabar“.");
+    } finally {
+      setUrgentSaving(false);
+    }
   }
 
   function chooseAvatarFile(file) {
@@ -3402,6 +3494,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
         .wd-heading-actions{display:grid;justify-items:end;gap:10px}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .wd-urgent-btn{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(240,138,40,.18)}
+        .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}
+        .wd-urgent-status{font-size:11px;color:#167a54;font-weight:800;text-align:right;margin-top:-4px}
         .wd-profile-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,36,56,.045);margin-bottom:22px}
         .wd-profile-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:4px}
         .wd-profile-editor-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
@@ -3523,6 +3618,38 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <span>{form.city || "Miestas nenurodytas"}</span>
               </div>
             </div>
+
+            <button
+              className={`wd-urgent-btn ${
+                urgentAvailabilityIsActive() ? "active" : ""
+              }`}
+              type="button"
+              onClick={() => {
+                setUrgentForm((current) => ({
+                  ...current,
+                  city:
+                    urgentAvailability.city ||
+                    current.city ||
+                    form.city ||
+                    "Vilnius",
+                }));
+                setShowUrgentAvailability(true);
+              }}
+            >
+              {urgentAvailabilityIsActive()
+                ? "Laisvas dabar · įjungta"
+                : "Laisvas dabar"}
+            </button>
+
+            {urgentAvailabilityIsActive() && (
+              <div className="wd-urgent-status">
+                {urgentAvailability.city} · iki{" "}
+                {new Date(urgentAvailability.until).toLocaleTimeString(
+                  "lt-LT",
+                  { hour: "2-digit", minute: "2-digit" }
+                )}
+              </div>
+            )}
 
             <button
               className="wd-edit-profile"
@@ -4788,6 +4915,129 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
+      {showUrgentAvailability && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !urgentSaving) {
+              setShowUrgentAvailability(false);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">LAISVAS DABAR</div>
+                <h2>Leisti darbdaviui jus rasti skubiai</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={urgentSaving}
+                onClick={() => setShowUrgentAvailability(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                border: "1px solid #f0d1b2",
+                background: "#fffaf5",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+                color: "#526374",
+                lineHeight: 1.5,
+                fontSize: 13,
+              }}
+            >
+              Įjungę šį režimą patvirtinate, kad šiuo metu laukiate skubaus
+              darbo. Iki pasirinkto laiko Business ir Business Pro darbdaviai,
+              ieškantys darbuotojo jūsų pasirinktame mieste, galės matyti jūsų
+              vardą ir telefono numerį.
+            </div>
+
+            <div style={{ display: "grid", gap: 14 }}>
+              <label className="wd-label">
+                Miestas
+                <CityAutocomplete
+                  className="wd-input"
+                  value={urgentForm.city}
+                  onChange={(value) =>
+                    setUrgentForm((current) => ({
+                      ...current,
+                      city: value,
+                    }))
+                  }
+                  placeholder="Pvz. Vilnius"
+                />
+              </label>
+
+              <label className="wd-label">
+                Kiek laiko būsite laisvas?
+                <select
+                  className="wd-input"
+                  value={urgentForm.hours}
+                  onChange={(e) =>
+                    setUrgentForm((current) => ({
+                      ...current,
+                      hours: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="2">2 valandas</option>
+                  <option value="4">4 valandas</option>
+                  <option value="8">8 valandas</option>
+                </select>
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 9,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <div>
+                {urgentAvailabilityIsActive() && (
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    disabled={urgentSaving}
+                    onClick={disableUrgentAvailability}
+                  >
+                    Išjungti „Laisvas dabar“
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 9 }}>
+                <button
+                  className="wd-decline"
+                  type="button"
+                  disabled={urgentSaving}
+                  onClick={() => setShowUrgentAvailability(false)}
+                >
+                  Atšaukti
+                </button>
+                <button
+                  className="wd-urgent-btn"
+                  type="button"
+                  disabled={urgentSaving}
+                  onClick={enableUrgentAvailability}
+                >
+                  {urgentSaving ? "Saugoma..." : "Esu laisvas dabar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {employerReviewTarget && (
         <div
           className="rs-modal-overlay"
@@ -5413,6 +5663,7 @@ const EMPLOYER_PLANS = [
       "Viskas, kas yra Basic plane",
       "Iki 25 darbo pasiūlymų per mėnesį",
       "Darbuotojų patikimumas ir įvertinimai",
+      "„Skubiai!“ – tiesioginiai šiuo metu laisvų darbuotojų kontaktai",
       "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė įmonės statistika",
       "1 įmonės vartotojas",
@@ -5521,6 +5772,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
   const [planBillingCycle, setPlanBillingCycle] = useState("monthly");
+  const [showUrgentSearch, setShowUrgentSearch] = useState(false);
+  const [urgentSearchCity, setUrgentSearchCity] = useState("");
+  const [urgentSearchResults, setUrgentSearchResults] = useState([]);
+  const [urgentSearchLoading, setUrgentSearchLoading] = useState(false);
+  const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
   const [showTeam, setShowTeam] = useState(false);
   const [showTeamChat, setShowTeamChat] = useState(false);
   const [teamChatUnread, setTeamChatUnread] = useState(0);
@@ -7478,6 +7734,73 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  function openUrgentSearch() {
+    const canUseUrgent = ["business", "business_pro"].includes(
+      planSummary?.plan_key
+    );
+
+    if (!canUseUrgent) {
+      setNotice(
+        "„Skubiai!“ kontaktų paieška prieinama Business ir Business Pro planuose."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setUrgentSearchCity(company?.city || "");
+    setUrgentSearchResults([]);
+    setShowUrgentSearch(true);
+    setError("");
+  }
+
+  async function searchUrgentWorkers() {
+    if (!company?.id) return;
+
+    const city = urgentSearchCity.trim();
+    if (!city) {
+      setError("Nurodykite miestą.");
+      return;
+    }
+
+    setUrgentSearchLoading(true);
+    setError("");
+
+    try {
+      const canonicalCity = await canonicalCityName(city);
+
+      const result = await supabase.rpc("get_urgent_workers", {
+        p_company_id: company.id,
+        p_city: canonicalCity,
+      });
+
+      if (result.error) throw result.error;
+
+      setUrgentSearchCity(canonicalCity);
+      setUrgentSearchResults(
+        (result.data || []).map((row) => ({
+          ...row,
+          avatarUrl: workerAvatarUrl(row.avatar_path),
+        }))
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko rasti skubiai laisvų darbuotojų.");
+    } finally {
+      setUrgentSearchLoading(false);
+    }
+  }
+
+  async function copyUrgentPhone(phone) {
+    if (!phone) return;
+
+    try {
+      await navigator.clipboard.writeText(phone);
+      setUrgentPhoneCopied(phone);
+      window.setTimeout(() => setUrgentPhoneCopied(""), 1600);
+    } catch {
+      setError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
   function openNewJobForm() {
     if (
       planSummary &&
@@ -7862,8 +8185,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
-        .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:8px;min-width:220px}
+        .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:8px;min-width:300px}
         .ed-heading-actions>button{width:100%}
+        .ed-heading-primary-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .ed-heading-primary-row>button{width:100%}
+        .ed-urgent-btn{border:0;border-radius:10px;background:#102438;color:#fff;padding:12px 16px;font:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
+        .ed-urgent-btn:hover{background:#1d354d}
+        .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.ed-urgent-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
+        .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
+        .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
+        .ed-urgent-results{display:grid;gap:9px}.ed-urgent-row{border:1px solid #e4ebf0;border-radius:12px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+        .ed-urgent-worker{display:flex;align-items:center;gap:11px}.ed-urgent-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f5;display:grid;place-items:center;font-weight:800;flex:0 0 44px}.ed-urgent-avatar img{width:100%;height:100%;object-fit:cover}.ed-urgent-worker b{display:block}.ed-urgent-worker span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-urgent-contact{text-align:right}.ed-urgent-contact b{display:block;font-size:15px;margin-bottom:6px}.ed-urgent-empty{text-align:center;color:#6c7a88;padding:28px 10px}
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
         .ed-chat-alert-btn{position:relative}
@@ -8046,7 +8381,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -8301,13 +8636,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
 
           <div className="ed-heading-actions">
-            <button
-              className="ed-primary"
-              type="button"
-              onClick={openNewJobForm}
-            >
-              + Sukurti darbo pasiūlymą
-            </button>
+            <div className="ed-heading-primary-row">
+              <button
+                className="ed-primary"
+                type="button"
+                onClick={openNewJobForm}
+              >
+                + Sukurti darbo pasiūlymą
+              </button>
+
+              <button
+                className="ed-urgent-btn"
+                type="button"
+                onClick={openUrgentSearch}
+              >
+                Skubiai!
+              </button>
+            </div>
 
             <button
               className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
@@ -9895,6 +10240,128 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showUrgentSearch && (
+        <div
+          className="ed-urgent-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !urgentSearchLoading) {
+              setShowUrgentSearch(false);
+            }
+          }}
+        >
+          <div className="ed-urgent-modal">
+            <div className="ed-urgent-head">
+              <div>
+                <div className="eyebrow">SKUBIAI!</div>
+                <h2>Kas gali atvykti dirbti dabar?</h2>
+                <p>
+                  Pasirinkite miestą. Rodomi tik darbuotojai, kurie patys
+                  įjungė režimą „Laisvas dabar“ ir sutiko laikinai parodyti
+                  savo telefono numerį darbdaviams.
+                </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={urgentSearchLoading}
+                onClick={() => setShowUrgentSearch(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="ed-urgent-note">
+              Ši paieška nesukuria darbo pasiūlymo ir nesiunčia kvietimų.
+              Susisiekę su darbuotoju darbo sąlygas suderinate tiesiogiai.
+              Darbuotojo numeris iš sąrašo dingsta automatiškai pasibaigus jo
+              pasirinktam „Laisvas dabar“ laikui.
+            </div>
+
+            <div className="ed-urgent-filter">
+              <label className="ed-label">
+                Miestas
+                <CityAutocomplete
+                  className="ed-input"
+                  value={urgentSearchCity}
+                  onChange={setUrgentSearchCity}
+                  placeholder="Pvz. Vilnius"
+                />
+              </label>
+
+              <button
+                className="ed-primary"
+                type="button"
+                disabled={urgentSearchLoading}
+                onClick={searchUrgentWorkers}
+              >
+                {urgentSearchLoading ? "Ieškoma..." : "Filtruoti"}
+              </button>
+            </div>
+
+            {urgentSearchResults.length ? (
+              <div className="ed-urgent-results">
+                {urgentSearchResults.map((worker) => (
+                  <div className="ed-urgent-row" key={worker.worker_id}>
+                    <div className="ed-urgent-worker">
+                      <div className="ed-urgent-avatar">
+                        {worker.avatarUrl ? (
+                          <img
+                            src={worker.avatarUrl}
+                            alt={worker.display_name || "Darbuotojas"}
+                          />
+                        ) : (
+                          workerInitials(worker.display_name)
+                        )}
+                      </div>
+
+                      <div>
+                        <b>{shortWorkerName(worker.display_name)}</b>
+                        <span>
+                          {worker.city}
+                          {Number(worker.years_experience || 0) > 0
+                            ? ` · ${Number(worker.years_experience)} m. patirties`
+                            : ""}
+                          {worker.has_driving_license_b ? " · B kategorija" : ""}
+                        </span>
+                        <span>
+                          Laisvas iki{" "}
+                          {new Date(
+                            worker.urgent_available_until
+                          ).toLocaleTimeString("lt-LT", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ed-urgent-contact">
+                      <b>{worker.phone}</b>
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        onClick={() => copyUrgentPhone(worker.phone)}
+                      >
+                        {urgentPhoneCopied === worker.phone
+                          ? "Nukopijuota"
+                          : "Kopijuoti numerį"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ed-urgent-empty">
+                {urgentSearchLoading
+                  ? "Ieškome darbuotojų..."
+                  : "Pasirinkite miestą ir spauskite „Filtruoti“."}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -14142,6 +14609,7 @@ function App() {
                   <li>Visa Basic funkcionalumo apimtis</li>
                   <li>Iki 25 darbo pasiūlymų / mėn.</li>
                   <li>Darbuotojų patikimumas ir įvertinimai</li>
+                  <li>„Skubiai!“ laisvų darbuotojų kontaktų paieška</li>
                   <li>Privatūs ir bendri darbo pokalbiai</li>
                   <li>Išplėstinė įmonės statistika</li>
                   <li>1 įmonės vartotojas</li>
