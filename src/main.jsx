@@ -7728,6 +7728,16 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!notice) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setNotice("");
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   async function createSafeFileUrl(bucketId, storagePath) {
     if (!bucketId || !storagePath) return null;
 
@@ -8298,9 +8308,15 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
         .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
-        .admin-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
-        .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:108px;display:flex;flex-direction:column;justify-content:space-between}
-        .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;margin-top:10px}
+        .admin-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
+        .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
+        .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
+        .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
+        .admin-toast-stack{position:fixed;top:86px;right:22px;z-index:9800;display:grid;gap:8px;width:min(380px,calc(100vw - 44px))}
+        .admin-toast{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-radius:12px;padding:12px 13px;box-shadow:0 16px 44px rgba(16,36,56,.18);font-size:13px;font-weight:700;line-height:1.45}
+        .admin-toast.ok{background:#edf8f3;border:1px solid #bfe6d3;color:#146f4d}
+        .admin-toast.err{background:#fff0ec;border:1px solid #efc4b7;color:#a6462b}
+        .admin-toast button{border:0;background:transparent;color:inherit;font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 1px}
         .admin-section{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.035)}
         .admin-section+.admin-section{margin-top:14px}
         .admin-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
@@ -8329,8 +8345,9 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
-        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}}
-        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}}
+        @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
       `}</style>
 
       <header className="admin-topbar">
@@ -8399,134 +8416,77 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
           ))}
         </div>
 
-        {notice && <div className="wd-note ok">{notice}</div>}
-        {error && <div className="wd-note err">{error}</div>}
+        {(notice || error) && (
+          <div className="admin-toast-stack">
+            {notice && (
+              <div className="admin-toast ok">
+                <span>{notice}</span>
+                <button
+                  type="button"
+                  aria-label="Uždaryti pranešimą"
+                  onClick={() => setNotice("")}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {error && (
+              <div className="admin-toast err">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  aria-label="Uždaryti klaidos pranešimą"
+                  onClick={() => setError("")}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === "overview" && (
-          <>
-            <div className="admin-kpis">
-              <div className="admin-kpi">
-                <span>Darbuotojų paskyros</span>
-                <b>{Number(stats.totalWorkers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Suspenduoti darbuotojai</span>
-                <b>{Number(stats.suspendedWorkers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Realūs darbuotojai su patvirtintu darbu</span>
-                <b>{Number(stats.realWorkers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Realiai jau dirbę darbuotojai</span>
-                <b>{Number(stats.workedWorkers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Laisvi per artimiausias 30 d.</span>
-                <b>{Number(stats.availableWorkers30d || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Darbdavių paskyros</span>
-                <b>{Number(stats.totalEmployers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Suspenduoti darbdaviai</span>
-                <b>{Number(stats.suspendedEmployers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Darbdaviai, kurie jau sukūrė darbą</span>
-                <b>{Number(stats.realEmployers || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Įmonės</span>
-                <b>{Number(stats.totalCompanies || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Patvirtintos įmonės</span>
-                <b>{Number(stats.verifiedCompanies || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Visi darbo pasiūlymai</span>
-                <b>{Number(stats.totalJobs || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Aktyvūs darbai</span>
-                <b>{Number(stats.openJobs || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Įvykdyti darbai</span>
-                <b>{Number(stats.completedJobs || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Atšaukti darbai</span>
-                <b>{Number(stats.cancelledJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Panaudoti darbuotojai šį mėnesį</span>
-                <b>{Number(stats.workersUsedThisMonth || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Nauji darbai šį mėnesį</span>
-                <b>{Number(stats.jobsThisMonth || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Darbuotojų įvertinimo vidurkis</span>
-                <b>
-                  {Number(stats.workerRatingCount || 0)
-                    ? `${Number(stats.workerRatingAverage || 0).toFixed(1)} / 10`
-                    : "—"}
-                </b>
-              </div>
-              <div className="admin-kpi">
-                <span>Darbdavių patikimumo vidurkis</span>
-                <b>{Number(stats.employerReliabilityAverage || 0).toFixed(1)} / 100</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Neišspręsti ginčai</span>
-                <b>{Number(stats.unresolvedDisputes || 0)}</b>
-              </div>
-              <div className="admin-kpi">
-                <span>Įkelti failai</span>
-                <b>{Number(stats.uploadedFiles || 0)}</b>
-              </div>
+          <div className="admin-kpis">
+            <div className="admin-kpi">
+              <span>Darbuotojai</span>
+              <b>{Number(stats.totalWorkers || 0)}</b>
             </div>
 
-            <section className="admin-section" style={{ marginTop: 16 }}>
-              <div className="admin-section-head">
-                <div>
-                  <h2>Naudojimo santrauka</h2>
-                  <div className="admin-muted">
-                    „Realus darbuotojas“ čia reiškia žmogų, kuris turi
-                    patvirtintą / įvykusį užsakymą. „Realus darbdavys“ – įmonės
-                    savininką, kuris jau sukūrė bent vieną darbo pasiūlymą.
-                  </div>
-                </div>
-              </div>
+            <div className="admin-kpi">
+              <span>Darbdaviai</span>
+              <b>{Number(stats.totalEmployers || 0)}</b>
+            </div>
 
-              <div className="admin-kpis">
-                <div className="admin-kpi">
-                  <span>Darbuotojų registracijos šį mėnesį</span>
-                  <b>{Number(stats.workersRegisteredThisMonth || 0)}</b>
-                </div>
-                <div className="admin-kpi">
-                  <span>Darbdavių registracijos šį mėnesį</span>
-                  <b>{Number(stats.employersRegisteredThisMonth || 0)}</b>
-                </div>
-                <div className="admin-kpi">
-                  <span>Patvirtinti darbuotojų užsakymai</span>
-                  <b>{Number(stats.confirmedBookings || 0)}</b>
-                </div>
-                <div className="admin-kpi">
-                  <span>Darbuotojų atsiliepimų skaičius</span>
-                  <b>{Number(stats.workerRatingCount || 0)}</b>
-                </div>
-              </div>
-            </section>
-          </>
+            <div className="admin-kpi">
+              <span>Aktyvūs darbai</span>
+              <b>{Number(stats.openJobs || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Įvykdyti darbai</span>
+              <b>{Number(stats.completedJobs || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Atšaukti darbai</span>
+              <b>{Number(stats.cancelledJobs || 0)}</b>
+            </div>
+
+            <div
+              className={`admin-kpi ${
+                Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
+              }`}
+            >
+              <span>Neišspręsti ginčai</span>
+              <b>{Number(stats.unresolvedDisputes || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Panaudoti darbuotojai / mėn.</span>
+              <b>{Number(stats.workersUsedThisMonth || 0)}</b>
+            </div>
+          </div>
         )}
 
         {activeTab === "disputes" && (
