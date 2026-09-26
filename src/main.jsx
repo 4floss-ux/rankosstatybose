@@ -2213,6 +2213,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
   const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
+  const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
@@ -2568,17 +2569,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
 
     setInvitations(
-      invitationRows.map((invitation) => {
-        const job = jobMap.get(invitation.job_id);
-        const company = job ? companyMap.get(job.company_id) : null;
-        return {
-          ...invitation,
-          job,
-          companyName: company?.name || "Darbdavys",
-          companyReliability: Number(company?.reliability_rate ?? 100),
-          companyCancelledConfirmed: Number(company?.cancelled_confirmed_count ?? 0),
-        };
-      })
+      invitationRows
+        .filter((invitation) => invitation.status === "pending")
+        .map((invitation) => {
+          const job = jobMap.get(invitation.job_id);
+          const company = job ? companyMap.get(job.company_id) : null;
+          return {
+            ...invitation,
+            job,
+            companyName: company?.name || "Darbdavys",
+            companyReliability: Number(company?.reliability_rate ?? 100),
+            companyCancelledConfirmed: Number(
+              company?.cancelled_confirmed_count ?? 0
+            ),
+          };
+        })
     );
 
     setConfirmedJobs(
@@ -2739,6 +2744,34 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setNotice(`Telefono numeris nukopijuotas: ${phone}`);
     } catch (err) {
       setError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
+  async function openWorkdayDetails(item) {
+    if (!item?.job?.id) return;
+
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_job_contact", {
+        p_job_id: item.job.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const contact = result.data?.[0] || {};
+
+      setWorkdayDetailsTarget({
+        ...item,
+        companyName: contact.company_name || item.companyName,
+        companyPhone: contact.phone || "",
+      });
+    } catch (err) {
+      setWorkdayDetailsTarget({
+        ...item,
+        companyPhone: "",
+      });
+      setError(err?.message || "Nepavyko įkelti darbo kontaktų.");
     }
   }
 
@@ -3023,15 +3056,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       <style>{`
         .wd-page{min-height:100vh;background:#f6f8fa;color:#102438}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
-        .wd-topbar-inner{width:min(1060px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .wd-shell{width:min(1060px,calc(100% - 40px));margin:32px auto 70px}
+        .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 70px}
         .wd-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
         .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
-        .wd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+        .wd-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
@@ -3092,8 +3125,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}
         .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
         @keyframes wdspin{to{transform:rotate(360deg)}}
+        @media(max-width:1180px){
+          .wd-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+        }
         @media(max-width:760px){
-          .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1060px)}
+          .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1320px)}
           .wd-heading{align-items:flex-start;flex-direction:column}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
@@ -3425,11 +3461,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-kpis">
             <div className="wd-kpi">
               <span>Dirbta šį mėnesį</span>
-              <b>{workerStats.monthWorkedDays} d.</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Valandų šį mėnesį</span>
-              <b>{formatWorkedMinutes(workerStats.monthWorkedMinutes)}</b>
+              <b>
+                {workerStats.monthWorkedDays} d. ·{" "}
+                {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
+              </b>
             </div>
             <div className="wd-kpi">
               <span>Darbų šį mėnesį</span>
@@ -3525,23 +3560,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <div>
                         <h3>{job.title}</h3>
                         <div className="wd-workday-meta">
-                          <div><b>{item.companyName}</b></div>
                           <div>
+                            <b>{item.companyName}</b>
+                            {job.pay_amount
+                              ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                              : ""}
+                            {" · "}
                             {job.work_date} · {job.start_time?.slice(0, 5)}
                             {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
-                          </div>
-                          {job.break_start_time && job.break_end_time && (
-                            <div>
-                              Pietų pertrauka:{" "}
-                              <b>
-                                {job.break_start_time.slice(0, 5)}–
-                                {job.break_end_time.slice(0, 5)}
-                              </b>
-                            </div>
-                          )}
-                          <div>
-                            {job.city}
-                            {job.address_text ? ` · ${job.address_text}` : ""}
                           </div>
                         </div>
 
@@ -3672,6 +3698,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       </div>
 
                       <div className="wd-workday-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(item)}
+                        >
+                          Atidaryti
+                        </button>
+
+                        {["confirmed", "completed", "no_show"].includes(
+                          item.status
+                        ) && (
+                          <button
+                            className="wd-decline"
+                            type="button"
+                            onClick={() => openWorkerGroupConversation(job)}
+                          >
+                            Darbo pokalbis
+                          </button>
+                        )}
+
                         {canCheckIn && (
                           <>
                             <button
@@ -3688,28 +3734,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             >
                               Atvykau, bet nerandu
                             </button>
-                            <button
-                              className="wd-decline"
-                              type="button"
-                              onClick={() => openWorkerGroupConversation(job)}
-                            >
-                              Darbo pokalbis
-                            </button>
                           </>
                         )}
-
-                        {!canCheckIn &&
-                          ["confirmed", "completed", "no_show"].includes(
-                            item.status
-                          ) && (
-                            <button
-                              className="wd-decline"
-                              type="button"
-                              onClick={() => openWorkerGroupConversation(job)}
-                            >
-                              Darbo pokalbis
-                            </button>
-                          )}
 
                         {pendingNegative && !disputed && (
                           <>
@@ -3964,6 +3990,253 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         </div>
       </main>
+
+      {workdayDetailsTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setWorkdayDetailsTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO INFORMACIJA</div>
+                <h2>{workdayDetailsTarget.job?.title || "Darbas"}</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                onClick={() => setWorkdayDetailsTarget(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "#f8fafb",
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbdavys
+                </div>
+                <b style={{ display: "block", marginTop: 4, fontSize: 17 }}>
+                  {workdayDetailsTarget.companyName || "Darbdavys"}
+                </b>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Data ir laikas
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {workdayDetailsTarget.job?.work_date} ·{" "}
+                    {workdayDetailsTarget.job?.start_time?.slice(0, 5)}
+                    {workdayDetailsTarget.job?.end_time
+                      ? `–${workdayDetailsTarget.job.end_time.slice(0, 5)}`
+                      : ""}
+                  </b>
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Atlygis
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {workdayDetailsTarget.job?.pay_amount
+                      ? formatNetPay(
+                          workdayDetailsTarget.job.pay_amount,
+                          workdayDetailsTarget.job.pay_unit
+                        )
+                      : "Nenurodytas"}
+                  </b>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbo adresas
+                </div>
+                <b style={{ display: "block", marginTop: 4 }}>
+                  {workdayDetailsTarget.job?.address_text ||
+                    workdayDetailsTarget.job?.city ||
+                    "Adresas nenurodytas"}
+                </b>
+              </div>
+
+              {workdayDetailsTarget.job?.break_start_time &&
+                workdayDetailsTarget.job?.break_end_time && (
+                  <div
+                    style={{
+                      border: "1px solid #e4ebf0",
+                      borderRadius: 12,
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                      Pietų pertrauka
+                    </div>
+                    <b style={{ display: "block", marginTop: 4 }}>
+                      {workdayDetailsTarget.job.break_start_time.slice(0, 5)}–
+                      {workdayDetailsTarget.job.break_end_time.slice(0, 5)}
+                    </b>
+                  </div>
+                )}
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Atvykimas į darbo vietą
+                </div>
+                <b style={{ display: "block", marginTop: 4 }}>
+                  {workdayDetailsTarget.job?.transport_mode ===
+                  "employer_pickup"
+                    ? "Darbdavys paima darbuotoją"
+                    : "Darbuotojas atvyksta pats"}
+                </b>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbdavio telefono numeris
+                </div>
+
+                {workdayDetailsTarget.companyPhone ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      marginTop: 5,
+                    }}
+                  >
+                    <b>{workdayDetailsTarget.companyPhone}</b>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      onClick={() =>
+                        copyPhoneNumber(workdayDetailsTarget.companyPhone)
+                      }
+                    >
+                      Kopijuoti numerį
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 5, color: "#6c7a88" }}>
+                    Telefono numeris nenurodytas.
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbo aprašymas
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    lineHeight: 1.55,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {workdayDetailsTarget.job?.description?.trim() ||
+                    "Darbdavys papildomo darbo aprašymo nepateikė."}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {["confirmed", "completed", "no_show"].includes(
+                workdayDetailsTarget.status
+              ) && (
+                <button
+                  className="wd-decline"
+                  type="button"
+                  onClick={() => {
+                    const job = workdayDetailsTarget.job;
+                    setWorkdayDetailsTarget(null);
+                    openWorkerGroupConversation(job);
+                  }}
+                >
+                  Darbo pokalbis
+                </button>
+              )}
+
+              <button
+                className="wd-accept"
+                type="button"
+                onClick={() => setWorkdayDetailsTarget(null)}
+              >
+                Uždaryti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {arrivalHelpTarget && (
         <div
