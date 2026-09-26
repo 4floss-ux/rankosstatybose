@@ -5638,6 +5638,7 @@ const EMPLOYER_PLANS = [
       "Viskas, kas yra Basic plane",
       "Iki 25 darbo pasiūlymų per mėnesį",
       "Darbuotojų patikimumas ir įvertinimai",
+      "„Darbuotojai favoritai“ – išsaugoti gerai pasirodžiusius darbuotojus",
       "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė įmonės statistika",
       "1 įmonės vartotojas",
@@ -5752,6 +5753,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [urgentSearchResults, setUrgentSearchResults] = useState([]);
   const [urgentSearchLoading, setUrgentSearchLoading] = useState(false);
   const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
+  const [showSavedWorkers, setShowSavedWorkers] = useState(false);
+  const [savedWorkers, setSavedWorkers] = useState([]);
+  const [savedWorkersLoading, setSavedWorkersLoading] = useState(false);
+  const [savedWorkerBusy, setSavedWorkerBusy] = useState("");
+  const [workerSource, setWorkerSource] = useState("available");
+  const [invitingSavedTeam, setInvitingSavedTeam] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [showTeamChat, setShowTeamChat] = useState(false);
   const [teamChatUnread, setTeamChatUnread] = useState(0);
@@ -5847,6 +5854,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           loadEmployerNotifications(),
           loadEmployerStats(company.id, companyMemberRole),
           loadCompanyWorkerReviews(company.id),
+          planSummary?.can_saved_workers
+            ? loadSavedWorkers(company.id, planSummary)
+            : Promise.resolve(),
           loadCompanyTeamChatUnread(company.id, planSummary),
         ]);
 
@@ -6371,6 +6381,43 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function loadSavedWorkers(
+    companyId = company?.id,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_saved_workers) {
+      setSavedWorkers([]);
+      return [];
+    }
+
+    const result = await supabase.rpc("get_company_saved_workers", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const rows = (result.data || []).map((row) => ({
+      ...row,
+      id: row.worker_id,
+      name: shortWorkerName(row.display_name),
+      initials: workerInitials(row.display_name),
+      avatarUrl: workerAvatarUrl(row.avatar_path),
+      city: row.city || "",
+      yearsExperience: Number(row.years_experience || 0),
+      hasDrivingLicenseB: Boolean(row.has_driving_license_b),
+      attendanceRate: Number(row.attendance_rate ?? 100),
+      ratingAverage:
+        row.rating_average === null || row.rating_average === undefined
+          ? null
+          : Number(row.rating_average),
+      ratingCount: Number(row.rating_count || 0),
+      completedJobs: Number(row.completed_jobs || 0),
+    }));
+
+    setSavedWorkers(rows);
+    return rows;
+  }
+
   async function loadCompanyWorkerReviews(companyId = company?.id) {
     if (!companyId) {
       setCompanyWorkerReviews([]);
@@ -6478,6 +6525,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadEmployerNotifications(),
         loadEmployerStats(companyId, loadedMemberRole),
         loadCompanyWorkerReviews(companyId),
+        loadedPlan?.can_saved_workers
+          ? loadSavedWorkers(companyId, loadedPlan)
+          : Promise.resolve(),
         loadedPlan?.can_team_management
           ? loadCompanyTeam(companyId, loadedMemberRole, loadedPlan)
           : Promise.resolve(),
@@ -7671,6 +7721,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openExistingJob(job) {
     setNotice("");
     setError("");
+    setWorkerSource("available");
     setEditingJobId(null);
     setEditingConfirmedCount(0);
     setShowJobForm(false);
@@ -7706,6 +7757,131 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
       setError(err?.message || "Nepavyko atidaryti poreikio.");
+    }
+  }
+
+  async function openSavedWorkerTeam() {
+    if (!planSummary?.can_saved_workers) {
+      setNotice(
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setShowSavedWorkers(true);
+    setSavedWorkersLoading(true);
+    setError("");
+
+    try {
+      await loadSavedWorkers(company?.id, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbuotojų komandos.");
+    } finally {
+      setSavedWorkersLoading(false);
+    }
+  }
+
+  async function saveWorkerToTeam(worker) {
+    if (!company?.id || !worker?.id) return;
+
+    if (!planSummary?.can_saved_workers) {
+      setNotice(
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setSavedWorkerBusy(worker.id);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("save_worker_to_company_team", {
+        p_company_id: company.id,
+        p_worker_id: worker.id,
+      });
+
+      if (result.error) throw result.error;
+
+      await loadSavedWorkers(company.id, planSummary);
+      setNotice(`${worker.name || "Darbuotojas"} pridėtas į „Mano komandą“.`);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pridėti darbuotojo į komandą.");
+    } finally {
+      setSavedWorkerBusy("");
+    }
+  }
+
+  async function removeWorkerFromTeam(worker) {
+    if (!company?.id || !worker?.id) return;
+
+    setSavedWorkerBusy(worker.id);
+    setError("");
+
+    try {
+      const result = await supabase.rpc(
+        "remove_worker_from_company_team",
+        {
+          p_company_id: company.id,
+          p_worker_id: worker.id,
+        }
+      );
+
+      if (result.error) throw result.error;
+
+      await loadSavedWorkers(company.id, planSummary);
+      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš „Mano komandos“.`);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti darbuotojo iš komandos.");
+    } finally {
+      setSavedWorkerBusy("");
+    }
+  }
+
+  async function inviteSavedWorkerTeam() {
+    if (!currentJob?.id || !planSummary?.can_saved_workers) return;
+
+    setInvitingSavedTeam(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("invite_company_saved_workers", {
+        p_job_id: currentJob.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const summary = result.data?.[0] || {};
+      const invited = Number(summary.invited_count || 0);
+      const matching = Number(summary.matching_count || 0);
+      const saved = Number(summary.saved_count || 0);
+      const already = Number(summary.already_invited_count || 0);
+
+      await findMatches(currentJob);
+
+      if (!saved) {
+        setNotice("Darbuotojų favorituose dar nėra išsaugotų darbuotojų.");
+      } else if (!matching) {
+        setNotice(
+          "Šiam darbui šiuo metu netinka nė vienas darbuotojas iš favoritų pagal vietą, laiką, prieinamumą ir kitus darbo kriterijus."
+        );
+      } else if (invited) {
+        setNotice(
+          `Kvietimai išsiųsti ${invited} tinkamiems darbuotojams iš favoritų.${
+            already ? ` ${already} jau buvo pakviesti anksčiau.` : ""
+          }`
+        );
+      } else {
+        setNotice(
+          "Visi šiam darbui tinkami darbuotojai iš favoritų jau buvo pakviesti."
+        );
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko pakviesti „Mano komandos“.");
+    } finally {
+      setInvitingSavedTeam(false);
     }
   }
 
@@ -7792,6 +7968,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setEditingJobId(null);
     setEditingConfirmedCount(0);
     setCurrentJob(null);
+    setWorkerSource("available");
     setMatches([]);
     setJobWorkers([]);
     setNotice("");
@@ -8116,6 +8293,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     Boolean(currentJobResponsibleUserId) &&
     currentJobResponsibleUserId === user.id;
 
+  const savedWorkerIdSet = new Set(
+    savedWorkers.map((worker) => worker.id)
+  );
+
+  const baseCandidateWorkers = matches.filter(
+    (worker) => !jobWorkers.some((item) => item.id === worker.id)
+  );
+
+  const visibleCandidateWorkers =
+    workerSource === "team"
+      ? baseCandidateWorkers.filter((worker) =>
+          savedWorkerIdSet.has(worker.id)
+        )
+      : baseCandidateWorkers;
+
+  const matchingSavedWorkersCount = baseCandidateWorkers.filter((worker) =>
+    savedWorkerIdSet.has(worker.id)
+  ).length;
+
   const visibleJobs =
     planSummary?.can_team_management &&
     (jobScope === "mine" || !canSeeAllCompanyJobs)
@@ -8172,6 +8368,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-urgent-results{display:grid;gap:9px}.ed-urgent-row{border:1px solid #e4ebf0;border-radius:12px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
         .ed-urgent-worker{display:flex;align-items:center;gap:11px}.ed-urgent-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f5;display:grid;place-items:center;font-weight:800;flex:0 0 44px}.ed-urgent-avatar img{width:100%;height:100%;object-fit:cover}.ed-urgent-worker b{display:block}.ed-urgent-worker span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
         .ed-urgent-contact{text-align:right}.ed-urgent-contact b{display:block;font-size:15px;margin-bottom:6px}.ed-urgent-empty{text-align:center;color:#6c7a88;padding:28px 10px}
+        .ed-worker-source{display:flex;align-items:center;gap:5px;margin-top:12px;padding:4px;background:#f1f4f6;border-radius:10px;width:max-content;max-width:100%}
+        .ed-worker-source button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 11px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-worker-source button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-worker-source button.locked{color:#9a6a3d}
+        .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-saved-modal{width:min(850px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-saved-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+        .ed-saved-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-saved-head p{margin:0;color:#6c7a88;line-height:1.5}
+        .ed-saved-list{display:grid;gap:10px}
+        .ed-saved-row{border:1px solid #e4ebf0;border-radius:13px;padding:14px;display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(180px,1fr) auto;gap:14px;align-items:center}
+        .ed-saved-main{display:flex;align-items:center;gap:11px}.ed-saved-main b{display:block}.ed-saved-main span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-saved-meta span{display:block;color:#7a8996;font-size:11px;margin-bottom:4px}.ed-saved-meta b{font-size:13px}
+        .ed-saved-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
+        .ed-team-add{border:1px solid #cfe4db;background:#f2faf6;color:#167a54;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-team-badge{display:inline-flex;align-items:center;border-radius:999px;background:#edf8f3;color:#167a54;padding:7px 9px;font-size:11px;font-weight:800}
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
         .ed-chat-alert-btn{position:relative}
@@ -8354,7 +8565,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -8628,6 +8839,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   : "Skubiai! · Pro"}
               </button>
             </div>
+
+            <button
+              className="ed-secondary"
+              type="button"
+              onClick={openSavedWorkerTeam}
+            >
+              {planSummary?.can_saved_workers
+                ? `Darbuotojai favoritai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
+                : "Darbuotojai favoritai · Business"}
+            </button>
 
             <button
               className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
@@ -9221,6 +9442,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </button>
                             )}
 
+                          {attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            (savedWorkerIdSet.has(worker.id) ? (
+                              <span className="ed-team-badge">
+                                Favorituose
+                              </span>
+                            ) : (
+                              <button
+                                className="ed-team-add"
+                                type="button"
+                                disabled={savedWorkerBusy === worker.id}
+                                onClick={() => saveWorkerToTeam(worker)}
+                              >
+                                {savedWorkerBusy === worker.id
+                                  ? "Pridedama..."
+                                  : planSummary?.can_saved_workers
+                                  ? "Pridėti į favoritus"
+                                  : "Pridėti į favoritus · Business"}
+                              </button>
+                            ))}
+
                           {canViewWorkerMetrics &&
                             attendance.finalized_at &&
                             attendance.final_outcome !== "no_show" &&
@@ -9247,33 +9489,80 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="ed-results-head">
               <div>
-                <h2>Kviesti laisvus darbuotojus pagal jūsų parinktis</h2>
+                <h2>
+                  {workerSource === "team"
+                    ? "Kviesti darbuotojus iš favoritų"
+                    : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
+                </h2>
                 <p>
-                  Rodomi tik per paskutines 24 val. aktyvūs ir savo grafiką
-                  patvirtinę darbuotojai.
+                  Rodomi tik per paskutines 24 val. aktyvūs, savo grafiką
+                  patvirtinę ir šiam darbui tinkami darbuotojai.
                 </p>
+
+                <div className="ed-worker-source">
+                  <button
+                    type="button"
+                    className={workerSource === "available" ? "active" : ""}
+                    onClick={() => setWorkerSource("available")}
+                  >
+                    Laisvi darbuotojai
+                  </button>
+                  <button
+                    type="button"
+                    className={`${
+                      workerSource === "team" ? "active" : ""
+                    } ${planSummary?.can_saved_workers ? "" : "locked"}`}
+                    onClick={() => {
+                      if (!planSummary?.can_saved_workers) {
+                        setNotice(
+                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+                        );
+                        setShowPlans(true);
+                        return;
+                      }
+                      setWorkerSource("team");
+                    }}
+                  >
+                    {planSummary?.can_saved_workers
+                      ? `Darbuotojai favoritai · ${matchingSavedWorkersCount}`
+                      : "Darbuotojai favoritai · Business"}
+                  </button>
+                </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <b>{matches.filter((worker) => !jobWorkers.some((item) => item.id === worker.id)).length} rasti</b>
+                <b>{visibleCandidateWorkers.length} rasti</b>
                 <div className="ed-progress">
                   {currentJob.status === "completed"
                     ? "Darbo diena užbaigta"
                     : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
                 </div>
+
+                {workerSource === "team" &&
+                  planSummary?.can_saved_workers &&
+                  currentJob.status === "open" && (
+                    <button
+                      className="ed-primary"
+                      type="button"
+                      style={{ marginTop: 10 }}
+                      disabled={
+                        invitingSavedTeam ||
+                        matchingSavedWorkersCount === 0
+                      }
+                      onClick={inviteSavedWorkerTeam}
+                    >
+                      {invitingSavedTeam
+                        ? "Siunčiami kvietimai..."
+                        : "Pakviesti visus tinkamus"}
+                    </button>
+                  )}
               </div>
             </div>
 
             {searching ? (
               <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
-            ) : matches.filter(
-              (worker) => !jobWorkers.some((item) => item.id === worker.id)
-            ).length ? (
+            ) : visibleCandidateWorkers.length ? (
               <div className="ed-results">
-                {matches
-                  .filter(
-                    (worker) => !jobWorkers.some((item) => item.id === worker.id)
-                  )
-                  .map((worker) => {
+                {visibleCandidateWorkers.map((worker) => {
                   const invited = invitedIds.includes(worker.id);
                   return (
                     <div
@@ -9386,8 +9675,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             ) : (
               <div className="ed-empty compact">
-                Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus
-                nerasta.
+                {workerSource === "team"
+                  ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
+                  : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
               </div>
             )}
           </section>
@@ -10215,6 +10505,102 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSavedWorkers && (
+        <div
+          className="ed-saved-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !savedWorkerBusy) {
+              setShowSavedWorkers(false);
+            }
+          }}
+        >
+          <div className="ed-saved-modal">
+            <div className="ed-saved-head">
+              <div>
+                <div className="eyebrow">DARBUOTOJAI FAVORITAI</div>
+                <h2>Patikrinti darbuotojai, su kuriais jau dirbote</h2>
+                <p>
+                  Čia galite kaupti gerai pasirodžiusius darbuotojus. Sukūrus
+                  naują darbą sistema iš jų parodys tik tuos, kurie tuo metu
+                  atitinka darbo vietą, grafiką ir kitus kriterijus.
+                </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={Boolean(savedWorkerBusy)}
+                onClick={() => setShowSavedWorkers(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {savedWorkersLoading ? (
+              <div className="ed-empty">Kraunami darbuotojai favoritai...</div>
+            ) : savedWorkers.length ? (
+              <div className="ed-saved-list">
+                {savedWorkers.map((worker) => (
+                  <div className="ed-saved-row" key={worker.id}>
+                    <div className="ed-saved-main">
+                      <div className="ed-avatar">
+                        {worker.avatarUrl ? (
+                          <img src={worker.avatarUrl} alt={worker.name} />
+                        ) : (
+                          worker.initials
+                        )}
+                      </div>
+                      <div>
+                        <b>{worker.name}</b>
+                        <span>
+                          {worker.city || "Miestas nenurodytas"} ·{" "}
+                          {worker.yearsExperience} m. patirties
+                          {worker.hasDrivingLicenseB ? " · B kategorija" : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ed-saved-meta">
+                      <span>Paskutinis darbas su jumis</span>
+                      <b>
+                        {worker.last_job_title || "Įvykdytas darbas"}
+                        {worker.last_work_date
+                          ? ` · ${worker.last_work_date}`
+                          : ""}
+                      </b>
+                      <span style={{ marginTop: 7 }}>
+                        Patikimumas {Math.round(worker.attendanceRate)}%
+                        {worker.ratingAverage !== null
+                          ? ` · ${worker.ratingAverage.toFixed(1)}/10`
+                          : ""}
+                      </span>
+                    </div>
+
+                    <div className="ed-saved-actions">
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        disabled={savedWorkerBusy === worker.id}
+                        onClick={() => removeWorkerFromTeam(worker)}
+                      >
+                        {savedWorkerBusy === worker.id
+                          ? "Šalinama..."
+                          : "Pašalinti"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ed-empty">
+                Darbuotojų favoritų sąrašas dar tuščias. Užbaigę darbo dieną prie patikusio
+                darbuotojo spauskite „Pridėti į favoritus“.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -14579,6 +14965,7 @@ function App() {
                   <li>Visa Basic funkcionalumo apimtis</li>
                   <li>Iki 25 darbo pasiūlymų / mėn.</li>
                   <li>Darbuotojų patikimumas ir įvertinimai</li>
+                  <li>„Darbuotojai favoritai“ patikusiems darbuotojams</li>
                   <li>Privatūs ir bendri darbo pokalbiai</li>
                   <li>Išplėstinė įmonės statistika</li>
                   <li>1 įmonės vartotojas</li>
