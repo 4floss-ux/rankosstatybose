@@ -1551,6 +1551,83 @@ function WorkerDashboard({ user, onLogout }) {
     }
   }
 
+  function updateCompanyField(key, value) {
+    setCompanyForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveCompanyInformation() {
+    const name = companyForm.name.trim();
+    const city = companyForm.city.trim();
+    const phone = companyForm.phone.trim();
+    const description = companyForm.description.trim();
+
+    if (!company?.id) return;
+
+    if (companyMemberRole !== "owner") {
+      setError("Įmonės informaciją gali redaguoti tik įmonės savininkas.");
+      return;
+    }
+
+    if (name.length < 2) {
+      setError("Įveskite įmonės pavadinimą.");
+      return;
+    }
+
+    if (city.length < 2) {
+      setError("Įveskite įmonės miestą.");
+      return;
+    }
+
+    setCompanySaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const companyResult = await supabase
+        .from("companies")
+        .update({
+          name,
+          city,
+          description: description || null,
+        })
+        .eq("id", company.id)
+        .select(
+          "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+        )
+        .single();
+
+      if (companyResult.error) throw companyResult.error;
+
+      const privateResult = await supabase
+        .from("user_private")
+        .upsert(
+          {
+            user_id: user.id,
+            phone: phone || null,
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (privateResult.error) throw privateResult.error;
+
+      setCompany(companyResult.data);
+      setCompanyForm({
+        name: companyResult.data?.name || "",
+        companyCode: companyResult.data?.company_code || "",
+        city: companyResult.data?.city || "",
+        phone,
+        description: companyResult.data?.description || "",
+      });
+
+      setShowCompanyEditor(false);
+      setNotice("Įmonės informacija atnaujinta.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko atnaujinti įmonės informacijos.");
+    } finally {
+      setCompanySaving(false);
+    }
+  }
+
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -3422,6 +3499,16 @@ function EmployerDashboard({ user, onLogout }) {
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [company, setCompany] = useState(null);
+  const [companyMemberRole, setCompanyMemberRole] = useState(null);
+  const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companyForm, setCompanyForm] = useState({
+    name: "",
+    companyCode: "",
+    city: "",
+    phone: "",
+    description: "",
+  });
   const [skills, setSkills] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [employerStats, setEmployerStats] = useState({
@@ -3602,36 +3689,53 @@ function EmployerDashboard({ user, onLogout }) {
       }
 
       const companyId = memberResult.data.company_id;
+      setCompanyMemberRole(memberResult.data.member_role || null);
 
-      const [companyResult, skillsResult, jobsResult] = await Promise.all([
-        supabase
-          .from("companies")
-          .select(
-            "id, name, company_code, city, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
-          )
-          .eq("id", companyId)
-          .single(),
-        supabase
-          .from("skills")
-          .select("id, name")
-          .eq("is_active", true)
-          .order("name"),
-        supabase
-          .from("jobs")
-          .select(
-            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
-          )
-          .eq("company_id", companyId)
-          .order("created_at", { ascending: false })
-          .limit(12),
-      ]);
+      const [companyResult, privateResult, skillsResult, jobsResult] =
+        await Promise.all([
+          supabase
+            .from("companies")
+            .select(
+              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+            )
+            .eq("id", companyId)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("skills")
+            .select("id, name")
+            .eq("is_active", true)
+            .order("name"),
+          supabase
+            .from("jobs")
+            .select(
+              "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at"
+            )
+            .eq("company_id", companyId)
+            .order("created_at", { ascending: false })
+            .limit(12),
+        ]);
 
-      const failed = [companyResult, skillsResult, jobsResult].find(
-        (result) => result.error
-      );
+      const failed = [
+        companyResult,
+        privateResult,
+        skillsResult,
+        jobsResult,
+      ].find((result) => result.error);
       if (failed?.error) throw failed.error;
 
       setCompany(companyResult.data);
+      setCompanyForm({
+        name: companyResult.data?.name || "",
+        companyCode: companyResult.data?.company_code || "",
+        city: companyResult.data?.city || "",
+        phone: privateResult.data?.phone || "",
+        description: companyResult.data?.description || "",
+      });
       setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
       await Promise.all([
@@ -5053,6 +5157,16 @@ function EmployerDashboard({ user, onLogout }) {
                 </div>
               </div>
             )}
+            {companyMemberRole === "owner" && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => setShowCompanyEditor(true)}
+              >
+                Redaguoti informaciją
+              </button>
+            )}
+
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -6506,6 +6620,137 @@ function EmployerDashboard({ user, onLogout }) {
                 onClick={confirmEmployerCancellation}
               >
                 {cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCompanyEditor && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !companySaving) {
+              setShowCompanyEditor(false);
+            }
+          }}
+        >
+          <div className="rs-modal-card" style={{ width: "min(720px, 100%)" }}>
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">ĮMONĖS INFORMACIJA</div>
+                <h2>Redaguoti informaciją</h2>
+              </div>
+
+              <button
+                className="rs-close"
+                disabled={companySaving}
+                onClick={() => setShowCompanyEditor(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+              }}
+            >
+              <label className="ed-label">
+                Įmonės pavadinimas *
+                <input
+                  className="ed-input"
+                  value={companyForm.name}
+                  maxLength={160}
+                  onChange={(e) =>
+                    updateCompanyField("name", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="ed-label">
+                Įmonės kodas
+                <input
+                  className="ed-input"
+                  value={companyForm.companyCode || "Nenurodytas"}
+                  readOnly
+                  style={{
+                    background: "#f4f6f8",
+                    color: "#6c7a88",
+                  }}
+                />
+              </label>
+
+              <label className="ed-label">
+                Miestas *
+                <input
+                  className="ed-input"
+                  value={companyForm.city}
+                  maxLength={100}
+                  onChange={(e) =>
+                    updateCompanyField("city", e.target.value)
+                  }
+                  placeholder="Pvz. Vilnius"
+                />
+              </label>
+
+              <label className="ed-label">
+                Kontaktinis telefono numeris
+                <input
+                  className="ed-input"
+                  type="tel"
+                  value={companyForm.phone}
+                  maxLength={40}
+                  onChange={(e) =>
+                    updateCompanyField("phone", e.target.value)
+                  }
+                  placeholder="+370..."
+                />
+              </label>
+
+              <label
+                className="ed-label"
+                style={{ gridColumn: "1 / -1" }}
+              >
+                Trumpai apie įmonę
+                <textarea
+                  className="ed-textarea"
+                  value={companyForm.description}
+                  maxLength={1200}
+                  onChange={(e) =>
+                    updateCompanyField("description", e.target.value)
+                  }
+                  placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..."
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="ed-secondary"
+                type="button"
+                disabled={companySaving}
+                onClick={() => setShowCompanyEditor(false)}
+              >
+                Atšaukti
+              </button>
+
+              <button
+                className="ed-primary"
+                type="button"
+                disabled={companySaving}
+                onClick={saveCompanyInformation}
+              >
+                {companySaving ? "Saugoma..." : "Išsaugoti"}
               </button>
             </div>
           </div>
