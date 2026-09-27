@@ -9887,13 +9887,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
-        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
-        .ed-worker.ed-worker-basic{grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) minmax(210px,1.35fr)}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(260px,1fr) 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
+        .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
         .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
-        .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-worker-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        @media(max-width:900px){.ed-worker{grid-template-columns:1fr}.ed-worker.ed-worker-basic{grid-template-columns:1fr}.ed-worker-actions{justify-self:stretch;max-width:none}}
         .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
