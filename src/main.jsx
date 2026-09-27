@@ -2819,7 +2819,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const availabilityConfirmedAt = worker?.availability_confirmed_at
         ? new Date(worker.availability_confirmed_at).getTime()
         : 0;
-      const activityWindowMs = 72 * 60 * 60 * 1000;
+      const activityWindowMs = 24 * 60 * 60 * 1000;
 
       setNeedsAvailabilityConfirm(
         !availabilityConfirmedAt ||
@@ -6035,6 +6035,29 @@ function employerSubscriptionStatusLabel(status) {
   return "Aktyvus";
 }
 
+async function edgeFunctionErrorMessage(error, fallback) {
+  try {
+    const response = error?.context;
+    if (response && typeof response.json === "function") {
+      const payload = await response.json();
+      if (payload?.error) return payload.error;
+      if (payload?.message) return payload.message;
+    }
+  } catch {
+    // Jei atsako nepavyksta perskaityti, naudojame standartinį tekstą.
+  }
+
+  const raw = String(error?.message || "").trim();
+  if (
+    raw &&
+    !raw.toLowerCase().includes("edge function returned a non-2xx status code")
+  ) {
+    return raw;
+  }
+
+  return fallback;
+}
+
 function companyTeamRoleLabel(role) {
   if (role === "owner") return "Savininkas";
   if (role === "manager") return "Vadovas";
@@ -6107,6 +6130,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [companySaving, setCompanySaving] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
+  const [billingStatus, setBillingStatus] = useState(null);
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
   const [planActionBusy, setPlanActionBusy] = useState(false);
@@ -6259,10 +6283,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         if (
           summary?.plan_key !== "basic" &&
-          ["active", "trialing"].includes(summary?.subscription_status)
+          ["active", "trialing", "past_due"].includes(summary?.subscription_status)
         ) {
+          const freshBilling = await loadCompanyBillingStatus(company.id);
           setPlanBillingCycle(
-            company?.billing_interval === "yearly" ? "yearly" : planBillingCycle
+            freshBilling?.billing_interval === "yearly" ? "yearly" : "monthly"
           );
           setNotice(
             `${summary.plan_name} planas aktyvuotas. Mokamo plano teisės jau galioja.`
@@ -6302,6 +6327,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           loadEmployerStats(company.id, companyMemberRole),
           loadCompanyWorkerReviews(company.id),
           loadCompanyPlan(company.id),
+          loadCompanyBillingStatus(company.id),
           loadPendingPlanChange(company.id),
           planSummary?.can_saved_workers
             ? loadSavedWorkers(company.id, planSummary)
@@ -6725,6 +6751,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return summary;
   }
 
+  async function loadCompanyBillingStatus(companyId = company?.id) {
+    if (!companyId) {
+      setBillingStatus(null);
+      return null;
+    }
+
+    const result = await supabase.rpc("get_company_billing_status", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const status = result.data?.[0] || null;
+    setBillingStatus(status);
+    return status;
+  }
+
   async function loadPendingPlanChange(companyId = company?.id) {
     if (!companyId) {
       setPendingPlanChange(null);
@@ -6825,8 +6868,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       window.location.assign(data.url);
     } catch (err) {
       setError(
-        err?.message ||
+        await edgeFunctionErrorMessage(
+          err,
           "Nepavyko atidaryti prenumeratos valdymo. Bandykite dar kartą."
+        )
       );
       setPlanActionBusy(false);
     }
@@ -6844,9 +6889,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     const hasPaidSubscription =
-      Boolean(company?.billing_subscription_id) &&
+      billingStatus?.effective_plan_key !== "basic" &&
       ["active", "trialing", "past_due"].includes(
-        company?.subscription_status
+        billingStatus?.subscription_status
       );
 
     if (plan.price === 0) {
@@ -6922,8 +6967,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       window.location.assign(data.url);
     } catch (err) {
       setError(
-        err?.message ||
+        await edgeFunctionErrorMessage(
+          err,
           "Nepavyko pradėti Stripe apmokėjimo. Bandykite dar kartą."
+        )
       );
       setPlanActionBusy(false);
     }
@@ -7015,7 +7062,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           supabase
             .from("companies")
             .select(
-              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count, plan_key, subscription_status, billing_interval, billing_provider, billing_customer_id, billing_subscription_id"
+              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
             )
             .eq("id", companyId)
             .single(),
@@ -7052,10 +7099,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (failed?.error) throw failed.error;
 
       setCompany(companyResult.data);
+      const loadedBilling = await loadCompanyBillingStatus(companyId);
       setPlanBillingCycle(
-        preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
+        loadedBilling?.billing_interval === "yearly"
           ? "yearly"
-          : companyResult.data?.billing_interval === "yearly"
+          : preferredPlanKey !== "basic" &&
+            user?.user_metadata?.preferred_billing_interval === "yearly"
           ? "yearly"
           : "monthly"
       );
@@ -7824,108 +7873,41 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setMatches([]);
 
     try {
-      const availabilityResult = await supabase
-        .from("availability")
-        .select("worker_id, available_from, available_to")
-        .eq("available_date", job.work_date)
-        .eq("status", "available");
+      const candidateResult = await supabase.rpc("get_job_match_candidates", {
+        p_job_id: job.id,
+      });
 
-      if (availabilityResult.error) throw availabilityResult.error;
+      if (candidateResult.error) throw candidateResult.error;
 
-      const suitableAvailability = (availabilityResult.data || []).filter(
-        (row) => {
-          const from = row.available_from?.slice(0, 5);
-          const to = row.available_to?.slice(0, 5);
-          const startsInWindow = !from || from <= job.start_time.slice(0, 5);
-          const endsInWindow =
-            !job.end_time || !to || to >= job.end_time.slice(0, 5);
-          return startsInWindow && endsInWindow;
-        }
+      const candidateRows = candidateResult.data || [];
+      const workerIds = candidateRows.map((row) => row.worker_id);
+
+      if (!workerIds.length) {
+        setMatches([]);
+        return;
+      }
+
+      const [profilesResult, workersResult, workerSkillsResult] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, display_name, city, role")
+            .in("role", ["worker", "admin"])
+            .eq("is_active", true)
+            .in("id", workerIds),
+          supabase.rpc("get_employer_worker_profiles", {
+            p_job_id: job.id,
+            p_worker_ids: workerIds,
+          }),
+          supabase
+            .from("worker_skills")
+            .select("worker_id, skill_id")
+            .in("worker_id", workerIds),
+        ]);
+
+      const failed = [profilesResult, workersResult, workerSkillsResult].find(
+        (result) => result.error
       );
-
-      let workerIds = suitableAvailability.map((row) => row.worker_id);
-
-      if (!workerIds.length) {
-        setMatches([]);
-        return;
-      }
-
-      const busyBookingsResult = await supabase
-        .from("bookings")
-        .select("worker_id, job_id")
-        .in("worker_id", workerIds)
-        .eq("status", "confirmed");
-
-      if (busyBookingsResult.error) throw busyBookingsResult.error;
-
-      const busyJobIds = [
-        ...new Set(
-          (busyBookingsResult.data || [])
-            .map((row) => row.job_id)
-            .filter((id) => id && id !== job.id)
-        ),
-      ];
-
-      let busyJobs = [];
-      if (busyJobIds.length) {
-        const busyJobsResult = await supabase
-          .from("jobs")
-          .select("id, work_date, start_time, end_time")
-          .in("id", busyJobIds);
-
-        if (busyJobsResult.error) throw busyJobsResult.error;
-        busyJobs = busyJobsResult.data || [];
-      }
-
-      const busyJobMap = new Map(busyJobs.map((item) => [item.id, item]));
-      const busyByWorker = new Set();
-
-      for (const booking of busyBookingsResult.data || []) {
-        if (booking.job_id === job.id) continue;
-        const busyJob = busyJobMap.get(booking.job_id);
-        if (busyJob && timeRangesOverlap(job, busyJob)) {
-          busyByWorker.add(booking.worker_id);
-        }
-      }
-
-      workerIds = workerIds.filter((id) => !busyByWorker.has(id));
-
-      if (!workerIds.length) {
-        setMatches([]);
-        return;
-      }
-
-      const [
-        profilesResult,
-        workersResult,
-        workerSkillsResult,
-        cityLocationsResult,
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, display_name, city, role, suspended_until")
-          .in("role", ["worker", "admin"])
-          .eq("is_active", true)
-          .in("id", workerIds),
-        supabase.rpc("get_employer_worker_profiles", {
-          p_job_id: job.id,
-          p_worker_ids: workerIds,
-        }),
-        supabase
-          .from("worker_skills")
-          .select("worker_id, skill_id")
-          .in("worker_id", workerIds),
-        supabase
-          .from("city_locations")
-          .select("city_key, name, latitude, longitude"),
-      ]);
-
-      const failed = [
-        profilesResult,
-        workersResult,
-        workerSkillsResult,
-        cityLocationsResult,
-      ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
 
@@ -7935,19 +7917,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const workerMap = new Map(
         (workersResult.data || []).map((row) => [row.user_id, row])
       );
-      const availabilityMap = new Map(
-        suitableAvailability.map((row) => [row.worker_id, row])
+      const candidateMap = new Map(
+        candidateRows.map((row) => [row.worker_id, row])
       );
-
-      const cityLocationMap = new Map(
-        (cityLocationsResult.data || []).map((row) => [
-          row.city_key,
-          row,
-        ])
-      );
-
-      const jobCityKey = normalizeCityKey(job.city);
-      const jobLocation = cityLocationMap.get(jobCityKey) || null;
 
       const skillIdsByWorker = new Map();
       for (const row of workerSkillsResult.data || []) {
@@ -7964,72 +7936,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .map((workerId) => {
           const profile = profileMap.get(workerId);
           const worker = workerMap.get(workerId);
-          const slot = availabilityMap.get(workerId);
+          const slot = candidateMap.get(workerId);
           if (!profile || !worker || !slot) return null;
-
-          if (
-            profile.suspended_until &&
-            new Date(profile.suspended_until) > new Date()
-          ) {
-            return null;
-          }
-
-          const workerCityKey = normalizeCityKey(profile.city);
-          const workerLocation =
-            cityLocationMap.get(workerCityKey) || null;
-
-          let distanceKm = null;
-
-          if (workerCityKey && workerCityKey === jobCityKey) {
-            distanceKm = 0;
-          } else if (jobLocation && workerLocation) {
-            distanceKm = distanceKmBetweenPoints(
-              jobLocation,
-              workerLocation
-            );
-          } else {
-            // Saugus fallback: jei miesto koordinačių nežinome,
-            // skirtingo miesto darbuotojo nerodome.
-            return null;
-          }
-
-          const rawTravelRadius = Number(worker.travel_radius_km);
-          const workerTravelRadius = Number.isFinite(rawTravelRadius)
-            ? Math.max(0, rawTravelRadius)
-            : 30;
-
-          const allowedDistanceKm = Math.min(30, workerTravelRadius);
-
-          if (
-            distanceKm === null ||
-            distanceKm > allowedDistanceKm
-          ) {
-            return null;
-          }
-
-          if (
-            worker.restricted_until &&
-            new Date(worker.restricted_until) > new Date()
-          ) {
-            return null;
-          }
-
-          const activityCutoff = Date.now() - 24 * 60 * 60 * 1000;
-          const lastActiveAt = worker.last_active_at
-            ? new Date(worker.last_active_at).getTime()
-            : 0;
-          const availabilityConfirmedAt = worker.availability_confirmed_at
-            ? new Date(worker.availability_confirmed_at).getTime()
-            : 0;
-
-          if (
-            !lastActiveAt ||
-            !availabilityConfirmedAt ||
-            lastActiveAt < activityCutoff ||
-            availabilityConfirmedAt < activityCutoff
-          ) {
-            return null;
-          }
 
           const skillNames = (skillIdsByWorker.get(workerId) || [])
             .map((id) => skillNameMap.get(id))
@@ -8053,14 +7961,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             avatarUrl: workerAvatarUrl(worker.avatar_path),
             travelRadiusKm: Number(worker.travel_radius_km || 0),
             distanceKm:
-              distanceKm === null
+              slot.distance_km === null || slot.distance_km === undefined
                 ? null
-                : Math.round(distanceKm * 10) / 10,
+                : Number(slot.distance_km),
             noShowCount: Number(worker.no_show_count || 0),
             lastActiveAt: worker.last_active_at,
             activityLabel: workerRecentActivityLabel(worker.last_active_at),
             ratingAverage:
-              worker.rating_average === null
+              worker.rating_average === null ||
+              worker.rating_average === undefined
                 ? null
                 : Number(worker.rating_average),
             availableFrom: slot.available_from?.slice(0, 5) || "",
@@ -8075,15 +7984,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           const distanceB =
             b.distanceKm === null ? Number.POSITIVE_INFINITY : b.distanceKm;
 
-          if (distanceA !== distanceB) {
-            return distanceA - distanceB;
-          }
+          if (distanceA !== distanceB) return distanceA - distanceB;
 
-          if (b.attendanceRate !== a.attendanceRate) {
-            return b.attendanceRate - a.attendanceRate;
-          }
+          const attendanceA = Number(a.attendanceRate || 0);
+          const attendanceB = Number(b.attendanceRate || 0);
+          if (attendanceB !== attendanceA) return attendanceB - attendanceA;
 
-          return (b.ratingAverage || 0) - (a.ratingAverage || 0);
+          return Number(b.ratingAverage || 0) - Number(a.ratingAverage || 0);
         });
 
       const invitationsResult = await supabase
@@ -9025,6 +8932,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 12px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
         .ed-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
         .ed-billing-discount{display:inline-flex;align-items:center;border-radius:999px;background:#eaf8f1;color:#167a54;padding:6px 9px;font-size:10px;font-weight:900}
+        .ed-billing-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+        .ed-billing-card{border:1px solid #e3eaf0;border-radius:13px;background:#fff;padding:12px 13px;min-width:0}
+        .ed-billing-card span{display:block;color:#6b7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+        .ed-billing-card b{display:block;color:#102438;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+        .ed-billing-card small{display:block;color:#6b7a88;font-size:10px;line-height:1.4;margin-top:4px}
+        .ed-billing-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:0 0 16px}
+        .ed-billing-warning{margin:0 0 16px;padding:12px 14px;border-radius:13px;border:1px solid #f2d7bc;background:#fff7ef;color:#102438;font-size:12px;line-height:1.55}
+        .ed-billing-warning b{font-weight:900}
         .ed-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
         .ed-plan-card{border:1px solid #e1e8ed;border-radius:16px;padding:20px;display:flex;flex-direction:column;min-height:390px;background:#fff}
         .ed-plan-card.current{border-color:#f08a28;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
@@ -11254,6 +11169,111 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            {billingStatus && (
+              <>
+                <div className="ed-billing-overview">
+                  <div className="ed-billing-card">
+                    <span>Aktyvus planas</span>
+                    <b>{billingStatus.effective_plan_name || planSummary?.plan_name || "Basic"}</b>
+                    <small>{employerSubscriptionStatusLabel(billingStatus.subscription_status)}</small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>Kaina</span>
+                    <b>
+                      {billingStatus.effective_plan_key === "basic"
+                        ? "0 € / mėn."
+                        : `${formatPlanPrice(Number(billingStatus.amount_cents || 0) / 100)} € / ${
+                            billingStatus.billing_interval === "yearly"
+                              ? "metus"
+                              : "mėn."
+                          }`}
+                    </b>
+                    <small>
+                      {billingStatus.billing_interval === "yearly"
+                        ? "Metinis atsiskaitymas"
+                        : "Mėnesinis atsiskaitymas"}
+                    </small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>
+                      {billingStatus.cancel_at_period_end
+                        ? "Galioja iki"
+                        : "Kitas laikotarpis"}
+                    </span>
+                    <b>
+                      {billingStatus.current_period_end
+                        ? new Intl.DateTimeFormat("lt-LT", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }).format(new Date(billingStatus.current_period_end))
+                        : "—"}
+                    </b>
+                    <small>
+                      {billingStatus.cancel_at_period_end
+                        ? "Po datos prenumerata nebus pratęsta"
+                        : billingStatus.effective_plan_key === "basic"
+                        ? "Nemokamas planas"
+                        : "Prenumerata pratęsiama pagal Stripe būseną"}
+                    </small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>Paskutinis apmokėjimas</span>
+                    <b>
+                      {billingStatus.last_payment_at
+                        ? new Intl.DateTimeFormat("lt-LT", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }).format(new Date(billingStatus.last_payment_at))
+                        : "—"}
+                    </b>
+                    <small>
+                      {billingStatus.last_invoice_id
+                        ? "Sąskaita yra Stripe istorijoje"
+                        : "Dar nėra užfiksuotos sąskaitos"}
+                    </small>
+                  </div>
+                </div>
+
+                {billingStatus.in_payment_grace && (
+                  <div className="ed-billing-warning">
+                    <b>Nepavyko automatiškai apmokėti prenumeratos.</b>{" "}
+                    Mokamo plano teisės laikinai paliktos iki{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(billingStatus.payment_grace_until))}
+                    </b>
+                    . Atnaujinkite mokėjimo būdą Stripe lange, kad planas
+                    nenukristų į Basic.
+                  </div>
+                )}
+
+                {companyMemberRole === "owner" &&
+                  billingStatus.effective_plan_key !== "basic" &&
+                  !onAdminReturn && (
+                    <div className="ed-billing-actions">
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        disabled={planActionBusy}
+                        onClick={openBillingPortal}
+                      >
+                        {planActionBusy
+                          ? "Atidaroma..."
+                          : "Valdyti prenumeratą ir sąskaitas"}
+                      </button>
+                    </div>
+                  )}
+              </>
+            )}
+
             <div className="ed-billing-row">
               <span>Atsiskaitymo laikotarpis</span>
 
@@ -11351,7 +11371,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 const selectedBilling =
                   plan.price === 0 ? "monthly" : planBillingCycle;
                 const currentBilling =
-                  company?.billing_interval === "yearly"
+                  billingStatus?.billing_interval === "yearly"
                     ? "yearly"
                     : "monthly";
                 const current =
@@ -15152,21 +15172,19 @@ function App() {
     let cancelled = false;
 
     supabase
-      .from("profiles")
-      .select("role, is_active, suspended_until, suspension_reason")
-      .eq("id", user.id)
-      .single()
+      .rpc("get_my_account_status")
       .then(({ data, error }) => {
         if (!cancelled) {
           if (error) {
             console.error(error);
             setAccountRole(null);
           } else {
-            setAccountRole(data?.role || null);
+            const status = data?.[0] || null;
+            setAccountRole(status?.role || null);
             setAccountStatus({
-              isActive: data?.is_active !== false,
-              suspendedUntil: data?.suspended_until || null,
-              suspensionReason: data?.suspension_reason || null,
+              isActive: status?.is_active !== false,
+              suspendedUntil: status?.suspended_until || null,
+              suspensionReason: status?.suspension_reason || null,
             });
           }
         }
@@ -15238,19 +15256,16 @@ function App() {
 
       if (result.error) throw result.error;
 
-      const profileResult = await supabase
-        .from("profiles")
-        .select("role, is_active, suspended_until, suspension_reason")
-        .eq("id", user.id)
-        .single();
+      const profileResult = await supabase.rpc("get_my_account_status");
 
       if (profileResult.error) throw profileResult.error;
 
-      setAccountRole(profileResult.data?.role || "employer");
+      const profileStatus = profileResult.data?.[0] || null;
+      setAccountRole(profileStatus?.role || "employer");
       setAccountStatus({
-        isActive: profileResult.data?.is_active !== false,
-        suspendedUntil: profileResult.data?.suspended_until || null,
-        suspensionReason: profileResult.data?.suspension_reason || null,
+        isActive: profileStatus?.is_active !== false,
+        suspendedUntil: profileStatus?.suspended_until || null,
+        suspensionReason: profileStatus?.suspension_reason || null,
       });
 
       clearTeamInvite();
