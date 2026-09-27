@@ -31,6 +31,33 @@ function CloseMark() {
   );
 }
 
+class SectionErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error("Section render error", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="ed-note err" style={{ marginTop: 16 }}>
+          Nepavyko atvaizduoti šios dalies. Atnaujinkite puslapį ir bandykite dar kartą.
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -6823,6 +6850,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
   const payAmountInputRef = useRef(null);
+  const jobFormSectionRef = useRef(null);
   const [form, setForm] = useState({
     title: "Statybų pagalbiniai",
     city: "Vilnius",
@@ -6847,23 +6875,22 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   useEffect(() => {
     if (!showJobForm) return;
 
-    let secondFrame = 0;
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        const formSection = document.getElementById("employer-job-form");
-        if (!formSection) return;
+    const timer = window.setTimeout(() => {
+      const formSection = jobFormSectionRef.current;
+      if (!formSection) return;
 
-        formSection.scrollIntoView({
-          behavior: "auto",
-          block: "start",
-        });
+      const top =
+        formSection.getBoundingClientRect().top +
+        window.scrollY -
+        88;
+
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: "smooth",
       });
-    });
+    }, 80);
 
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      if (secondFrame) window.cancelAnimationFrame(secondFrame);
-    };
+    return () => window.clearTimeout(timer);
   }, [showJobForm, editingJobId]);
 
   useEffect(() => {
@@ -9205,16 +9232,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     setEditingJobId(null);
     setEditingConfirmedCount(0);
-    setCurrentJob(null);
     setJobFormErrors({});
-    setWorkerSource("available");
-    setMatches([]);
-    setJobWorkers([]);
     setNotice("");
     setError("");
-    setInvitedIds([]);
-    setInvitationStatuses({});
-    setInvitationByWorker({});
     setForm({
       title: "Statybų pagalbiniai",
       city: company?.city || "Vilnius",
@@ -10318,100 +10338,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
-        {!showJobForm && (
-        <section>
-          <div style={{ marginBottom: 10 }}>
-            <div className="eyebrow">
-              {planSummary?.can_team_management &&
-              companyMemberRole === "recruiter"
-                ? "MANO DARBŲ STATISTIKA"
-                : "ĮMONĖS STATISTIKA"}
-            </div>
-          </div>
-
-          <div className="ed-kpis">
-            <div className="ed-kpi">
-              <span>Sukurta darbo pasiūlymų</span>
-              <b>{employerStats.totalJobs}</b>
-            </div>
-
-            {planSummary?.can_advanced_analytics && (
-              <div className="ed-kpi">
-                <span>Pilnai žmonėmis užpildyti darbai</span>
-                <b>{employerStats.filledJobs}</b>
-              </div>
-            )}
-
-            <div className="ed-kpi">
-              <span>Trūksta darbuotojų</span>
-              <b>{employerStats.missingWorkers}</b>
-            </div>
-
-            <div className="ed-kpi">
-              <span>Įvykdyti darbai</span>
-              <b>{employerStats.completedJobs}</b>
-            </div>
-
-            {planSummary?.can_advanced_analytics && (
-              <>
-                <div className="ed-kpi">
-                  <span>Atšaukti darbai</span>
-                  <b>{employerStats.cancelledJobs}</b>
-                </div>
-
-                <div className="ed-kpi">
-                  <span>Panaudoti darbuotojai / mėn.</span>
-                  <b>{employerStats.monthlyWorkersUsed}</b>
-                </div>
-              </>
-            )}
-
-            <div className="ed-kpi ed-reliability-card">
-              <div className="ed-reliability-copy">
-                <div className="ed-reliability-title">
-                  <button
-                    type="button"
-                    className="ed-reliability-title-btn"
-                    aria-label="Atidaryti darbdavio patikimumo paaiškinimą"
-                    onClick={() => setShowReliabilityInfo(true)}
-                  >
-                    Patikimumas
-                  </button>
-                </div>
-
-                <b className="ed-reliability-label">
-                  {Math.round(employerStats.reliabilityRate)} / 100
-                </b>
-              </div>
-            </div>
-          </div>
-
-          {planSummary && !planSummary.can_advanced_analytics && (
-            <div className="ed-analytics-lock">
-              <div>
-                <b>Išplėstinė įmonės statistika</b>
-                <span>
-                  Užpildytų ir atšauktų darbų bei mėnesio darbuotojų analizė
-                  įtraukta į Business ir Business Pro.
-                </span>
-              </div>
-              <button
-                className="ed-secondary"
-                type="button"
-                onClick={() => setShowPlans(true)}
-              >
-                Peržiūrėti planus
-              </button>
-            </div>
-          )}
-        </section>
-        )}
-
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
 
+        <SectionErrorBoundary key={showJobForm ? "job-form-open" : "job-form-closed"}>
         {showJobForm && (
         <section
+          ref={jobFormSectionRef}
           className="ed-card"
           id="employer-job-form"
           style={{ scrollMarginTop: 92 }}
@@ -10704,6 +10637,96 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </section>
         )}
+
+        </SectionErrorBoundary>
+
+        <section>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">
+              {planSummary?.can_team_management &&
+              companyMemberRole === "recruiter"
+                ? "MANO DARBŲ STATISTIKA"
+                : "ĮMONĖS STATISTIKA"}
+            </div>
+          </div>
+
+          <div className="ed-kpis">
+            <div className="ed-kpi">
+              <span>Sukurta darbo pasiūlymų</span>
+              <b>{employerStats.totalJobs}</b>
+            </div>
+
+            {planSummary?.can_advanced_analytics && (
+              <div className="ed-kpi">
+                <span>Pilnai žmonėmis užpildyti darbai</span>
+                <b>{employerStats.filledJobs}</b>
+              </div>
+            )}
+
+            <div className="ed-kpi">
+              <span>Trūksta darbuotojų</span>
+              <b>{employerStats.missingWorkers}</b>
+            </div>
+
+            <div className="ed-kpi">
+              <span>Įvykdyti darbai</span>
+              <b>{employerStats.completedJobs}</b>
+            </div>
+
+            {planSummary?.can_advanced_analytics && (
+              <>
+                <div className="ed-kpi">
+                  <span>Atšaukti darbai</span>
+                  <b>{employerStats.cancelledJobs}</b>
+                </div>
+
+                <div className="ed-kpi">
+                  <span>Panaudoti darbuotojai / mėn.</span>
+                  <b>{employerStats.monthlyWorkersUsed}</b>
+                </div>
+              </>
+            )}
+
+            <div className="ed-kpi ed-reliability-card">
+              <div className="ed-reliability-copy">
+                <div className="ed-reliability-title">
+                  <button
+                    type="button"
+                    className="ed-reliability-title-btn"
+                    aria-label="Atidaryti darbdavio patikimumo paaiškinimą"
+                    onClick={() => setShowReliabilityInfo(true)}
+                  >
+                    Patikimumas
+                  </button>
+                </div>
+
+                <b className="ed-reliability-label">
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </b>
+              </div>
+            </div>
+          </div>
+
+          {planSummary && !planSummary.can_advanced_analytics && (
+            <div className="ed-analytics-lock">
+              <div>
+                <b>Išplėstinė įmonės statistika</b>
+                <span>
+                  Užpildytų ir atšauktų darbų bei mėnesio darbuotojų analizė
+                  įtraukta į Business ir Business Pro.
+                </span>
+              </div>
+              <button
+                className="ed-secondary"
+                type="button"
+                onClick={() => setShowPlans(true)}
+              >
+                Peržiūrėti planus
+              </button>
+            </div>
+          )}
+        </section>
+
 
         {currentJob && (
           <section
