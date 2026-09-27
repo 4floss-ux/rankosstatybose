@@ -2994,12 +2994,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-    setJobFormErrors((current) => {
-      if (!current[key]) return current;
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
   }
 
   function urgentAvailabilityIsActive() {
@@ -6853,17 +6847,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   useEffect(() => {
     if (!showJobForm) return;
 
-    const timer = window.setTimeout(() => {
-      const formSection = document.getElementById("employer-job-form");
-      if (!formSection) return;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        const formSection = document.getElementById("employer-job-form");
+        if (!formSection) return;
 
-      formSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+        formSection.scrollIntoView({
+          behavior: "auto",
+          block: "start",
+        });
       });
-    }, 80);
+    });
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
   }, [showJobForm, editingJobId]);
 
   useEffect(() => {
@@ -9205,6 +9205,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     setEditingJobId(null);
     setEditingConfirmedCount(0);
+    setCurrentJob(null);
+    setJobFormErrors({});
     setWorkerSource("available");
     setMatches([]);
     setJobWorkers([]);
@@ -10006,7 +10008,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
-                <button className="ed-primary" type="button" onClick={() => setShowJobForm(true)}>Sukurti pirmą darbą</button>
+                <button className="ed-primary" type="button" onClick={openNewJobForm}>Sukurti pirmą darbą</button>
               </div>
             </div>
             <div className="ed-onboarding-steps">
@@ -10316,6 +10318,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
+        {!showJobForm && (
         <section>
           <div style={{ marginBottom: 10 }}>
             <div className="eyebrow">
@@ -10402,6 +10405,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
         </section>
+        )}
 
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
