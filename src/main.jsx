@@ -6109,6 +6109,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planSummary, setPlanSummary] = useState(null);
   const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
   const [planActionBusy, setPlanActionBusy] = useState(false);
+  const billingReturnHandledRef = useRef(false);
   const [planBillingCycle, setPlanBillingCycle] = useState(
     preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
       ? "yearly"
@@ -6211,6 +6212,85 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, [user.id]);
 
   useEffect(() => {
+    if (!company?.id || billingReturnHandledRef.current) return;
+
+    const url = new URL(window.location.href);
+    const billingResult = url.searchParams.get("billing");
+    if (!billingResult) return;
+
+    billingReturnHandledRef.current = true;
+
+    const clearBillingParam = () => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("billing");
+      window.history.replaceState(
+        {},
+        "",
+        `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`
+      );
+    };
+
+    if (billingResult === "cancelled") {
+      setNotice("Apmokėjimas atšauktas. Jūsų planas nepakeistas.");
+      clearBillingParam();
+      return;
+    }
+
+    if (billingResult !== "success") {
+      clearBillingParam();
+      return;
+    }
+
+    let stopped = false;
+    let attempts = 0;
+
+    setShowPlans(false);
+    setError("");
+    setNotice(
+      "Apmokėjimas užbaigtas. Laukiame Stripe patvirtinimo ir aktyvuojame planą..."
+    );
+
+    const refreshPaidPlan = async () => {
+      attempts += 1;
+
+      try {
+        const summary = await loadCompanyPlan(company.id);
+
+        if (
+          summary?.plan_key !== "basic" &&
+          ["active", "trialing"].includes(summary?.subscription_status)
+        ) {
+          setPlanBillingCycle(
+            company?.billing_interval === "yearly" ? "yearly" : planBillingCycle
+          );
+          setNotice(
+            `${summary.plan_name} planas aktyvuotas. Mokamo plano teisės jau galioja.`
+          );
+          clearBillingParam();
+          return;
+        }
+      } catch {
+        // Webhook gali būti dar neapdorotas — bandome dar kartą.
+      }
+
+      if (!stopped && attempts < 10) {
+        window.setTimeout(refreshPaidPlan, 1500);
+      } else if (!stopped) {
+        setNotice(
+          "Apmokėjimas gautas. Stripe patvirtinimas dar apdorojamas — planas įsijungs automatiškai vos tik gausime patvirtinimą."
+        );
+        clearBillingParam();
+      }
+    };
+
+    refreshPaidPlan();
+
+    return () => {
+      stopped = true;
+    };
+  }, [company?.id]);
+
+  useEffect(() => {
     if (!company?.id) return;
 
     const timer = setInterval(async () => {
@@ -6220,6 +6300,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           loadEmployerNotifications(),
           loadEmployerStats(company.id, companyMemberRole),
           loadCompanyWorkerReviews(company.id),
+          loadCompanyPlan(company.id),
           planSummary?.can_saved_workers
             ? loadSavedWorkers(company.id, planSummary)
             : Promise.resolve(),
@@ -6693,17 +6774,81 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function openBillingPortal() {
+    if (!company?.id) return;
+
+    if (companyMemberRole !== "owner") {
+      setError("Prenumeratą gali valdyti tik įmonės savininkas.");
+      return;
+    }
+
+    setPlanActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "stripe-customer-portal",
+        {
+          body: { companyId: company.id },
+        }
+      );
+
+      if (invokeError) throw invokeError;
+      if (!data?.url) {
+        throw new Error("Stripe negrąžino prenumeratos valdymo nuorodos.");
+      }
+
+      window.location.assign(data.url);
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Nepavyko atidaryti prenumeratos valdymo. Bandykite dar kartą."
+      );
+      setPlanActionBusy(false);
+    }
+  }
+
   async function requestPaidPlan(planKey) {
     const plan = EMPLOYER_PLANS.find((item) => item.key === planKey);
     if (!plan || !company?.id) return;
 
     if (companyMemberRole !== "owner") {
-      setError("Planą ir atsiskaitymo laikotarpį gali keisti tik įmonės savininkas.");
+      setError(
+        "Planą ir atsiskaitymo laikotarpį gali keisti tik įmonės savininkas."
+      );
       return;
     }
 
-    const billingInterval =
-      plan.price === 0 ? "monthly" : planBillingCycle;
+    const hasPaidSubscription =
+      Boolean(company?.billing_subscription_id) &&
+      ["active", "trialing", "past_due"].includes(
+        company?.subscription_status
+      );
+
+    if (plan.price === 0) {
+      if (hasPaidSubscription) {
+        setNotice(
+          "Mokama prenumerata galioja. Norėdami grįžti į Basic, pirmiausia valdykite arba nutraukite prenumeratą Stripe lange."
+        );
+        await openBillingPortal();
+        return;
+      }
+
+      setNotice("Basic planas jau yra nemokamas ir nereikalauja apmokėjimo.");
+      setShowPlans(false);
+      return;
+    }
+
+    if (hasPaidSubscription) {
+      setNotice(
+        "Jau turite aktyvią mokamą prenumeratą. Planą, atsiskaitymo laikotarpį ar atšaukimą valdykite prenumeratos lange."
+      );
+      await openBillingPortal();
+      return;
+    }
+
+    const billingInterval = planBillingCycle;
 
     setPlanActionBusy(true);
     setError("");
@@ -6726,6 +6871,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           preferred_billing_interval: billingInterval,
         },
       });
+
       if (preferenceResult.error) throw preferenceResult.error;
 
       setCompany((current) =>
@@ -6734,21 +6880,28 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           : current
       );
 
-      const priceText =
-        plan.price === 0
-          ? "0 €"
-          : billingInterval === "yearly"
-          ? `${formatPlanPrice(employerPlanAnnualPrice(plan))} € / metus`
-          : `${formatPlanPrice(plan.price)} € / mėn.`;
-
-      setNotice(
-        `${plan.name} · ${priceText} pasirinkimas paruoštas prenumeratai. ` +
-          "Kortelės apmokėjimo tiekėją prijungsime kaip atskirą paskutinį žingsnį."
+      const { data, error: checkoutError } = await supabase.functions.invoke(
+        "stripe-create-checkout",
+        {
+          body: {
+            companyId: company.id,
+            planKey,
+            billingInterval,
+          },
+        }
       );
-      setShowPlans(false);
+
+      if (checkoutError) throw checkoutError;
+      if (!data?.url) {
+        throw new Error("Stripe negrąžino apmokėjimo nuorodos.");
+      }
+
+      window.location.assign(data.url);
     } catch (err) {
-      setError(err?.message || "Nepavyko išsaugoti atsiskaitymo pasirinkimo.");
-    } finally {
+      setError(
+        err?.message ||
+          "Nepavyko pradėti Stripe apmokėjimo. Bandykite dar kartą."
+      );
       setPlanActionBusy(false);
     }
   }
@@ -6839,7 +6992,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           supabase
             .from("companies")
             .select(
-              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count, billing_interval"
+              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count, plan_key, subscription_status, billing_interval, billing_provider, billing_customer_id, billing_subscription_id"
             )
             .eq("id", companyId)
             .single(),
@@ -11104,7 +11257,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
               <div className="ed-note" style={{ background: "#fff7ef", border: "1px solid #f2d7bc", color: "#102438", marginBottom: 16 }}>
-                Registruodamiesi pasirinkote {employerPlanName(preferredPlanKey)}. Žemiau galite peržiūrėti planą ir atsiskaitymo laikotarpį. Kol mokėjimas neįdiegtas ir nepatvirtintas, aktyvus lieka Basic planas.
+                Registruodamiesi pasirinkote {employerPlanName(preferredPlanKey)}. Žemiau patvirtinkite atsiskaitymo laikotarpį ir atlikite saugų apmokėjimą per Stripe. Iki Stripe patvirtinimo aktyvus lieka Basic planas.
               </div>
             )}
 
@@ -11185,13 +11338,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </ul>
 
                     {current ? (
-                      <button
-                        className="ed-secondary"
-                        type="button"
-                        disabled
-                      >
-                        Aktyvus planas
-                      </button>
+                      plan.price > 0 && !onAdminReturn ? (
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          disabled={planActionBusy}
+                          onClick={openBillingPortal}
+                        >
+                          {planActionBusy
+                            ? "Atidaroma..."
+                            : "Valdyti prenumeratą"}
+                        </button>
+                      ) : (
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          disabled
+                        >
+                          Aktyvus planas
+                        </button>
+                      )
                     ) : onAdminReturn ? (
                       <button
                         className={isPro ? "ed-secondary" : "ed-primary"}
@@ -11207,15 +11373,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <button
                         className={isPro ? "ed-secondary" : "ed-primary"}
                         type="button"
+                        disabled={planActionBusy}
                         onClick={() => requestPaidPlan(plan.key)}
                       >
-                        {plan.price === 0
+                        {planActionBusy
+                          ? "Atidaroma..."
+                          : plan.price === 0
                           ? "Pasirinkti Basic"
                           : samePlan
                           ? planBillingCycle === "yearly"
                             ? "Keisti į metinį atsiskaitymą"
                             : "Keisti į mėnesinį atsiskaitymą"
-                          : `Pasirinkti ${plan.name}`}
+                          : `Apmokėti ${plan.name}`}
                       </button>
                     )}
                   </div>
@@ -11224,11 +11393,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="ed-plan-footnote">
-              Business ir Business Pro galima apmokėti kas mėnesį arba iš karto
-              už 12 mėnesių. Metiniam atsiskaitymui taikoma 20% nuolaida.
-              Pasirinktas atsiskaitymo laikotarpis jau saugomas įmonės
-              prenumeratos nustatymuose; kortelės apmokėjimo tiekėjas
-              prijungiamas atskirai prieš viešą mokamų planų paleidimą.
+              Business ir Business Pro apmokami saugiai per Stripe. Galite
+              mokėti kas mėnesį arba iš karto už 12 mėnesių; metiniam
+              atsiskaitymui taikoma 20% nuolaida. Mokamo plano teisės
+              aktyvuojamos tik tada, kai Stripe patvirtina prenumeratą.
+              Kortelės duomenų RankosStatybose.lt nesaugo.
             </div>
           </div>
         </div>
