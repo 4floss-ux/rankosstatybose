@@ -9887,7 +9887,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
-        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(260px,1fr) 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
         .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
         .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
@@ -9909,7 +9909,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-member-metric{padding:8px 10px;border-radius:10px;background:#f6f8fa}
         .ed-member-metric span{display:block;color:#6c7a88;font-size:11px;margin-bottom:3px}
         .ed-member-metric b{font-family:Manrope,Inter,sans-serif;font-size:17px}
-        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}.ed-worker-activity{display:flex;align-items:center;justify-content:center;min-width:0}.ed-worker-activity .ed-attendance-badge{margin:0;text-align:center}
         .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
         .ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
         .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
@@ -9926,7 +9926,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
         @media(max-width:620px){.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
@@ -11177,15 +11177,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       </div>
 
                       {canViewWorkerMetrics && (
-                        <div className="ed-metric">
-                          <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
-                          <span>atvykimas</span>
-                          {worker.activityLabel && (
-                            <span className="ed-attendance-badge green" style={{ marginTop: 8 }}>
-                              {worker.activityLabel}
-                            </span>
-                          )}
-                        </div>
+                        <>
+                          <div className="ed-worker-activity">
+                            {worker.activityLabel ? (
+                              <span className="ed-attendance-badge green">
+                                {worker.activityLabel}
+                              </span>
+                            ) : (
+                              <span className="ed-attendance-badge">Neaktyvus</span>
+                            )}
+                          </div>
+                          <div className="ed-metric">
+                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                            <span>atvykimas</span>
+                          </div>
+                        </>
                       )}
 
                       <div className="ed-worker-actions">
