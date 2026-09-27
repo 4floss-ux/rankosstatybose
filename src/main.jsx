@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createClient } from "@supabase/supabase-js";
 import "./styles.css";
@@ -18,6 +18,107 @@ const workers = [
 function Icon({children}) {
   return <span className="icon">{children}</span>;
 }
+
+function CloseMark() {
+  return (
+    <svg className="unified-close-mark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RoundedTeamSelect({ value, options, disabled, onChange }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="ed-select"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            requestAnimationFrame(() => containerRef.current?.querySelector('[role="option"]')?.focus());
+          }
+        }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", background: "#fff", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer" }}
+      >
+        <span>{selected?.label || "Pasirinkite atsakingą žmogų"}</span>
+        <span aria-hidden="true" style={{ marginLeft: 12 }}>⌄</span>
+      </button>
+      {open && !disabled && (
+        <div role="listbox" aria-label="Atsakingas žmogus" style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(16,36,56,.14)" }}>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => { onChange(option.value); setOpen(false); }}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                event.preventDefault();
+                const buttons = [...containerRef.current.querySelectorAll('[role="option"]')];
+                const next = buttons.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1);
+                buttons[(next + buttons.length) % buttons.length]?.focus();
+              }}
+              style={{ display: "block", width: "100%", padding: "10px 12px", textAlign: "left", border: 0, borderRadius: 8, background: option.value === value ? "#fff1e5" : "#fff", color: "#102438", font: "inherit", cursor: "pointer" }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const unifiedCloseStyles = `
+  button.rs-close, button.ctc-close, button.wd-profile-editor-close,
+  button.reliability-modal-close, button.admin-setup-close,
+  button[aria-label="Uždaryti"], button[aria-label="Uždaryti sąlygas"],
+  button[aria-label="Uždaryti pranešimą"], button[aria-label="Uždaryti klaidos pranešimą"] {
+    display:inline-flex !important; align-items:center !important; justify-content:center !important;
+    width:44px !important; height:44px !important; min-width:44px !important; flex:0 0 44px !important;
+    padding:0 !important; border:0 !important; border-radius:12px !important;
+    background:#f1f4f6 !important; color:#102438 !important; cursor:pointer;
+    line-height:1 !important;
+  }
+  .unified-close-mark { display:block; width:20px; height:20px; pointer-events:none; }
+  button.rs-close:focus-visible, button.ctc-close:focus-visible,
+  button.wd-profile-editor-close:focus-visible, button.reliability-modal-close:focus-visible,
+  button.admin-setup-close:focus-visible, button[aria-label^="Uždaryti"]:focus-visible {
+    outline:2px solid #f08a28; outline-offset:2px;
+  }
+`;
 
 const LITHUANIAN_CITY_NAMES = [
   "Akmenė",
@@ -388,7 +489,7 @@ function PlatformTermsDialog({ open, onClose }) {
       <section role="dialog" aria-modal="true" aria-labelledby="platform-terms-title" style={{ width: "min(680px,100%)", maxHeight: "min(780px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">RANKOSSTATYBOSE.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
-          <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}>×</button>
+          <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
         </div>
         <p><b>Platformos vaidmuo.</b> RankosStatybose.lt suteikia skaitmeninę erdvę, kurioje darbdaviai skelbia darbus, o darbuotojai žymi prieinamumą, gauna kvietimus ir bendrauja dėl darbo. Platforma suveda šalis ir padeda administruoti darbo eigą. Ji pati nesamdo darbuotojų atlikti paskelbtų darbų ir nėra darbo užmokesčio mokėtoja.</p>
         <p><b>Darbo sąlygos ir atsiskaitymas.</b> Darbdavys ir darbuotojas tarpusavyje susitaria dėl darbo pobūdžio, atlygio, atsiskaitymo, teisėto darbo įforminimo ir kitų sąlygų. Darbdavys atsako už savo paskelbtos informacijos tikslumą ir sutartą apmokėjimą; darbuotojas – už pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą. Platforma nepriima ir neperveda atlygio už atliktą darbą.</p>
@@ -645,7 +746,7 @@ function AuthModal({
               fontSize: 20,
             }}
           >
-            ×
+            <CloseMark />
           </button>
         </div>
 
@@ -1519,7 +1620,7 @@ function ConversationModal({
             <div className="eyebrow">ŽINUTĖS</div>
             <h2>{title || "Pokalbis apie darbą"}</h2>
           </div>
-          <button className="rs-close" onClick={onClose}>×</button>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
         </div>
 
         {error && <div className="rs-error">{error}</div>}
@@ -1774,7 +1875,7 @@ function GroupConversationModal({
             <div className="eyebrow">DARBO POKALBIS</div>
             <h2>{title || "Bendras darbo pokalbis"}</h2>
           </div>
-          <button className="rs-close" onClick={onClose}>×</button>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
         </div>
 
         <div className="rs-group-note">
@@ -2005,7 +2106,7 @@ function CompanyTeamChatModal({
             onClick={onClose}
             aria-label="Uždaryti"
           >
-            ×
+            <CloseMark />
           </button>
         </div>
 
@@ -2255,7 +2356,7 @@ function WorkerProfileModal({
               <h2>{worker.name}</h2>
             </div>
           </div>
-          <button className="rs-close" onClick={onClose}>×</button>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
         </div>
 
         <div className="rs-profile-grid">
@@ -3769,7 +3870,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 onClick={() => setShowProfileEditor(false)}
                 aria-label="Uždaryti"
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -4627,7 +4728,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 type="button"
                 onClick={() => setWorkdayDetailsTarget(null)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -5023,7 +5124,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={urgentSaving}
                 onClick={() => setShowUrgentAvailability(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -5129,7 +5230,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={employerReviewSaving}
                 onClick={() => setEmployerReviewTarget(null)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -5268,7 +5369,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 className="rs-close"
                 onClick={() => setArrivalHelpTarget(null)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -5396,7 +5497,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setWorkerEvidenceFile(null);
                 }}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -5548,7 +5649,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setCommitmentChecked(false);
                 }}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -9081,25 +9182,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </label>
 
             {planSummary?.can_team_management && (
-              <label className="ed-label ed-span-2">
+              <div className="ed-label ed-span-2">
                 Atsakingas žmogus
-                <select
-                  className="ed-select"
+                <RoundedTeamSelect
                   value={form.responsibleUserId}
                   disabled={
                     !["owner", "manager"].includes(companyMemberRole)
                   }
-                  onChange={(e) =>
-                    updateField("responsibleUserId", e.target.value)
+                  onChange={(userId) =>
+                    updateField("responsibleUserId", userId)
                   }
-                >
-                  {activeTeamMembers.map((member) => (
-                    <option value={member.user_id} key={member.user_id}>
-                      {member.display_name} ·{" "}
-                      {companyTeamRoleLabel(member.member_role)}
-                    </option>
-                  ))}
-                </select>
+                  options={activeTeamMembers.map((member) => ({
+                    value: member.user_id,
+                    label: `${member.display_name} · ${companyTeamRoleLabel(member.member_role)}`,
+                  }))}
+                />
                 <span
                   style={{
                     color: "#7a8996",
@@ -9110,7 +9207,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Vadybininkui naujas darbas automatiškai priskiriamas jam
                   pačiam. Savininkas ir vadovas gali pakeisti atsakingą žmogų.
                 </span>
-              </label>
+              </div>
             )}
 
             <label className="ed-label">
@@ -9976,7 +10073,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setAttendanceNote("");
                 }}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -10193,7 +10290,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setRatingComment("");
                 }}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -10294,7 +10391,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={teamActionBusy}
                 onClick={() => setShowTeam(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -10631,7 +10728,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={Boolean(savedWorkerBusy)}
                 onClick={() => setShowSavedWorkers(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -10727,7 +10824,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={urgentSearchLoading}
                 onClick={() => setShowUrgentSearch(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -10845,7 +10942,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={planActionBusy}
                 onClick={() => setShowPlans(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -11187,7 +11284,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 aria-label="Uždaryti"
                 onClick={() => setShowReliabilityInfo(false)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -11300,7 +11397,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setCancelReason("");
                 }}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -11454,7 +11551,7 @@ function AdminSetupModal({
             onClick={onClose}
             aria-label="Uždaryti"
           >
-            ×
+            <CloseMark />
           </button>
         </div>
 
@@ -12033,7 +12130,7 @@ function AdminJobChatModal({ job, user, onClose }) {
             disabled={sending}
             onClick={onClose}
           >
-            ×
+            <CloseMark />
           </button>
         </div>
 
@@ -12193,7 +12290,7 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
           </div>
 
           <button className="rs-close" type="button" onClick={onClose}>
-            ×
+            <CloseMark />
           </button>
         </div>
 
@@ -13025,7 +13122,7 @@ function AdminDashboard({
                   aria-label="Uždaryti pranešimą"
                   onClick={() => setNotice("")}
                 >
-                  ×
+                  <CloseMark />
                 </button>
               </div>
             )}
@@ -13038,7 +13135,7 @@ function AdminDashboard({
                   aria-label="Uždaryti klaidos pranešimą"
                   onClick={() => setError("")}
                 >
-                  ×
+                  <CloseMark />
                 </button>
               </div>
             )}
@@ -13837,7 +13934,7 @@ function AdminDashboard({
                 disabled={editorSaving}
                 onClick={() => setEditor(null)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -14316,7 +14413,7 @@ function AdminDashboard({
                 disabled={actionBusy}
                 onClick={() => setActionDialog(null)}
               >
-                ×
+                <CloseMark />
               </button>
             </div>
 
@@ -14898,4 +14995,4 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(<><style>{unifiedCloseStyles}</style><App /></>);
