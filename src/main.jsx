@@ -8642,8 +8642,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
-        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
-        .ed-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
+        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
+        .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
         .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
         .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
         .ed-textarea{min-height:90px;resize:vertical}
@@ -8726,7 +8726,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-invite-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
         .ed-team-link{margin-top:12px;background:#f6f8fa;border-radius:10px;padding:11px;font-size:11px;overflow-wrap:anywhere;color:#405264}
         .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-        .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+        .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
         .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
