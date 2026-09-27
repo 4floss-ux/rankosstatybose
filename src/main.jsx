@@ -9759,9 +9759,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     min="1"
     step="0.01"
     required
-    value={form.hourlyRate}
+    value={form.payAmount}
     disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("hourlyRate", e.target.value)}
+    onChange={(e) => updateField("payAmount", e.target.value)}
     placeholder="Pvz. 12"
   />
 </label>
@@ -9770,9 +9770,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   Mokėjimo tipas *
   <RoundedSelect
     ariaLabel="Mokėjimo tipas"
-    value={form.payType}
+    value={form.payUnit}
     disabled={editingConfirmedCount > 0}
-    onChange={(value) => updateField("payType", value)}
+    onChange={(value) => updateField("payUnit", value)}
     options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
   />
 </div>
