@@ -2769,6 +2769,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [avatarMarkedForRemoval, setAvatarMarkedForRemoval] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
@@ -2925,6 +2926,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       });
       setAvatarFile(null);
       setAvatarPreview("");
+      setAvatarMarkedForRemoval(false);
 
       setUrgentAvailability({
         city: worker?.urgent_city || "",
@@ -3098,6 +3100,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+    setAvatarMarkedForRemoval(false);
+    setError("");
+  }
+
+  function markAvatarForRemoval() {
+    if (avatarPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setAvatarMarkedForRemoval(Boolean(form.avatarPath));
     setError("");
   }
 
@@ -3739,7 +3752,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (privateUpdate.error) throw privateUpdate.error;
 
-      let nextAvatarPath = form.avatarPath || "";
+      let nextAvatarPath = avatarMarkedForRemoval ? "" : form.avatarPath || "";
 
       if (avatarFile) {
         const extension =
@@ -3776,9 +3789,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (workerUpdate.error) throw workerUpdate.error;
 
       if (
-        avatarFile &&
         form.avatarPath &&
-        form.avatarPath !== nextAvatarPath
+        form.avatarPath !== nextAvatarPath &&
+        (avatarFile || avatarMarkedForRemoval)
       ) {
         await supabase.storage
           .from("worker-avatars")
@@ -3844,6 +3857,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
       setAvatarFile(null);
       setAvatarPreview("");
+      setAvatarMarkedForRemoval(false);
       setShowProfileEditor(false);
       setNotice("Profilio informacija atnaujinta.");
     } catch (err) {
@@ -3864,8 +3878,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (item) => item.available
   ).length;
 
-  const profileAvatarUrl =
-    avatarPreview || workerAvatarUrl(form.avatarPath);
+  const profileAvatarUrl = avatarMarkedForRemoval
+    ? ""
+    : avatarPreview || workerAvatarUrl(form.avatarPath);
 
   const workerDashboardToday = localDateISO(new Date());
 
@@ -4093,10 +4108,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   return (
     <div className="wd-page">
       <style>{`
-        .wd-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .wd-page{min-height:100vh;background:#f6f8fa;color:#102438;padding-bottom:56px}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 70px}
+        .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 0}
         .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
@@ -4105,7 +4120,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px;min-width:0}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:4px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
         .wd-focus{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding:16px 18px;border:1px solid #dfe7ed;border-radius:15px;background:#fff}.wd-focus.action{border-color:#efc99e;background:#fff9f2}.wd-focus.live{border-color:#cce5d8;background:#f4faf7}.wd-focus.danger{border-color:#efc7bb;background:#fff5f2}.wd-focus-copy b{display:block;color:#102438;font-size:15px;margin-bottom:4px}.wd-focus-copy span{display:block;color:#607180;font-size:12px;line-height:1.5}.wd-focus-btn{border:0;border-radius:9px;background:#102438;color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}.wd-focus.action .wd-focus-btn{background:#f08a28}.wd-focus.live .wd-focus-btn{background:#1c9b67}.wd-focus.danger .wd-focus-btn{background:#b64d2a}
-        .wd-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:20px}
+        .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
@@ -4144,8 +4159,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}
         .wd-avatar-preview img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}.wd-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:50%}
         .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
-        .wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
-        .wd-avatar-upload input{display:none}
+        .wd-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-avatar-upload input{display:none}.wd-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
@@ -4482,16 +4496,27 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     Nuotrauką matys darbdaviai prie jūsų profilio. JPG, PNG arba
                     WEBP, iki 5 MB.
                   </span>
-                  <label className="wd-avatar-upload">
-                    {profileAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) =>
-                        chooseAvatarFile(e.target.files?.[0] || null)
-                      }
-                    />
-                  </label>
+                  <div className="wd-avatar-actions">
+                    <label className="wd-avatar-upload">
+                      {profileAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) =>
+                          chooseAvatarFile(e.target.files?.[0] || null)
+                        }
+                      />
+                    </label>
+                    {profileAvatarUrl && (
+                      <button
+                        className="wd-avatar-remove"
+                        type="button"
+                        onClick={markAvatarForRemoval}
+                      >
+                        Ištrinti nuotrauką
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -4717,16 +4742,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </b>
             </div>
             <div className="wd-kpi">
-              <span>Darbų šį mėnesį</span>
-              <b>{workerStats.monthJobs}</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Aktyvūs darbai</span>
-              <b>{workerStats.activeJobs}</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Darbdavio atšaukti</span>
-              <b>{workerStats.cancelledByEmployer}</b>
+              <span>Užbaigti darbai</span>
+              <b>{metrics.completedJobs}</b>
+              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                Visa patvirtinta istorija
+              </small>
             </div>
             <div className="wd-kpi">
               <span>Atvykimo patikimumas</span>
@@ -4746,8 +4766,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </small>
             </div>
             <div className="wd-kpi">
-              <span>Nepagrįsti ankstyvi išėjimai</span>
-              <b>{workerStats.unexcusedEarlyLeaveCount}</b>
+              <span>Probleminės darbo dienos</span>
+              <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
+              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                Neatvykimai {metrics.noShowCount} · ankstyvi išėjimai {workerStats.unexcusedEarlyLeaveCount}
+              </small>
             </div>
           </div>
         </section>
@@ -6676,6 +6699,14 @@ function workerAvatarUrl(path) {
   );
 }
 
+function companyAvatarUrl(path) {
+  if (!path) return "";
+  return (
+    supabase.storage.from("worker-avatars").getPublicUrl(path).data
+      ?.publicUrl || ""
+  );
+}
+
 function workerInitials(name) {
   return String(name || "D")
     .trim()
@@ -6698,6 +6729,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [companySaving, setCompanySaving] = useState(false);
+  const [companyAvatarFile, setCompanyAvatarFile] = useState(null);
+  const [companyAvatarPreview, setCompanyAvatarPreview] = useState("");
+  const [companyAvatarMarkedForRemoval, setCompanyAvatarMarkedForRemoval] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
@@ -6740,6 +6774,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     city: "",
     phone: "",
     description: "",
+    avatarPath: "",
   });
   const [skills, setSkills] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -7691,7 +7726,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           supabase
             .from("companies")
             .select(
-              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+              "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
             )
             .eq("id", companyId)
             .single(),
@@ -7743,7 +7778,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         city: companyResult.data?.city || "",
         phone: privateResult.data?.phone || "",
         description: companyResult.data?.description || "",
+        avatarPath: companyResult.data?.avatar_path || "",
       });
+      setCompanyAvatarFile(null);
+      setCompanyAvatarPreview("");
+      setCompanyAvatarMarkedForRemoval(false);
       setJobs(await addConfirmedCounts(jobsResult.data || []));
       setSkills(skillsResult.data || []);
       const loadedPlan = planResult.data?.[0] || null;
@@ -7780,6 +7819,40 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setCompanyForm((current) => ({ ...current, [key]: value }));
   }
 
+  function chooseCompanyAvatarFile(file) {
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError("Įmonės profilio nuotrauka turi būti JPG, PNG arba WEBP formato.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Įmonės profilio nuotrauka negali būti didesnė nei 5 MB.");
+      return;
+    }
+
+    if (companyAvatarPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(companyAvatarPreview);
+    }
+
+    setCompanyAvatarFile(file);
+    setCompanyAvatarPreview(URL.createObjectURL(file));
+    setCompanyAvatarMarkedForRemoval(false);
+    setError("");
+  }
+
+  function markCompanyAvatarForRemoval() {
+    if (companyAvatarPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(companyAvatarPreview);
+    }
+    setCompanyAvatarFile(null);
+    setCompanyAvatarPreview("");
+    setCompanyAvatarMarkedForRemoval(Boolean(companyForm.avatarPath));
+    setError("");
+  }
+
   async function saveCompanyInformation() {
     const name = companyForm.name.trim();
     const cityInput = companyForm.city.trim();
@@ -7813,20 +7886,56 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
+      let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
+        ? ""
+        : companyForm.avatarPath || "";
+
+      if (companyAvatarFile) {
+        const extension =
+          companyAvatarFile.type === "image/png"
+            ? "png"
+            : companyAvatarFile.type === "image/webp"
+            ? "webp"
+            : "jpg";
+        const uploadPath = `${user.id}/company-${company.id}-${Date.now()}.${extension}`;
+
+        const uploadResult = await supabase.storage
+          .from("worker-avatars")
+          .upload(uploadPath, companyAvatarFile, {
+            cacheControl: "3600",
+            contentType: companyAvatarFile.type,
+            upsert: false,
+          });
+
+        if (uploadResult.error) throw uploadResult.error;
+        nextCompanyAvatarPath = uploadPath;
+      }
+
       const companyResult = await supabase
         .from("companies")
         .update({
           name,
           city,
           description: description || null,
+          avatar_path: nextCompanyAvatarPath || null,
         })
         .eq("id", company.id)
         .select(
-          "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+          "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
         )
         .single();
 
       if (companyResult.error) throw companyResult.error;
+
+      if (
+        companyForm.avatarPath &&
+        companyForm.avatarPath !== nextCompanyAvatarPath &&
+        (companyAvatarFile || companyAvatarMarkedForRemoval)
+      ) {
+        await supabase.storage
+          .from("worker-avatars")
+          .remove([companyForm.avatarPath]);
+      }
 
       const privateResult = await supabase
         .from("user_private")
@@ -7847,7 +7956,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         city: companyResult.data?.city || "",
         phone,
         description: companyResult.data?.description || "",
+        avatarPath: companyResult.data?.avatar_path || "",
       });
+      if (companyAvatarPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(companyAvatarPreview);
+      }
+      setCompanyAvatarFile(null);
+      setCompanyAvatarPreview("");
+      setCompanyAvatarMarkedForRemoval(false);
 
       setShowCompanyEditor(false);
       setNotice("Įmonės informacija atnaujinta.");
@@ -9521,6 +9637,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (member) => member.user_id === user.id
   );
 
+  const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
+    ? ""
+    : companyAvatarPreview || companyAvatarUrl(companyForm.avatarPath);
+
   if (loading) {
     return (
       <div className="ed-loading">
@@ -9577,6 +9697,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
+        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-profile-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
         .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
         .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
@@ -9865,6 +9986,52 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </p>
               </div>
 
+            </div>
+
+            <div className="ed-company-avatar-editor">
+              <div className="ed-company-avatar-preview">
+                {currentCompanyAvatarUrl ? (
+                  <img
+                    src={currentCompanyAvatarUrl}
+                    alt={companyForm.name || "Įmonės profilio nuotrauka"}
+                  />
+                ) : (
+                  String(companyForm.name || "Į")
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase())
+                    .join("") || "Į"
+                )}
+              </div>
+              <div className="ed-company-avatar-copy">
+                <b>Įmonės profilio nuotrauka</b>
+                <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
+                {companyMemberRole === "owner" && (
+                  <div className="ed-company-avatar-actions">
+                    <label className="ed-company-avatar-upload">
+                      {currentCompanyAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) =>
+                          chooseCompanyAvatarFile(e.target.files?.[0] || null)
+                        }
+                      />
+                    </label>
+                    {currentCompanyAvatarUrl && (
+                      <button
+                        className="ed-company-avatar-remove"
+                        type="button"
+                        onClick={markCompanyAvatarForRemoval}
+                      >
+                        Ištrinti nuotrauką
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="ed-profile-summary">
