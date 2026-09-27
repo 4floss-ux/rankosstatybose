@@ -8949,6 +8949,109 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )
       : jobs;
 
+  const employerDashboardToday = localDateISO(new Date());
+
+  function employerJobDashboardState(job) {
+    const confirmed = Number(job.confirmedCount || 0);
+    const needed = Number(job.workers_needed || 0);
+    const missing = Math.max(0, needed - confirmed);
+    const ended = jobHasEnded(job);
+    const isToday = job.work_date === employerDashboardToday;
+    const startMoment =
+      job.work_date && job.start_time
+        ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+        : null;
+    const started =
+      Boolean(startMoment) &&
+      !Number.isNaN(startMoment?.getTime()) &&
+      new Date() >= startMoment;
+
+    if (job.status === "cancelled") {
+      return {
+        key: "cancelled",
+        tone: "muted",
+        label: "Atšaukta",
+        detail: "Darbas atšauktas",
+        missing,
+      };
+    }
+
+    if (job.status === "completed") {
+      return {
+        key: "completed",
+        tone: "ok",
+        label: "Įvykdyta",
+        detail: "Darbo ciklas užbaigtas",
+        missing: 0,
+      };
+    }
+
+    if (ended && confirmed > 0) {
+      return {
+        key: "action",
+        tone: "danger",
+        label: "Reikia veiksmo",
+        detail: "Uždarykite pasibaigusią darbo dieną",
+        missing,
+      };
+    }
+
+    if (isToday && started) {
+      return {
+        key: "today",
+        tone: "live",
+        label: "Vyksta šiandien",
+        detail:
+          missing > 0
+            ? `Dar trūksta ${missing} ${missing === 1 ? "žmogaus" : "žmonių"}`
+            : "Komanda suformuota",
+        missing,
+      };
+    }
+
+    if (missing > 0) {
+      return {
+        key: "hiring",
+        tone: "action",
+        label: `Trūksta ${missing}`,
+        detail:
+          missing === 1
+            ? "Reikia dar 1 darbuotojo"
+            : `Reikia dar ${missing} darbuotojų`,
+        missing,
+      };
+    }
+
+    return {
+      key: "ready",
+      tone: "ok",
+      label: isToday ? "Paruošta šiandienai" : "Komanda suformuota",
+      detail: `${confirmed}/${needed} darbuotojai patvirtinti`,
+      missing: 0,
+    };
+  }
+
+  const dashboardActionJobs = visibleJobs.filter(
+    (job) => employerJobDashboardState(job).key === "action"
+  ).length;
+
+  const dashboardMissingWorkers = visibleJobs.reduce(
+    (sum, job) => sum + employerJobDashboardState(job).missing,
+    0
+  );
+
+  const dashboardTodayJobs = visibleJobs.filter(
+    (job) =>
+      job.work_date === employerDashboardToday &&
+      !["cancelled", "completed"].includes(job.status)
+  ).length;
+
+  const dashboardUnreadMessages = employerNotifications.filter(
+    (item) =>
+      item.event_type === "message" &&
+      visibleJobs.some((job) => job.id === item.job_id)
+  ).length;
+
   const activeTeamMembers = teamMembers.filter((member) => member.is_active);
   const pendingTeamInvites = teamInvites.filter(
     (invite) =>
@@ -9201,12 +9304,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
         .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
-        .ed-jobs{display:grid;gap:9px;margin-top:22px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 10px;border-top:1px solid #edf1f4;border-radius:10px;transition:background .18s ease}.ed-job:first-child{border-top:0}.ed-job-active{background:#eef1f3}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
+        .ed-jobs{display:grid;gap:9px;margin-top:14px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 105px 112px minmax(260px,1fr);gap:14px;align-items:center;padding:13px 12px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-job-state{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:5px;color:#6c7a88;font-size:11px;line-height:1.35}
+        .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 100px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -10524,18 +10630,71 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
 
           {visibleJobs.length ? (
-            <div className="ed-jobs">
+            <>
+              <div className="ed-job-overview">
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardActionJobs ? "danger" : ""
+                  }`}
+                >
+                  <span>Reikia veiksmo</span>
+                  <b>{dashboardActionJobs}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardMissingWorkers ? "alert" : ""
+                  }`}
+                >
+                  <span>Trūksta žmonių</span>
+                  <b>{dashboardMissingWorkers}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardTodayJobs ? "live" : ""
+                  }`}
+                >
+                  <span>Šiandienos darbai</span>
+                  <b>{dashboardTodayJobs}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardUnreadMessages ? "alert" : ""
+                  }`}
+                >
+                  <span>Naujos žinutės</span>
+                  <b>{dashboardUnreadMessages}</b>
+                </div>
+              </div>
+
+              <div className="ed-jobs">
               {visibleJobs.map((job) => {
                 const unreadNews = unreadEmployerNotifications(job.id);
                 const newsPresentation = notificationPresentation(unreadNews);
+                const unreadMessages = unreadNews.filter(
+                  (item) => item.event_type === "message"
+                );
+                const unreadGroupMessages =
+                  unreadEmployerGroupChatNotifications(job.id);
+                const jobDashboardState = employerJobDashboardState(job);
 
                 return (
                   <div
-                    className={
-                      currentJob?.id === job.id
-                        ? "ed-job ed-job-active"
-                        : "ed-job"
-                    }
+                    className={[
+                      "ed-job",
+                      currentJob?.id === job.id ? "ed-job-active" : "",
+                      jobDashboardState.tone === "danger"
+                        ? "ed-job-priority-danger"
+                        : jobDashboardState.tone === "action"
+                        ? "ed-job-priority-action"
+                        : jobDashboardState.tone === "live"
+                        ? "ed-job-priority-live"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     key={job.id}
                   >
                     <b>{job.work_date}</b>
@@ -10582,6 +10741,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             {newsPresentation.label}
                             {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
                           </span>
+                          {unreadMessages.length > 0 && (
+                            <span
+                              style={{
+                                marginLeft: 7,
+                                color: "#b9342b",
+                                fontSize: 11,
+                                fontWeight: 900,
+                              }}
+                            >
+                              Naujos žinutės · {unreadMessages.length}
+                            </span>
+                          )}
                         </div>
                       )}
                       {job.status === "cancelled" &&
@@ -10602,19 +10773,36 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <span className="ed-progress">
                       {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
                     </span>
-                    <span className="ed-status">
-                      {job.status === "filled"
-                        ? "Užpildyta"
-                        : job.status === "completed"
-                        ? "Įvykdyta"
-                        : job.status === "cancelled"
-                        ? "Atšaukta"
-                        : job.status === "open"
-                        ? "Atvira"
-                        : job.status}
-                    </span>
+
+                    <div>
+                      <span
+                        className={`ed-job-state ${jobDashboardState.tone}`}
+                      >
+                        {jobDashboardState.label}
+                      </span>
+                      <span className="ed-job-state-detail">
+                        {jobDashboardState.detail}
+                      </span>
+                    </div>
+
                     <div className="ed-job-actions">
                       <button onClick={() => openExistingJob(job)}>Atidaryti</button>
+
+                      <button
+                        className={`ed-job-chat-btn ${
+                          unreadGroupMessages.length ? "has-unread" : ""
+                        }`}
+                        type="button"
+                        onClick={() => openEmployerGroupConversation(job)}
+                      >
+                        {planSummary?.can_job_chat ? "Pokalbis" : "Pokalbis · Business"}
+                        {unreadGroupMessages.length > 0 && (
+                          <span className="ed-job-chat-new">
+                            Nauja {Math.min(9, unreadGroupMessages.length)}
+                          </span>
+                        )}
+                      </button>
+
                       {job.status !== "cancelled" && job.status !== "completed" && (
                         <button onClick={() => startEditJob(job)}>Redaguoti</button>
                       )}
@@ -10630,7 +10818,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           ) : (
             <div className="ed-empty">
               {planSummary?.can_team_management && jobScope === "mine"
