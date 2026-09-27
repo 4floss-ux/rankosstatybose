@@ -6107,6 +6107,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [companySaving, setCompanySaving] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
+  const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
   const [planActionBusy, setPlanActionBusy] = useState(false);
   const billingReturnHandledRef = useRef(false);
@@ -6301,6 +6302,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           loadEmployerStats(company.id, companyMemberRole),
           loadCompanyWorkerReviews(company.id),
           loadCompanyPlan(company.id),
+          loadPendingPlanChange(company.id),
           planSummary?.can_saved_workers
             ? loadSavedWorkers(company.id, planSummary)
             : Promise.resolve(),
@@ -6723,6 +6725,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return summary;
   }
 
+  async function loadPendingPlanChange(companyId = company?.id) {
+    if (!companyId) {
+      setPendingPlanChange(null);
+      return null;
+    }
+
+    const result = await supabase.rpc("get_company_pending_plan_change", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const pending = result.data?.[0] || null;
+    const activePending = pending?.pending_plan_key
+      ? pending
+      : null;
+
+    setPendingPlanChange(activePending);
+    return activePending;
+  }
+
   async function activatePlanForAdminTest(planKey) {
     if (!company?.id || !onAdminReturn) return;
 
@@ -7049,6 +7072,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setPlanSummary(loadedPlan);
 
       await Promise.all([
+        loadPendingPlanChange(companyId),
         loadEmployerNotifications(),
         loadEmployerStats(companyId, loadedMemberRole),
         loadCompanyWorkerReviews(companyId),
@@ -11258,6 +11282,38 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
               <div className="ed-note" style={{ background: "#fff7ef", border: "1px solid #f2d7bc", color: "#102438", marginBottom: 16 }}>
                 Registruodamiesi pasirinkote {employerPlanName(preferredPlanKey)}. Žemiau patvirtinkite atsiskaitymo laikotarpį ir atlikite saugų apmokėjimą per Stripe. Iki Stripe patvirtinimo aktyvus lieka Basic planas.
+              </div>
+            )}
+
+            {pendingPlanChange?.pending_plan_key && (
+              <div
+                className="ed-note"
+                style={{
+                  background: "#eef6ff",
+                  border: "1px solid #cfe1f4",
+                  color: "#102438",
+                  marginBottom: 16,
+                }}
+              >
+                <b>Suplanuotas plano pakeitimas:</b>{" "}
+                {pendingPlanChange.pending_plan_name ||
+                  employerPlanName(pendingPlanChange.pending_plan_key)}
+                {pendingPlanChange.pending_billing_interval === "yearly"
+                  ? " · metinis atsiskaitymas"
+                  : " · mėnesinis atsiskaitymas"}
+                {pendingPlanChange.pending_effective_at && (
+                  <>
+                    {" "}nuo{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(pendingPlanChange.pending_effective_at))}
+                    </b>
+                  </>
+                )}
+                . Iki tol lieka galioti <b>{planSummary?.plan_name}</b> teisės.
               </div>
             )}
 
