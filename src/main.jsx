@@ -11166,7 +11166,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               ? ` · ${worker.distanceKm} km nuo darbo`
                               : ""}
                           </span>
-                          {worker.activityLabel && (
+                          {!canViewWorkerMetrics && worker.activityLabel && (
                             <div className="ed-worker-status">
                               <span className="ed-attendance-badge green">
                                 {worker.activityLabel}
@@ -11180,6 +11180,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <div className="ed-metric">
                           <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
                           <span>atvykimas</span>
+                          {worker.activityLabel && (
+                            <span className="ed-attendance-badge green" style={{ marginTop: 8 }}>
+                              {worker.activityLabel}
+                            </span>
+                          )}
                         </div>
                       )}
 
