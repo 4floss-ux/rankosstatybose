@@ -14010,10 +14010,14 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
                 key={message.id}
               >
                 <b>
-                  {message.sender_label || "Komandos narys"}{" "}
-                  <span className="admin-team-chat-role">
-                    · {companyTeamRoleLabel(message.sender_role)}
-                  </span>
+                  {message.sender_role === "admin"
+                    ? "Administratorius"
+                    : message.sender_label || "Komandos narys"}
+                  {message.sender_role !== "admin" && (
+                    <span className="admin-team-chat-role">
+                      {` · ${companyTeamRoleLabel(message.sender_role)}`}
+                    </span>
+                  )}
                 </b>
                 <p>{message.body}</p>
                 <time>
