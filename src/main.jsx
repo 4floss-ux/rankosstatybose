@@ -3792,6 +3792,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (item) => item.event_type === "message"
   );
 
+  const workerOpenDisputes = workdays.filter(
+    (item) =>
+      item.attendance?.dispute_status === "disputed" &&
+      !item.attendance?.finalized_at
+  );
+
   const workerActionWorkdays = workdays.filter((item) => {
     const attendance = item.attendance || {};
     if (item.status !== "confirmed" || attendance.finalized_at) return false;
@@ -3817,7 +3823,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       (item) =>
         item.status === "confirmed" &&
         !item.attendance?.finalized_at &&
-        item.job?.status !== "cancelled"
+        item.job?.status !== "cancelled" &&
+        !jobHasEnded(item.job)
     )
     .sort((a, b) => {
       const aKey = `${a.job?.work_date || "9999-12-31"}T${
@@ -3828,6 +3835,27 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       }`;
       return aKey.localeCompare(bKey);
     })[0];
+
+  const workerRequiredActionCount =
+    workerActionWorkdays.length + (needsAvailabilityConfirm ? 1 : 0);
+
+  const workerDashboardTomorrow = localDateISO(
+    new Date(Date.now() + 24 * 60 * 60 * 1000)
+  );
+
+  const nextConfirmedJob = nextConfirmedWorkday?.job || null;
+  const nextConfirmedWorkdayDateLabel = nextConfirmedJob?.work_date
+    ? nextConfirmedJob.work_date === workerDashboardToday
+      ? "Šiandien"
+      : nextConfirmedJob.work_date === workerDashboardTomorrow
+      ? "Rytoj"
+      : new Date(`${nextConfirmedJob.work_date}T00:00:00`).toLocaleDateString(
+          "lt-LT",
+          { day: "numeric", month: "short" }
+        )
+    : "";
+
+  const firstOpenDispute = workerOpenDisputes[0] || null;
 
   const firstPendingReview = workerActionWorkdays.find((item) => {
     const attendance = item.attendance || {};
@@ -3918,6 +3946,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         action: "Peržiūrėti pokalbius",
         target: "workdays",
       }
+    : firstOpenDispute
+    ? {
+        tone: "danger",
+        title: "Ginčas nagrinėjamas",
+        text: `${firstOpenDispute.job?.title || "Darbo diena"} · laukiamas administratoriaus sprendimas. Kol vyksta nagrinėjimas, reitingas nekeičiamas.`,
+        action: "Peržiūrėti ginčą",
+        target: "workdays",
+      }
     : nextConfirmedWorkday
     ? {
         tone: "live",
@@ -3980,7 +4016,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
-        .wd-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
+        .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px;min-width:0}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:4px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
         .wd-focus{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding:16px 18px;border:1px solid #dfe7ed;border-radius:15px;background:#fff}.wd-focus.action{border-color:#efc99e;background:#fff9f2}.wd-focus.live{border-color:#cce5d8;background:#f4faf7}.wd-focus.danger{border-color:#efc7bb;background:#fff5f2}.wd-focus-copy b{display:block;color:#102438;font-size:15px;margin-bottom:4px}.wd-focus-copy span{display:block;color:#607180;font-size:12px;line-height:1.5}.wd-focus-btn{border:0;border-radius:9px;background:#102438;color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}.wd-focus.action .wd-focus-btn{background:#f08a28}.wd-focus.live .wd-focus-btn{background:#1c9b67}.wd-focus.danger .wd-focus-btn{background:#b64d2a}
         .wd-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
@@ -4035,7 +4071,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
-        .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -4056,15 +4091,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-availability-alert-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
         .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}
         .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
+        .wd-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
         @keyframes wdspin{to{transform:rotate(360deg)}}
         @media(max-width:1180px){
-          .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .wd-overview{grid-template-columns:repeat(3,minmax(0,1fr))}
           .wd-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
         }
         @media(max-width:760px){
           .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1320px)}
           .wd-heading{align-items:flex-start;flex-direction:column}
+          .wd-onboarding-steps{grid-template-columns:1fr}
           .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .wd-heading-actions{width:100%}
           .wd-focus{align-items:flex-start;flex-direction:column}
           .wd-focus-btn{width:100%}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -4079,6 +4117,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-availability-alert-actions{justify-content:flex-start}
           .wd-bottom{bottom:10px}
           .wd-save{width:100%}
+        }
+        @media(max-width:480px){
+          .wd-overview{grid-template-columns:1fr}
+          .wd-heading h1{font-size:29px}
         }
       `}</style>
 
@@ -4129,10 +4171,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button className="wd-secondary" type="button" onClick={() => setShowProfileEditor(true)}>Profilis</button>
-                  <button className="wd-primary" type="button" onClick={() => document.getElementById("worker-availability")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Nustatyti grafiką</button>
+                  <button className="wd-primary" type="button" onClick={() => setShowProfileEditor(true)}>Nustatyti grafiką</button>
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, marginTop: 14 }}>
+              <div className="wd-onboarding-steps">
                 <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
                 <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{Object.values(availability).some((day) => day.available) ? "✓" : "2"}</b> Bent viena laisva diena</div>
                 <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
@@ -4213,20 +4255,50 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
             <span>Nauji kvietimai</span>
             <b>{invitations.length}</b>
+            <small>{invitations.length ? "Laukia jūsų atsakymo" : "Naujų kvietimų nėra"}</small>
           </div>
 
-          <div className={`wd-overview-card ${workerTodayJobs.length ? "live" : ""}`}>
-            <span>Šiandienos darbai</span>
-            <b>{workerTodayJobs.length}</b>
+          <div
+            className={`wd-overview-card next-work ${
+              nextConfirmedJob?.work_date === workerDashboardToday ? "live" : ""
+            }`}
+          >
+            <span>Artimiausias darbas</span>
+            <b>
+              {nextConfirmedJob
+                ? `${nextConfirmedWorkdayDateLabel} · ${
+                    nextConfirmedJob.start_time?.slice(0, 5) || "Laikas nenurodytas"
+                  }`
+                : "Nėra"}
+            </b>
+            <small>
+              {nextConfirmedJob
+                ? `${nextConfirmedJob.title}${
+                    workerTodayJobs.length > 1 &&
+                    nextConfirmedJob.work_date === workerDashboardToday
+                      ? ` · dar ${workerTodayJobs.length - 1} šiandien`
+                      : nextConfirmedJob.city
+                      ? ` · ${nextConfirmedJob.city}`
+                      : ""
+                  }`
+                : "Patvirtintų artimiausių darbų nėra"}
+            </small>
           </div>
 
           <div
             className={`wd-overview-card ${
-              workerActionWorkdays.length ? "danger" : ""
+              workerRequiredActionCount ? "danger" : ""
             }`}
           >
             <span>Reikia veiksmo</span>
-            <b>{workerActionWorkdays.length}</b>
+            <b>{workerRequiredActionCount}</b>
+            <small>
+              {workerRequiredActionCount
+                ? needsAvailabilityConfirm
+                  ? "Įskaitant grafiko patvirtinimą"
+                  : "Atidarykite darbo dienas"
+                : "Veiksmų šiuo metu nėra"}
+            </small>
           </div>
 
           <div
@@ -4236,6 +4308,23 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           >
             <span>Naujos žinutės</span>
             <b>{workerUnreadMessages.length}</b>
+            <small>{workerUnreadMessages.length ? "Atidarykite pokalbį" : "Viskas perskaityta"}</small>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerOpenDisputes.length ? "danger" : ""
+            }`}
+          >
+            <span>Ginčai</span>
+            <b>{workerOpenDisputes.length}</b>
+            <small>
+              {workerOpenDisputes.length
+                ? workerOpenDisputes.length === 1
+                  ? "Nagrinėja administratorius"
+                  : "Nagrinėjami administratoriaus"
+                : "Aktyvių ginčų nėra"}
+            </small>
           </div>
         </div>
 
@@ -5122,14 +5211,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               {unreadPresentation.label}
                               {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
                             </span>
-                            <div>
-                              <button
-                                className="rs-alert-read"
-                                onClick={() => markWorkerNotificationsRead(invitation.id)}
-                              >
-                                Pažymėti perskaityta
-                              </button>
-                            </div>
                           </div>
                         )}
                         <h3>{job.title}</h3>
