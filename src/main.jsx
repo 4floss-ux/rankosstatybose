@@ -3779,7 +3779,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday h3{margin:0 0 5px;font-size:18px}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -4324,6 +4324,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   const job = item.job;
                   const attendance = item.attendance || {};
                   const ended = jobHasEnded(job);
+                  const workStarts = job.work_date && job.start_time
+                    ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+                    : null;
+                  const hasStarted = workStarts && !Number.isNaN(workStarts.getTime())
+                    && new Date() >= workStarts;
+                  const workdayPhase = item.status === "cancelled_by_employer"
+                    ? { label: "Atšauktas", tone: "cancelled" }
+                    : attendance.finalized_at || item.status === "completed"
+                    ? { label: "Užbaigtas", tone: "done" }
+                    : attendance.dispute_status === "disputed"
+                    ? { label: "Ginčas nagrinėjamas", tone: "past" }
+                    : ["no_show", "left_early_agreed", "left_early_unexcused"].includes(attendance.employer_outcome)
+                    ? { label: "Reikia peržiūrėti", tone: "past" }
+                    : ended && attendance.worker_workday_claim === "worked"
+                    ? { label: "Laukiama darbdavio", tone: "past" }
+                    : ended
+                    ? { label: "Pasibaigė · reikia uždaryti", tone: "past" }
+                    : hasStarted
+                    ? { label: "Vyksta šiandien", tone: "today" }
+                    : { label: "Laukiamas darbas", tone: "upcoming" };
                   const checkInOpen = jobCheckInWindowOpen(job);
                   const isConfirmed = item.status === "confirmed";
                   const pendingNegative =
@@ -4353,7 +4373,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   return (
                     <div className="wd-workday" key={item.id}>
                       <div>
-                        <h3>{job.title}</h3>
+                        <div className="wd-workday-title"><h3>{job.title}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
                         <div className="wd-workday-meta">
                           <div>
                             <b>{item.companyName}</b>
@@ -4446,12 +4466,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               Neuždaryta darbo diena · reikia veiksmo
                             </span>
                           )}
-
-                        {canCheckIn && (
-                          <span className="wd-workday-status muted">
-                            Darbo diena vyksta
-                          </span>
-                        )}
 
                         {attendance.worker_check_in_at &&
                           !attendance.finalized_at &&
@@ -8667,7 +8681,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
         .ed-chat-alert-btn{position:relative}
-        .ed-chat-alert{position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 0 0 3px #fff}
+        .ed-chat-alert{position:absolute;top:-9px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 0 0 3px #fff}
         .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
@@ -8841,7 +8855,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
         .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
-        .ed-jobs{display:grid;gap:9px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 10px;border-top:1px solid #edf1f4;border-radius:10px;transition:background .18s ease}.ed-job:first-child{border-top:0}.ed-job-active{background:#eef1f3}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-jobs{display:grid;gap:9px;margin-top:22px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 95px 105px minmax(230px,1fr);gap:14px;align-items:center;padding:13px 10px;border-top:1px solid #edf1f4;border-radius:10px;transition:background .18s ease}.ed-job:first-child{border-top:0}.ed-job-active{background:#eef1f3}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
