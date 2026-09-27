@@ -3731,7 +3731,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
         .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 70px}
-        .wd-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}
+        .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
         .wd-user{display:flex;align-items:center;gap:11px}
