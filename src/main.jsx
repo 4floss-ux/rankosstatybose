@@ -6241,6 +6241,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
   const [showJobForm, setShowJobForm] = useState(false);
+  const [cityWorkerSignal, setCityWorkerSignal] = useState(null);
+  const [cityWorkerSignalLoading, setCityWorkerSignalLoading] = useState(false);
   const [cancelJobTarget, setCancelJobTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancellingJob, setCancellingJob] = useState(false);
@@ -6266,6 +6268,64 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   useEffect(() => {
     loadEmployerDashboard();
   }, [user.id]);
+
+  useEffect(() => {
+    if (
+      !showJobForm ||
+      !company?.id ||
+      !String(form.city || "").trim() ||
+      !form.workDate
+    ) {
+      setCityWorkerSignal(null);
+      setCityWorkerSignalLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setCityWorkerSignalLoading(true);
+
+      const result = await supabase.rpc("get_employer_city_worker_signal", {
+        p_company_id: company.id,
+        p_city: String(form.city || "").trim(),
+        p_work_date: form.workDate,
+      });
+
+      if (cancelled) return;
+
+      if (result.error) {
+        console.error(result.error);
+        setCityWorkerSignal(null);
+      } else {
+        const row = result.data?.[0] || null;
+        setCityWorkerSignal(
+          row
+            ? {
+                availableWorkers: Number(row.available_workers || 0),
+                urgentWorkersNow:
+                  row.urgent_workers_now === null ||
+                  row.urgent_workers_now === undefined
+                    ? null
+                    : Number(row.urgent_workers_now || 0),
+              }
+            : null
+        );
+      }
+
+      setCityWorkerSignalLoading(false);
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    showJobForm,
+    company?.id,
+    form.city,
+    form.workDate,
+    planSummary?.plan_key,
+  ]);
 
   useEffect(() => {
     if (!company?.id || billingReturnHandledRef.current) return;
@@ -9582,6 +9642,90 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     onChange={(e) => updateField("workDate", e.target.value)}
   />
 </label>
+
+{!editingJobId && (
+  <div
+    className="ed-span-2"
+    style={{
+      border: "1px solid #dfe7ed",
+      borderRadius: 13,
+      padding: "12px 14px",
+      background: "#f7f9fb",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <b style={{ display: "block", color: "#102438", fontSize: 13 }}>
+          Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
+        </b>
+        <span style={{ display: "block", marginTop: 3, color: "#6c7a87", fontSize: 11 }}>
+          Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <span
+          style={{
+            borderRadius: 999,
+            padding: "7px 10px",
+            background: "#fff",
+            border: "1px solid #dfe7ed",
+            color: "#102438",
+            fontSize: 11,
+            fontWeight: 900,
+          }}
+        >
+          {cityWorkerSignalLoading
+            ? "Skaičiuojama..."
+            : cityWorkerSignal
+            ? `${cityWorkerSignal.availableWorkers} tinkamų pagal dieną`
+            : "Pasiūla tikrinama"}
+        </span>
+
+        {planSummary?.plan_key === "business_pro" &&
+          cityWorkerSignal?.urgentWorkersNow !== null && (
+            <span
+              style={{
+                borderRadius: 999,
+                padding: "7px 10px",
+                background: "#fff1e5",
+                border: "1px solid #f3d2b1",
+                color: "#a7550d",
+                fontSize: 11,
+                fontWeight: 900,
+              }}
+            >
+              {cityWorkerSignal.urgentWorkersNow} „Laisvas dabar“
+            </span>
+          )}
+      </div>
+    </div>
+
+    {!cityWorkerSignalLoading &&
+      cityWorkerSignal &&
+      cityWorkerSignal.availableWorkers === 0 && (
+        <div
+          style={{
+            marginTop: 9,
+            color: "#8a5d32",
+            fontSize: 11,
+            lineHeight: 1.45,
+          }}
+        >
+          Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek
+          galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
+        </div>
+      )}
+  </div>
+)}
 
 <div className="ed-label ed-span-2">
   Darbo laikas
