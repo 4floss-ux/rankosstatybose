@@ -11285,6 +11285,34 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
+            {planSummary?.cancel_at_period_end && (
+              <div
+                className="ed-note"
+                style={{
+                  background: "#fff7ef",
+                  border: "1px solid #f2d7bc",
+                  color: "#102438",
+                  marginBottom: 16,
+                }}
+              >
+                <b>Prenumeratos atšaukimas suplanuotas.</b>{" "}
+                {planSummary?.plan_name || employerPlanName(planSummary?.plan_key)} teisės
+                {planSummary?.current_period_end && (
+                  <>
+                    {" "}galioja iki{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(planSummary.current_period_end))}
+                    </b>
+                  </>
+                )}
+                . Po šios datos planas automatiškai taps <b>Basic</b>.
+              </div>
+            )}
+
             {pendingPlanChange?.pending_plan_key && (
               <div
                 className="ed-note"
