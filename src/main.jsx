@@ -9622,11 +9622,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return {
         key: "hiring",
         tone: "action",
-        label: `Trūksta ${missing}`,
-        detail:
+        label:
           missing === 1
-            ? "Reikia dar 1 darbuotojo"
-            : `Reikia dar ${missing} darbuotojų`,
+            ? "Trūksta 1 darbuotojo"
+            : `Trūksta ${missing} darbuotojų`,
+        detail: "",
         missing,
       };
     }
@@ -11448,9 +11448,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       >
                         {jobDashboardState.label}
                       </span>
-                      <span className="ed-job-state-detail">
-                        {jobDashboardState.detail}
-                      </span>
+                      {jobDashboardState.detail && (
+                        <span className="ed-job-state-detail">
+                          {jobDashboardState.detail}
+                        </span>
+                      )}
                     </div>
 
                     <div className="ed-job-actions">
