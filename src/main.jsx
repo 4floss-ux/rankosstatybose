@@ -2994,6 +2994,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+    setJobFormErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
   }
 
   function urgentAvailabilityIsActive() {
@@ -6821,6 +6827,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [cancellingJob, setCancellingJob] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [jobFormErrors, setJobFormErrors] = useState({});
+  const payAmountInputRef = useRef(null);
   const [form, setForm] = useState({
     title: "Statybų pagalbiniai",
     city: "Vilnius",
@@ -7974,6 +7982,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+    if (key === "payAmount") {
+      setJobFormErrors((current) => ({ ...current, payAmount: "" }));
+    }
   }
 
   async function loadEmployerStats(
@@ -8775,6 +8786,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function saveJobAndFind() {
     setNotice("");
     setError("");
+    setJobFormErrors({});
 
     if (!company?.id) {
       setError("Nerasta įmonė.");
@@ -8818,13 +8830,22 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
-    if (form.description.trim().length < 10) {
-      setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
+    if (!form.payAmount || Number(form.payAmount) <= 0) {
+      const message = "Įveskite atlygio sumą prieš kuriant darbo pasiūlymą.";
+      setError(message);
+      setJobFormErrors({ payAmount: message });
+      requestAnimationFrame(() => {
+        payAmountInputRef.current?.focus();
+        payAmountInputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
       return;
     }
 
-    if (!form.payAmount || Number(form.payAmount) <= 0) {
-      setError("Atlygis į rankas yra privalomas. Įveskite sumą.");
+    if (form.description.trim().length < 10) {
+      setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
       return;
     }
 
@@ -8925,6 +8946,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setEditingConfirmedCount(0);
     setShowJobForm(false);
     setCurrentJob(job);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById("employer-open-job")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
 
     try {
       setForm((current) => ({
@@ -10563,16 +10592,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 <label className="ed-label">
   Atlygis į rankas (€) *
   <input
+    ref={payAmountInputRef}
     className="ed-input"
     type="number"
     min="1"
     step="0.01"
     required
+    aria-invalid={Boolean(jobFormErrors.payAmount)}
     value={form.payAmount}
     disabled={editingConfirmedCount > 0}
     onChange={(e) => updateField("payAmount", e.target.value)}
     placeholder="Pvz. 12"
+    style={jobFormErrors.payAmount ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
   />
+  {jobFormErrors.payAmount && (
+    <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
+      {jobFormErrors.payAmount}
+    </span>
+  )}
 </label>
 
 <div className="ed-label">
@@ -10639,7 +10676,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {currentJob && (
-          <section className="ed-card">
+          <section
+            className="ed-card"
+            id="employer-open-job"
+            style={{ scrollMarginTop: 96 }}
+          >
             {unreadEmployerNotifications(currentJob.id).some((item) => item.event_type !== "message") && (() => {
               const currentNews = unreadEmployerNotifications(currentJob.id)
                 .filter((item) => item.event_type !== "message");
@@ -11287,11 +11328,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               <div className="ed-jobs">
               {visibleJobs.map((job) => {
-                const unreadNews = unreadEmployerNotifications(job.id);
-                const newsPresentation = notificationPresentation(unreadNews);
-                const unreadMessages = unreadNews.filter(
-                  (item) => item.event_type === "message"
+                const unreadNonMessageNews = unreadEmployerNotifications(job.id).filter(
+                  (item) => item.event_type !== "message"
                 );
+                const newsPresentation = notificationPresentation(unreadNonMessageNews);
                 const unreadGroupMessages =
                   unreadEmployerGroupChatNotifications(job.id);
                 const jobDashboardState = employerJobDashboardState(job);
@@ -11351,24 +11391,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </span>
                           </div>
                         )}
-                      {unreadNews.length > 0 && (
+                      {unreadNonMessageNews.length > 0 && (
                         <div className="ed-news">
                           <span className={`rs-alert ${newsPresentation.tone}`}>
                             {newsPresentation.label}
-                            {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                            {unreadNonMessageNews.length > 1
+                              ? ` · ${unreadNonMessageNews.length}`
+                              : ""}
                           </span>
-                          {unreadMessages.length > 0 && (
-                            <span
-                              style={{
-                                marginLeft: 7,
-                                color: "#b9342b",
-                                fontSize: 11,
-                                fontWeight: 900,
-                              }}
-                            >
-                              Naujos žinutės · {unreadMessages.length}
-                            </span>
-                          )}
                         </div>
                       )}
                       {job.status === "cancelled" &&
