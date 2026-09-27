@@ -7,6 +7,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const TERMS_VERSION = "2026-09-27-v1";
 
 const workers = [
   { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, experience:2 },
@@ -496,7 +497,7 @@ function PlatformTermsDialog({ open, onClose }) {
         <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
         <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
         <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
-        <p style={{ fontSize: 13, color: "#607180" }}>Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
+        <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
       </section>
     </div>
@@ -509,6 +510,8 @@ function AuthModal({
   initialMode = "login",
   initialRole = "worker",
   teamInvite = null,
+  selectedPlanKey = "basic",
+  selectedBillingCycle = "monthly",
 }) {
   const [mode, setMode] = useState(initialMode);
   const [role, setRole] = useState(initialRole);
@@ -619,7 +622,16 @@ function AuthModal({
               ? companyTeamInviteLink(teamInvite.token)
               : window.location.origin,
             data: {
+              terms_accepted: true,
+              terms_version: TERMS_VERSION,
               role: teamInvite ? "employer" : role,
+              preferred_plan:
+                role === "employer" && !teamInvite &&
+                EMPLOYER_PLANS.some((plan) => plan.key === selectedPlanKey)
+                  ? selectedPlanKey
+                  : "basic",
+              preferred_billing_interval:
+                selectedBillingCycle === "yearly" ? "yearly" : "monthly",
               display_name: form.name.trim(),
               legal_name: form.name.trim(),
               city: canonicalCity,
@@ -789,6 +801,17 @@ function AuthModal({
             >
               Ieškau darbuotojų
             </button>
+          </div>
+        )}
+
+        {mode === "signup" && role === "employer" && !teamInvite && (
+          <div style={{ background: "#fff7ef", border: "1px solid #f2d7bc", borderRadius: 10, padding: "11px 13px", fontSize: 13, lineHeight: 1.5 }}>
+            <b>Pasirinktas planas: {employerPlanName(selectedPlanKey)}</b>
+            {selectedPlanKey !== "basic" && (
+              <span style={{ display: "block", color: "#607180", marginTop: 3 }}>
+                {selectedBillingCycle === "yearly" ? "Metinis" : "Mėnesinis"} atsiskaitymas. Mokamas planas bus aktyvus tik po atskiro apmokėjimo.
+              </span>
+            )}
           </div>
         )}
 
@@ -5932,6 +5955,10 @@ function workerInitials(name) {
 }
 
 function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+  // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
+  const preferredPlanKey = EMPLOYER_PLANS.some(
+    (plan) => plan.key === user?.user_metadata?.preferred_plan
+  ) ? user.user_metadata.preferred_plan : "basic";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -5940,9 +5967,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [companySaving, setCompanySaving] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
-  const [showPlans, setShowPlans] = useState(false);
+  const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
   const [planActionBusy, setPlanActionBusy] = useState(false);
-  const [planBillingCycle, setPlanBillingCycle] = useState("monthly");
+  const [planBillingCycle, setPlanBillingCycle] = useState(
+    preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
+      ? "yearly"
+      : "monthly"
+  );
   const [showUrgentSearch, setShowUrgentSearch] = useState(false);
   const [urgentSearchCity, setUrgentSearchCity] = useState("");
   const [urgentSearchResults, setUrgentSearchResults] = useState([]);
@@ -6551,6 +6582,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (billingResult.error) throw billingResult.error;
 
+      const preferenceResult = await supabase.auth.updateUser({
+        data: {
+          preferred_plan: planKey,
+          preferred_billing_interval: billingInterval,
+        },
+      });
+      if (preferenceResult.error) throw preferenceResult.error;
+
       setCompany((current) =>
         current
           ? { ...current, billing_interval: billingInterval }
@@ -6700,7 +6739,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setCompany(companyResult.data);
       setPlanBillingCycle(
-        companyResult.data?.billing_interval === "yearly"
+        preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
+          ? "yearly"
+          : companyResult.data?.billing_interval === "yearly"
           ? "yearly"
           : "monthly"
       );
@@ -10924,6 +10965,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </span>
             </div>
 
+            {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
+              <div className="ed-note" style={{ background: "#fff7ef", border: "1px solid #f2d7bc", color: "#102438", marginBottom: 16 }}>
+                Registruodamiesi pasirinkote {employerPlanName(preferredPlanKey)}. Žemiau galite peržiūrėti planą ir atsiskaitymo laikotarpį. Kol mokėjimas neįdiegtas ir nepatvirtintas, aktyvus lieka Basic planas.
+              </div>
+            )}
+
             <div className="ed-plan-grid">
               {EMPLOYER_PLANS.map((plan) => {
                 const samePlan = planSummary?.plan_key === plan.key;
@@ -10955,7 +11002,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {plan.key === "basic"
                         ? "PRADŽIA"
                         : plan.key === "business"
-                        ? "POPULIARIAUSIAS"
+                        ? "REKOMENDUOJAMAS"
                         : "KOMANDAI"}
                     </div>
                     <h3>{plan.name}</h3>
@@ -10989,6 +11036,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <span className="ed-plan-current">
                         Dabartinis planas
                       </span>
+                    )}
+                    {!current && preferredPlanKey === plan.key && planSummary?.plan_key === "basic" && (
+                      <span className="ed-plan-current">Pasirinktas registruojantis</span>
                     )}
 
                     <ul className="ed-plan-features">
@@ -14565,7 +14615,7 @@ function PublicLandingPage({
         .home-stats{border-bottom:1px solid var(--line);background:#fff}.home-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:27px 0}.home-stat{padding:9px 24px;border-left:1px solid var(--line)}.home-stat:first-child{border-left:0}.home-stat strong{display:block;font:900 30px Manrope,Inter,sans-serif;color:var(--navy)}.home-stat span{font-size:12px;color:var(--muted)}.home-section{padding:82px 0}.home-section.soft{background:#f7f9fb}.home-section h2,.home-cta h2{font:850 clamp(29px,3.2vw,40px)/1.16 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 12px}.home-intro{color:var(--muted);max-width:610px;margin:0 0 32px}.home-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.home-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:25px}.home-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e5;color:#bb661c;font-size:20px;font-weight:900}.home-card h3{font:850 18px Manrope,Inter,sans-serif;margin:18px 0 8px}.home-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:18px}.home-audience{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff)}.home-audience h3{font:850 25px Manrope,Inter,sans-serif;margin:10px 0}.home-audience p{color:var(--muted);font-size:14px;line-height:1.6}.home-audience ul,.home-plan ul{list-style:none;padding:0;display:grid;gap:12px;margin:24px 0}.home-audience li,.home-plan li{font-size:13px;padding-left:24px;position:relative}.home-audience li:before,.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-audience .home-btn{margin-top:10px}
         .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px}.home-toggle{display:flex;background:#eaf0f4;border-radius:10px;padding:4px}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:12px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px #10243818}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:17px;padding:24px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 18px 42px #f08a2827;margin-top:-8px;padding:30px 26px}.home-plan-badge{position:absolute;right:20px;top:-13px;background:var(--orange);color:#fff;padding:5px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 22px Manrope,Inter,sans-serif;margin:0}.home-plan>p{min-height:62px;color:var(--muted);font-size:13px;margin:12px 0 14px}.home-amount{font:900 36px Manrope,Inter,sans-serif}.home-amount small{font:700 12px Inter,sans-serif;color:var(--muted)}.home-year-note{min-height:26px;color:#167a54;font-size:11px;font-weight:750;margin-top:5px}.home-plan ul{flex:1;align-content:start;grid-auto-rows:max-content;gap:9px;margin:14px 0 22px}.home-plan .home-btn{width:100%}
-        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:740px;margin:0 0 10px;text-align:center}.home-cta p{color:var(--muted);max-width:780px;margin:0 auto;text-align:center}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:780px;margin:0 auto;text-align:center}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(max-width:900px){.home-hero-grid{gap:30px}.home-benefits{grid-template-columns:1fr 1fr}.home-prices{gap:9px}}
         @media(max-width:700px){.home-stats-grid{gap:0}.home-stat{padding:7px}.home-stat strong{font-size:23px}.home-stat span{font-size:10px}.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:64px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px;min-height:38px}.home-login{font-size:11px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
         @media(max-width:420px){.home-brand{font-size:13px}.home-brand-mark{display:none}.home-actions{gap:5px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}}
@@ -14574,21 +14624,22 @@ function PublicLandingPage({
 
       <header className="home-header"><div className="home-wrap home-nav">
         <a className="home-brand" href="#pradzia"><span className="home-brand-mark">⌂</span>rankos<b>statybose</b>.lt</a>
-        <div className="home-actions"><button className="home-login" type="button" onClick={onLogin}>Prisijungti</button><button className="home-btn" type="button" onClick={onEmployerSignup}>Registruotis</button></div>
+        <div className="home-actions"><button className="home-login" type="button" onClick={onLogin}>Prisijungti</button><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis</button></div>
       </div></header>
 
       <main id="pradzia">
         <section className="home-hero"><div className="home-wrap home-hero-grid"><div>
           <div className="home-kicker">Darbuotojų paieška statyboms</div>
-          <h1>Objektui reikia žmonių? <em>Raskite atsakingus darbuotojus.</em></h1>
+          <h1>Objektui reikia žmonių? <em>Raskite patikimus darbuotojus.</em></h1>
           <p className="home-lead">Padedam greičiau susisiekti su darbui tinkamais žmonėmis. Darbdavys aiškiai pateikia poreikį, darbuotojas iš anksto mato sąlygas, o visa darbo eiga lieka vienoje vietoje.</p>
-          <div className="home-hero-actions"><button className="home-btn" type="button" onClick={onEmployerSignup}>Ieškau darbuotojų →</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button></div>
+          <div className="home-hero-actions"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Ieškau darbuotojų →</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button></div>
           <div className="home-micro">✓ Paieška pagal prieinamumą &nbsp; ✓ Aiškus atlygis &nbsp; ✓ Darbo eiga vienoje vietoje</div>
         </div><div className="home-flow" aria-label="Darbo organizavimo eiga">
           <div className="home-flow-label">KODĖL MES</div><h2 className="home-flow-title">Ne CV skelbimų lenta – reali darbuotojų paieška</h2><p className="home-flow-intro">Padedame ieškoti žmogaus čia ir dabar pagal patvirtintą prieinamumą. Nuo pirmo kvietimo iki darbo dienos rezultato.</p>
           <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span><div><b>Žmonės pagal realų prieinamumą</b><span>Paieška atsižvelgia į patvirtintą grafiką, aktyvumą, vietą ir esamus darbus.</span></div></div>
           <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span><div><b>Aiškus pasiūlymas abiem pusėms</b><span>Darbuotojas mato darbo vietą, laiką ir atlygį dar prieš priimdamas kvietimą.</span></div></div>
           <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg></span><div><b>Patikimumas iš tikrų darbo dienų</b><span>Atvykimo ir darbo uždarymo įrašai padeda vertinti būsimą bendradarbiavimą.</span></div></div>
+          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h4"/></svg></span><div><b>Patogus ir lengvas sistemos valdymas</b><span>Darbus, kvietimus ir darbo dienų eigą valdote vienoje vietoje.</span></div></div>
           
         </div></div></section>
 
@@ -14602,7 +14653,7 @@ function PublicLandingPage({
         </div></div></section>
 
         <section className="home-section soft" id="kainodara"><div className="home-wrap"><div className="home-price-head"><div><div className="home-kicker">Darbdavių planai</div><h2>Pasirinkite planą pagal savo darbų apimtį.</h2></div><div className="home-toggle" aria-label="Mokėjimo laikotarpis"><button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button></div></div>
-          <div className="home-prices">{plans.map((item) => { const plan = item; const paid = item.key !== "basic"; const yearly = pricingBillingCycle === "yearly"; return <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>{item.key === "business" && <span className="home-plan-badge">POPULIARIAUSIAS PLANAS</span>}{item.key === "business_pro" && <span className="home-plan-badge">DIDŽIAUSIA NAUDA</span>}<h3>{item.name}</h3><p>{plan.description}</p><div className="home-amount">{paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(plan)) : formatPlanPrice(plan.price) : "0"} € <small>/ {paid && yearly ? "metus" : "mėn."}</small></div><div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(plan))} € per metus` : ""}</div><ul>{plan.features.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul><button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={onEmployerSignup}>{item.key === "basic" ? "Pradėti nemokamai" : `Rinktis ${item.name}`}</button></article>; })}</div>
+          <div className="home-prices">{plans.map((item) => { const plan = item; const paid = item.key !== "basic"; const yearly = pricingBillingCycle === "yearly"; return <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>{item.key === "business" && <span className="home-plan-badge">REKOMENDUOJAMAS</span>}{item.key === "business_pro" && <span className="home-plan-badge">DIDŽIAUSIA NAUDA</span>}<h3>{item.name}</h3><p>{plan.description}</p><div className="home-amount">{paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(plan)) : formatPlanPrice(plan.price) : "0"} € <small>/ {paid && yearly ? "metus" : "mėn."}</small></div><div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(plan))} € per metus` : ""}</div><ul>{plan.features.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul><button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={() => onEmployerSignup(item.key)}>{item.key === "basic" ? "Pradėti nemokamai" : `Rinktis ${item.name}`}</button></article>; })}</div>
           
         </div></section>
 
@@ -14613,7 +14664,7 @@ function PublicLandingPage({
           <details><summary>Ar darbuotojui platforma mokama?</summary><p>Ne. Darbuotojo registracija ir kvietimų gavimas nemokami.</p></details>
           <details><summary>Kas vyksta kilus ginčui?</summary><p>Darbo dienos žymėjimą galima ginčyti pateikiant paaiškinimą. Sprendimą priima administratorius, o jo istorija lieka sistemoje.</p></details>
         </div></section>
-        <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={onEmployerSignup}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
+        <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
       </main>
       <footer className="home-footer"><div className="home-wrap home-footer-inner"><a className="home-brand" href="#pradzia">rankos<b>statybose</b>.lt</a><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><span>© 2026 RankosStatybose.lt</span></div></footer>
       <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
@@ -14633,6 +14684,7 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
   const [pricingBillingCycle, setPricingBillingCycle] = useState("monthly");
+  const [signupPlanKey, setSignupPlanKey] = useState("basic");
   const [adminMode, setAdminMode] = useState("admin");
   const [teamInviteToken, setTeamInviteToken] = useState(() =>
     new URLSearchParams(window.location.search).get("team_invite")
@@ -14745,7 +14797,10 @@ function App() {
     setAuthOpen(true);
   };
 
-  const openEmployerSignup = () => {
+  const openEmployerSignup = (planKey = "basic") => {
+    setSignupPlanKey(
+      EMPLOYER_PLANS.some((plan) => plan.key === planKey) ? planKey : "basic"
+    );
     setAuthMode("signup");
     setAuthRole("employer");
     setAuthOpen(true);
@@ -14924,6 +14979,8 @@ function App() {
         onClose={() => setAuthOpen(false)}
         initialMode={authMode}
         initialRole={authRole}
+        selectedPlanKey={signupPlanKey}
+        selectedBillingCycle={pricingBillingCycle}
       />
     </>
   );
