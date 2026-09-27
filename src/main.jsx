@@ -3846,7 +3846,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -4417,6 +4417,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <p className="wd-card-sub">
               Pasibaigus darbo laikui darbo dieną turi uždaryti bent viena pusė.
               Jei rezultatai nesutampa, reitingas nekeičiamas iki ginčo išsprendimo.
+              Žemiau visada rodome, koks yra jūsų kitas žingsnis.
             </p>
 
             {workdays.length ? (
@@ -4468,6 +4469,78 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     item.status === "completed" ||
                     item.status === "no_show" ||
                     item.status === "cancelled_by_employer";
+
+                  const workdayNextStep =
+                    item.status === "cancelled_by_employer"
+                      ? {
+                          tone: "",
+                          title: "Darbas atšauktas",
+                          text: "Papildomų veiksmų šiai darbo dienai nereikia.",
+                        }
+                      : attendance.finalized_at
+                      ? {
+                          tone:
+                            attendance.final_outcome === "no_show" ||
+                            attendance.final_outcome === "left_early_unexcused"
+                              ? "danger"
+                              : "ok",
+                          title: "Darbo diena uždaryta",
+                          text:
+                            attendance.dispute_status === "resolved_worker" ||
+                            attendance.dispute_status === "resolved_employer"
+                              ? "Ginčas išspręstas ir galutinis rezultatas užfiksuotas."
+                              : "Galutinis darbo dienos rezultatas jau užfiksuotas.",
+                        }
+                      : disputed
+                      ? {
+                          tone: "danger",
+                          title: "Ginčas perduotas administratoriui",
+                          text: "Kol vyksta nagrinėjimas, reitingas nekeičiamas. Jei reikia, galite papildyti savo paaiškinimą ir įrodymus.",
+                        }
+                      : pendingNegative
+                      ? {
+                          tone: "action",
+                          title: "Reikia jūsų atsakymo",
+                          text: "Peržiūrėkite darbdavio pažymėtą rezultatą ir pasirinkite „Patvirtinti“ arba „Ginčyti“.",
+                        }
+                      : needsClose &&
+                        attendance.worker_workday_claim === "worked"
+                      ? {
+                          tone: "action",
+                          title: "Jūsų veiksmas atliktas",
+                          text: "Pažymėjote, kad dirbote. Dabar laukiama darbdavio darbo dienos uždarymo.",
+                        }
+                      : needsClose
+                      ? {
+                          tone: "action",
+                          title: "Uždarykite darbo dieną",
+                          text: "Pasirinkite „Dirbau šiame darbe“ arba, jei neatvykote, pažymėkite „Neatvykau“.",
+                        }
+                      : canCheckIn
+                      ? {
+                          tone: "action",
+                          title: "Atvykę pažymėkite atvykimą",
+                          text: "Paspauskite „Atvykau“. Jei nerandate objekto ar atsakingo žmogaus, naudokite „Atvykau, bet nerandu“.",
+                        }
+                      : checkInOpen && attendance.worker_check_in_at
+                      ? {
+                          tone: "ok",
+                          title: "Atvykimas užfiksuotas",
+                          text: attendance.employer_check_in_at
+                            ? "Darbdavys taip pat patvirtino jūsų atvykimą. Po darbo pabaigos reikės uždaryti dieną."
+                            : "Jūsų atvykimas sistemoje užfiksuotas. Darbdavys gali jį papildomai patvirtinti.",
+                        }
+                      : hasStarted
+                      ? {
+                          tone: "",
+                          title: "Darbo diena vyksta",
+                          text: "Po numatyto darbo laiko pabaigos atsiras darbo dienos uždarymo veiksmai.",
+                        }
+                      : {
+                          tone: "",
+                          title: "Kitas žingsnis",
+                          text: "Atvykimo mygtukas atsiras likus 2 valandoms iki darbo pradžios.",
+                        };
 
                   if (!recentOrActive) return null;
 
@@ -4605,6 +4678,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               })}
                             </div>
                           )}
+
+                        <div
+                          className={`wd-next-step ${
+                            workdayNextStep.tone || ""
+                          }`}
+                        >
+                          <b>{workdayNextStep.title}</b>
+                          {workdayNextStep.text}
+                        </div>
                       </div>
 
                       <div className="wd-workday-actions">
@@ -9097,6 +9179,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
+        .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
+        .ed-next-step{margin-top:9px;padding:9px 11px;border-left:3px solid #d7e0e7;border-radius:0 9px 9px 0;background:#f7f9fb;color:#526374;font-size:11.5px;line-height:1.45}
+        .ed-next-step b{display:block;color:#102438;margin-bottom:2px}
+        .ed-next-step.action{border-left-color:#f08a28;background:#fff8f1}
+        .ed-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}
+        .ed-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .ed-attendance-list{display:grid;gap:9px;margin-top:14px}
         .ed-attendance-row{display:grid;grid-template-columns:minmax(220px,1.35fr) minmax(210px,.9fr) auto;gap:18px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:14px 15px}
         .ed-worker-main{display:flex;flex-direction:column;gap:4px}.ed-worker-main b{display:block}.ed-worker-main span{font-size:13px;color:#6c7a88}.ed-member-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -9868,6 +9956,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {jobWorkers.length > 0 && (
               <div className="ed-attendance-panel">
                 <h2>Patvirtinti darbuotojai ir darbo diena</h2>
+                <p className="ed-attendance-help">
+                  Atvykimas → darbo dienos uždarymas → įvertinimas → favoritas.
+                  Kiekvienam darbuotojui rodome, ko šiuo metu reikia iš jūsų.
+                </p>
 
                 <div className="ed-attendance-list">
                   {jobWorkers.map((worker) => {
@@ -9887,6 +9979,81 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       ended &&
                       !attendance.finalized_at &&
                       !attendance.employer_outcome;
+
+                    const employerNextStep =
+                      currentJob.status === "cancelled"
+                        ? {
+                            tone: "",
+                            title: "Darbas atšauktas",
+                            text: "Papildomų veiksmų šiai darbo dienai nereikia.",
+                          }
+                        : attendance.finalized_at
+                        ? attendance.final_outcome === "no_show"
+                          ? {
+                              tone: "ok",
+                              title: "Darbo diena uždaryta",
+                              text: "Užfiksuotas neatvykimas. Atskiro darbuotojo vertinimo šiuo atveju nėra.",
+                            }
+                          : !worker.rating && canRateCurrentJob
+                          ? {
+                              tone: "action",
+                              title: "Kitas žingsnis – įvertinkite darbuotoją",
+                              text: "Darbo diena užbaigta. Palikite 1–10 įvertinimą; vertinti gali tik už darbą atsakingas žmogus.",
+                            }
+                          : worker.rating &&
+                            !savedWorkerIdSet.has(worker.id) &&
+                            planSummary?.can_saved_workers
+                          ? {
+                              tone: "action",
+                              title: "Darbo ciklas užbaigtas",
+                              text: "Jei norite šį žmogų greitai kviesti ateityje, galite pridėti jį į favoritus.",
+                            }
+                          : {
+                              tone: "ok",
+                              title: "Darbo ciklas užbaigtas",
+                              text: worker.rating
+                                ? `Darbuotojas įvertintas ${worker.rating.score}/10.`
+                                : "Galutinis darbo dienos rezultatas užfiksuotas.",
+                            }
+                        : disputed
+                        ? {
+                            tone: "danger",
+                            title: "Laukiama administratoriaus sprendimo",
+                            text: "Kol ginčas neišspręstas, darbuotojo reitingas ir galutinis rezultatas nekeičiami.",
+                          }
+                        : pendingNegative
+                        ? {
+                            tone: "action",
+                            title: "Laukiama darbuotojo atsakymo",
+                            text: "Jūs pateikėte darbo dienos rezultatą. Darbuotojas turi jį patvirtinti arba ginčyti.",
+                          }
+                        : canClose
+                        ? {
+                            tone: "action",
+                            title: "Reikia uždaryti darbo dieną",
+                            text: "Darbo laikas pasibaigė. Pasirinkite „Uždaryti dieną“ ir užfiksuokite rezultatą.",
+                          }
+                        : checkInOpen &&
+                          isConfirmed &&
+                          !attendance.employer_check_in_at
+                        ? {
+                            tone: "action",
+                            title: "Patvirtinkite atvykimą",
+                            text: attendance.worker_check_in_at
+                              ? "Darbuotojas jau pažymėjo „Atvykau“. Jei jis objekte, patvirtinkite jo atvykimą."
+                              : "Jei darbuotojas jau objekte, galite patvirtinti jo atvykimą.",
+                          }
+                        : attendance.employer_check_in_at
+                        ? {
+                            tone: "ok",
+                            title: "Atvykimas patvirtintas",
+                            text: "Po numatyto darbo laiko pabaigos čia atsiras darbo dienos uždarymo veiksmas.",
+                          }
+                        : {
+                            tone: "",
+                            title: "Darbas dar neprasidėjo",
+                            text: "Atvykimą galėsite patvirtinti nuo 2 valandų prieš darbo pradžią.",
+                          };
 
                     return (
                       <div
@@ -9961,6 +10128,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   </span>
                                 )}
                             </div>
+
+                            <div
+                              className={`ed-next-step ${
+                                employerNextStep.tone || ""
+                              }`}
+                            >
+                              <b>{employerNextStep.title}</b>
+                              {employerNextStep.text}
+                            </div>
                           </div>
                         </div>
 
@@ -10029,15 +10205,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </button>
                             )}
 
-                          {isConfirmed && !attendance.finalized_at && (
+                          {canClose && (
                             <button
                               className="ed-primary"
-                              disabled={!canClose || attendanceSaving}
-                              title={
-                                canClose
-                                  ? "Uždaryti šio darbuotojo darbo dieną"
-                                  : "Darbo dieną galima uždaryti pasibaigus darbo laikui"
-                              }
+                              disabled={attendanceSaving}
+                              title="Uždaryti šio darbuotojo darbo dieną"
                               onClick={() => {
                                 setAttendanceTarget(worker);
                                 setAttendanceMode("choose");
