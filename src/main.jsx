@@ -8,6 +8,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const TERMS_VERSION = "2026-09-27-v1";
+const PRIVACY_VERSION = "2026-09-27-draft-v1";
+const PRIVACY_CONTROLLER_NAME = "[ĮRAŠYTI PLATFORMOS VALDYTOJO JURIDINĮ PAVADINIMĄ]";
+const PRIVACY_CONTACT_EMAIL = "[ĮRAŠYTI PRIVATUMO KONTAKTINĮ EL. PAŠTĄ]";
 
 const workers = [
   { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, experience:2 },
@@ -569,6 +572,52 @@ function PlatformTermsDialog({ open, onClose }) {
   );
 }
 
+
+function PlatformPrivacyDialog({ open, onClose }) {
+  if (!open) return null;
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
+    >
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
+          <div><div className="eyebrow">RANKOSSTATYBOSE.LT</div><h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2></div>
+          <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
+        </div>
+
+        <p><b>Duomenų valdytojas.</b> RankosStatybose.lt platformos asmens duomenų valdytojas: <b>{PRIVACY_CONTROLLER_NAME}</b>. Dėl privatumo ir duomenų subjektų teisių galima kreiptis el. paštu <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
+
+        <p><b>Kokius duomenis tvarkome.</b> Priklausomai nuo naudojimosi platforma, tvarkome paskyros ir kontaktinius duomenis (pvz., vardą, el. paštą, telefono numerį, miestą), darbuotojo profesinę informaciją ir įgūdžius, prieinamumo grafiką bei aktyvumo būseną, darbdavio ir įmonės duomenis, darbų skelbimų informaciją, kvietimus, rezervacijas, atvykimo ir darbo dienos užbaigimo įrašus, reitingus, patikimumo rodiklius, favoritus, ginčų informaciją, darbo ir komandos pokalbių turinį bei techninius ir saugumo įrašus.</p>
+
+        <p><b>Mokėjimų duomenys.</b> Mokamų darbdavio planų atsiskaitymui naudojamas Stripe. RankosStatybose.lt sistemoje saugomi tik mokėjimo administravimui reikalingi Stripe identifikatoriai, prenumeratos būsena, planas, atsiskaitymo laikotarpis, sąskaitos identifikatorius ir mokėjimo laikas, kai ši informacija gaunama iš Stripe. Pilnų mokėjimo kortelės duomenų RankosStatybose.lt nekaupia ir jie įvedami Stripe valdomame Checkout lange.</p>
+
+        <p><b>Kam naudojame duomenis.</b> Duomenys reikalingi paskyrai sukurti ir administruoti, darbuotojų bei darbų paieškai ir suderinimui, kvietimams ir rezervacijoms, darbo dienos eigai ir atvykimui fiksuoti, bendravimui, reitingams ir patikimumo istorijai, ginčų nagrinėjimui, mokamų planų administravimui, platformos saugumui, piktnaudžiavimo prevencijai, techniniam veikimui ir teisinių pareigų vykdymui.</p>
+
+        <p><b>Tvarkymo pagrindai.</b> Duomenis tvarkome tiek, kiek tai būtina paslaugai suteikti ir sutartiniams veiksmams atlikti, teisėtiems platformos bei jos naudotojų interesams užtikrinti (pvz., saugumui, sukčiavimo ir piktnaudžiavimo prevencijai, ginčų ir patikimumo istorijai), taip pat kai tvarkyti duomenis reikalauja teisės aktai. Jei konkrečiai funkcijai būtų reikalingas sutikimas, jis būtų prašomas atskirai ir galėtų būti atšauktas.</p>
+
+        <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas ir infrastruktūra) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
+
+        <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
+
+        <p><b>Automatinis vertinimas ir paieška.</b> Platformoje darbuotojų paieška ir kai kurie patikimumo rodikliai gali būti apskaičiuojami pagal tokius duomenis kaip patvirtintas prieinamumas, aktyvumas, vieta, darbo laikas, ankstesni atvykimo ir darbo dienos rezultatai, reitingai ir paskyros apribojimai. Šie rodikliai padeda organizuoti paiešką ir pateikti informaciją naudotojams; ginčijamas darbo dienos rezultatas turi atskirą ginčo procesą ir gali būti peržiūrėtas administratoriaus.</p>
+
+        <p><b>Jūsų teisės.</b> Pagal taikytinus duomenų apsaugos teisės aktus galite prašyti susipažinti su savo duomenimis, juos ištaisyti, tam tikrais atvejais ištrinti ar apriboti jų tvarkymą, gauti perduodamus duomenis, nesutikti su tam tikru tvarkymu ir, kai tvarkymas grindžiamas sutikimu, jį atšaukti. Taip pat turite teisę pateikti skundą kompetentingai duomenų apsaugos priežiūros institucijai.</p>
+
+        <p><b>Paskyros ištrynimas.</b> Prašant ištrinti paskyrą gali būti pašalinti su ja susiję platformos duomenys, išskyrus informaciją, kurią būtina toliau saugoti dėl teisinių pareigų, teisinių reikalavimų, saugumo, sukčiavimo prevencijos ar jau įvykusių sandorių ir ginčų dokumentavimo.</p>
+
+        <p><b>Slapukai ir techninė saugykla.</b> Platforma gali naudoti techniškai būtinus autentifikavimo, sesijos ir saugumo identifikatorius, kad vartotojas galėtų prisijungti ir naudotis sistema. Atskiros reklaminės ar rinkodaros sekimo priemonės šiame privatumo pranešime nenumatytos; jei jos būtų įdiegtos, informacija ir pasirinkimai būtų pateikti atskirai.</p>
+
+        <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines RankosStatybose.lt funkcijas. Prieš viešą paleidimą būtina pakeisti du skliaustuose pažymėtus valdytojo rekvizitus tikrais duomenimis.</p>
+
+        <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+      </section>
+    </div>
+  );
+}
+
 function AuthModal({
   open,
   onClose,
@@ -594,6 +643,7 @@ function AuthModal({
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [signupPlan, setSignupPlan] = useState(selectedPlanKey);
 
   useEffect(() => {
@@ -1001,6 +1051,9 @@ function AuthModal({
                 Susipažinau ir sutinku su{" "}
                 <button type="button" onClick={(event) => { event.preventDefault(); setTermsOpen(true); }} style={{ border: 0, background: "none", padding: 0, color: "#b85f0e", font: "inherit", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>
                   naudojimosi sąlygomis
+                </button>{" "}ir susipažinau su{" "}
+                <button type="button" onClick={(event) => { event.preventDefault(); setPrivacyOpen(true); }} style={{ border: 0, background: "none", padding: 0, color: "#b85f0e", font: "inherit", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>
+                  privatumo politika
                 </button>.
               </span>
             </label>
@@ -1040,6 +1093,7 @@ function AuthModal({
           </button>
         </form>
         <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
+      <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
       </div>
     </div>
   );
@@ -15942,6 +15996,7 @@ function PublicLandingPage({
 }) {
   const plans = EMPLOYER_PLANS;
   const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [landingStats, setLandingStats] = useState(null);
 
   useEffect(() => {
@@ -15982,7 +16037,7 @@ function PublicLandingPage({
         .home-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.home-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:25px}.home-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e5;color:#bb661c;font-size:20px;font-weight:900}.home-card h3{font:850 18px Manrope,Inter,sans-serif;margin:18px 0 8px}.home-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:18px}.home-audience{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff)}.home-audience h3{font:850 25px Manrope,Inter,sans-serif;margin:10px 0}.home-audience p{color:var(--muted);font-size:14px;line-height:1.6}.home-audience ul,.home-plan ul{list-style:none;padding:0;display:grid;gap:12px;margin:24px 0}.home-audience li,.home-plan li{font-size:13px;padding-left:24px;position:relative}.home-audience li:before,.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-audience .home-btn{margin-top:10px}
         .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px}.home-toggle{display:flex;background:#eaf0f4;border-radius:10px;padding:4px}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:12px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px #10243818}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:17px;padding:24px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 18px 42px #f08a2827;margin-top:-8px;padding:30px 26px}.home-plan-badge{position:absolute;right:20px;top:-13px;background:var(--orange);color:#fff;padding:5px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 22px Manrope,Inter,sans-serif;margin:0}.home-plan>p{min-height:62px;color:var(--muted);font-size:13px;margin:12px 0 14px}.home-amount{font:900 36px Manrope,Inter,sans-serif}.home-amount small{font:700 12px Inter,sans-serif;color:var(--muted)}.home-year-note{min-height:26px;color:#167a54;font-size:11px;font-weight:750;margin-top:5px}.home-plan ul{flex:1;align-content:start;grid-auto-rows:max-content;gap:9px;margin:14px 0 22px}.home-plan .home-btn{width:100%}
-        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:none;margin:0 auto;text-align:center}@media(min-width:850px){.home-cta p{white-space:nowrap;font-size:clamp(14px,1.4vw,18px)}}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:none;margin:0 auto;text-align:center}@media(min-width:850px){.home-cta p{white-space:nowrap;font-size:clamp(14px,1.4vw,18px)}}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{gap:30px}.home-benefits{grid-template-columns:1fr 1fr}.home-steps{grid-template-columns:1fr 1fr}.home-prices{gap:9px}}
         @media(max-width:700px){.home-stats-grid{gap:0}.home-stat{padding:7px}.home-stat strong{font-size:23px}.home-stat span{font-size:10px}.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:64px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px;min-height:38px}.home-login{font-size:11px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices,.home-about{grid-template-columns:1fr}.home-steps{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
         @media(max-width:420px){.home-brand{font-size:13px}.home-brand-mark{display:none}.home-actions{gap:5px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}}
@@ -16083,8 +16138,9 @@ function PublicLandingPage({
         </div></section>
         <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
       </main>
-      <footer className="home-footer"><div className="home-wrap home-footer-inner"><a className="home-brand" href="#pradzia">rankos<b>statybose</b>.lt</a><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><span>© 2026 RankosStatybose.lt</span></div></footer>
+      <footer className="home-footer"><div className="home-wrap home-footer-inner"><a className="home-brand" href="#pradzia">rankos<b>statybose</b>.lt</a><div className="home-legal-links"><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button></div><span>© 2026 RankosStatybose.lt</span></div></footer>
       <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
+      <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
   );
 }
