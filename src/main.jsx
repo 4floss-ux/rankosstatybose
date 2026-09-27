@@ -10902,12 +10902,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                               {!ended &&
                                 isConfirmed &&
+                                checkInOpen &&
                                 !attendance.finalized_at &&
                                 !attendance.employer_check_in_at && (
                                   <span className="ed-attendance-badge muted">
-                                    {checkInOpen
-                                      ? "Darbo diena vyksta"
-                                      : "Darbo diena dar neprasidėjo"}
+                                    Darbo diena vyksta
                                   </span>
                                 )}
                             </div>
