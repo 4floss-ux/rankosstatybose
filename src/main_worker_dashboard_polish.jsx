@@ -1,0 +1,16408 @@
+import React, { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { createClient } from "@supabase/supabase-js";
+import "./styles.css";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabase =
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const TERMS_VERSION = "2026-09-27-v1";
+
+const workers = [
+  { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, experience:2 },
+  { initials:"MP", name:"Mantas P.", status:"Laisvas rytoj", city:"Vilnius", skills:["Medžiagų nešiojimas","Tvarkymas"], attendance:100, experience:1 },
+  { initials:"DS", name:"Darius S.", status:"Laisvas šiandien", city:"Vilnius", skills:["Betonavimo pagalba","Krovos darbai"], attendance:94, experience:3 },
+  { initials:"RK", name:"Rytis K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Tvarkymas","Statybvietės pagalba"], attendance:92, experience:2 },
+];
+
+function Icon({children}) {
+  return <span className="icon">{children}</span>;
+}
+
+function CloseMark() {
+  return (
+    <svg className="unified-close-mark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas" }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={className}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            requestAnimationFrame(() => containerRef.current?.querySelector('[role="option"]')?.focus());
+          }
+        }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", background: "#fff", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer" }}
+      >
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected?.label || "Pasirinkite"}</span>
+        <span aria-hidden="true" style={{ marginLeft: 12 }}>⌄</span>
+      </button>
+      {open && !disabled && (
+        <div role="listbox" aria-label={ariaLabel} style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(16,36,56,.14)" }}>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => { onChange(option.value); setOpen(false); triggerRef.current?.focus(); }}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                event.preventDefault();
+                const buttons = [...containerRef.current.querySelectorAll('[role="option"]')];
+                const next = buttons.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1);
+                buttons[(next + buttons.length) % buttons.length]?.focus();
+              }}
+              style={{ display: "block", width: "100%", padding: "10px 12px", textAlign: "left", border: 0, borderRadius: 8, background: option.value === value ? "#fff1e5" : "#fff", color: "#102438", font: "inherit", cursor: "pointer" }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left" }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const [hour = "08", minute = "00"] = String(value || "08:00").split(":");
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      containerRef.current?.querySelectorAll(".wd-time-options").forEach((list) => {
+        const selected = list.querySelector(".selected");
+        if (selected) list.scrollTop = selected.offsetTop - list.offsetTop - list.clientHeight / 2;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
+      <button ref={triggerRef} type="button" className="wd-time wd-time-trigger"
+        disabled={disabled} aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}>
+        <span>{hour}:{minute}</span><span aria-hidden="true">◷</span>
+      </button>
+      {open && !disabled && (
+        <div role="dialog" aria-label={ariaLabel} className="wd-time-popover"
+          style={align === "right" ? { right: 0 } : { left: 0 }}>
+          {[{ title: "Valandos", count: 24, selected: hour, set: (next) => onChange(`${next}:${minute}`) },
+            { title: "Minutės", count: 60, selected: minute, set: (next) => { onChange(`${hour}:${next}`); setOpen(false); triggerRef.current?.focus(); } }].map((column) => (
+            <div key={column.title} className="wd-time-column">
+              <b>{column.title}</b>
+              <div className="wd-time-options">
+                {Array.from({ length: column.count }, (_, index) => String(index).padStart(2, "0")).map((option) => (
+                  <button key={option} type="button" className={option === column.selected ? "selected" : ""}
+                    aria-label={`${column.title}: ${option}`} aria-pressed={option === column.selected}
+                    onClick={() => column.set(option)}>{option}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const unifiedCloseStyles = `
+  button.rs-close, button.ctc-close, button.wd-profile-editor-close,
+  button.reliability-modal-close, button.admin-setup-close,
+  button[aria-label="Uždaryti"], button[aria-label="Uždaryti sąlygas"],
+  button[aria-label="Uždaryti pranešimą"], button[aria-label="Uždaryti klaidos pranešimą"] {
+    display:inline-flex !important; align-items:center !important; justify-content:center !important;
+    width:44px !important; height:44px !important; min-width:44px !important; flex:0 0 44px !important;
+    padding:0 !important; border:0 !important; border-radius:12px !important;
+    background:#f1f4f6 !important; color:#102438 !important; cursor:pointer;
+    line-height:1 !important;
+  }
+  .unified-close-mark { display:block; width:20px; height:20px; pointer-events:none; }
+  button.rs-close:focus-visible, button.ctc-close:focus-visible,
+  button.wd-profile-editor-close:focus-visible, button.reliability-modal-close:focus-visible,
+  button.admin-setup-close:focus-visible, button[aria-label^="Uždaryti"]:focus-visible {
+    outline:2px solid #f08a28; outline-offset:2px;
+  }
+`;
+
+const LITHUANIAN_CITY_NAMES = [
+  "Akmenė",
+  "Alytus",
+  "Anykščiai",
+  "Ariogala",
+  "Avižieniai",
+  "Baltoji Vokė",
+  "Birštonas",
+  "Biržai",
+  "Bukiškis",
+  "Daugai",
+  "Didžioji Riešė",
+  "Druskininkai",
+  "Dūkštas",
+  "Dusetos",
+  "Eišiškės",
+  "Elektrėnai",
+  "Ežerėlis",
+  "Gargždai",
+  "Garliava",
+  "Gelgaudiškis",
+  "Grigiškės",
+  "Ignalina",
+  "Jieznas",
+  "Jonava",
+  "Joniškėlis",
+  "Joniškis",
+  "Juodšiliai",
+  "Jurbarkas",
+  "Kaišiadorys",
+  "Kalvarija",
+  "Kaunas",
+  "Kavarskas",
+  "Kazlų Rūda",
+  "Kėdainiai",
+  "Kelmė",
+  "Klaipėda",
+  "Kretinga",
+  "Kudirkos Naumiestis",
+  "Kupiškis",
+  "Kuršėnai",
+  "Kybartai",
+  "Lazdijai",
+  "Lentvaris",
+  "Linkuva",
+  "Maišiagala",
+  "Marijampolė",
+  "Mažeikiai",
+  "Medininkai",
+  "Molėtai",
+  "Naujoji Akmenė",
+  "Nemenčinė",
+  "Neringa",
+  "Obeliai",
+  "Pabradė",
+  "Pagėgiai",
+  "Pagiriai",
+  "Pakruojis",
+  "Palanga",
+  "Pandėlys",
+  "Panemunė",
+  "Panevėžys",
+  "Pasvalys",
+  "Plungė",
+  "Priekulė",
+  "Prienai",
+  "Radviliškis",
+  "Ramygala",
+  "Raseiniai",
+  "Riešė",
+  "Rietavas",
+  "Rokiškis",
+  "Rudamina",
+  "Rūdiškės",
+  "Šakiai",
+  "Salantai",
+  "Šalčininkai",
+  "Seda",
+  "Šeduva",
+  "Šiauliai",
+  "Šilalė",
+  "Šilutė",
+  "Simnas",
+  "Širvintos",
+  "Skaidiškės",
+  "Skaudvilė",
+  "Skuodas",
+  "Smalininkai",
+  "Subačius",
+  "Sudervė",
+  "Švenčionėliai",
+  "Švenčionys",
+  "Tauragė",
+  "Telšiai",
+  "Trakai",
+  "Troškūnai",
+  "Tytuvėnai",
+  "Ukmergė",
+  "Utena",
+  "Užventis",
+  "Vabalninkas",
+  "Valčiūnai",
+  "Varėna",
+  "Varniai",
+  "Veisiejai",
+  "Venta",
+  "Viekšniai",
+  "Vievis",
+  "Vilkaviškis",
+  "Vilkija",
+  "Vilnius",
+  "Virbalis",
+  "Visaginas",
+  "Žagarė",
+  "Zarasai",
+  "Žiežmariai",
+  "Zujūnai",
+];
+
+const STATIC_CITY_OPTIONS = LITHUANIAN_CITY_NAMES.map((name) => ({
+  city_key: normalizeCityKey(name),
+  name,
+}));
+
+let cityLocationsCache = STATIC_CITY_OPTIONS;
+let cityLocationsPromise = null;
+
+async function loadCityLocations() {
+  if (!supabase) return STATIC_CITY_OPTIONS;
+
+  if (!cityLocationsPromise) {
+    cityLocationsPromise = supabase
+      .from("city_locations")
+      .select("city_key, name, latitude, longitude")
+      .order("name")
+      .then(({ data, error }) => {
+        if (error || !data?.length) {
+          return STATIC_CITY_OPTIONS;
+        }
+
+        const merged = new Map(
+          STATIC_CITY_OPTIONS.map((city) => [city.city_key, city])
+        );
+
+        for (const city of data) {
+          merged.set(city.city_key, city);
+        }
+
+        cityLocationsCache = [...merged.values()].sort((a, b) =>
+          a.name.localeCompare(b.name, "lt")
+        );
+
+        return cityLocationsCache;
+      })
+      .catch(() => STATIC_CITY_OPTIONS)
+      .finally(() => {
+        cityLocationsPromise = null;
+      });
+  }
+
+  return cityLocationsPromise;
+}
+
+async function canonicalCityName(value) {
+  const key = normalizeCityKey(value);
+  if (!key) return null;
+
+  const staticMatch = STATIC_CITY_OPTIONS.find(
+    (city) =>
+      city.city_key === key ||
+      normalizeCityKey(city.name) === key
+  );
+
+  if (staticMatch) return staticMatch.name;
+
+  const cities = await loadCityLocations();
+  const match = cities.find(
+    (city) =>
+      city.city_key === key ||
+      normalizeCityKey(city.name) === key
+  );
+
+  return match?.name || null;
+}
+
+function CityAutocomplete({
+  value,
+  onChange,
+  className = "",
+  style,
+  disabled = false,
+  placeholder = "Pradėkite rašyti miestą",
+}) {
+  const [cities, setCities] = useState(cityLocationsCache);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCityLocations().then((rows) => {
+      if (!cancelled && rows?.length) {
+        setCities(rows);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const query = normalizeCityKey(value);
+
+  const exactMatch = cities.some(
+    (city) =>
+      city.city_key === query ||
+      normalizeCityKey(city.name) === query
+  );
+
+  const suggestions = cities
+    .filter((city) => {
+      if (!query) return true;
+      const cityKey = normalizeCityKey(city.name);
+      return cityKey.includes(query);
+    })
+    .sort((a, b) => {
+      if (!query) return a.name.localeCompare(b.name, "lt");
+
+      const aKey = normalizeCityKey(a.name);
+      const bKey = normalizeCityKey(b.name);
+      const aStarts = aKey.startsWith(query) ? 0 : 1;
+      const bStarts = bKey.startsWith(query) ? 0 : 1;
+
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.localeCompare(b.name, "lt");
+    })
+    .slice(0, 12);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        zIndex: open ? 8000 : "auto",
+      }}
+    >
+      <input
+        className={className}
+        style={style}
+        value={value}
+        disabled={disabled}
+        autoComplete="off"
+        placeholder={placeholder}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onMouseDown={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setOpen(false);
+          }
+
+          if (e.key === "Enter" && suggestions.length === 1) {
+            e.preventDefault();
+            onChange(suggestions[0].name);
+            setOpen(false);
+          }
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 180);
+        }}
+      />
+
+      {open && !disabled && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            zIndex: 8001,
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            maxHeight: 270,
+            overflowY: "auto",
+            background: "#fff",
+            border: "1px solid #dfe7ed",
+            borderRadius: 12,
+            boxShadow: "0 14px 35px rgba(16,36,56,.14)",
+            padding: 5,
+          }}
+        >
+          {suggestions.length ? (
+            suggestions.map((city) => (
+              <button
+                key={city.city_key}
+                type="button"
+                role="option"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(city.name);
+                  setOpen(false);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  border: 0,
+                  background:
+                    normalizeCityKey(value) === city.city_key
+                      ? "#fff1e5"
+                      : "#fff",
+                  color: "#102438",
+                  textAlign: "left",
+                  borderRadius: 8,
+                  padding: "10px 11px",
+                  font: "inherit",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {city.name}
+              </button>
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "10px 11px",
+                color: "#6c7a88",
+                fontSize: 13,
+              }}
+            >
+              Tokio miesto sąraše nėra.
+            </div>
+          )}
+        </div>
+      )}
+
+      {!!value && !exactMatch && (
+        <div
+          style={{
+            marginTop: 5,
+            color: "#b85f0e",
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+        >
+          Pasirinkite miestą iš pasiūlymų sąrašo.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlatformTermsDialog({ open, onClose }) {
+  if (!open) return null;
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
+    >
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-terms-title" style={{ width: "min(680px,100%)", maxHeight: "min(780px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
+          <div><div className="eyebrow">RANKOSSTATYBOSE.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
+          <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
+        </div>
+        <p><b>Platformos vaidmuo.</b> RankosStatybose.lt suteikia skaitmeninę erdvę, kurioje darbdaviai skelbia darbus, o darbuotojai žymi prieinamumą, gauna kvietimus ir bendrauja dėl darbo. Platforma suveda šalis ir padeda administruoti darbo eigą. Ji pati nesamdo darbuotojų atlikti paskelbtų darbų ir nėra darbo užmokesčio mokėtoja.</p>
+        <p><b>Darbo sąlygos ir atsiskaitymas.</b> Darbdavys ir darbuotojas tarpusavyje susitaria dėl darbo pobūdžio, atlygio, atsiskaitymo, teisėto darbo įforminimo ir kitų sąlygų. Darbdavys atsako už savo paskelbtos informacijos tikslumą ir sutartą apmokėjimą; darbuotojas – už pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą. Platforma nepriima ir neperveda atlygio už atliktą darbą.</p>
+        <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
+        <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
+        <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
+        <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
+        <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+      </section>
+    </div>
+  );
+}
+
+function AuthModal({
+  open,
+  onClose,
+  initialMode = "login",
+  initialRole = "worker",
+  teamInvite = null,
+  selectedPlanKey = "basic",
+  selectedBillingCycle = "monthly",
+}) {
+  const [mode, setMode] = useState(initialMode);
+  const [role, setRole] = useState(initialRole);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    city: "Vilnius",
+    phone: "",
+    companyName: "",
+    companyCode: "",
+  });
+  const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [signupPlan, setSignupPlan] = useState(selectedPlanKey);
+
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setRole(teamInvite ? "employer" : initialRole);
+      setMessage("");
+      setSuccess(false);
+      setTermsAccepted(false);
+      setSignupPlan(selectedPlanKey);
+
+      if (teamInvite) {
+        setForm((current) => ({
+          ...current,
+          name: teamInvite.invited_name || current.name,
+          email: teamInvite.email || current.email,
+        }));
+      }
+    }
+  }, [open, initialMode, initialRole, teamInvite, selectedPlanKey]);
+
+  if (!open) return null;
+
+  const setField = (key) => (e) =>
+    setForm((current) => ({ ...current, [key]: e.target.value }));
+
+  async function submit(e) {
+    e.preventDefault();
+    setMessage("");
+    setSuccess(false);
+
+    if (!supabase) {
+      setMessage("Trūksta Supabase nustatymų Cloudflare aplinkoje.");
+      return;
+    }
+
+    if (!form.email.trim() || !form.password) {
+      setMessage("Įveskite el. paštą ir slaptažodį.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email.trim(),
+          password: form.password,
+        });
+
+        if (error) throw error;
+        onClose();
+      } else {
+        if (!termsAccepted) {
+          throw new Error("Norėdami registruotis, susipažinkite su naudojimosi sąlygomis ir jas patvirtinkite.");
+        }
+        if (!form.name.trim()) {
+          throw new Error("Įveskite vardą.");
+        }
+
+        if (form.password.length < 8) {
+          throw new Error("Slaptažodis turi būti bent 8 simbolių.");
+        }
+
+        if (
+          role === "worker" &&
+          !teamInvite &&
+          !form.phone.trim()
+        ) {
+          throw new Error(
+            "Darbuotojo registracijai telefono numeris yra privalomas."
+          );
+        }
+
+        if (
+          role === "employer" &&
+          !teamInvite &&
+          !form.companyName.trim()
+        ) {
+          throw new Error("Įveskite įmonės pavadinimą.");
+        }
+
+        const canonicalCity = await canonicalCityName(form.city);
+        if (!canonicalCity) {
+          throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: form.email.trim(),
+          password: form.password,
+          options: {
+            emailRedirectTo: teamInvite?.token
+              ? companyTeamInviteLink(teamInvite.token)
+              : window.location.origin,
+            data: {
+              terms_accepted: true,
+              terms_version: TERMS_VERSION,
+              role: teamInvite ? "employer" : role,
+              preferred_plan:
+                role === "employer" && !teamInvite &&
+                EMPLOYER_PLANS.some((plan) => plan.key === signupPlan)
+                  ? signupPlan
+                  : "basic",
+              preferred_billing_interval:
+                signupPlan !== "basic" && selectedBillingCycle === "yearly"
+                  ? "yearly" : "monthly",
+              display_name: form.name.trim(),
+              legal_name: form.name.trim(),
+              city: canonicalCity,
+              phone: form.phone.trim(),
+              company_name:
+                role === "employer" && !teamInvite
+                  ? form.companyName.trim()
+                  : "",
+              company_code:
+                role === "employer" && !teamInvite
+                  ? form.companyCode.trim()
+                  : "",
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.session) {
+          onClose();
+        } else {
+          setSuccess(true);
+          setMessage(
+            "Registracija sėkminga. Patikrinkite el. paštą ir patvirtinkite paskyrą."
+          );
+        }
+      }
+    } catch (error) {
+      setMessage(error?.message || "Nepavyko. Bandykite dar kartą.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const overlay = {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(16,36,56,.58)",
+    zIndex: 1000,
+    display: "grid",
+    placeItems: "center",
+    padding: 20,
+  };
+
+  const card = {
+    width: "min(520px, 100%)",
+    maxHeight: "calc(100vh - 40px)",
+    overflowY: "auto",
+    background: "#fff",
+    borderRadius: 20,
+    boxShadow: "0 24px 80px rgba(16,36,56,.24)",
+    padding: 28,
+  };
+
+  const twoColumns = {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  };
+
+  const tabStyle = (active) => ({
+    border: "1px solid #dfe7ed",
+    borderRadius: 10,
+    padding: "11px 12px",
+    background: active ? "#102438" : "#fff",
+    color: active ? "#fff" : "#102438",
+    fontWeight: 700,
+    cursor: "pointer",
+  });
+
+  const labelStyle = {
+    display: "grid",
+    gap: 6,
+    fontSize: 14,
+    fontWeight: 700,
+  };
+
+  const inputStyle = {
+    width: "100%",
+    border: "1px solid #dfe7ed",
+    borderRadius: 10,
+    padding: "12px 13px",
+    font: "inherit",
+    outline: "none",
+  };
+
+  return (
+    <div
+      style={overlay}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div style={card}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 16,
+            alignItems: "flex-start",
+            marginBottom: 20,
+          }}
+        >
+          <div>
+            <div className="eyebrow">
+              {mode === "login" ? "PRISIJUNGIMAS" : "REGISTRACIJA"}
+            </div>
+            <h2 style={{ margin: "6px 0 0", fontSize: 30 }}>
+              {mode === "login" ? "Sveiki sugrįžę" : "Sukurkite paskyrą"}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Uždaryti"
+            style={{
+              border: 0,
+              background: "#f3f6f8",
+              borderRadius: 10,
+              width: 38,
+              height: 38,
+              cursor: "pointer",
+              fontSize: 20,
+            }}
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        <div style={{ ...twoColumns, marginBottom: 18 }}>
+          <button
+            type="button"
+            style={tabStyle(mode === "login")}
+            onClick={() => {
+              setMode("login");
+              setMessage("");
+            }}
+          >
+            Prisijungti
+          </button>
+          <button
+            type="button"
+            style={tabStyle(mode === "signup")}
+            onClick={() => {
+              setMode("signup");
+              setMessage("");
+            }}
+          >
+            Registruotis
+          </button>
+        </div>
+
+        {mode === "signup" && !teamInvite && (
+          <div style={{ ...twoColumns, marginBottom: 18 }}>
+            <button
+              type="button"
+              style={tabStyle(role === "worker")}
+              onClick={() => setRole("worker")}
+            >
+              Ieškau darbo
+            </button>
+            <button
+              type="button"
+              style={tabStyle(role === "employer")}
+              onClick={() => setRole("employer")}
+            >
+              Ieškau darbuotojų
+            </button>
+          </div>
+        )}
+
+        {mode === "signup" && role === "employer" && !teamInvite && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 9 }}>Pasirinkite darbdavio planą</div>
+            <div role="group" aria-label="Darbdavio planas" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+              {EMPLOYER_PLANS.map((plan) => (
+                <button key={plan.key} type="button" onClick={() => setSignupPlan(plan.key)} aria-pressed={signupPlan === plan.key} style={{ minWidth: 0, minHeight: 76, border: signupPlan === plan.key ? "2px solid #f08a28" : "1px solid #dfe7ed", borderRadius: 11, padding: "10px 6px", background: signupPlan === plan.key ? "#fff7ef" : "#fff", color: "#102438", textAlign: "center", cursor: "pointer", font: "inherit" }}>
+                  <b style={{ display: "block", fontSize: 13 }}>{plan.name}</b>
+                  <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#607180" }}>{plan.price ? selectedBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualPrice(plan))} € / metus` : `${formatPlanPrice(plan.price)} € / mėn.` : "Nemokamai"}</span>
+                </button>
+              ))}
+            </div>
+            <p style={{ color: "#607180", fontSize: 12, lineHeight: 1.5, margin: "8px 0 0" }}>
+              {signupPlan === "basic"
+                ? "Pradėkite nemokamai. Planą vėliau galėsite pakeisti darbdavio paskyroje."
+                : `${selectedBillingCycle === "yearly" ? "Pasirinktas metinis atsiskaitymas." : "Pasirinktas mėnesinis atsiskaitymas."} Mokamas planas bus aktyvuotas tik po apmokėjimo. Pasirinkimą galėsite keisti darbdavio paskyroje.`}
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={submit} style={{ display: "grid", gap: 13 }}>
+          {mode === "signup" && (
+            <>
+              <label style={labelStyle}>
+                Vardas
+                <input
+                  style={inputStyle}
+                  value={form.name}
+                  onChange={setField("name")}
+                  placeholder="Pvz. Tomas"
+                  autoComplete="name"
+                />
+              </label>
+
+              <div style={twoColumns}>
+                <label style={labelStyle}>
+                  Miestas
+                  <CityAutocomplete
+                    style={inputStyle}
+                    value={form.city}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, city: value }))
+                    }
+                    placeholder="Pradėkite rašyti miestą"
+                  />
+                </label>
+
+                <label style={labelStyle}>
+                  {role === "worker" && !teamInvite
+                    ? "Telefonas *"
+                    : "Telefonas"}
+                  <input
+                    style={inputStyle}
+                    value={form.phone}
+                    onChange={setField("phone")}
+                    placeholder="+370..."
+                    autoComplete="tel"
+                    required={role === "worker" && !teamInvite}
+                  />
+                </label>
+              </div>
+
+              {role === "employer" && !teamInvite && (
+                <div style={twoColumns}>
+                  <label style={labelStyle}>
+                    Įmonės pavadinimas
+                    <input
+                      style={inputStyle}
+                      value={form.companyName}
+                      onChange={setField("companyName")}
+                      placeholder="UAB Statyba"
+                    />
+                  </label>
+
+                  <label style={labelStyle}>
+                    Įmonės kodas
+                    <input
+                      style={inputStyle}
+                      value={form.companyCode}
+                      onChange={setField("companyCode")}
+                      placeholder="123456789"
+                    />
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+
+          <label style={labelStyle}>
+            El. paštas
+            <input
+              style={inputStyle}
+              type="email"
+              value={form.email}
+              onChange={setField("email")}
+              placeholder="vardas@email.lt"
+              autoComplete="email"
+              readOnly={Boolean(teamInvite)}
+            />
+          </label>
+
+          <label style={labelStyle}>
+            Slaptažodis
+            <input
+              style={inputStyle}
+              type="password"
+              value={form.password}
+              onChange={setField("password")}
+              placeholder={
+                mode === "signup" ? "Bent 8 simboliai" : "Jūsų slaptažodis"
+              }
+              autoComplete={
+                mode === "signup" ? "new-password" : "current-password"
+              }
+            />
+          </label>
+
+          {mode === "signup" && (
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, color: "#405264", fontSize: 13, lineHeight: 1.5 }}>
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(event) => setTermsAccepted(event.target.checked)}
+                required
+                style={{ marginTop: 3, accentColor: "#f08a28", width: 17, height: 17, flexShrink: 0 }}
+              />
+              <span>
+                Susipažinau ir sutinku su{" "}
+                <button type="button" onClick={(event) => { event.preventDefault(); setTermsOpen(true); }} style={{ border: 0, background: "none", padding: 0, color: "#b85f0e", font: "inherit", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>
+                  naudojimosi sąlygomis
+                </button>.
+              </span>
+            </label>
+          )}
+
+          {message && (
+            <div
+              style={{
+                padding: "11px 12px",
+                borderRadius: 10,
+                background: success ? "#edf8f3" : "#fff3ed",
+                color: "#102438",
+                fontSize: 14,
+                lineHeight: 1.45,
+              }}
+            >
+              {message}
+            </div>
+          )}
+
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              justifyContent: "center",
+              marginTop: 4,
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading
+              ? "Prašome palaukti..."
+              : mode === "login"
+              ? "Prisijungti"
+              : "Sukurti paskyrą"}
+          </button>
+        </form>
+        <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
+      </div>
+    </div>
+  );
+}
+
+
+function TeamInvitePage({
+  invite,
+  loading,
+  error,
+  user,
+  accepting,
+  onLogin,
+  onSignup,
+  onAccept,
+  onCancel,
+}) {
+  const valid = Boolean(invite?.valid);
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f6f8fa",
+        display: "grid",
+        placeItems: "center",
+        padding: 20,
+        color: "#102438",
+      }}
+    >
+      <div
+        style={{
+          width: "min(640px,100%)",
+          background: "#fff",
+          border: "1px solid #e4ebf0",
+          borderRadius: 20,
+          boxShadow: "0 24px 70px rgba(16,36,56,.10)",
+          padding: 28,
+        }}
+      >
+        <a
+          className="brand"
+          href="/"
+          style={{ display: "inline-flex", marginBottom: 26 }}
+        >
+          <span className="logo-mark">⌂</span>
+          <span>
+            rankos<span>statybose</span>.lt
+          </span>
+        </a>
+
+        <div className="eyebrow">ĮMONĖS KOMANDOS KVIETIMAS</div>
+
+        {loading ? (
+          <div style={{ padding: "28px 0", color: "#6c7a88" }}>
+            Tikrinamas kvietimas...
+          </div>
+        ) : error || !invite ? (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              Kvietimo atidaryti nepavyko
+            </h1>
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              {error || "Kvietimo nuoroda nerasta."}
+            </p>
+            <button className="btn ghost" type="button" onClick={onCancel}>
+              Grįžti į pradžią
+            </button>
+          </>
+        ) : !valid ? (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              Kvietimas nebegalioja
+            </h1>
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              Paprašykite įmonės savininko atsiųsti naują komandos kvietimą.
+            </p>
+            <button className="btn ghost" type="button" onClick={onCancel}>
+              Grįžti į pradžią
+            </button>
+          </>
+        ) : (
+          <>
+            <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
+              {invite.company_name} kviečia prisijungti
+            </h1>
+
+            <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+              Jums paruošta atskira darbdavio paskyra. Prisijungę dirbsite kaip{" "}
+              <b style={{ color: "#102438" }}>
+                {invite.invited_name} · {invite.company_name}
+              </b>
+              .
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                margin: "20px 0",
+              }}
+            >
+              <div
+                style={{
+                  background: "#f6f8fa",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <span
+                  style={{ display: "block", color: "#7a8996", fontSize: 11 }}
+                >
+                  EL. PAŠTAS
+                </span>
+                <b style={{ display: "block", marginTop: 5 }}>
+                  {invite.email}
+                </b>
+              </div>
+
+              <div
+                style={{
+                  background: "#f6f8fa",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <span
+                  style={{ display: "block", color: "#7a8996", fontSize: 11 }}
+                >
+                  ROLĖ
+                </span>
+                <b style={{ display: "block", marginTop: 5 }}>
+                  {companyTeamRoleLabel(invite.member_role)}
+                </b>
+              </div>
+            </div>
+
+            {!user ? (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button className="btn primary" type="button" onClick={onSignup}>
+                  Sukurti paskyrą
+                </button>
+                <button className="btn ghost" type="button" onClick={onLogin}>
+                  Jau turiu paskyrą
+                </button>
+              </div>
+            ) : (
+              <>
+                {String(user.email || "").toLowerCase() !==
+                  String(invite.email || "").toLowerCase() && (
+                  <div
+                    style={{
+                      background: "#fff0ec",
+                      color: "#9f4529",
+                      borderRadius: 10,
+                      padding: 12,
+                      marginBottom: 14,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Šis kvietimas skirtas <b>{invite.email}</b>, o dabar
+                    prisijungta kaip <b>{user.email}</b>.
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    className="btn primary"
+                    type="button"
+                    disabled={
+                      accepting ||
+                      String(user.email || "").toLowerCase() !==
+                        String(invite.email || "").toLowerCase()
+                    }
+                    onClick={onAccept}
+                  >
+                    {accepting ? "Jungiama..." : "Prisijungti prie komandos"}
+                  </button>
+                  <button className="btn ghost" type="button" onClick={onCancel}>
+                    Atšaukti
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Header({ onLogin, onEmployerSignup, user, onLogout }) {
+  return (
+    <header className="header">
+      <div className="container nav">
+        <a className="brand" href="#">
+          <span className="logo-mark">⌂</span>
+          <span>
+            rankos<span>statybose</span>.lt
+          </span>
+        </a>
+
+        <nav className="navlinks">
+          <a href="#kaip">Kaip tai veikia</a>
+          <a href="#darbdaviams">Darbdaviams</a>
+          <a href="#darbuotojams">Darbuotojams</a>
+          <a href="#kainodara">Kainodara</a>
+        </nav>
+
+        <div className="nav-actions">
+          {user ? (
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          ) : (
+            <button className="btn ghost" onClick={onLogin}>
+              Prisijungti
+            </button>
+          )}
+
+          <button className="btn primary" onClick={onEmployerSignup}>
+            Pateikti užklausą
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function SearchBox({ onEmployerSignup }) {
+  return (
+    <div className="searchbox">
+      <div className="field">
+        <label>Miestas</label>
+        <div className="control">
+          ⌖ Vilnius <span>⌄</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>Data</label>
+        <div className="control">
+          ▣ Rytoj <span>⌄</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>Kiek žmonių reikia?</label>
+        <div className="control">
+          ◉ 3 <span>⌄</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>Atvykimas</label>
+        <div className="control">
+          ↗ Darbuotojas atvyksta pats <span>⌄</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>Pradžios laikas</label>
+        <div className="control">
+          ◷ 08:00 <span>⌄</span>
+        </div>
+      </div>
+
+      <button className="btn primary search-cta" onClick={onEmployerSignup}>
+        Rasti darbuotojus →
+      </button>
+
+      <div className="availability">
+        <span></span> Vilniuje rytoj laisvi <b>18 darbuotojų</b>
+      </div>
+    </div>
+  );
+}
+
+function WorkersPanel({ onEmployerSignup }) {
+  return (
+    <div className="product-window">
+      <div className="product-top">
+        <div className="mini-brand">
+          <span className="logo-mark small">⌂</span> rankosstatybose.lt
+        </div>
+        <div className="mini-actions">
+          <span>⌕</span>
+          <span>◉</span>
+        </div>
+      </div>
+
+      <div className="app-shell">
+        <aside className="sidebar">
+          <div className="active">⌕ Darbuotojų paieška</div>
+          <div>▤ Mano užklausos</div>
+          <div>▦ Darbo skydelis</div>
+          <div>
+            ◉ Pranešimai <b>3</b>
+          </div>
+          <div>▣ Mokėjimai</div>
+          <div>⚙ Nustatymai</div>
+        </aside>
+
+        <main className="app-main">
+          <div className="app-title-row">
+            <div>
+              <h3>Galimi darbuotojai</h3>
+              <p>Rasta 18 darbuotojų</p>
+            </div>
+            <button className="btn compact">Filtrai</button>
+          </div>
+
+          <div className="worker-list">
+            {workers.map((w) => (
+              <div className="worker-row" key={w.name}>
+                <div className="avatar">{w.initials}</div>
+
+                <div className="worker-main">
+                  <div className="worker-name">
+                    {w.name} <span className="status">{w.status}</span>
+                  </div>
+                  <div className="muted">{w.city}</div>
+                  <div className="tags">
+                    {w.skills.slice(0, 2).map((s) => (
+                      <span key={s}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="metric">
+                  <strong>{w.attendance}%</strong>
+                  <span>atvykimas</span>
+                </div>
+
+                <div className="metric">
+                  <strong>{w.experience} m.</strong>
+                  <span>patirties</span>
+                </div>
+
+                <button
+                  className="btn primary tiny"
+                  onClick={onEmployerSignup}
+                >
+                  Kviesti
+                </button>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+
+function localDateISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function nextSevenDays() {
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + i);
+    return {
+      iso: localDateISO(date),
+      weekday: new Intl.DateTimeFormat("lt-LT", { weekday: "short" }).format(date),
+      label: new Intl.DateTimeFormat("lt-LT", { day: "2-digit", month: "2-digit" }).format(date),
+    };
+  });
+}
+
+function formatNetPay(amount, unit) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return "Atlygis nenurodytas";
+  const formatted = Number.isInteger(value)
+    ? String(value)
+    : value.toLocaleString("lt-LT", { maximumFractionDigits: 2 });
+  return unit === "day"
+    ? `${formatted} € į rankas / dieną`
+    : `${formatted} € į rankas / val.`;
+}
+
+function formatWorkedMinutes(minutes) {
+  const total = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (!hours) return `${mins} min.`;
+  if (!mins) return `${hours} val.`;
+  return `${hours} val. ${mins} min.`;
+}
+
+function jobEndMoment(job) {
+  if (!job?.work_date) return null;
+  const end = (job.end_time || job.start_time || "23:59").slice(0, 5);
+  const value = new Date(`${job.work_date}T${end}:00`);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function jobHasEnded(job) {
+  const end = jobEndMoment(job);
+  return end ? new Date() >= end : false;
+}
+
+function jobCheckInWindowOpen(job) {
+  if (!job?.work_date || !job?.start_time) return false;
+
+  const start = new Date(
+    `${job.work_date}T${job.start_time.slice(0, 5)}:00`
+  );
+  if (Number.isNaN(start.getTime())) return false;
+
+  const opens = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+  let end = job.end_time
+    ? new Date(`${job.work_date}T${job.end_time.slice(0, 5)}:00`)
+    : new Date(start.getTime() + 12 * 60 * 60 * 1000);
+
+  if (job.end_time && end <= start) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const now = new Date();
+  return now >= opens && now <= end;
+}
+
+function attendanceOutcomeLabel(attendance) {
+  const outcome = attendance?.final_outcome || attendance?.employer_outcome;
+  if (outcome === "full_day") return "Išdirbo visą dieną";
+  if (outcome === "left_early_agreed") return "Išėjo anksčiau – suderinta";
+  if (outcome === "left_early_unexcused") return "Išėjo anksčiau be pateisinamos priežasties";
+  if (outcome === "no_show") return "Neatvyko";
+  return "Darbo diena neuždaryta";
+}
+
+
+function timeRangesOverlap(a, b) {
+  if (!a || !b || a.work_date !== b.work_date) return false;
+  const aStart = (a.start_time || "00:00").slice(0, 5);
+  const aEnd = (a.end_time || "23:59").slice(0, 5);
+  const bStart = (b.start_time || "00:00").slice(0, 5);
+  const bEnd = (b.end_time || "23:59").slice(0, 5);
+  return aStart < bEnd && aEnd > bStart;
+}
+
+function normalizeCityKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function distanceKmBetweenPoints(a, b) {
+  if (!a || !b) return null;
+
+  const lat1 = Number(a.latitude);
+  const lon1 = Number(a.longitude);
+  const lat2 = Number(b.latitude);
+  const lon2 = Number(b.longitude);
+
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
+
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function notificationPresentation(events = []) {
+  const types = events.map((event) => event.event_type);
+
+  if (types.includes("invitation_declined")) {
+    return { tone: "red", label: "⚑ Darbuotojas atsisakė" };
+  }
+  if (types.includes("invitation_cancelled")) {
+    return { tone: "red", label: "⚑ Darbdavys atšaukė" };
+  }
+  if (types.includes("message")) {
+    return { tone: "orange", label: "● Nauja žinutė" };
+  }
+  if (types.includes("job_updated")) {
+    return { tone: "orange", label: "● Darbas atnaujintas" };
+  }
+  if (types.includes("invitation_accepted")) {
+    return { tone: "green", label: "✓ Darbuotojas priėmė" };
+  }
+  if (types.includes("attendance_disputed")) {
+    return { tone: "red", label: "⚑ Darbo dienos ginčas" };
+  }
+  if (types.includes("attendance_review_required")) {
+    return { tone: "orange", label: "● Reikia patvirtinti darbo dieną" };
+  }
+  if (types.includes("attendance_action_required")) {
+    return { tone: "orange", label: "● Reikia uždaryti darbo dieną" };
+  }
+  if (types.includes("worker_checked_in")) {
+    return { tone: "green", label: "✓ Darbuotojas pažymėjo „Atvykau“" };
+  }
+  if (types.includes("employer_checked_in")) {
+    return { tone: "green", label: "✓ Darbdavys patvirtino atvykimą" };
+  }
+  if (types.includes("attendance_finalized")) {
+    return { tone: "green", label: "✓ Darbo diena uždaryta" };
+  }
+  if (types.includes("attendance_resolved")) {
+    return { tone: "green", label: "✓ Ginčas išspręstas" };
+  }
+  if (types.includes("invitation_expired")) {
+    return { tone: "muted", label: "Kvietimas nebegalioja" };
+  }
+
+  return { tone: "orange", label: "● Yra naujienų" };
+}
+
+function ConversationModal({
+  open,
+  onClose,
+  onRead,
+  invitationId,
+  title,
+  user,
+  senderMode = null,
+}) {
+  const [messages, setMessages] = useState([]);
+  const [names, setNames] = useState({});
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [conversationLocked, setConversationLocked] = useState(false);
+  const [planLocked, setPlanLocked] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedConversationRef = useRef(null);
+
+  useEffect(() => {
+    if (open && invitationId) {
+      scrollOnLoadRef.current = true;
+      loadedConversationRef.current = null;
+      setMessages([]);
+      loadMessages();
+    }
+  }, [open, invitationId, senderMode]);
+
+  useEffect(() => {
+    if (!open || loading || loadedConversationRef.current !== invitationId) return;
+    if (scrollOnLoadRef.current && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      scrollOnLoadRef.current = false;
+    }
+    if (document.visibilityState === "visible") onRead?.();
+  }, [open, loading, messages, invitationId]);
+
+  async function loadMessages() {
+    setLoading(true);
+    setError("");
+    try {
+      const [result, invitationResult] = await Promise.all([
+        supabase
+          .from("job_messages")
+          .select("id, sender_id, sender_context, sender_label, body, created_at")
+          .eq("invitation_id", invitationId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("job_invitations")
+          .select("job_id")
+          .eq("id", invitationId)
+          .single(),
+      ]);
+
+      if (result.error) throw result.error;
+      if (invitationResult.error) throw invitationResult.error;
+
+      const [jobResult, chatPlanResult] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("status, cancellation_reason")
+          .eq("id", invitationResult.data.job_id)
+          .single(),
+        supabase.rpc("job_chat_enabled", {
+          p_job_id: invitationResult.data.job_id,
+        }),
+      ]);
+
+      if (jobResult.error) throw jobResult.error;
+      if (chatPlanResult.error) throw chatPlanResult.error;
+
+      const cancelled = jobResult.data?.status === "cancelled";
+      const chatPlanLocked = !chatPlanResult.data;
+
+      setPlanLocked(chatPlanLocked);
+      setConversationLocked(cancelled || chatPlanLocked);
+      setCancellationReason(jobResult.data?.cancellation_reason || "");
+
+      const rows = result.data || [];
+      loadedConversationRef.current = invitationId;
+      setMessages(rows);
+
+      const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
+      if (ids.length) {
+        const profilesResult = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", ids);
+
+        if (profilesResult.error) throw profilesResult.error;
+
+        setNames(
+          Object.fromEntries(
+            (profilesResult.data || []).map((row) => [
+              row.id,
+              row.display_name || "Vartotojas",
+            ])
+          )
+        );
+      } else {
+        setNames({});
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti žinučių.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || !invitationId || conversationLocked) return;
+
+    setSending(true);
+    setError("");
+    try {
+      const result = senderMode
+        ? await supabase.rpc("admin_send_private_job_message_as_mode", {
+            p_invitation_id: invitationId,
+            p_body: body,
+            p_mode: senderMode,
+          })
+        : await supabase.from("job_messages").insert({
+            invitation_id: invitationId,
+            sender_id: user.id,
+            body,
+          });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      scrollOnLoadRef.current = true;
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="rs-modal-overlay" onMouseDown={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-messages{display:grid;gap:10px;max-height:360px;overflow:auto;padding:4px 2px 12px}
+          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+          .rs-message.mine{margin-left:auto;background:#fff3e7}
+          .rs-message b{display:block;font-size:12px;margin-bottom:4px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
+          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
+          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+          .rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">ŽINUTĖS</div>
+            <h2>{title || "Pokalbis apie darbą"}</h2>
+          </div>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages" ref={messagesRef}>
+          {loading ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={message.sender_id === user.id ? "rs-message mine" : "rs-message"}
+                key={message.id}
+              >
+                <b>
+                  {message.sender_label ||
+                    names[message.sender_id] ||
+                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="rs-empty">Žinučių dar nėra. Galite parašyti pirmą.</div>
+          )}
+        </div>
+
+        {conversationLocked && (
+          <div className="rs-locked">
+            {planLocked ? (
+              <>
+                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
+                <div style={{ marginTop: 4 }}>
+                  Darbdavys naudoja Basic planą. Žinučių funkcija įtraukta į
+                  Business ir Business Pro planus.
+                </div>
+              </>
+            ) : (
+              <>
+                <b>Šis darbas atšauktas — pokalbis uždarytas.</b>
+                {cancellationReason && (
+                  <div style={{ marginTop: 4 }}>
+                    Atšaukimo priežastis: {cancellationReason}
+                  </div>
+                )}
+                <div style={{ marginTop: 4 }}>
+                  Ankstesnes žinutes galite perskaityti, tačiau naujų siųsti
+                  nebegalima.
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (
+                  !conversationLocked &&
+                  !sending &&
+                  textValue.trim()
+                ) {
+                  sendMessage(e);
+                }
+              }
+            }}
+            maxLength={2000}
+            disabled={conversationLocked}
+            placeholder={
+              conversationLocked
+                ? "Pokalbis uždarytas"
+                : "Parašykite žinutę..."
+            }
+          />
+          <button disabled={conversationLocked || sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+function GroupConversationModal({
+  open,
+  onClose,
+  onRead,
+  jobId,
+  title,
+  user,
+  senderMode = null,
+}) {
+  const [messages, setMessages] = useState([]);
+  const [names, setNames] = useState({});
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [conversationLocked, setConversationLocked] = useState(false);
+  const [planLocked, setPlanLocked] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedConversationRef = useRef(null);
+
+  useEffect(() => {
+    if (!open || !jobId) return;
+
+    scrollOnLoadRef.current = true;
+    loadedConversationRef.current = null;
+    setMessages([]);
+    loadMessages();
+    const timer = setInterval(loadMessages, 3000);
+    return () => clearInterval(timer);
+  }, [open, jobId, senderMode]);
+
+  useEffect(() => {
+    if (!open || loading || loadedConversationRef.current !== jobId) return;
+    if (scrollOnLoadRef.current && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      scrollOnLoadRef.current = false;
+    }
+    if (document.visibilityState === "visible") onRead?.();
+  }, [open, loading, messages, jobId]);
+
+  async function loadMessages() {
+    if (!messages.length) setLoading(true);
+    setError("");
+
+    try {
+      const [messagesResult, jobResult, chatPlanResult] = await Promise.all([
+        supabase
+          .from("job_group_messages")
+          .select("id, sender_id, sender_context, sender_label, body, created_at")
+          .eq("job_id", jobId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("jobs")
+          .select("status, cancellation_reason")
+          .eq("id", jobId)
+          .single(),
+        supabase.rpc("job_chat_enabled", {
+          p_job_id: jobId,
+        }),
+      ]);
+
+      if (messagesResult.error) throw messagesResult.error;
+      if (jobResult.error) throw jobResult.error;
+      if (chatPlanResult.error) throw chatPlanResult.error;
+
+      const chatPlanLocked = !chatPlanResult.data;
+      setPlanLocked(chatPlanLocked);
+      setConversationLocked(
+        jobResult.data?.status === "cancelled" || chatPlanLocked
+      );
+      setCancellationReason(jobResult.data?.cancellation_reason || "");
+
+      const rows = messagesResult.data || [];
+      loadedConversationRef.current = jobId;
+      setMessages(rows);
+
+      const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
+      if (ids.length) {
+        const profilesResult = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", ids);
+
+        if (profilesResult.error) throw profilesResult.error;
+
+        setNames(
+          Object.fromEntries(
+            (profilesResult.data || []).map((row) => [
+              row.id,
+              row.display_name || "Vartotojas",
+            ])
+          )
+        );
+      } else {
+        setNames({});
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbo pokalbio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || !jobId || conversationLocked) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = senderMode
+        ? await supabase.rpc("admin_send_job_chat_as_mode", {
+            p_job_id: jobId,
+            p_body: body,
+            p_mode: senderMode,
+          })
+        : await supabase.from("job_group_messages").insert({
+            job_id: jobId,
+            sender_id: user.id,
+            body,
+          });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      scrollOnLoadRef.current = true;
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}
+          .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+          .rs-messages{display:grid;gap:10px;max-height:360px;overflow:auto;padding:4px 2px 12px}
+          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+          .rs-message.mine{margin-left:auto;background:#fff3e7}
+          .rs-message b{display:block;font-size:12px;margin-bottom:4px}
+          .rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
+          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
+          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.6}
+          .rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+          .rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">DARBO POKALBIS</div>
+            <h2>{title || "Bendras darbo pokalbis"}</h2>
+          </div>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
+        </div>
+
+        <div className="rs-group-note">
+          {senderMode === "worker"
+            ? "Rašote darbuotojo režimu. Žinutė bus rodoma jūsų darbuotojo vardu."
+            : senderMode === "employer"
+            ? "Rašote darbdavio režimu. Žinutė bus rodoma jūsų įmonės vardu."
+            : "Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai."}
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages" ref={messagesRef}>
+          {loading && !messages.length ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={
+                  message.sender_id === user.id
+                    ? "rs-message mine"
+                    : "rs-message"
+                }
+                key={message.id}
+              >
+                <b>
+                  {message.sender_label ||
+                    names[message.sender_id] ||
+                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="rs-empty">
+              Darbo pokalbis dar tuščias. Galite parašyti pirmą žinutę.
+            </div>
+          )}
+        </div>
+
+        {conversationLocked && (
+          <div className="rs-locked">
+            {planLocked ? (
+              <>
+                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
+                <div style={{ marginTop: 4 }}>
+                  Darbdavys naudoja Basic planą. Bendri ir privatūs darbo
+                  pokalbiai įtraukti į Business ir Business Pro.
+                </div>
+              </>
+            ) : (
+              <>
+                <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
+                {cancellationReason && (
+                  <div style={{ marginTop: 4 }}>
+                    Atšaukimo priežastis: {cancellationReason}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (
+                  !conversationLocked &&
+                  !sending &&
+                  textValue.trim()
+                ) {
+                  sendMessage(e);
+                }
+              }
+            }}
+            maxLength={2000}
+            disabled={conversationLocked}
+            placeholder={
+              conversationLocked
+                ? "Pokalbis uždarytas"
+                : "Žinutė visai darbo komandai..."
+            }
+          />
+          <button disabled={conversationLocked || sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+function CompanyTeamChatModal({
+  open,
+  onClose,
+  companyId,
+  companyName,
+  user,
+  onRead = null,
+}) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open || !companyId) return;
+
+    loadMessages();
+    const timer = setInterval(loadMessages, 3000);
+    return () => clearInterval(timer);
+  }, [open, companyId]);
+
+  async function loadMessages() {
+    if (!messages.length) setLoading(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_company_team_messages", {
+        p_company_id: companyId,
+      });
+
+      if (result.error) throw result.error;
+      setMessages(result.data || []);
+
+      const readResult = await supabase.rpc("mark_company_team_chat_read", {
+        p_company_id: companyId,
+      });
+
+      if (readResult.error) throw readResult.error;
+      onRead?.();
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+
+    const body = textValue.trim();
+    if (!body || sending || !companyId) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("send_company_team_message", {
+        p_company_id: companyId,
+        p_body: body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="ctc-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose();
+      }}
+    >
+      <div className="ctc-modal">
+        <style>{`
+          .ctc-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+          .ctc-modal{width:min(700px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
+          .ctc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+          .ctc-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:24px}
+          .ctc-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.45}
+          .ctc-close{width:38px;height:38px;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-size:21px;cursor:pointer;flex:0 0 auto}
+          .ctc-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:10px}
+          .ctc-messages{display:grid;align-content:start;justify-items:start;gap:10px;min-height:260px;max-height:430px;overflow:auto;padding:8px 2px 14px}
+          .ctc-empty{justify-self:stretch;text-align:center;color:#7a8996;padding:52px 14px;font-size:13px}
+          .ctc-message{width:fit-content;max-width:min(72%,520px);padding:9px 12px;border-radius:13px;background:#f2f5f7}
+          .ctc-message.mine{justify-self:end;margin-left:0;background:#fff3e7}
+          .ctc-message b{display:block;font-size:12px;margin-bottom:3px}
+          .ctc-role{font-weight:600;color:#7a8996}
+          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}
+          .ctc-message time{display:block;margin-top:5px;color:#8a98a6;font-size:10px}
+          .ctc-form{display:grid;grid-template-columns:1fr auto;align-items:end;gap:8px;border-top:1px solid #e4ebf0;padding-top:14px}
+          .ctc-form textarea{min-height:48px;max-height:110px;resize:vertical;border:1px solid #dbe4ea;border-radius:11px;padding:11px 12px;font:inherit;line-height:1.4}
+          .ctc-form button{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}
+          .ctc-form button:disabled{opacity:.55;cursor:not-allowed}
+          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{max-height:calc(100vh - 20px);padding:17px}.ctc-head h2{font-size:21px}.ctc-message{max-width:88%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
+        `}</style>
+
+        <div className="ctc-head">
+          <div>
+            <div className="eyebrow">BUSINESS PRO · KOMANDOS POKALBIS</div>
+            <h2>{companyName || "Įmonės komanda"}</h2>
+            <p>
+              Vidinis pokalbis tik jūsų įmonės Savininkui, Vadovams ir
+              Vadybininkams.
+            </p>
+          </div>
+
+          <button
+            className="ctc-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        {error && <div className="ctc-error">{error}</div>}
+
+        <div className="ctc-messages">
+          {loading && !messages.length ? (
+            <div className="ctc-empty">Kraunamas komandos pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div
+                className={
+                  message.sender_id === user.id
+                    ? "ctc-message mine"
+                    : "ctc-message"
+                }
+                key={message.id}
+              >
+                <b>
+                  {message.sender_label || "Komandos narys"}{" "}
+                  <span className="ctc-role">
+                    · {companyTeamRoleLabel(message.sender_role)}
+                  </span>
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="ctc-empty">
+              Komandos pokalbis dar tuščias. Parašykite pirmą žinutę.
+            </div>
+          )}
+        </div>
+
+        <form className="ctc-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) {
+                  sendMessage(e);
+                }
+              }
+            }}
+            maxLength={2000}
+            placeholder="Parašykite komandai..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function WorkerProfileModal({
+  worker,
+  jobId,
+  canViewWorkerMetrics = false,
+  onClose,
+}) {
+  const [ratingReviews, setRatingReviews] = useState([]);
+  const [ratingReviewsLoading, setRatingReviewsLoading] = useState(false);
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [phoneCopied, setPhoneCopied] = useState(false);
+
+  useEffect(() => {
+    if (!worker?.id || !canViewWorkerMetrics) {
+      setRatingReviews([]);
+      setRatingReviewsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRatingReviews() {
+      setRatingReviewsLoading(true);
+
+      const result = await supabase
+        .from("worker_ratings")
+        .select("id, score, comment, created_at")
+        .eq("worker_id", worker.id)
+        .order("created_at", { ascending: false });
+
+      if (!cancelled) {
+        setRatingReviews(result.error ? [] : result.data || []);
+        setRatingReviewsLoading(false);
+      }
+    }
+
+    loadRatingReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id, canViewWorkerMetrics]);
+
+  useEffect(() => {
+    if (!worker?.id || !jobId) {
+      setContactPhone("");
+      setContactError("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadContact() {
+      setContactLoading(true);
+      setContactError("");
+
+      try {
+        const result = await supabase.rpc("get_worker_contact", {
+          p_worker_id: worker.id,
+          p_job_id: jobId,
+        });
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setContactPhone(result.data?.[0]?.phone || "");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setContactPhone("");
+          setContactError(
+            err?.message || "Nepavyko įkelti darbuotojo telefono numerio."
+          );
+        }
+      } finally {
+        if (!cancelled) setContactLoading(false);
+      }
+    }
+
+    loadContact();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [worker?.id, jobId]);
+
+  async function copyWorkerPhone() {
+    if (!contactPhone) return;
+
+    try {
+      await navigator.clipboard.writeText(contactPhone);
+      setPhoneCopied(true);
+      window.setTimeout(() => setPhoneCopied(false), 1800);
+    } catch {
+      setContactError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
+  if (!worker) return null;
+
+  const stats = worker.publicStats || {};
+  const monthMinutes = Number(stats.monthWorkedMinutes || 0);
+  const ratingAverage =
+    stats.ratingAverage ?? worker.ratingAverage ?? null;
+  const ratingCount =
+    Number(stats.ratingCount ?? worker.ratingCount ?? 0);
+  const attendanceRate =
+    Number(stats.attendanceRate ?? worker.attendanceRate ?? 100);
+  const noShows =
+    Number(stats.noShowCount ?? worker.noShowCount ?? 0);
+  const earlyLeaves =
+    Number(
+      stats.unexcusedEarlyLeaveCount ??
+        worker.unexcusedEarlyLeaveCount ??
+        0
+    );
+
+  return (
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(700px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .rs-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+          .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
+          .rs-profile-stat span{display:block;font-size:11px;color:#6c7a88;margin-bottom:5px;line-height:1.3}.rs-profile-stat b{font-family:Manrope,Inter,sans-serif;font-size:18px}
+          .rs-profile-phone{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+          .rs-profile-phone button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+          .rs-profile-contact-error{margin-top:6px;font-size:11px;color:#b64d2a}
+          .rs-profile-plan-lock{grid-column:1/-1;border:1px dashed #d7e0e7;background:#f8fafb;border-radius:12px;padding:13px 14px;color:#526374;font-size:12px;line-height:1.5}
+          .rs-profile-plan-lock b{display:block;color:#102438;font-size:13px;margin-bottom:3px}
+          .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
+          .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
+          @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
+          @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
+            <div
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: "#102438",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+                overflow: "hidden",
+                flex: "0 0 50px",
+              }}
+            >
+              {worker.avatarUrl ? (
+                <img
+                  src={worker.avatarUrl}
+                  alt={worker.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                worker.initials
+              )}
+            </div>
+            <div>
+              <div className="eyebrow">DARBUOTOJO PROFILIS</div>
+              <h2>{worker.name}</h2>
+            </div>
+          </div>
+          <button className="rs-close" onClick={onClose}><CloseMark /></button>
+        </div>
+
+        <div className="rs-profile-grid">
+          <div className="rs-profile-stat">
+            <span>Miestas</span>
+            <b>{worker.city || "—"}</b>
+          </div>
+
+          <div className="rs-profile-stat">
+            <span>Telefonas</span>
+            {contactLoading ? (
+              <b>...</b>
+            ) : contactPhone ? (
+              <div className="rs-profile-phone">
+                <b>{contactPhone}</b>
+                <button type="button" onClick={copyWorkerPhone}>
+                  {phoneCopied ? "Nukopijuota" : "Kopijuoti"}
+                </button>
+              </div>
+            ) : (
+              <b>—</b>
+            )}
+            {contactError && (
+              <div className="rs-profile-contact-error">{contactError}</div>
+            )}
+          </div>
+
+          <div className="rs-profile-stat">
+            <span>Patirtis</span>
+            <b>{Number(worker.yearsExperience || 0)} m.</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Dirbta šį mėnesį</span>
+            <b>{Number(stats.monthWorkedDays || 0)} d.</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Valandų šį mėnesį</span>
+            <b>{formatWorkedMinutes(monthMinutes)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Darbų šį mėnesį</span>
+            <b>{Number(stats.monthJobs || 0)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Aktyvūs darbai</span>
+            <b>{Number(stats.activeJobs || 0)}</b>
+          </div>
+          <div className="rs-profile-stat">
+            <span>Darbdavio atšaukti</span>
+            <b>{Number(stats.cancelledByEmployer || 0)}</b>
+          </div>
+          {canViewWorkerMetrics ? (
+            <>
+              <div className="rs-profile-stat">
+                <span>Atvykimo patikimumas</span>
+                <b>{Math.round(attendanceRate)}%</b>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Darbdavių įvertinimas</span>
+                <b>
+                  {ratingAverage === null || ratingAverage === undefined
+                    ? "—"
+                    : `${Number(ratingAverage).toFixed(1)} / 10`}
+                </b>
+                <span style={{ marginTop: 4, marginBottom: 0 }}>
+                  {ratingCount ? `${ratingCount} vert.` : "Dar nėra vertinimų"}
+                </span>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Neatvykimai</span>
+                <b>{noShows}</b>
+              </div>
+              <div className="rs-profile-stat">
+                <span>Nepagrįsti ankstyvi išėjimai</span>
+                <b>{earlyLeaves}</b>
+              </div>
+            </>
+          ) : (
+            <div className="rs-profile-plan-lock">
+              <b>Patikimumas ir įvertinimai · Business</b>
+              Šie darbuotojo rodikliai prieinami Business ir Business Pro
+              planuose.
+            </div>
+          )}
+        </div>
+
+        {worker.hasDrivingLicenseB && (
+          <div className="rs-profile-section">
+            <b>Vairuotojo pažymėjimas</b>
+            <p style={{ margin: "6px 0 0", color: "#6c7a88" }}>
+              Turi B kategoriją
+            </p>
+          </div>
+        )}
+
+        <div className="rs-profile-section">
+          <b>Trumpai apie patirtį</b>
+          <p style={{ color: "#526374", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: "8px 0 0" }}>
+            {worker.shortBio?.trim() || (Number(worker.yearsExperience || 0) > 0
+              ? `Profilyje nurodyta ${Number(worker.yearsExperience)} m. patirtis. Išsamesnio aprašymo darbuotojas dar nepateikė.`
+              : "Darbuotojas dar nepateikė savo patirties aprašymo.")}
+          </p>
+        </div>
+
+        {canViewWorkerMetrics && (
+          <div className="rs-profile-section">
+            <b>Darbdavių atsiliepimai</b>
+
+            {ratingReviewsLoading ? (
+              <div style={{ marginTop: 10, color: "#6c7a88" }}>
+                Kraunami atsiliepimai...
+              </div>
+            ) : ratingReviews.length ? (
+              <div className="rs-review-list">
+                {ratingReviews.map((review) => (
+                  <div className="rs-review" key={review.id}>
+                    <div className="rs-review-head">
+                      <span className="rs-review-score">
+                        {review.score} / 10
+                      </span>
+                      <span className="rs-review-date">
+                        {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                      </span>
+                    </div>
+
+                    <p>
+                      {review.comment?.trim()
+                        ? review.comment
+                        : "Darbdavys komentaro nepaliko."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ marginTop: 10, color: "#6c7a88" }}>
+                Dar nėra darbdavių atsiliepimų.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
+  const days = nextSevenDays();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [originalSkills, setOriginalSkills] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [workerNotifications, setWorkerNotifications] = useState([]);
+  const [confirmedJobs, setConfirmedJobs] = useState([]);
+  const [respondingInvitation, setRespondingInvitation] = useState(null);
+  const [confirmInvitation, setConfirmInvitation] = useState(null);
+  const [commitmentChecked, setCommitmentChecked] = useState(false);
+  const [conversation, setConversation] = useState(null);
+  const [groupConversation, setGroupConversation] = useState(null);
+  const [workdays, setWorkdays] = useState([]);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [needsAvailabilityConfirm, setNeedsAvailabilityConfirm] = useState(false);
+  const [confirmingAvailability, setConfirmingAvailability] = useState(false);
+  const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
+  const [workerAttendanceMode, setWorkerAttendanceMode] = useState(null);
+  const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
+  const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
+  const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
+  const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
+  const [employerReviewOpportunities, setEmployerReviewOpportunities] = useState([]);
+  const [employerReviewTarget, setEmployerReviewTarget] = useState(null);
+  const [employerReviewScore, setEmployerReviewScore] = useState(null);
+  const [employerReviewComment, setEmployerReviewComment] = useState("");
+  const [employerReviewSaving, setEmployerReviewSaving] = useState(false);
+  const [showUrgentAvailability, setShowUrgentAvailability] = useState(false);
+  const [urgentSaving, setUrgentSaving] = useState(false);
+  const [urgentAvailability, setUrgentAvailability] = useState({
+    city: "",
+    active: false,
+  });
+  const [urgentForm, setUrgentForm] = useState({
+    city: "",
+  });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [form, setForm] = useState({
+    displayName: "",
+    city: "Vilnius",
+    phone: "",
+    travelRadius: 30,
+    hasDrivingLicenseB: false,
+    yearsExperience: 0,
+    shortBio: "",
+    avatarPath: "",
+  });
+  const [metrics, setMetrics] = useState({
+    attendanceRate: 100,
+    completedJobs: 0,
+    ratingAverage: null,
+    ratingCount: 0,
+    noShowCount: 0,
+    restrictedUntil: null,
+  });
+  const [workerStats, setWorkerStats] = useState({
+    monthWorkedDays: 0,
+    monthWorkedMinutes: 0,
+    monthJobs: 0,
+    activeJobs: 0,
+    cancelledByEmployer: 0,
+    unexcusedEarlyLeaveCount: 0,
+  });
+  const [availability, setAvailability] = useState(() =>
+    Object.fromEntries(
+      days.map((day) => [
+        day.iso,
+        { available: false, from: "08:00", to: "17:00" },
+      ])
+    )
+  );
+
+  useEffect(() => {
+    loadDashboard();
+  }, [user.id]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      Promise.all([
+        loadInvitations(),
+        loadWorkerStats(),
+        loadEmployerReviewOpportunities(),
+      ]).catch(() => {
+        // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [user.id]);
+
+  useEffect(() => {
+    const timer = window.setInterval(async () => {
+      try {
+        await supabase.rpc("worker_touch_activity");
+      } catch {
+        // Aktyvumo atnaujinimas neturi trukdyti naudotis paskyra.
+      }
+    }, 30 * 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [user.id]);
+
+  async function loadDashboard() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const activityResult = await supabase.rpc("worker_touch_activity");
+      if (activityResult.error) throw activityResult.error;
+
+      const start = days[0].iso;
+      const end = days[days.length - 1].iso;
+
+      const [
+        profileResult,
+        privateResult,
+        workerResult,
+        skillsResult,
+        workerSkillsResult,
+        availabilityResult,
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("display_name, city")
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("user_private")
+          .select("phone")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("worker_profiles")
+          .select(
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active"
+          )
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("skills")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+        supabase
+          .from("worker_skills")
+          .select("skill_id")
+          .eq("worker_id", user.id),
+        supabase
+          .from("availability")
+          .select("available_date, status, available_from, available_to")
+          .eq("worker_id", user.id)
+          .gte("available_date", start)
+          .lte("available_date", end),
+      ]);
+
+      const failed = [
+        profileResult,
+        privateResult,
+        workerResult,
+        skillsResult,
+        workerSkillsResult,
+        availabilityResult,
+      ].find((result) => result.error);
+
+      if (failed?.error) throw failed.error;
+
+      const profile = profileResult.data;
+      const privateData = privateResult.data;
+      const worker = workerResult.data;
+
+      const availabilityConfirmedAt = worker?.availability_confirmed_at
+        ? new Date(worker.availability_confirmed_at).getTime()
+        : 0;
+      const activityWindowMs = 24 * 60 * 60 * 1000;
+
+      setNeedsAvailabilityConfirm(
+        !availabilityConfirmedAt ||
+          Date.now() - availabilityConfirmedAt > activityWindowMs
+      );
+
+      setForm({
+        displayName: profile?.display_name || "",
+        city: profile?.city || "Vilnius",
+        phone: privateData?.phone || "",
+        travelRadius: worker?.travel_radius_km ?? 30,
+        hasDrivingLicenseB: Boolean(worker?.has_driving_license_b),
+        yearsExperience: worker?.years_experience ?? 0,
+        shortBio: worker?.short_bio || "",
+        avatarPath: worker?.avatar_path || "",
+      });
+      setAvatarFile(null);
+      setAvatarPreview("");
+
+      setUrgentAvailability({
+        city: worker?.urgent_city || "",
+        active: Boolean(worker?.urgent_is_active),
+      });
+      setUrgentForm({
+        city: worker?.urgent_city || profile?.city || "Vilnius",
+      });
+
+      setMetrics({
+        attendanceRate: Number(worker?.attendance_rate ?? 100),
+        completedJobs: Number(worker?.completed_jobs ?? 0),
+        ratingAverage:
+          worker?.rating_average === null || worker?.rating_average === undefined
+            ? null
+            : Number(worker.rating_average),
+        ratingCount: Number(worker?.rating_count || 0),
+        noShowCount: Number(worker?.no_show_count || 0),
+        restrictedUntil: worker?.restricted_until || null,
+      });
+
+      setSkills(skillsResult.data || []);
+
+      const selected = (workerSkillsResult.data || []).map((row) =>
+        Number(row.skill_id)
+      );
+      setSelectedSkills(selected);
+      setOriginalSkills(selected);
+
+      const storedAvailability = Object.fromEntries(
+        (availabilityResult.data || []).map((row) => [
+          row.available_date,
+          {
+            available: row.status === "available",
+            from: row.available_from?.slice(0, 5) || "08:00",
+            to: row.available_to?.slice(0, 5) || "17:00",
+          },
+        ])
+      );
+
+      setAvailability(
+        Object.fromEntries(
+          days.map((day) => [
+            day.iso,
+            storedAvailability[day.iso] || {
+              available: false,
+              from: "08:00",
+              to: "17:00",
+            },
+          ])
+        )
+      );
+
+      await Promise.all([
+        loadInvitations(),
+        loadWorkerStats(),
+        loadEmployerReviewOpportunities(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti profilio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateField(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function urgentAvailabilityIsActive() {
+    return Boolean(urgentAvailability.active);
+  }
+
+  function hasCurrentScheduledWork() {
+    return workdays.some((item) =>
+      ["confirmed", "no_show"].includes(item.status) &&
+      ["open", "filled", "in_progress"].includes(item.job?.status) &&
+      jobCheckInWindowOpen(item.job) && !jobHasEnded(item.job)
+    );
+  }
+
+  async function enableUrgentAvailability() {
+    const city = urgentForm.city.trim();
+
+    if (hasCurrentScheduledWork()) {
+      setError("Šiuo metu turite patvirtintą darbą. „Laisvas dabar“ galėsite įjungti pasibaigus suplanuotam darbo laikui.");
+      return;
+    }
+
+    if (!city) {
+      setError("Nurodykite miestą, kuriame šiuo metu galite dirbti.");
+      return;
+    }
+
+    if (!form.phone.trim()) {
+      setError(
+        "Prieš įjungdami režimą „Laisvas dabar“ profilyje pridėkite telefono numerį."
+      );
+      return;
+    }
+
+    setUrgentSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const canonicalCity = await canonicalCityName(city);
+
+      const result = await supabase.rpc("worker_set_urgent_availability", {
+        p_city: canonicalCity,
+      });
+
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0] || {};
+      setUrgentAvailability({
+        city: row.urgent_city || canonicalCity,
+        active: Boolean(row.urgent_is_active),
+      });
+      setUrgentForm((current) => ({
+        ...current,
+        city: row.urgent_city || canonicalCity,
+      }));
+      setShowUrgentAvailability(false);
+      setNotice(
+        "Režimas „Laisvas dabar“ įjungtas. Darbdaviai šiame mieste gali matyti jūsų telefono numerį, kol patys šio režimo neišjungsite."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko įjungti režimo „Laisvas dabar“.");
+    } finally {
+      setUrgentSaving(false);
+    }
+  }
+
+  async function disableUrgentAvailability() {
+    setUrgentSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("worker_clear_urgent_availability");
+      if (result.error) throw result.error;
+
+      setUrgentAvailability({ city: "", active: false });
+      setShowUrgentAvailability(false);
+      setNotice("Režimas „Laisvas dabar“ išjungtas.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko išjungti režimo „Laisvas dabar“.");
+    } finally {
+      setUrgentSaving(false);
+    }
+  }
+
+  function chooseAvatarFile(file) {
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError("Profilio nuotrauka turi būti JPG, PNG arba WEBP formato.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profilio nuotrauka negali būti didesnė nei 5 MB.");
+      return;
+    }
+
+    if (avatarPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setError("");
+  }
+
+  function toggleSkill(skillId) {
+    setSelectedSkills((current) =>
+      current.includes(skillId)
+        ? current.filter((id) => id !== skillId)
+        : [...current, skillId]
+    );
+  }
+
+  function updateAvailability(date, patch) {
+    setAvailability((current) => ({
+      ...current,
+      [date]: { ...current[date], ...patch },
+    }));
+  }
+
+  async function loadWorkerStats() {
+    const [statsResult, workerResult] = await Promise.all([
+      supabase.rpc("get_worker_public_stats", { p_worker_id: user.id }),
+      supabase
+        .from("worker_profiles")
+        .select(
+          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until, completed_jobs, unexcused_early_leave_count"
+        )
+        .eq("user_id", user.id)
+        .single(),
+    ]);
+
+    if (statsResult.error) throw statsResult.error;
+    if (workerResult.error) throw workerResult.error;
+
+    const stats = statsResult.data?.[0] || {};
+    const worker = workerResult.data || {};
+
+    setWorkerStats({
+      monthWorkedDays: Number(stats.month_worked_days || 0),
+      monthWorkedMinutes: Number(stats.month_worked_minutes || 0),
+      monthJobs: Number(stats.month_jobs || 0),
+      activeJobs: Number(stats.active_jobs || 0),
+      cancelledByEmployer: Number(stats.cancelled_by_employer || 0),
+      unexcusedEarlyLeaveCount: Number(
+        stats.unexcused_early_leave_count ||
+          worker.unexcused_early_leave_count ||
+          0
+      ),
+    });
+
+    setMetrics((current) => ({
+      ...current,
+      attendanceRate: Number(
+        stats.attendance_rate ?? worker.attendance_rate ?? current.attendanceRate ?? 100
+      ),
+      completedJobs: Number(worker.completed_jobs || 0),
+      ratingAverage:
+        stats.rating_average === null || stats.rating_average === undefined
+          ? worker.rating_average === null || worker.rating_average === undefined
+            ? null
+            : Number(worker.rating_average)
+          : Number(stats.rating_average),
+      ratingCount: Number(stats.rating_count ?? worker.rating_count ?? 0),
+      noShowCount: Number(stats.no_show_count ?? worker.no_show_count ?? 0),
+      restrictedUntil: worker.restricted_until || null,
+    }));
+  }
+
+  async function loadEmployerReviewOpportunities() {
+    const result = await supabase.rpc(
+      "get_worker_employer_review_opportunities"
+    );
+
+    if (result.error) throw result.error;
+    setEmployerReviewOpportunities(result.data || []);
+  }
+
+  async function loadInvitations() {
+    const [invitationResult, bookingResult, notificationResult] = await Promise.all([
+      supabase
+        .from("job_invitations")
+        .select("id, job_id, status, message, invited_at, responded_at")
+        .eq("worker_id", user.id)
+        .order("invited_at", { ascending: false }),
+      supabase
+        .from("bookings")
+        .select("id, job_id, invitation_id, status, confirmed_at, cancelled_at, cancellation_reason")
+        .eq("worker_id", user.id)
+        .order("confirmed_at", { ascending: false }),
+      supabase
+        .from("job_notifications")
+        .select("id, job_id, invitation_id, event_type, created_at, read_at")
+        .is("read_at", null)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (invitationResult.error) throw invitationResult.error;
+    if (bookingResult.error) throw bookingResult.error;
+    if (notificationResult.error) throw notificationResult.error;
+
+    setWorkerNotifications(notificationResult.data || []);
+
+    const invitationRows = invitationResult.data || [];
+    const bookingRows = bookingResult.data || [];
+    const allJobIds = [
+      ...new Set([
+        ...invitationRows.map((row) => row.job_id),
+        ...bookingRows.map((row) => row.job_id),
+      ].filter(Boolean)),
+    ];
+
+    if (!allJobIds.length) {
+      setInvitations([]);
+      setConfirmedJobs([]);
+      setWorkdays([]);
+      return;
+    }
+
+    const jobsResult = await supabase
+      .from("jobs")
+      .select(
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at"
+      )
+      .in("id", allJobIds);
+
+    if (jobsResult.error) throw jobsResult.error;
+
+    const companyIds = [
+      ...new Set((jobsResult.data || []).map((job) => job.company_id).filter(Boolean)),
+    ];
+
+    let companies = [];
+    if (companyIds.length) {
+      const companiesResult = await supabase
+        .from("companies")
+        .select("id, name, reliability_rate, cancelled_confirmed_count")
+        .in("id", companyIds);
+
+      if (companiesResult.error) throw companiesResult.error;
+      companies = companiesResult.data || [];
+    }
+
+    let companyReviewSummaries = [];
+    if (companyIds.length) {
+      const reviewSummaryResult = await supabase.rpc(
+        "get_worker_company_review_summaries",
+        { p_company_ids: companyIds }
+      );
+
+      if (reviewSummaryResult.error) throw reviewSummaryResult.error;
+      companyReviewSummaries = reviewSummaryResult.data || [];
+    }
+
+    let attendanceRows = [];
+    const bookingIds = bookingRows.map((row) => row.id);
+    if (bookingIds.length) {
+      const attendanceResult = await supabase
+        .from("attendance")
+        .select(
+          "id, booking_id, status, worker_check_in_at, employer_check_in_at, worker_workday_claim, worker_claimed_at, employer_outcome, employer_marked_at, actual_end_time, employer_note, worker_response, worker_response_note, worker_responded_at, dispute_status, final_outcome, finalized_at, worked_minutes, resolution_note, worker_evidence_path, worker_evidence_name"
+        )
+        .in("booking_id", bookingIds);
+
+      if (attendanceResult.error) throw attendanceResult.error;
+      attendanceRows = attendanceResult.data || [];
+    }
+
+    const jobMap = new Map((jobsResult.data || []).map((job) => [job.id, job]));
+    const companyMap = new Map(companies.map((company) => [company.id, company]));
+    const companyReviewSummaryMap = new Map(
+      companyReviewSummaries.map((row) => [row.company_id, row])
+    );
+    const attendanceMap = new Map(
+      attendanceRows.map((row) => [row.booking_id, row])
+    );
+
+    setInvitations(
+      invitationRows
+        .filter((invitation) => invitation.status === "pending")
+        .map((invitation) => {
+          const job = jobMap.get(invitation.job_id);
+          const company = job ? companyMap.get(job.company_id) : null;
+          return {
+            ...invitation,
+            job,
+            companyName: company?.name || "Darbdavys",
+            companyReliability: Number(company?.reliability_rate ?? 100),
+            companyCancelledConfirmed: Number(
+              company?.cancelled_confirmed_count ?? 0
+            ),
+            companyDisputeReviewCount: Number(
+              companyReviewSummaryMap.get(job?.company_id)?.review_count || 0
+            ),
+            companyLatestDisputeReview:
+              companyReviewSummaryMap.get(job?.company_id)
+                ?.latest_review_comment || "",
+          };
+        })
+    );
+
+    setConfirmedJobs(
+      bookingRows
+        .filter((booking) => booking.status === "confirmed")
+        .map((booking) => jobMap.get(booking.job_id))
+        .filter(Boolean)
+    );
+
+    setWorkdays(
+      bookingRows
+        .map((booking) => {
+          const job = jobMap.get(booking.job_id);
+          const company = job ? companyMap.get(job.company_id) : null;
+          return {
+            ...booking,
+            job,
+            companyName: company?.name || "Darbdavys",
+            companyDisputeReviewCount: Number(
+              companyReviewSummaryMap.get(job?.company_id)?.review_count || 0
+            ),
+            companyLatestDisputeReview:
+              companyReviewSummaryMap.get(job?.company_id)
+                ?.latest_review_comment || "",
+            attendance: attendanceMap.get(booking.id) || null,
+          };
+        })
+        .filter((item) => item.job)
+        .sort((a, b) =>
+          String(b.job.work_date || "").localeCompare(String(a.job.work_date || ""))
+        )
+    );
+  }
+
+  function unreadWorkerNotifications(invitationId) {
+    return workerNotifications.filter(
+      (item) => item.invitation_id === invitationId
+    );
+  }
+
+  function unreadWorkerJobNotifications(jobId) {
+    return workerNotifications.filter(
+      (item) => item.job_id === jobId && !item.invitation_id
+    );
+  }
+
+  async function markWorkerJobNotificationsRead(jobId) {
+    const ids = unreadWorkerJobNotifications(jobId).map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setWorkerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
+    );
+  }
+
+  async function openWorkerGroupConversation(job) {
+    setGroupConversation({
+      jobId: job.id,
+      title: job.title,
+    });
+  }
+
+  async function markWorkerNotificationsRead(invitationId) {
+    const ids = unreadWorkerNotifications(invitationId).map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setWorkerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
+    );
+  }
+
+  function invitationHasConflict(invitation) {
+    if (!invitation?.job) return false;
+    return confirmedJobs.some(
+      (job) =>
+        job.id !== invitation.job.id &&
+        timeRangesOverlap(invitation.job, job)
+    );
+  }
+
+  function openEmployerReview(opportunity) {
+    setEmployerReviewTarget(opportunity);
+    setEmployerReviewScore(null);
+    setEmployerReviewComment("");
+    setError("");
+  }
+
+  async function submitEmployerReview() {
+    if (!employerReviewTarget?.attendance_id) return;
+
+    const score = Number(employerReviewScore);
+    const comment = employerReviewComment.trim();
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      setError("Pasirinkite įvertinimą nuo 1 iki 10.");
+      return;
+    }
+
+    if (comment.length < 10) {
+      setError("Atsiliepimas turi būti bent 10 simbolių.");
+      return;
+    }
+
+    setEmployerReviewSaving(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("submit_employer_review", {
+        p_attendance_id: employerReviewTarget.attendance_id,
+        p_score: score,
+        p_comment: comment,
+      });
+
+      if (result.error) throw result.error;
+
+      setEmployerReviewTarget(null);
+      setEmployerReviewScore(null);
+      setEmployerReviewComment("");
+      setNotice(
+        "Atsiliepimas apie darbdavį paskelbtas. Jį matys įmonė ir darbuotojai, gavę šios įmonės darbo kvietimus."
+      );
+
+      await loadEmployerReviewOpportunities();
+      await loadInvitations();
+    } catch (err) {
+      setError(err?.message || "Nepavyko paskelbti atsiliepimo.");
+    } finally {
+      setEmployerReviewSaving(false);
+    }
+  }
+
+  async function respondToInvitation(invitationId, status) {
+    setRespondingInvitation(invitationId);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase
+        .from("job_invitations")
+        .update({
+          status,
+          responded_at: new Date().toISOString(),
+        })
+        .eq("id", invitationId)
+        .eq("worker_id", user.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+
+      if (result.error) throw result.error;
+
+      if (!result.data) {
+        throw new Error("Šis kvietimas jau buvo atsakytas arba nebegalioja.");
+      }
+
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+      setConfirmInvitation(null);
+      setCommitmentChecked(false);
+
+      setNotice(
+        status === "accepted"
+          ? "Darbo kvietimas priimtas. Darbas patvirtintas."
+          : "Darbo kvietimas atmestas."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko atsakyti į kvietimą.");
+    } finally {
+      setRespondingInvitation(null);
+    }
+  }
+
+  async function workerCheckIn(bookingId) {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_check_in", {
+        p_booking_id: bookingId,
+      });
+      if (result.error) throw result.error;
+      setNotice("Atvykimas pažymėtas. Darbdavys matys, kad atvykote.");
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pažymėti atvykimo.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function copyPhoneNumber(phone) {
+    if (!phone) return;
+    try {
+      await navigator.clipboard.writeText(phone);
+      setNotice(`Telefono numeris nukopijuotas: ${phone}`);
+    } catch (err) {
+      setError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
+  async function openWorkdayDetails(item) {
+    if (!item?.job?.id) return;
+
+    setError("");
+
+    try {
+      const [contactResult, reviewsResult] = await Promise.all([
+        supabase.rpc("get_job_contact", {
+          p_job_id: item.job.id,
+        }),
+        supabase.rpc("get_company_worker_reviews", {
+          p_company_id: item.job.company_id,
+        }),
+      ]);
+
+      if (contactResult.error) throw contactResult.error;
+      if (reviewsResult.error) throw reviewsResult.error;
+
+      const contact = contactResult.data?.[0] || {};
+
+      setWorkdayDetailsTarget({
+        ...item,
+        companyName: contact.company_name || item.companyName,
+        companyPhone: contact.phone || "",
+        companyReviews: reviewsResult.data || [],
+      });
+    } catch (err) {
+      setWorkdayDetailsTarget({
+        ...item,
+        companyPhone: "",
+        companyReviews: [],
+      });
+      setError(err?.message || "Nepavyko įkelti darbo kontaktų.");
+    }
+  }
+
+  async function openArrivalHelp(item) {
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_job_contact", {
+        p_job_id: item.job.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const contact = result.data?.[0] || {};
+
+      setArrivalHelpTarget({
+        ...item,
+        companyName: contact.company_name || item.companyName,
+        companyPhone: contact.phone || "",
+      });
+    } catch (err) {
+      setArrivalHelpTarget({
+        ...item,
+        companyPhone: "",
+      });
+      setError(err?.message || "Nepavyko įkelti darbdavio kontaktų.");
+    }
+  }
+
+  async function workerClaimWorkday(bookingId, claim) {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_claim_workday", {
+        p_booking_id: bookingId,
+        p_claim: claim,
+      });
+      if (result.error) throw result.error;
+
+      setNotice(
+        claim === "worked"
+          ? "Pažymėjote, kad dirbote. Laukiama darbdavio darbo dienos uždarymo."
+          : "Neatvykimas patvirtintas. Pritaikytas darbuotojo patikimumo poveikis."
+      );
+
+      setWorkerAttendanceTarget(null);
+      setWorkerAttendanceMode(null);
+      setWorkerAttendanceNote("");
+      setWorkerEvidenceFile(null);
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko užbaigti darbo dienos.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function workerRespondAttendance(attendanceId, response, note = "") {
+    setAttendanceBusy(true);
+    setNotice("");
+    setError("");
+
+    let uploadedPath = null;
+
+    try {
+      if (response === "disputed" && workerEvidenceFile) {
+        const allowedTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf",
+        ];
+
+        if (!allowedTypes.includes(workerEvidenceFile.type)) {
+          throw new Error(
+            "Įrodymui galima įkelti JPG, PNG, WEBP nuotrauką arba PDF dokumentą."
+          );
+        }
+
+        if (workerEvidenceFile.size > 8 * 1024 * 1024) {
+          throw new Error("Įrodymo failas negali būti didesnis nei 8 MB.");
+        }
+
+        const safeName = workerEvidenceFile.name
+          .replace(/[^a-zA-Z0-9._-]+/g, "-")
+          .slice(-100);
+
+        uploadedPath = `${user.id}/${attendanceId}/${Date.now()}-${safeName}`;
+
+        const uploadResult = await supabase.storage
+          .from("attendance-evidence")
+          .upload(uploadedPath, workerEvidenceFile, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: workerEvidenceFile.type,
+          });
+
+        if (uploadResult.error) throw uploadResult.error;
+      }
+
+      const result = await supabase.rpc("worker_respond_attendance", {
+        p_attendance_id: attendanceId,
+        p_response: response,
+        p_note: note || null,
+        p_evidence_path: uploadedPath,
+        p_evidence_name:
+          response === "disputed" && workerEvidenceFile
+            ? workerEvidenceFile.name
+            : null,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice(
+        response === "disputed"
+          ? "Ginčas pateiktas. Kol jis neišspręstas, jūsų reitingas nekeičiamas."
+          : "Darbo dienos rezultatas patvirtintas."
+      );
+
+      setWorkerAttendanceTarget(null);
+      setWorkerAttendanceMode(null);
+      setWorkerAttendanceNote("");
+      setWorkerEvidenceFile(null);
+
+      await Promise.all([loadInvitations(), loadWorkerStats()]);
+    } catch (err) {
+      if (uploadedPath) {
+        await supabase.storage
+          .from("attendance-evidence")
+          .remove([uploadedPath])
+          .catch(() => {});
+      }
+
+      setError(err?.message || "Nepavyko pateikti atsakymo.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function confirmCurrentAvailability() {
+    setConfirmingAvailability(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("worker_confirm_availability");
+      if (result.error) throw result.error;
+
+      setNeedsAvailabilityConfirm(false);
+      setNotice(
+        "Grafikas patvirtintas. Darbdaviai vėl gali matyti jūsų profilį paieškoje."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti grafiko.");
+    } finally {
+      setConfirmingAvailability(false);
+    }
+  }
+
+  async function saveEverything() {
+    setSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      if (!form.phone.trim()) {
+        throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
+      }
+
+      const canonicalCity = await canonicalCityName(form.city);
+      if (!canonicalCity) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const profileUpdate = await supabase
+        .from("profiles")
+        .update({
+          display_name: form.displayName.trim(),
+          city: canonicalCity,
+        })
+        .eq("id", user.id);
+
+      if (profileUpdate.error) throw profileUpdate.error;
+
+      const privateUpdate = await supabase
+        .from("user_private")
+        .update({ phone: form.phone.trim() || null })
+        .eq("user_id", user.id);
+
+      if (privateUpdate.error) throw privateUpdate.error;
+
+      let nextAvatarPath = form.avatarPath || "";
+
+      if (avatarFile) {
+        const extension =
+          avatarFile.type === "image/png"
+            ? "png"
+            : avatarFile.type === "image/webp"
+            ? "webp"
+            : "jpg";
+        const uploadPath = `${user.id}/avatar-${Date.now()}.${extension}`;
+
+        const uploadResult = await supabase.storage
+          .from("worker-avatars")
+          .upload(uploadPath, avatarFile, {
+            cacheControl: "3600",
+            contentType: avatarFile.type,
+            upsert: false,
+          });
+
+        if (uploadResult.error) throw uploadResult.error;
+        nextAvatarPath = uploadPath;
+      }
+
+      const workerUpdate = await supabase
+        .from("worker_profiles")
+        .update({
+          travel_radius_km: Number(form.travelRadius),
+          has_driving_license_b: form.hasDrivingLicenseB,
+          years_experience: Number(form.yearsExperience) || 0,
+          short_bio: form.shortBio.trim() || null,
+          avatar_path: nextAvatarPath || null,
+        })
+        .eq("user_id", user.id);
+
+      if (workerUpdate.error) throw workerUpdate.error;
+
+      if (
+        avatarFile &&
+        form.avatarPath &&
+        form.avatarPath !== nextAvatarPath
+      ) {
+        await supabase.storage
+          .from("worker-avatars")
+          .remove([form.avatarPath]);
+      }
+
+      const selectedSet = new Set(selectedSkills);
+      const originalSet = new Set(originalSkills);
+      const toAdd = selectedSkills.filter((id) => !originalSet.has(id));
+      const toDelete = originalSkills.filter((id) => !selectedSet.has(id));
+
+      if (toDelete.length) {
+        const deleteResult = await supabase
+          .from("worker_skills")
+          .delete()
+          .eq("worker_id", user.id)
+          .in("skill_id", toDelete);
+
+        if (deleteResult.error) throw deleteResult.error;
+      }
+
+      if (toAdd.length) {
+        const insertResult = await supabase.from("worker_skills").insert(
+          toAdd.map((skillId) => ({
+            worker_id: user.id,
+            skill_id: skillId,
+            years_experience: 0,
+          }))
+        );
+
+        if (insertResult.error) throw insertResult.error;
+      }
+
+      const availabilityRows = days.map((day) => {
+        const state = availability[day.iso];
+        return {
+          worker_id: user.id,
+          available_date: day.iso,
+          status: state.available ? "available" : "unavailable",
+          available_from: state.available ? state.from : null,
+          available_to: state.available ? state.to : null,
+        };
+      });
+
+      const availabilityResult = await supabase
+        .from("availability")
+        .upsert(availabilityRows, { onConflict: "worker_id,available_date" });
+
+      if (availabilityResult.error) throw availabilityResult.error;
+
+      const confirmResult = await supabase.rpc("worker_confirm_availability");
+      if (confirmResult.error) throw confirmResult.error;
+
+      setNeedsAvailabilityConfirm(false);
+      setOriginalSkills([...selectedSkills]);
+      setForm((current) => ({
+        ...current,
+        city: canonicalCity,
+        avatarPath: nextAvatarPath,
+      }));
+      if (avatarPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      setAvatarFile(null);
+      setAvatarPreview("");
+      setShowProfileEditor(false);
+      setNotice("Profilio informacija atnaujinta.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti duomenų.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const initials = (form.displayName || user.email || "D")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  const availableCount = Object.values(availability).filter(
+    (item) => item.available
+  ).length;
+
+  const profileAvatarUrl =
+    avatarPreview || workerAvatarUrl(form.avatarPath);
+
+  const workerDashboardToday = localDateISO(new Date());
+
+  const workerTodayJobs = workdays.filter(
+    (item) =>
+      item.job?.work_date === workerDashboardToday &&
+      !["cancelled_by_employer", "completed", "no_show"].includes(item.status)
+  );
+
+  const workerUnreadMessages = workerNotifications.filter(
+    (item) => item.event_type === "message"
+  );
+
+  const workerOpenDisputes = workdays.filter(
+    (item) =>
+      item.attendance?.dispute_status === "disputed" &&
+      !item.attendance?.finalized_at
+  );
+
+  const workerActionWorkdays = workdays.filter((item) => {
+    const attendance = item.attendance || {};
+    if (item.status !== "confirmed" || attendance.finalized_at) return false;
+
+    const pendingNegative =
+      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+        attendance.employer_outcome
+      ) && attendance.dispute_status !== "disputed";
+
+    const needsClose =
+      jobHasEnded(item.job) &&
+      !attendance.employer_outcome &&
+      attendance.worker_workday_claim !== "worked";
+
+    const canCheckIn =
+      jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+
+    return pendingNegative || needsClose || canCheckIn;
+  });
+
+  const nextConfirmedWorkday = [...workdays]
+    .filter(
+      (item) =>
+        item.status === "confirmed" &&
+        !item.attendance?.finalized_at &&
+        item.job?.status !== "cancelled" &&
+        !jobHasEnded(item.job)
+    )
+    .sort((a, b) => {
+      const aKey = `${a.job?.work_date || "9999-12-31"}T${
+        a.job?.start_time?.slice(0, 5) || "23:59"
+      }`;
+      const bKey = `${b.job?.work_date || "9999-12-31"}T${
+        b.job?.start_time?.slice(0, 5) || "23:59"
+      }`;
+      return aKey.localeCompare(bKey);
+    })[0];
+
+  const workerRequiredActionCount =
+    workerActionWorkdays.length + (needsAvailabilityConfirm ? 1 : 0);
+
+  const workerDashboardTomorrow = localDateISO(
+    new Date(Date.now() + 24 * 60 * 60 * 1000)
+  );
+
+  const nextConfirmedJob = nextConfirmedWorkday?.job || null;
+  const nextConfirmedWorkdayDateLabel = nextConfirmedJob?.work_date
+    ? nextConfirmedJob.work_date === workerDashboardToday
+      ? "Šiandien"
+      : nextConfirmedJob.work_date === workerDashboardTomorrow
+      ? "Rytoj"
+      : new Date(`${nextConfirmedJob.work_date}T00:00:00`).toLocaleDateString(
+          "lt-LT",
+          { day: "numeric", month: "short" }
+        )
+    : "";
+
+  const firstOpenDispute = workerOpenDisputes[0] || null;
+
+  const firstPendingReview = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return (
+      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+        attendance.employer_outcome
+      ) && attendance.dispute_status !== "disputed"
+    );
+  });
+
+  const firstNeedsClose = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return (
+      jobHasEnded(item.job) &&
+      !attendance.employer_outcome &&
+      attendance.worker_workday_claim !== "worked"
+    );
+  });
+
+  const firstCanCheckIn = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+  });
+
+  const workerPrimaryFocus = needsAvailabilityConfirm
+    ? {
+        tone: "action",
+        title: "Patvirtinkite savo prieinamumą",
+        text: "Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų darbuotojų paieškoje.",
+        action: "Patvirtinti grafiką",
+        target: "availability",
+      }
+    : metrics.restrictedUntil &&
+      new Date(metrics.restrictedUntil) > new Date()
+    ? {
+        tone: "danger",
+        title: "Paskyrai taikomas laikinas apribojimas",
+        text: `Naujų darbų priimti negalite iki ${new Date(
+          metrics.restrictedUntil
+        ).toLocaleString("lt-LT", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })}.`,
+        action: "Peržiūrėti darbus",
+        target: "workdays",
+      }
+    : firstPendingReview
+    ? {
+        tone: "danger",
+        title: "Reikia atsakyti į darbdavio pažymėtą rezultatą",
+        text: `${firstPendingReview.job?.title || "Darbo diena"} · pasirinkite „Patvirtinti“ arba „Ginčyti“.`,
+        action: "Peržiūrėti",
+        target: "workdays",
+      }
+    : firstNeedsClose
+    ? {
+        tone: "action",
+        title: "Reikia uždaryti darbo dieną",
+        text: `${firstNeedsClose.job?.title || "Darbas"} jau pasibaigė. Užfiksuokite, ar dirbote.`,
+        action: "Uždaryti dieną",
+        target: "workdays",
+      }
+    : firstCanCheckIn
+    ? {
+        tone: "live",
+        title: "Galite pažymėti atvykimą",
+        text: `${firstCanCheckIn.job?.title || "Darbas"} · atvykimo langas jau atidarytas.`,
+        action: "Atidaryti darbą",
+        target: "workdays",
+      }
+    : invitations.length
+    ? {
+        tone: "action",
+        title: `Turite ${invitations.length} ${
+          invitations.length === 1 ? "darbo kvietimą" : "darbo kvietimus"
+        }`,
+        text: "Peržiūrėkite datą, laiką, atlyginimą ir atsakykite darbdaviui.",
+        action: "Peržiūrėti kvietimus",
+        target: "invitations",
+      }
+    : workerUnreadMessages.length
+    ? {
+        tone: "action",
+        title: `Turite ${workerUnreadMessages.length} ${
+          workerUnreadMessages.length === 1 ? "naują žinutę" : "naujas žinutes"
+        }`,
+        text: "Atidarykite darbo arba kvietimo pokalbį, kad žinutės būtų pažymėtos perskaitytomis.",
+        action: "Peržiūrėti pokalbius",
+        target: "workdays",
+      }
+    : firstOpenDispute
+    ? {
+        tone: "danger",
+        title: "Ginčas nagrinėjamas",
+        text: `${firstOpenDispute.job?.title || "Darbo diena"} · laukiamas administratoriaus sprendimas. Kol vyksta nagrinėjimas, reitingas nekeičiamas.`,
+        action: "Peržiūrėti ginčą",
+        target: "workdays",
+      }
+    : nextConfirmedWorkday
+    ? {
+        tone: "live",
+        title: "Artimiausias patvirtintas darbas",
+        text: `${nextConfirmedWorkday.job?.title || "Darbas"} · ${
+          nextConfirmedWorkday.job?.work_date || ""
+        } · ${nextConfirmedWorkday.job?.start_time?.slice(0, 5) || ""}`,
+        action: "Peržiūrėti",
+        target: "workdays",
+      }
+    : {
+        tone: "",
+        title: "Šiuo metu veiksmų nereikia",
+        text: "Atnaujinkite prieinamumą ir laukite naujų tinkamų darbo kvietimų.",
+        action: "Tvarkyti profilį",
+        target: "profile",
+      };
+
+  function openWorkerDashboardTarget(target) {
+    if (target === "profile") {
+      setShowProfileEditor(true);
+      return;
+    }
+
+    if (target === "availability") {
+      if (needsAvailabilityConfirm) {
+        confirmCurrentAvailability();
+      } else {
+        setShowProfileEditor(true);
+      }
+      return;
+    }
+
+    document
+      .getElementById(
+        target === "invitations" ? "worker-invitations" : "worker-workdays"
+      )
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (loading) {
+    return (
+      <div className="wd-loading">
+        <div className="wd-spinner" />
+        <b>Kraunamas darbuotojo profilis...</b>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wd-page">
+      <style>{`
+        .wd-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
+        .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 70px}
+        .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
+        .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
+        .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
+        .wd-user{display:flex;align-items:center;gap:11px}
+        .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
+        .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
+        .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px;min-width:0}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:4px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
+        .wd-focus{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding:16px 18px;border:1px solid #dfe7ed;border-radius:15px;background:#fff}.wd-focus.action{border-color:#efc99e;background:#fff9f2}.wd-focus.live{border-color:#cce5d8;background:#f4faf7}.wd-focus.danger{border-color:#efc7bb;background:#fff5f2}.wd-focus-copy b{display:block;color:#102438;font-size:15px;margin-bottom:4px}.wd-focus-copy span{display:block;color:#607180;font-size:12px;line-height:1.5}.wd-focus-btn{border:0;border-radius:9px;background:#102438;color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}.wd-focus.action .wd-focus-btn{background:#f08a28}.wd-focus.live .wd-focus-btn{background:#1c9b67}.wd-focus.danger .wd-focus-btn{background:#b64d2a}
+        .wd-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:20px}
+        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
+        .wd-form{display:grid;gap:18px}
+        .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}
+        .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
+        .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
+        .wd-input:focus,.wd-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
+        .wd-textarea{min-height:92px;resize:vertical}
+        .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+        .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+        .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
+        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:#fff}.wd-invite.has-unread{border-left:4px solid #f08a28}.wd-invite.has-conflict{border-color:#efc7bb;background:#fffafa}
+        .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
+        .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
+        .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
+        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-chat-btn{position:relative}.wd-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-chat-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}.wd-conflict{display:inline-flex;margin-top:10px;border-radius:999px;padding:6px 9px;background:#fff0ec;color:#b64d2a;font-size:11px;font-weight:900}
+        .wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
+        .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
+        .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
+        .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .wd-urgent-btn{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(240,138,40,.18)}
+        .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}.wd-urgent-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+        .wd-urgent-status{font-size:11px;color:#167a54;font-weight:800;text-align:right;margin-top:-4px}
+        .wd-profile-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,36,56,.045);margin-bottom:22px}
+        .wd-profile-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:4px}
+        .wd-profile-editor-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .wd-profile-editor-head p{margin:6px 0 0;color:#6c7a88;line-height:1.5}
+        .wd-profile-editor-close{border:0;background:#f1f4f6;color:#102438;border-radius:9px;width:38px;height:38px;flex:0 0 38px;font:inherit;font-size:20px;cursor:pointer}
+        .wd-profile-editor-section{padding:20px 0;border-top:1px solid #e8edf1}
+        .wd-profile-editor-section:first-of-type{margin-top:16px}
+        .wd-profile-editor-section h3{margin:0 0 6px;font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .wd-profile-editor-section>p{margin:0 0 14px;color:#6c7a88;font-size:13px;line-height:1.5}
+        .wd-avatar-editor{display:flex;align-items:center;gap:14px;margin:14px 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
+        .wd-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}
+        .wd-avatar-preview img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}.wd-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:50%}
+        .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
+        .wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .wd-avatar-upload input{display:none}
+        .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
+        .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
+        .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
+        .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
+        .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
+        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+        .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+        .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .rs-alert-read{border:0;background:transparent;color:#6c7a88;text-decoration:underline;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0}
+        .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+        .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+        .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+        .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
+        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}
+        .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
+        .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
+        .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
+        .wd-time-trigger{display:flex;align-items:center;justify-content:space-between;min-height:44px;text-align:left;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8;color:#a0aab3;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:60;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.14)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
+        .wd-time-field{display:grid;gap:5px}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
+        .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
+        .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
+        .wd-save:disabled{opacity:.6;cursor:wait}
+        .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:18px}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a}
+        .wd-availability-alert{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff8ed;border:1px solid #f1cf9e;border-radius:14px;padding:16px 18px;margin-bottom:20px}
+        .wd-availability-alert b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#8a531d;margin-bottom:4px}
+        .wd-availability-alert span{display:block;color:#6f5a42;font-size:13px;line-height:1.5;max-width:650px}
+        .wd-availability-alert-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
+        .wd-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa;color:#102438}
+        .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
+        @keyframes wdspin{to{transform:rotate(360deg)}}
+        @media(max-width:1180px){
+          .wd-overview{grid-template-columns:repeat(3,minmax(0,1fr))}
+          .wd-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+        }
+        @media(max-width:760px){
+          .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1320px)}
+          .wd-heading{align-items:flex-start;flex-direction:column}
+          .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .wd-heading-actions{width:100%}
+          .wd-focus{align-items:flex-start;flex-direction:column}
+          .wd-focus-btn{width:100%}
+          .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .wd-grid-2{grid-template-columns:1fr}
+          .wd-day{grid-template-columns:1fr 1fr}
+          .wd-day-date{grid-column:1/-1}
+          .wd-availability-choice{grid-column:1/-1}
+          .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
+          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{justify-content:flex-start}
+          .wd-heading-actions{justify-items:start}
+          .wd-availability-alert{align-items:stretch;flex-direction:column}
+          .wd-availability-alert-actions{justify-content:flex-start}
+          .wd-bottom{bottom:10px}
+          .wd-save{width:100%}
+        }
+        @media(max-width:480px){
+          .wd-overview{grid-template-columns:1fr}
+          .wd-heading h1{font-size:29px}
+        }
+      `}</style>
+
+      <header className="wd-topbar">
+        <div className="wd-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {onAdminReturn && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={onAdminReturn}
+              >
+                ← Administravimas
+              </button>
+            )}
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="wd-shell">
+        {!onAdminReturn &&
+          (!form.displayName.trim() ||
+            !form.phone.trim() ||
+            !Object.values(availability).some((day) => day.available)) && (
+            <section
+              style={{
+                marginBottom: 18,
+                padding: 16,
+                border: "1px solid #dfe7ed",
+                borderRadius: 16,
+                background: "#fff",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div>
+                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
+                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį darbo kvietimams</h3>
+                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="wd-secondary" type="button" onClick={() => setShowProfileEditor(true)}>Profilis</button>
+                  <button className="wd-primary" type="button" onClick={() => setShowProfileEditor(true)}>Nustatyti grafiką</button>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, marginTop: 14 }}>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{Object.values(availability).some((day) => day.available) ? "✓" : "2"}</b> Bent viena laisva diena</div>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
+              </div>
+            </section>
+          )}
+        <div className="wd-heading">
+          <div>
+            <div className="eyebrow">DARBUOTOJO PASKYRA</div>
+            <h1>Mano darbai ir statistika</h1>
+            <p>
+              Čia matote aktyvius darbus, neuždarytas darbo dienas ir savo
+              patikimumo statistiką.
+            </p>
+          </div>
+
+          <div className="wd-heading-actions">
+            <div className="wd-user">
+              <div className="wd-avatar">
+                {profileAvatarUrl ? (
+                  <img
+                    src={profileAvatarUrl}
+                    alt={form.displayName || "Darbuotojo profilis"}
+                  />
+                ) : (
+                  initials || "D"
+                )}
+              </div>
+              <div>
+                <b>{form.displayName || "Darbuotojas"}</b>
+                <span>{form.city || "Miestas nenurodytas"}</span>
+              </div>
+            </div>
+
+            <button
+              className={`wd-urgent-btn ${
+                urgentAvailabilityIsActive() ? "active" : ""
+              }`}
+              type="button"
+              onClick={() => {
+                setUrgentForm((current) => ({
+                  ...current,
+                  city:
+                    urgentAvailability.city ||
+                    current.city ||
+                    form.city ||
+                    "Vilnius",
+                }));
+                setShowUrgentAvailability(true);
+              }}
+            >
+              {urgentAvailabilityIsActive()
+                ? "Laisvas dabar · įjungta"
+                : "Laisvas dabar"}
+            </button>
+
+            {urgentAvailabilityIsActive() && (
+              <div className="wd-urgent-status">
+                {hasCurrentScheduledWork()
+                  ? "Šiuo metu skubioje paieškoje nerodomas: vyksta patvirtinto darbo laikas."
+                  : `${urgentAvailability.city} · matomas „Skubiai!“ paieškoje`}
+              </div>
+            )}
+
+            <button
+              className="wd-edit-profile"
+              type="button"
+              onClick={() => setShowProfileEditor((current) => !current)}
+            >
+              {showProfileEditor
+                ? "Uždaryti redagavimą"
+                : "Tvarkyti mano informaciją"}
+            </button>
+          </div>
+        </div>
+
+        <div className="wd-overview">
+          <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
+            <span>Nauji kvietimai</span>
+            <b>{invitations.length}</b>
+            <small>{invitations.length ? "Laukia jūsų atsakymo" : "Naujų kvietimų nėra"}</small>
+          </div>
+
+          <div
+            className={`wd-overview-card next-work ${
+              nextConfirmedJob?.work_date === workerDashboardToday ? "live" : ""
+            }`}
+          >
+            <span>Artimiausias darbas</span>
+            <b>
+              {nextConfirmedJob
+                ? `${nextConfirmedWorkdayDateLabel} · ${
+                    nextConfirmedJob.start_time?.slice(0, 5) || "Laikas nenurodytas"
+                  }`
+                : "Nėra"}
+            </b>
+            <small>
+              {nextConfirmedJob
+                ? `${nextConfirmedJob.title}${
+                    workerTodayJobs.length > 1 &&
+                    nextConfirmedJob.work_date === workerDashboardToday
+                      ? ` · dar ${workerTodayJobs.length - 1} šiandien`
+                      : nextConfirmedJob.city
+                      ? ` · ${nextConfirmedJob.city}`
+                      : ""
+                  }`
+                : "Patvirtintų artimiausių darbų nėra"}
+            </small>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerRequiredActionCount ? "danger" : ""
+            }`}
+          >
+            <span>Reikia veiksmo</span>
+            <b>{workerRequiredActionCount}</b>
+            <small>
+              {workerRequiredActionCount
+                ? needsAvailabilityConfirm
+                  ? "Įskaitant grafiko patvirtinimą"
+                  : "Atidarykite darbo dienas"
+                : "Veiksmų šiuo metu nėra"}
+            </small>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerUnreadMessages.length ? "action" : ""
+            }`}
+          >
+            <span>Naujos žinutės</span>
+            <b>{workerUnreadMessages.length}</b>
+            <small>{workerUnreadMessages.length ? "Atidarykite pokalbį" : "Viskas perskaityta"}</small>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerOpenDisputes.length ? "danger" : ""
+            }`}
+          >
+            <span>Ginčai</span>
+            <b>{workerOpenDisputes.length}</b>
+            <small>
+              {workerOpenDisputes.length
+                ? workerOpenDisputes.length === 1
+                  ? "Nagrinėja administratorius"
+                  : "Nagrinėjami administratoriaus"
+                : "Aktyvių ginčų nėra"}
+            </small>
+          </div>
+        </div>
+
+        <div className={`wd-focus ${workerPrimaryFocus.tone || ""}`}>
+          <div className="wd-focus-copy">
+            <div className="eyebrow">DABAR SVARBIAUSIA</div>
+            <b>{workerPrimaryFocus.title}</b>
+            <span>{workerPrimaryFocus.text}</span>
+          </div>
+
+          <button
+            className="wd-focus-btn"
+            type="button"
+            disabled={
+              workerPrimaryFocus.target === "availability" &&
+              confirmingAvailability
+            }
+            onClick={() => openWorkerDashboardTarget(workerPrimaryFocus.target)}
+          >
+            {workerPrimaryFocus.target === "availability" &&
+            confirmingAvailability
+              ? "Patvirtinama..."
+              : workerPrimaryFocus.action}
+          </button>
+        </div>
+
+        {showProfileEditor && (
+          <section className="wd-profile-editor">
+            <div className="wd-profile-editor-head">
+              <div>
+                <div className="eyebrow">MANO INFORMACIJA</div>
+                <h2>Tvarkyti mano informaciją</h2>
+                <p>
+                  Atnaujinkite savo profilį ir laiką, kada galite priimti darbo
+                  pasiūlymus.
+                </p>
+              </div>
+
+              <button
+                className="wd-profile-editor-close"
+                type="button"
+                disabled={saving}
+                onClick={() => setShowProfileEditor(false)}
+                aria-label="Uždaryti"
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="wd-profile-editor-section">
+              <h3>Pagrindinė informacija</h3>
+
+              <div className="wd-avatar-editor">
+                <div className="wd-avatar-preview">
+                  {profileAvatarUrl ? (
+                    <img
+                      src={profileAvatarUrl}
+                      alt={form.displayName || "Profilio nuotrauka"}
+                    />
+                  ) : (
+                    initials || "D"
+                  )}
+                </div>
+
+                <div className="wd-avatar-editor-copy">
+                  <b>Profilio nuotrauka</b>
+                  <span>
+                    Nuotrauką matys darbdaviai prie jūsų profilio. JPG, PNG arba
+                    WEBP, iki 5 MB.
+                  </span>
+                  <label className="wd-avatar-upload">
+                    {profileAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) =>
+                        chooseAvatarFile(e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="wd-grid-2">
+                <label className="wd-label">
+                  Vardas
+                  <input
+                    className="wd-input"
+                    value={form.displayName}
+                    onChange={(e) =>
+                      updateField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="wd-input"
+                    value={form.city}
+                    onChange={(value) => updateField("city", value)}
+                    placeholder="Pradėkite rašyti miestą"
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Telefonas *
+                  <input
+                    className="wd-input"
+                    value={form.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="+370..."
+                    required
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Kiek km galite nuvykti?
+                  <input
+                    className="wd-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    value={form.travelRadius}
+                    onChange={(e) =>
+                      updateField("travelRadius", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Patirtis statybose (metais)
+                  <input
+                    className="wd-input"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={form.yearsExperience}
+                    onChange={(e) =>
+                      updateField("yearsExperience", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="wd-check wd-profile-editor-check">
+                  <input
+                    type="checkbox"
+                    checked={form.hasDrivingLicenseB}
+                    onChange={(e) =>
+                      updateField("hasDrivingLicenseB", e.target.checked)
+                    }
+                  />
+                  Turiu B kategorijos vairuotojo pažymėjimą
+                </label>
+              </div>
+
+              <label className="wd-label" style={{ marginTop: 16 }}>
+                Trumpai apie patirtį
+                <textarea
+                  className="wd-textarea"
+                  value={form.shortBio}
+                  onChange={(e) => updateField("shortBio", e.target.value)}
+                  placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
+                />
+              </label>
+            </div>
+
+            <div className="wd-profile-editor-section">
+              <h3>Kada galite dirbti?</h3>
+              <p>
+                Pažymėkite artimiausias dienas, kuriomis realiai galite priimti
+                darbo pasiūlymą.
+              </p>
+
+              <div className="wd-days">
+                {days.map((day) => {
+                  const state = availability[day.iso];
+
+                  return (
+                    <div className={`wd-day ${state.available ? "available" : ""}`} key={day.iso}>
+                      <div className="wd-day-date">
+                        <b>{day.weekday}</b>
+                        <span>{day.label}</span>
+                      </div>
+
+                      <div className="wd-availability-choice">
+                        <span>Būsena</span>
+                        <RoundedSelect
+                          className="wd-status-select"
+                          ariaLabel={`${day.label} prieinamumas`}
+                          value={state.available ? "available" : "unavailable"}
+                          onChange={(value) =>
+                            updateAvailability(day.iso, {
+                              available: value === "available",
+                            })
+                          }
+                          options={[{ value: "unavailable", label: "Užimtas" }, { value: "available", label: "Laisvas" }]}
+                        />
+                      </div>
+
+                      <div className="wd-time-field">
+                        <span>Nuo</span>
+                        <RoundedTimeSelect
+                          ariaLabel={`${day.label} nuo`}
+                          disabled={!state.available}
+                          value={state.from}
+                          onChange={(value) =>
+                            updateAvailability(day.iso, {
+                              from: value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="wd-time-field">
+                        <span>Iki</span>
+                        <RoundedTimeSelect
+                          ariaLabel={`${day.label} iki`}
+                          align="right"
+                          disabled={!state.available}
+                          value={state.to}
+                          onChange={(value) =>
+                            updateAvailability(day.iso, {
+                              to: value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="wd-profile-editor-actions">
+              <button
+                className="wd-profile-editor-cancel"
+                type="button"
+                disabled={saving}
+                onClick={() => setShowProfileEditor(false)}
+              >
+                Atšaukti
+              </button>
+
+              <button
+                className="wd-save"
+                type="button"
+                disabled={saving}
+                onClick={saveEverything}
+              >
+                {saving ? "Saugoma..." : "Išsaugoti"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {needsAvailabilityConfirm && (
+          <div className="wd-availability-alert">
+            <div>
+              <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
+              <span>
+                Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų
+                darbuotojų paieškoje. Tai padeda rodyti tik realiai aktyvius
+                žmones.
+              </span>
+            </div>
+
+            <div className="wd-availability-alert-actions">
+              <button
+                className="wd-profile-editor-cancel"
+                type="button"
+                disabled={confirmingAvailability}
+                onClick={() => setShowProfileEditor(true)}
+              >
+                Keisti grafiką
+              </button>
+
+              <button
+                className="wd-save"
+                type="button"
+                disabled={confirmingAvailability}
+                onClick={confirmCurrentAvailability}
+              >
+                {confirmingAvailability
+                  ? "Patvirtinama..."
+                  : "Patvirtinti dabartinį grafiką"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <section>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">MANO STATISTIKA</div>
+          </div>
+
+          <div className="wd-kpis">
+            <div className="wd-kpi">
+              <span>Dirbta šį mėnesį</span>
+              <b>
+                {workerStats.monthWorkedDays} d. ·{" "}
+                {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
+              </b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbų šį mėnesį</span>
+              <b>{workerStats.monthJobs}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Aktyvūs darbai</span>
+              <b>{workerStats.activeJobs}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbdavio atšaukti</span>
+              <b>{workerStats.cancelledByEmployer}</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Atvykimo patikimumas</span>
+              <b>{Math.round(metrics.attendanceRate)}%</b>
+            </div>
+            <div className="wd-kpi">
+              <span>Darbdavių įvertinimas</span>
+              <b>
+                {metrics.ratingAverage === null
+                  ? "—"
+                  : `${metrics.ratingAverage.toFixed(1)} / 10`}
+              </b>
+              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                {metrics.ratingCount
+                  ? `${metrics.ratingCount} vertinimai`
+                  : "Dar nėra vertinimų"}
+              </small>
+            </div>
+            <div className="wd-kpi">
+              <span>Nepagrįsti ankstyvi išėjimai</span>
+              <b>{workerStats.unexcusedEarlyLeaveCount}</b>
+            </div>
+          </div>
+        </section>
+
+        {employerReviewOpportunities.length > 0 && (
+          <section
+            className="wd-card"
+            style={{
+              borderColor: "#f3c38f",
+              background: "#fffaf5",
+              marginBottom: 18,
+            }}
+          >
+            <div className="eyebrow">GINČAS IŠSPRĘSTAS JŪSŲ NAUDAI</div>
+            <h2 style={{ marginTop: 6 }}>
+              Galite palikti atsiliepimą apie darbdavį
+            </h2>
+            <p className="wd-card-sub">
+              Atsiliepimas bus rodomas įmonės profilyje ir darbuotojams,
+              gavusiems šios įmonės darbo kvietimus.
+            </p>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {employerReviewOpportunities.map((opportunity) => (
+                <div
+                  key={opportunity.attendance_id}
+                  style={{
+                    border: "1px solid #ead7c4",
+                    background: "#fff",
+                    borderRadius: 12,
+                    padding: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 14,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <b>{opportunity.company_name}</b>
+                    <div
+                      style={{
+                        color: "#6c7a88",
+                        fontSize: 13,
+                        marginTop: 4,
+                      }}
+                    >
+                      {opportunity.job_title} · {opportunity.work_date}
+                    </div>
+                  </div>
+
+                  <button
+                    className="wd-accept"
+                    type="button"
+                    onClick={() => openEmployerReview(opportunity)}
+                  >
+                    Palikti atsiliepimą
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {notice && <div className="wd-note ok">{notice}</div>}
+        {error && <div className="wd-note err">{error}</div>}
+        {metrics.restrictedUntil &&
+          new Date(metrics.restrictedUntil) > new Date() && (
+            <div className="wd-note err">
+              Paskyrai taikomas laikinas apribojimas: naujų darbų priimti negalite iki{" "}
+              {new Date(metrics.restrictedUntil).toLocaleString("lt-LT", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}.
+            </div>
+          )}
+
+        <div className="wd-form">
+          <section className="wd-card" id="worker-workdays">
+            <h2>Mano darbo dienos</h2>
+            <p className="wd-card-sub">
+              Pasibaigus darbo laikui darbo dieną turi uždaryti bent viena pusė.
+              Jei rezultatai nesutampa, reitingas nekeičiamas iki ginčo išsprendimo.
+              Žemiau visada rodome, koks yra jūsų kitas žingsnis.
+            </p>
+
+            {workdays.length ? (
+              <div className="wd-workdays">
+                {workdays.map((item) => {
+                  const job = item.job;
+                  const attendance = item.attendance || {};
+                  const ended = jobHasEnded(job);
+                  const workStarts = job.work_date && job.start_time
+                    ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+                    : null;
+                  const hasStarted = workStarts && !Number.isNaN(workStarts.getTime())
+                    && new Date() >= workStarts;
+                  const workdayPhase = item.status === "cancelled_by_employer"
+                    ? { label: "Atšauktas", tone: "cancelled" }
+                    : attendance.finalized_at || item.status === "completed"
+                    ? { label: "Užbaigtas", tone: "done" }
+                    : attendance.dispute_status === "disputed"
+                    ? { label: "Ginčas nagrinėjamas", tone: "past" }
+                    : ["no_show", "left_early_agreed", "left_early_unexcused"].includes(attendance.employer_outcome)
+                    ? { label: "Reikia peržiūrėti", tone: "past" }
+                    : ended && attendance.worker_workday_claim === "worked"
+                    ? { label: "Laukiama darbdavio", tone: "past" }
+                    : ended
+                    ? { label: "Pasibaigė · reikia uždaryti", tone: "past" }
+                    : hasStarted
+                    ? { label: "Vyksta šiandien", tone: "today" }
+                    : { label: "Laukiamas darbas", tone: "upcoming" };
+                  const checkInOpen = jobCheckInWindowOpen(job);
+                  const isConfirmed = item.status === "confirmed";
+                  const pendingNegative =
+                    !attendance.finalized_at &&
+                    ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+                      attendance.employer_outcome
+                    );
+                  const disputed =
+                    attendance.dispute_status === "disputed";
+                  const canCheckIn =
+                    isConfirmed &&
+                    checkInOpen &&
+                    !attendance.worker_check_in_at;
+                  const needsClose =
+                    isConfirmed &&
+                    ended &&
+                    !attendance.finalized_at &&
+                    !pendingNegative;
+                  const recentOrActive =
+                    isConfirmed ||
+                    item.status === "completed" ||
+                    item.status === "no_show" ||
+                    item.status === "cancelled_by_employer";
+
+                  const workdayNextStep =
+                    item.status === "cancelled_by_employer"
+                      ? {
+                          tone: "",
+                          title: "Darbas atšauktas",
+                          text: "Papildomų veiksmų šiai darbo dienai nereikia.",
+                        }
+                      : attendance.finalized_at
+                      ? {
+                          tone:
+                            attendance.final_outcome === "no_show" ||
+                            attendance.final_outcome === "left_early_unexcused"
+                              ? "danger"
+                              : "ok",
+                          title: "Darbo diena uždaryta",
+                          text:
+                            attendance.dispute_status === "resolved_worker" ||
+                            attendance.dispute_status === "resolved_employer"
+                              ? "Ginčas išspręstas ir galutinis rezultatas užfiksuotas."
+                              : "Galutinis darbo dienos rezultatas jau užfiksuotas.",
+                        }
+                      : disputed
+                      ? {
+                          tone: "danger",
+                          title: "Ginčas perduotas administratoriui",
+                          text: "Kol vyksta nagrinėjimas, reitingas nekeičiamas. Jei reikia, galite papildyti savo paaiškinimą ir įrodymus.",
+                        }
+                      : pendingNegative
+                      ? {
+                          tone: "action",
+                          title: "Reikia jūsų atsakymo",
+                          text: "Peržiūrėkite darbdavio pažymėtą rezultatą ir pasirinkite „Patvirtinti“ arba „Ginčyti“.",
+                        }
+                      : needsClose &&
+                        attendance.worker_workday_claim === "worked"
+                      ? {
+                          tone: "action",
+                          title: "Jūsų veiksmas atliktas",
+                          text: "Pažymėjote, kad dirbote. Dabar laukiama darbdavio darbo dienos uždarymo.",
+                        }
+                      : needsClose
+                      ? {
+                          tone: "action",
+                          title: "Uždarykite darbo dieną",
+                          text: "Pasirinkite „Dirbau šiame darbe“ arba, jei neatvykote, pažymėkite „Neatvykau“.",
+                        }
+                      : canCheckIn
+                      ? {
+                          tone: "action",
+                          title: "Atvykę pažymėkite atvykimą",
+                          text: "Paspauskite „Atvykau“. Jei nerandate objekto ar atsakingo žmogaus, naudokite „Atvykau, bet nerandu“.",
+                        }
+                      : checkInOpen && attendance.worker_check_in_at
+                      ? {
+                          tone: "ok",
+                          title: "Atvykimas užfiksuotas",
+                          text: attendance.employer_check_in_at
+                            ? "Darbdavys taip pat patvirtino jūsų atvykimą. Po darbo pabaigos reikės uždaryti dieną."
+                            : "Jūsų atvykimas sistemoje užfiksuotas. Darbdavys gali jį papildomai patvirtinti.",
+                        }
+                      : hasStarted
+                      ? {
+                          tone: "",
+                          title: "Darbo diena vyksta",
+                          text: "Po numatyto darbo laiko pabaigos atsiras darbo dienos uždarymo veiksmai.",
+                        }
+                      : {
+                          tone: "",
+                          title: "Kitas žingsnis",
+                          text: "Atvykimo mygtukas atsiras likus 2 valandoms iki darbo pradžios.",
+                        };
+
+                  if (!recentOrActive) return null;
+
+                  return (
+                    <div className="wd-workday" key={item.id}>
+                      <div>
+                        <div className="wd-workday-title"><h3>{job.title}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
+                        <div className="wd-workday-meta">
+                          <div>
+                            <b>{item.companyName}</b>
+                            {job.pay_amount
+                              ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                              : ""}
+                            {" · "}
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </div>
+                        </div>
+
+                        {item.status === "cancelled_by_employer" && (
+                          <span className="wd-workday-status red">
+                            Darbdavys atšaukė darbą
+                          </span>
+                        )}
+
+                        {unreadWorkerJobNotifications(job.id).length > 0 && (
+                          <span className="wd-workday-status orange">
+                            ● Nauja žinutė darbo pokalbyje
+                          </span>
+                        )}
+
+                        {attendance.finalized_at && (
+                          <span
+                            className={`wd-workday-status ${
+                              attendance.final_outcome === "no_show" ||
+                              attendance.final_outcome === "left_early_unexcused"
+                                ? "red"
+                                : "green"
+                            }`}
+                          >
+                            {attendanceOutcomeLabel(attendance)}
+                            {attendance.worked_minutes > 0
+                              ? ` · ${formatWorkedMinutes(attendance.worked_minutes)}`
+                              : ""}
+                          </span>
+                        )}
+
+                        {!attendance.finalized_at && disputed && (
+                          <span className="wd-workday-status red">
+                            Ginčas pateiktas · reitingas nekeičiamas
+                          </span>
+                        )}
+
+                        {!attendance.finalized_at &&
+                          pendingNegative &&
+                          !disputed && (
+                            <div style={{ marginTop: 10 }}>
+                              <span className="wd-workday-status orange">
+                                Darbdavys pažymėjo: {attendanceOutcomeLabel(attendance)}
+                              </span>
+                              {attendance.employer_note && (
+                                <div
+                                  style={{
+                                    marginTop: 7,
+                                    color: "#6c7a88",
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  Darbdavio paaiškinimas: {attendance.employer_note}
+                                </div>
+                              )}
+                              {attendance.worker_check_in_at && (
+                                <div
+                                  style={{
+                                    marginTop: 7,
+                                    color: "#167a54",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Sistema turi jūsų „Atvykau“ pažymėjimą.
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim === "worked" && (
+                            <span className="wd-workday-status orange">
+                              Pažymėjote, kad dirbote · laukiama darbdavio patvirtinimo
+                            </span>
+                          )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim !== "worked" && (
+                            <span className="wd-workday-status orange">
+                              Neuždaryta darbo diena · reikia veiksmo
+                            </span>
+                          )}
+
+                        {attendance.worker_check_in_at &&
+                          !attendance.finalized_at &&
+                          !pendingNegative && (
+                            <div
+                              style={{
+                                marginTop: 7,
+                                color: "#167a54",
+                                fontSize: 13,
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓ Atvykimą pažymėjote{" "}
+                              {new Date(attendance.worker_check_in_at).toLocaleTimeString(
+                                "lt-LT",
+                                { hour: "2-digit", minute: "2-digit" }
+                              )}
+                            </div>
+                          )}
+                        {attendance.employer_check_in_at &&
+                          !attendance.finalized_at && (
+                            <div
+                              style={{
+                                marginTop: 7,
+                                color: "#167a54",
+                                fontSize: 13,
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓ Darbdavys patvirtino jūsų atvykimą{" "}
+                              {new Date(
+                                attendance.employer_check_in_at
+                              ).toLocaleTimeString("lt-LT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+
+                        <div
+                          className={`wd-next-step ${
+                            workdayNextStep.tone || ""
+                          }`}
+                        >
+                          <b>{workdayNextStep.title}</b>
+                          {workdayNextStep.text}
+                        </div>
+                      </div>
+
+                      <div className="wd-workday-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(item)}
+                        >
+                          Atidaryti
+                        </button>
+
+                        {["confirmed", "completed", "no_show"].includes(
+                          item.status
+                        ) && (
+                          <button
+                            className={`wd-decline wd-workday-chat ${
+                              unreadWorkerJobNotifications(job.id).some(
+                                (item) => item.event_type === "message"
+                              )
+                                ? "has-unread"
+                                : ""
+                            }`}
+                            type="button"
+                            onClick={() => openWorkerGroupConversation(job)}
+                          >
+                            Darbo pokalbis
+                            {unreadWorkerJobNotifications(job.id).filter(
+                              (item) => item.event_type === "message"
+                            ).length > 0 && (
+                              <span className="wd-chat-count">
+                                Nauja{" "}
+                                {Math.min(
+                                  9,
+                                  unreadWorkerJobNotifications(job.id).filter(
+                                    (item) => item.event_type === "message"
+                                  ).length
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        )}
+
+                        {canCheckIn && (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={attendanceBusy}
+                              onClick={() => workerCheckIn(item.id)}
+                            >
+                              Atvykau
+                            </button>
+                            <button
+                              className="wd-decline"
+                              type="button"
+                              onClick={() => openArrivalHelp(item)}
+                            >
+                              Atvykau, bet nerandu
+                            </button>
+                          </>
+                        )}
+
+                        {pendingNegative && !disputed && (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={attendanceBusy}
+                              onClick={() =>
+                                workerRespondAttendance(
+                                  attendance.id,
+                                  "confirmed"
+                                )
+                              }
+                            >
+                              Patvirtinti
+                            </button>
+                            <button
+                              className="wd-danger"
+                              disabled={attendanceBusy}
+                              onClick={() => {
+                                setWorkerAttendanceTarget(item);
+                                setWorkerAttendanceMode("dispute");
+                                setWorkerAttendanceNote("");
+                                setWorkerEvidenceFile(null);
+                              }}
+                            >
+                              Ginčyti
+                            </button>
+                          </>
+                        )}
+
+                        {disputed && attendance.id && (
+                          <button
+                            className="wd-decline"
+                            disabled={attendanceBusy}
+                            onClick={() => {
+                              setWorkerAttendanceTarget(item);
+                              setWorkerAttendanceMode("dispute");
+                              setWorkerAttendanceNote(
+                                attendance.worker_response_note?.startsWith(
+                                  "Automatinis ginčas:"
+                                )
+                                  ? ""
+                                  : attendance.worker_response_note || ""
+                              );
+                              setWorkerEvidenceFile(null);
+                            }}
+                          >
+                            Papildyti ginčą
+                          </button>
+                        )}
+
+                        {needsClose &&
+                          attendance.worker_workday_claim !== "worked" && (
+                            <>
+                              <button
+                                className="wd-accept"
+                                disabled={attendanceBusy}
+                                onClick={() =>
+                                  workerClaimWorkday(item.id, "worked")
+                                }
+                              >
+                                Dirbau šiame darbe
+                              </button>
+                              <button
+                                className="wd-danger"
+                                disabled={attendanceBusy}
+                                onClick={() => {
+                                  setWorkerAttendanceTarget(item);
+                                  setWorkerAttendanceMode("self_no_show");
+                                  setWorkerAttendanceNote("");
+                                  setWorkerEvidenceFile(null);
+                                }}
+                              >
+                                Neatvykau
+                              </button>
+                            </>
+                          )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Patvirtintų darbo dienų kol kas nėra.
+              </div>
+            )}
+          </section>
+
+          <section className="wd-card" id="worker-invitations">
+            <h2>Darbo kvietimai</h2>
+            <p className="wd-card-sub">
+              Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
+            </p>
+
+            {invitations.length ? (
+              <div className="wd-invites">
+                {invitations.map((invitation) => {
+                  const job = invitation.job;
+                  if (!job) return null;
+
+                  const busy = respondingInvitation === invitation.id;
+                  const unreadNews = unreadWorkerNotifications(invitation.id);
+                  const unreadPresentation = notificationPresentation(unreadNews);
+                  const unreadPrivateMessages = unreadNews.filter(
+                    (item) => item.event_type === "message"
+                  );
+                  const hasConflict = invitationHasConflict(invitation);
+                  const statusLabel =
+                    invitation.status === "accepted"
+                      ? "Priimta"
+                      : invitation.status === "declined"
+                      ? "Atmesta"
+                      : invitation.status === "cancelled"
+                      ? "Atšaukta"
+                      : invitation.status === "expired"
+                      ? "Nebegalioja"
+                      : "Laukia atsakymo";
+
+                  return (
+                    <div
+                      className={[
+                        "wd-invite",
+                        unreadPrivateMessages.length ? "has-unread" : "",
+                        hasConflict ? "has-conflict" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      key={invitation.id}
+                    >
+                      <div className="wd-invite-main">
+                        {unreadNews.length > 0 && (
+                          <div>
+                            <span className={`rs-alert ${unreadPresentation.tone}`}>
+                              {unreadPresentation.label}
+                              {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                            </span>
+                            <div>
+                              <button
+                                className="rs-alert-read"
+                                onClick={() => markWorkerNotificationsRead(invitation.id)}
+                              >
+                                Pažymėti perskaityta
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        <h3>{job.title}</h3>
+                        <div className="wd-invite-summary">
+                          <b>{invitation.companyName}</b>
+                          <span>
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </span>
+                          <span>{job.city || "Miestas nenurodytas"}</span>
+                          <span>
+                            {job.pay_amount
+                              ? formatNetPay(job.pay_amount, job.pay_unit)
+                              : "Atlygis nenurodytas"}
+                          </span>
+                          <span>
+                            Patikimumas:{" "}
+                            {Math.round(invitation.companyReliability)} / 100
+                          </span>
+                          {invitation.companyDisputeReviewCount > 0 && (
+                            <span
+                              style={{
+                                color: "#b85f0e",
+                                fontWeight: 800,
+                              }}
+                            >
+                              Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
+                              {invitation.companyDisputeReviewCount}
+                            </span>
+                          )}
+                        </div>
+
+                        {hasConflict && (
+                          <span className="wd-conflict">
+                            Laikas sutampa su jau priimtu darbu
+                          </span>
+                        )}
+
+                        {job.status === "cancelled" && (
+                          <div
+                            className="wd-note err"
+                            style={{ marginTop: 12 }}
+                          >
+                            <b>Darbdavys atšaukė šį darbą.</b>
+                            <div style={{ marginTop: 4 }}>
+                              Priežastis:{" "}
+                              {job.cancellation_reason || "Priežastis nenurodyta."}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="wd-invite-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(invitation)}
+                        >
+                          Atidaryti
+                        </button>
+
+                        {invitation.status === "pending" ? (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={
+                                busy ||
+                                hasConflict ||
+                                (metrics.restrictedUntil &&
+                                  new Date(metrics.restrictedUntil) > new Date())
+                              }
+                              onClick={() => {
+                                setCommitmentChecked(false);
+                                setConfirmInvitation(invitation);
+                              }}
+                            >
+                              {busy
+                                ? "Prašome..."
+                                : hasConflict
+                                ? "Laikas užimtas"
+                                : "Priimti"}
+                            </button>
+                            <button
+                              className="wd-decline"
+                              disabled={busy}
+                              onClick={() =>
+                                respondToInvitation(invitation.id, "declined")
+                              }
+                            >
+                              Atmesti
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`wd-invite-status ${invitation.status}`}>
+                            {statusLabel}
+                          </span>
+                        )}
+
+                        <button
+                          className={`wd-decline wd-chat-btn ${
+                            unreadPrivateMessages.length ? "has-unread" : ""
+                          }`}
+                          onClick={() => {
+                            setConversation({
+                              invitationId: invitation.id,
+                              title: `${invitation.companyName} · ${job.title}`,
+                            });
+                          }}
+                        >
+                          Žinutės
+                          {unreadPrivateMessages.length > 0 && (
+                            <span className="wd-chat-count">
+                              Nauja {Math.min(9, unreadPrivateMessages.length)}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Šiuo metu naujų darbo kvietimų nėra.
+              </div>
+            )}
+          </section>
+
+        </div>
+      </main>
+
+      {workdayDetailsTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setWorkdayDetailsTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO INFORMACIJA</div>
+                <h2>{workdayDetailsTarget.job?.title || "Darbas"}</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                onClick={() => setWorkdayDetailsTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "#f8fafb",
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbdavys
+                </div>
+                <b style={{ display: "block", marginTop: 4, fontSize: 17 }}>
+                  {workdayDetailsTarget.companyName || "Darbdavys"}
+                </b>
+              </div>
+
+              {workdayDetailsTarget.companyReliability !== undefined && (
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Darbdavio patikimumas
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {Math.round(
+                      Number(workdayDetailsTarget.companyReliability || 0)
+                    )}{" "}
+                    / 100
+                  </b>
+                  {Number(
+                    workdayDetailsTarget.companyCancelledConfirmed || 0
+                  ) > 0 && (
+                    <div
+                      style={{
+                        color: "#6c7a88",
+                        fontSize: 12,
+                        marginTop: 5,
+                      }}
+                    >
+                      Atšauktų jau patvirtintų darbų:{" "}
+                      {Number(
+                        workdayDetailsTarget.companyCancelledConfirmed || 0
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {workdayDetailsTarget.companyReviews?.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #f0d1b2",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fffaf5",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      color: "#102438",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Atsiliepimai po darbuotojų laimėtų ginčų
+                  </div>
+
+                  <div style={{ display: "grid", gap: 9 }}>
+                    {workdayDetailsTarget.companyReviews.map((review) => (
+                      <div
+                        key={review.id}
+                        style={{
+                          background: "#fff",
+                          border: "1px solid #eadfd5",
+                          borderRadius: 10,
+                          padding: 11,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            flexWrap: "wrap",
+                            marginBottom: 5,
+                          }}
+                        >
+                          <b>{review.score} / 10</b>
+                          <span
+                            style={{
+                              color: "#7a8996",
+                              fontSize: 11,
+                            }}
+                          >
+                            {review.work_date || ""}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            color: "#6c7a88",
+                            fontSize: 11,
+                            marginBottom: 5,
+                          }}
+                        >
+                          {review.job_title}
+                        </div>
+                        <div
+                          style={{
+                            lineHeight: 1.5,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {review.comment}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Data ir laikas
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {workdayDetailsTarget.job?.work_date} ·{" "}
+                    {workdayDetailsTarget.job?.start_time?.slice(0, 5)}
+                    {workdayDetailsTarget.job?.end_time
+                      ? `–${workdayDetailsTarget.job.end_time.slice(0, 5)}`
+                      : ""}
+                  </b>
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                    Atlygis
+                  </div>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {workdayDetailsTarget.job?.pay_amount
+                      ? formatNetPay(
+                          workdayDetailsTarget.job.pay_amount,
+                          workdayDetailsTarget.job.pay_unit
+                        )
+                      : "Nenurodytas"}
+                  </b>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbo adresas
+                </div>
+                <b style={{ display: "block", marginTop: 4 }}>
+                  {workdayDetailsTarget.job?.address_text ||
+                    workdayDetailsTarget.job?.city ||
+                    "Adresas nenurodytas"}
+                </b>
+              </div>
+
+              {workdayDetailsTarget.job?.break_start_time &&
+                workdayDetailsTarget.job?.break_end_time && (
+                  <div
+                    style={{
+                      border: "1px solid #e4ebf0",
+                      borderRadius: 12,
+                      padding: 14,
+                    }}
+                  >
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                      Pietų pertrauka
+                    </div>
+                    <b style={{ display: "block", marginTop: 4 }}>
+                      {workdayDetailsTarget.job.break_start_time.slice(0, 5)}–
+                      {workdayDetailsTarget.job.break_end_time.slice(0, 5)}
+                    </b>
+                  </div>
+                )}
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Atvykimas į darbo vietą
+                </div>
+                <b style={{ display: "block", marginTop: 4 }}>
+                  {workdayDetailsTarget.job?.transport_mode ===
+                  "employer_pickup"
+                    ? "Darbdavys paima darbuotoją"
+                    : "Darbuotojas atvyksta pats"}
+                </b>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbdavio telefono numeris
+                </div>
+
+                {workdayDetailsTarget.companyPhone ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      marginTop: 5,
+                    }}
+                  >
+                    <b>{workdayDetailsTarget.companyPhone}</b>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      onClick={() =>
+                        copyPhoneNumber(workdayDetailsTarget.companyPhone)
+                      }
+                    >
+                      Kopijuoti numerį
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 5, color: "#6c7a88" }}>
+                    Telefono numeris nenurodytas.
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Darbo aprašymas
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    lineHeight: 1.55,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {workdayDetailsTarget.job?.description?.trim() ||
+                    "Darbdavys papildomo darbo aprašymo nepateikė."}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {workdayDetailsTarget.status === "pending" && (
+                <>
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    disabled={
+                      respondingInvitation === workdayDetailsTarget.id
+                    }
+                    onClick={async () => {
+                      const invitationId = workdayDetailsTarget.id;
+                      setWorkdayDetailsTarget(null);
+                      await respondToInvitation(invitationId, "declined");
+                    }}
+                  >
+                    Atmesti
+                  </button>
+
+                  <button
+                    className="wd-accept"
+                    type="button"
+                    disabled={
+                      busy ||
+                      invitationHasConflict(workdayDetailsTarget) ||
+                      (metrics.restrictedUntil &&
+                        new Date(metrics.restrictedUntil) > new Date())
+                    }
+                    onClick={() => {
+                      const invitation = workdayDetailsTarget;
+                      setWorkdayDetailsTarget(null);
+                      setCommitmentChecked(false);
+                      setConfirmInvitation(invitation);
+                    }}
+                  >
+                    {invitationHasConflict(workdayDetailsTarget)
+                      ? "Laikas užimtas"
+                      : "Priimti darbą"}
+                  </button>
+                </>
+              )}
+
+              {["confirmed", "completed", "no_show"].includes(
+                workdayDetailsTarget.status
+              ) && (
+                <button
+                  className="wd-decline"
+                  type="button"
+                  onClick={() => {
+                    const job = workdayDetailsTarget.job;
+                    setWorkdayDetailsTarget(null);
+                    openWorkerGroupConversation(job);
+                  }}
+                >
+                  Darbo pokalbis
+                </button>
+              )}
+
+              <button
+                className="wd-decline"
+                type="button"
+                onClick={() => setWorkdayDetailsTarget(null)}
+              >
+                Uždaryti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUrgentAvailability && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !urgentSaving) {
+              setShowUrgentAvailability(false);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">LAISVAS DABAR</div>
+                <h2>Leisti darbdaviui jus rasti skubiai</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={urgentSaving}
+                onClick={() => setShowUrgentAvailability(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div
+              style={{
+                border: "1px solid #f0d1b2",
+                background: "#fffaf5",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+                color: "#526374",
+                lineHeight: 1.5,
+                fontSize: 13,
+              }}
+            >
+              Įjungę šį režimą patvirtinate, kad šiuo metu laukiate skubaus
+              darbo. Darbdaviai, ieškantys darbuotojo jūsų
+              pasirinktame mieste, galės matyti jūsų vardą ir telefono numerį,
+              kol patys šio režimo neišjungsite.
+            </div>
+
+            {hasCurrentScheduledWork() && (
+              <div className="wd-note err" style={{ marginBottom: 14 }}>
+                Dabar turite patvirtintą darbą. Net jei į jį neatvykote, „Laisvas dabar“
+                galėsite įjungti tik pasibaigus suplanuotam darbo laikui.
+              </div>
+            )}
+
+            <div style={{ display: "grid", gap: 14 }}>
+              <label className="wd-label">
+                Miestas
+                <CityAutocomplete
+                  className="wd-input"
+                  value={urgentForm.city}
+                  onChange={(value) =>
+                    setUrgentForm((current) => ({
+                      ...current,
+                      city: value,
+                    }))
+                  }
+                  placeholder="Pvz. Vilnius"
+                />
+              </label>
+
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 9,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <div>
+                {urgentAvailabilityIsActive() && (
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    disabled={urgentSaving}
+                    onClick={disableUrgentAvailability}
+                  >
+                    Išjungti „Laisvas dabar“
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 9 }}>
+                <button
+                  className="wd-decline"
+                  type="button"
+                  disabled={urgentSaving}
+                  onClick={() => setShowUrgentAvailability(false)}
+                >
+                  Atšaukti
+                </button>
+                <button
+                  className="wd-urgent-btn"
+                  type="button"
+                  disabled={urgentSaving || hasCurrentScheduledWork()}
+                  onClick={enableUrgentAvailability}
+                >
+                  {urgentSaving ? "Saugoma..." : "Esu laisvas dabar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {employerReviewTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !employerReviewSaving) {
+              setEmployerReviewTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">ATSILIEPIMAS APIE DARBDAVĮ</div>
+                <h2>Jūs laimėjote ginčą</h2>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={employerReviewSaving}
+                onClick={() => setEmployerReviewTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#fffaf5",
+                border: "1px solid #f0d1b2",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+                lineHeight: 1.5,
+              }}
+            >
+              <b>{employerReviewTarget.company_name}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {employerReviewTarget.job_title} ·{" "}
+                {employerReviewTarget.work_date}
+              </div>
+              <div style={{ marginTop: 8, color: "#526374" }}>
+                Ginčas oficialiai išspręstas jūsų naudai. Galite pasidalinti
+                savo patirtimi, kad kiti darbuotojai turėtų daugiau informacijos
+                prieš priimdami šios įmonės darbo pasiūlymą.
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <b>Įvertinimas</b>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(10, minmax(34px,1fr))",
+                  gap: 6,
+                  marginTop: 9,
+                }}
+              >
+                {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                  (score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setEmployerReviewScore(score)}
+                      style={{
+                        border:
+                          employerReviewScore === score
+                            ? "1px solid #f08a28"
+                            : "1px solid #dbe4ea",
+                        background:
+                          employerReviewScore === score ? "#fff3e7" : "#fff",
+                        color: "#102438",
+                        borderRadius: 9,
+                        minHeight: 40,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {score}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            <label style={{ display: "grid", gap: 7, fontWeight: 700 }}>
+              Atsiliepimas *
+              <textarea
+                className="wd-textarea"
+                maxLength={1500}
+                value={employerReviewComment}
+                onChange={(e) => setEmployerReviewComment(e.target.value)}
+                placeholder="Trumpai ir konkrečiai aprašykite, kas nutiko ir ką kiti darbuotojai turėtų žinoti."
+                style={{ minHeight: 120 }}
+              />
+              <span
+                style={{
+                  color: "#7a8996",
+                  fontSize: 11,
+                  fontWeight: 500,
+                }}
+              >
+                {employerReviewComment.trim().length}/1500 · mažiausiai 10
+                simbolių
+              </span>
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="wd-decline"
+                type="button"
+                disabled={employerReviewSaving}
+                onClick={() => setEmployerReviewTarget(null)}
+              >
+                Vėliau
+              </button>
+              <button
+                className="wd-accept"
+                type="button"
+                disabled={
+                  employerReviewSaving ||
+                  !employerReviewScore ||
+                  employerReviewComment.trim().length < 10
+                }
+                onClick={submitEmployerReview}
+              >
+                {employerReviewSaving
+                  ? "Skelbiama..."
+                  : "Paskelbti atsiliepimą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {arrivalHelpTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setArrivalHelpTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">PAGALBA ATVYKUS</div>
+                <h2>Atvykau, bet nerandu darbdavio</h2>
+              </div>
+              <button
+                className="rs-close"
+                onClick={() => setArrivalHelpTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#f6f8fa",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <b>{arrivalHelpTarget.companyName}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {arrivalHelpTarget.job?.title} · {arrivalHelpTarget.job?.work_date}
+              </div>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {arrivalHelpTarget.job?.address_text || "Adresas nenurodytas"}
+              </div>
+            </div>
+
+            <div className="wd-note ok" style={{ marginBottom: 16 }}>
+              Jei jau esate vietoje, pirmiausia parašykite žinutę darbdaviui.
+              Jei reikia, galite nukopijuoti jo telefono numerį ir susisiekti tiesiogiai.
+            </div>
+
+            <div style={{ display: "grid", gap: 12, marginBottom: 18 }}>
+              <button
+                className="wd-accept"
+                type="button"
+                onClick={() => {
+                  setArrivalHelpTarget(null);
+                  setConversation({
+                    invitationId: arrivalHelpTarget.invitation_id,
+                    title: `${arrivalHelpTarget.companyName} · ${arrivalHelpTarget.job?.title}`,
+                  });
+                }}
+              >
+                Rašyti žinutę darbdaviui
+              </button>
+
+              {arrivalHelpTarget.companyPhone ? (
+                <div
+                  style={{
+                    border: "1px solid #dbe4ea",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fff",
+                  }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 13, marginBottom: 6 }}>
+                    Darbdavio telefono numeris
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <b style={{ fontSize: 18 }}>{arrivalHelpTarget.companyPhone}</b>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      onClick={() => copyPhoneNumber(arrivalHelpTarget.companyPhone)}
+                    >
+                      Kopijuoti numerį
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="wd-note err" style={{ marginBottom: 0 }}>
+                  Šiuo metu darbdavio telefono numeris nenurodytas. Parašykite jam žinutę platformoje.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                className="wd-decline"
+                type="button"
+                onClick={() => setArrivalHelpTarget(null)}
+              >
+                Uždaryti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {workerAttendanceTarget && workerAttendanceMode && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !attendanceBusy) {
+              setWorkerAttendanceTarget(null);
+              setWorkerAttendanceMode(null);
+              setWorkerAttendanceNote("");
+              setWorkerEvidenceFile(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">
+                  {workerAttendanceMode === "dispute"
+                    ? "DARBO DIENOS GINČAS"
+                    : "DARBO DIENOS PATVIRTINIMAS"}
+                </div>
+                <h2>
+                  {workerAttendanceMode === "dispute"
+                    ? "Nesutinkate su darbdavio pažymėjimu?"
+                    : "Patvirtinti, kad neatvykote?"}
+                </h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={attendanceBusy}
+                onClick={() => {
+                  setWorkerAttendanceTarget(null);
+                  setWorkerAttendanceMode(null);
+                  setWorkerAttendanceNote("");
+                  setWorkerEvidenceFile(null);
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {workerAttendanceMode === "dispute" ? (
+              <>
+                <div className="wd-note err" style={{ marginBottom: 14 }}>
+                  Kol ginčas neišspręstas, jūsų patikimumo reitingas nebus
+                  mažinamas. Trumpai parašykite, kas įvyko.
+                </div>
+                <label className="wd-label">
+                  Paaiškinimas *
+                  <textarea
+                    className="wd-textarea"
+                    value={workerAttendanceNote}
+                    maxLength={1000}
+                    onChange={(e) => setWorkerAttendanceNote(e.target.value)}
+                    placeholder="Pvz. Atvykau 07:55 ir dirbau iki 17:00. Darbdaviui parašiau žinutę..."
+                  />
+                </label>
+                <label className="wd-label" style={{ marginTop: 14 }}>
+                  Įrodymas (nebūtina)
+                  <input
+                    className="wd-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    disabled={attendanceBusy}
+                    onChange={(e) =>
+                      setWorkerEvidenceFile(e.target.files?.[0] || null)
+                    }
+                  />
+                  <span
+                    style={{
+                      display: "block",
+                      marginTop: 6,
+                      color: "#6c7a88",
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Galite pridėti nuotrauką arba PDF iki 8 MB. Failą matys tik
+                    ginčą nagrinėjantis administratorius.
+                  </span>
+                  {workerEvidenceFile && (
+                    <span
+                      style={{
+                        display: "block",
+                        marginTop: 6,
+                        color: "#167a54",
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Pasirinkta: {workerEvidenceFile.name}
+                    </span>
+                  )}
+                </label>
+              </>
+            ) : (
+              <div className="wd-note err" style={{ marginBottom: 0 }}>
+                Patvirtinus neatvykimą, bus pritaikytas 3 dienų naujų darbų
+                priėmimo apribojimas ir sumažės atvykimo patikimumas.
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="wd-decline"
+                disabled={attendanceBusy}
+                onClick={() => {
+                  setWorkerAttendanceTarget(null);
+                  setWorkerAttendanceMode(null);
+                  setWorkerAttendanceNote("");
+                  setWorkerEvidenceFile(null);
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className={
+                  workerAttendanceMode === "dispute"
+                    ? "wd-danger"
+                    : "wd-danger"
+                }
+                disabled={
+                  attendanceBusy ||
+                  (workerAttendanceMode === "dispute" &&
+                    workerAttendanceNote.trim().length < 5)
+                }
+                onClick={() => {
+                  if (workerAttendanceMode === "dispute") {
+                    workerRespondAttendance(
+                      workerAttendanceTarget.attendance.id,
+                      "disputed",
+                      workerAttendanceNote.trim()
+                    );
+                  } else {
+                    workerClaimWorkday(
+                      workerAttendanceTarget.id,
+                      "no_show"
+                    );
+                  }
+                }}
+              >
+                {attendanceBusy
+                  ? "Prašome..."
+                  : workerAttendanceMode === "dispute"
+                  ? "Pateikti ginčą"
+                  : "Taip, neatvykau"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmInvitation && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !respondingInvitation) {
+              setConfirmInvitation(null);
+              setCommitmentChecked(false);
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <style>{`
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+              .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+            `}</style>
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO PATVIRTINIMAS</div>
+                <h2>Ar tikrai įsipareigojate atvykti laiku?</h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={Boolean(respondingInvitation)}
+                onClick={() => {
+                  setConfirmInvitation(null);
+                  setCommitmentChecked(false);
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div style={{ background: "#f6f8fa", borderRadius: 12, padding: 15 }}>
+              <b>{confirmInvitation.job?.title}</b>
+              <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
+                {confirmInvitation.companyName} · {confirmInvitation.job?.city}
+                <br />
+                Darbdavio patikimumas:{" "}
+                <b>{Math.round(confirmInvitation.companyReliability)}%</b>
+                {confirmInvitation.companyCancelledConfirmed > 0
+                  ? ` · atšauktų patvirtintų darbų: ${confirmInvitation.companyCancelledConfirmed}`
+                  : ""}
+                {confirmInvitation.companyDisputeReviewCount > 0 && (
+                  <>
+                    <br />
+                    <span style={{ color: "#b85f0e", fontWeight: 800 }}>
+                      Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
+                      {confirmInvitation.companyDisputeReviewCount}
+                    </span>
+                  </>
+                )}
+                <br />
+                {confirmInvitation.job?.work_date} ·{" "}
+                {confirmInvitation.job?.start_time?.slice(0, 5)}
+                {confirmInvitation.job?.end_time
+                  ? `–${confirmInvitation.job.end_time.slice(0, 5)}`
+                  : ""}
+                <br />
+                Atvykimas:{" "}
+                <b>
+                  {confirmInvitation.job?.transport_mode === "employer_pickup"
+                    ? "darbdavys paima darbuotoją"
+                    : "darbuotojas atvyksta pats"}
+                </b>
+                {confirmInvitation.job?.break_start_time &&
+                  confirmInvitation.job?.break_end_time && (
+                    <>
+                      <br />
+                      Pietų pertrauka:{" "}
+                      <b>
+                        {confirmInvitation.job.break_start_time.slice(0, 5)}–
+                        {confirmInvitation.job.break_end_time.slice(0, 5)}
+                      </b>
+                    </>
+                  )}
+              </div>
+              <div className="wd-pay">
+                {formatNetPay(
+                  confirmInvitation.job?.pay_amount,
+                  confirmInvitation.job?.pay_unit
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <b>Priimdami darbą prisiimate realų įsipareigojimą.</b>
+              <ul style={{ lineHeight: 1.65, color: "#425466", paddingLeft: 22 }}>
+                <li>
+                  Jei atsiranda problema dėl atvykimo, kuo greičiau parašykite
+                  darbdaviui žinutę šiame darbo pokalbyje.
+                </li>
+                <li>
+                  Neatvykus į patvirtintą darbą, 3 dienas negalėsite priimti
+                  naujų darbų.
+                </li>
+                <li>
+                  Neatvykimas sumažins jūsų patikimumo reitingą, todėl darbdavių
+                  paieškoje būsite rodomi žemiau ir galite gauti mažiau kvietimų.
+                </li>
+              </ul>
+              <p style={{ fontSize: 13, color: "#6c7a88", lineHeight: 1.5 }}>
+                Jei negalite atvykti, svarbiausia nepradingti — informuokite
+                darbdavį žinute kuo anksčiau.
+              </p>
+            </div>
+
+            <label style={{
+              display: "flex", gap: 9, alignItems: "flex-start",
+              padding: "12px 0", fontWeight: 700
+            }}>
+              <input
+                type="checkbox"
+                checked={commitmentChecked}
+                onChange={(e) => setCommitmentChecked(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              Suprantu sąlygas ir patvirtinu, kad planuoju atvykti laiku.
+            </label>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 9 }}>
+              <button
+                className="wd-decline"
+                disabled={Boolean(respondingInvitation)}
+                onClick={() => {
+                  setConfirmInvitation(null);
+                  setCommitmentChecked(false);
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className="wd-accept"
+                disabled={!commitmentChecked || Boolean(respondingInvitation)}
+                onClick={() =>
+                  respondToInvitation(confirmInvitation.id, "accepted")
+                }
+              >
+                {respondingInvitation
+                  ? "Patvirtinama..."
+                  : "Taip, įsipareigoju atvykti"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConversationModal
+        open={Boolean(conversation)}
+        onClose={() => setConversation(null)}
+        onRead={() => conversation && markWorkerNotificationsRead(conversation.invitationId)}
+        invitationId={conversation?.invitationId}
+        title={conversation?.title}
+        user={user}
+        senderMode={onAdminReturn ? "worker" : null}
+      />
+
+      <GroupConversationModal
+        open={Boolean(groupConversation)}
+        onClose={() => setGroupConversation(null)}
+        onRead={() => groupConversation && markWorkerJobNotificationsRead(groupConversation.jobId)}
+        jobId={groupConversation?.jobId}
+        title={groupConversation?.title}
+        user={user}
+        senderMode={onAdminReturn ? "worker" : null}
+      />
+    </div>
+  );
+}
+
+
+const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
+
+function employerPlanAnnualPrice(plan) {
+  return Math.round(Number(plan?.price || 0) * 12 * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
+}
+
+function employerPlanAnnualSavings(plan) {
+  return Math.round(Number(plan?.price || 0) * 12 * EMPLOYER_ANNUAL_DISCOUNT * 100) / 100;
+}
+
+function employerPlanAnnualMonthlyEquivalent(plan) {
+  return Math.round(Number(plan?.price || 0) * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
+}
+
+function formatPlanPrice(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("lt-LT", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+const EMPLOYER_PLANS = [
+  {
+    key: "basic",
+    name: "Basic",
+    price: 0,
+    description:
+      "Nemokamas planas įmonei, kuri nori išbandyti darbuotojų paiešką.",
+    features: [
+      "Iki 5 darbo pasiūlymų per mėnesį",
+      "Darbuotojų paieška ir kvietimai",
+      "1 įmonės vartotojas",
+    ],
+  },
+  {
+    key: "business",
+    name: "Business",
+    price: 29,
+    description:
+      "Vienam įmonės atsakingam žmogui, kuris darbuotojų ieško reguliariai.",
+    features: [
+      "Viskas, kas yra Basic plane",
+      "Iki 25 darbo pasiūlymų per mėnesį",
+      "Darbuotojų patikimumas ir įvertinimai",
+      "„Darbuotojai favoritai“ – išsaugoti gerai pasirodžiusius darbuotojus",
+      "Privatūs ir bendri darbo pokalbiai",
+      "Išplėstinė įmonės statistika",
+      "1 įmonės vartotojas",
+    ],
+  },
+  {
+    key: "business_pro",
+    name: "Business Pro",
+    price: 59,
+    description:
+      "Business planas + pilnas darbų paskirstymas keliems įmonės žmonėms.",
+    features: [
+      "Viskas, kas yra Business plane",
+      "Neribotas darbo pasiūlymų skaičius",
+      "Iki 5 atskirų įmonės vartotojų",
+      "Savininko, vadovo ir vadybininko rolės",
+      "„Mano darbai“ ir „Visi įmonės darbai“",
+      "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
+      "Atskira vadybininko darbų statistika",
+      "„Skubiai!“ – tiesioginiai šiuo metu laisvų darbuotojų kontaktai",
+      "Vidinis įmonės komandos pokalbis platformoje",
+    ],
+  },
+];
+
+function employerPlanName(key) {
+  return (
+    EMPLOYER_PLANS.find((item) => item.key === key)?.name || "Basic"
+  );
+}
+
+function employerSubscriptionStatusLabel(status) {
+  if (status === "trialing") return "Bandomasis laikotarpis";
+  if (status === "past_due") return "Laukiama apmokėjimo";
+  if (status === "cancelled") return "Nutraukta";
+  return "Aktyvus";
+}
+
+async function edgeFunctionErrorMessage(error, fallback) {
+  try {
+    const response = error?.context;
+    if (response && typeof response.json === "function") {
+      const payload = await response.json();
+      if (payload?.error) return payload.error;
+      if (payload?.message) return payload.message;
+    }
+  } catch {
+    // Jei atsako nepavyksta perskaityti, naudojame standartinį tekstą.
+  }
+
+  const raw = String(error?.message || "").trim();
+  if (
+    raw &&
+    !raw.toLowerCase().includes("edge function returned a non-2xx status code")
+  ) {
+    return raw;
+  }
+
+  return fallback;
+}
+
+function companyTeamRoleLabel(role) {
+  if (role === "owner") return "Savininkas";
+  if (role === "manager") return "Vadovas";
+  return "Vadybininkas";
+}
+
+function companyTeamInviteLink(token) {
+  if (!token) return "";
+  return `${window.location.origin}${window.location.pathname}?team_invite=${encodeURIComponent(
+    token
+  )}`;
+}
+
+
+function employerTomorrowISO() {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + 1);
+  return localDateISO(date);
+}
+
+function workerRecentActivityLabel(value) {
+  if (!value) return "";
+
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return "";
+
+  const hours = Math.max(0, (Date.now() - timestamp) / (60 * 60 * 1000));
+
+  if (hours < 24) return "Aktyvus šiandien";
+  if (hours < 48) return "Aktyvus vakar";
+  return "Aktyvus per 3 d.";
+}
+
+function shortWorkerName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "Darbuotojas";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function workerAvatarUrl(path) {
+  if (!path) return "";
+  return (
+    supabase.storage.from("worker-avatars").getPublicUrl(path).data
+      ?.publicUrl || ""
+  );
+}
+
+function workerInitials(name) {
+  return String(name || "D")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+  // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
+  const preferredPlanKey = EMPLOYER_PLANS.some(
+    (plan) => plan.key === user?.user_metadata?.preferred_plan
+  ) ? user.user_metadata.preferred_plan : "basic";
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [company, setCompany] = useState(null);
+  const [companyMemberRole, setCompanyMemberRole] = useState(null);
+  const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [planSummary, setPlanSummary] = useState(null);
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [pendingPlanChange, setPendingPlanChange] = useState(null);
+  const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
+  const [planActionBusy, setPlanActionBusy] = useState(false);
+  const billingReturnHandledRef = useRef(false);
+  const [planBillingCycle, setPlanBillingCycle] = useState(
+    preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
+      ? "yearly"
+      : "monthly"
+  );
+  const [showUrgentSearch, setShowUrgentSearch] = useState(false);
+  const [urgentSearchCity, setUrgentSearchCity] = useState("");
+  const [urgentSearchResults, setUrgentSearchResults] = useState([]);
+  const [urgentSearchLoading, setUrgentSearchLoading] = useState(false);
+  const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
+  const [showSavedWorkers, setShowSavedWorkers] = useState(false);
+  const [savedWorkers, setSavedWorkers] = useState([]);
+  const [savedWorkersLoading, setSavedWorkersLoading] = useState(false);
+  const [savedWorkerBusy, setSavedWorkerBusy] = useState("");
+  const [workerSource, setWorkerSource] = useState("available");
+  const [invitingSavedTeam, setInvitingSavedTeam] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
+  const [showTeamChat, setShowTeamChat] = useState(false);
+  const [teamChatUnread, setTeamChatUnread] = useState(0);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamInvites, setTeamInvites] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamActionBusy, setTeamActionBusy] = useState(false);
+  const [lastTeamInviteLink, setLastTeamInviteLink] = useState("");
+  const [jobScope, setJobScope] = useState("mine");
+  const [teamInviteForm, setTeamInviteForm] = useState({
+    displayName: "",
+    email: "",
+    memberRole: "recruiter",
+  });
+  const [companyForm, setCompanyForm] = useState({
+    name: "",
+    companyCode: "",
+    city: "",
+    phone: "",
+    description: "",
+  });
+  const [skills, setSkills] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [employerStats, setEmployerStats] = useState({
+    totalJobs: 0,
+    filledJobs: 0,
+    missingWorkers: 0,
+    completedJobs: 0,
+    cancelledJobs: 0,
+    monthlyWorkersUsed: 0,
+    reliabilityRate: 100,
+    cancelledConfirmedCount: 0,
+    falseAttendanceClaimCount: 0,
+  });
+  const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
+  const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
+  const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [invitedIds, setInvitedIds] = useState([]);
+  const [invitationStatuses, setInvitationStatuses] = useState({});
+  const [invitationByWorker, setInvitationByWorker] = useState({});
+  const [employerNotifications, setEmployerNotifications] = useState([]);
+  const [selectedWorker, setSelectedWorker] = useState(null);
+  const [jobWorkers, setJobWorkers] = useState([]);
+  const [attendanceTarget, setAttendanceTarget] = useState(null);
+  const [attendanceMode, setAttendanceMode] = useState(null);
+  const [attendanceEndTime, setAttendanceEndTime] = useState("");
+  const [attendanceNote, setAttendanceNote] = useState("");
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState(null);
+  const [ratingScore, setRatingScore] = useState(null);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [conversation, setConversation] = useState(null);
+  const [groupConversation, setGroupConversation] = useState(null);
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [cityWorkerSignal, setCityWorkerSignal] = useState(null);
+  const [cityWorkerSignalLoading, setCityWorkerSignalLoading] = useState(false);
+  const [cancelJobTarget, setCancelJobTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancellingJob, setCancellingJob] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    title: "Statybų pagalbiniai",
+    city: "Vilnius",
+    address: "",
+    workDate: employerTomorrowISO(),
+    startTime: "08:00",
+    endTime: "17:00",
+    breakStartTime: "12:00",
+    breakEndTime: "12:30",
+    workersNeeded: 1,
+    transportMode: "self_arrival",
+    payAmount: "",
+    payUnit: "hour",
+    description: "",
+    responsibleUserId: user.id,
+  });
+
+  useEffect(() => {
+    loadEmployerDashboard();
+  }, [user.id]);
+
+  useEffect(() => {
+    if (
+      !showJobForm ||
+      !company?.id ||
+      !String(form.city || "").trim() ||
+      !form.workDate
+    ) {
+      setCityWorkerSignal(null);
+      setCityWorkerSignalLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setCityWorkerSignalLoading(true);
+
+      const result = await supabase.rpc("get_employer_city_worker_signal", {
+        p_company_id: company.id,
+        p_city: String(form.city || "").trim(),
+        p_work_date: form.workDate,
+      });
+
+      if (cancelled) return;
+
+      if (result.error) {
+        console.error(result.error);
+        setCityWorkerSignal(null);
+      } else {
+        const row = result.data?.[0] || null;
+        setCityWorkerSignal(
+          row
+            ? {
+                availableWorkers: Number(row.available_workers || 0),
+                urgentWorkersNow:
+                  row.urgent_workers_now === null ||
+                  row.urgent_workers_now === undefined
+                    ? null
+                    : Number(row.urgent_workers_now || 0),
+              }
+            : null
+        );
+      }
+
+      setCityWorkerSignalLoading(false);
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    showJobForm,
+    company?.id,
+    form.city,
+    form.workDate,
+    planSummary?.plan_key,
+  ]);
+
+  useEffect(() => {
+    if (!company?.id || billingReturnHandledRef.current) return;
+
+    const url = new URL(window.location.href);
+    const billingResult = url.searchParams.get("billing");
+    if (!billingResult) return;
+
+    billingReturnHandledRef.current = true;
+
+    const clearBillingParam = () => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("billing");
+      window.history.replaceState(
+        {},
+        "",
+        `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`
+      );
+    };
+
+    if (billingResult === "cancelled") {
+      setNotice("Apmokėjimas atšauktas. Jūsų planas nepakeistas.");
+      clearBillingParam();
+      return;
+    }
+
+    if (billingResult !== "success") {
+      clearBillingParam();
+      return;
+    }
+
+    let stopped = false;
+    let attempts = 0;
+
+    setShowPlans(false);
+    setError("");
+    setNotice(
+      "Apmokėjimas užbaigtas. Laukiame Stripe patvirtinimo ir aktyvuojame planą..."
+    );
+
+    const refreshPaidPlan = async () => {
+      attempts += 1;
+
+      try {
+        const summary = await loadCompanyPlan(company.id);
+
+        if (
+          summary?.plan_key !== "basic" &&
+          ["active", "trialing", "past_due"].includes(summary?.subscription_status)
+        ) {
+          const freshBilling = await loadCompanyBillingStatus(company.id);
+          setPlanBillingCycle(
+            freshBilling?.billing_interval === "yearly" ? "yearly" : "monthly"
+          );
+          setNotice(
+            `${summary.plan_name} planas aktyvuotas. Mokamo plano teisės jau galioja.`
+          );
+          clearBillingParam();
+          return;
+        }
+      } catch {
+        // Webhook gali būti dar neapdorotas — bandome dar kartą.
+      }
+
+      if (!stopped && attempts < 10) {
+        window.setTimeout(refreshPaidPlan, 1500);
+      } else if (!stopped) {
+        setNotice(
+          "Apmokėjimas gautas. Stripe patvirtinimas dar apdorojamas — planas įsijungs automatiškai vos tik gausime patvirtinimą."
+        );
+        clearBillingParam();
+      }
+    };
+
+    refreshPaidPlan();
+
+    return () => {
+      stopped = true;
+    };
+  }, [company?.id]);
+
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const timer = setInterval(async () => {
+      try {
+        await reloadJobs(company.id);
+        await Promise.all([
+          loadEmployerNotifications(),
+          loadEmployerStats(company.id, companyMemberRole),
+          loadCompanyWorkerReviews(company.id),
+          loadCompanyPlan(company.id),
+          loadCompanyBillingStatus(company.id),
+          loadPendingPlanChange(company.id),
+          planSummary?.can_saved_workers
+            ? loadSavedWorkers(company.id, planSummary)
+            : Promise.resolve(),
+          loadCompanyTeamChatUnread(company.id, planSummary),
+        ]);
+
+        if (currentJob?.id) {
+          await loadCurrentJobWorkers(currentJob.id);
+
+          const [jobResult, bookingResult, invitationsResult] = await Promise.all([
+            supabase
+              .from("jobs")
+              .select(
+                "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+              )
+              .eq("id", currentJob.id)
+              .single(),
+            supabase
+              .from("bookings")
+              .select("id", { count: "exact", head: true })
+              .eq("job_id", currentJob.id)
+              .eq("status", "confirmed"),
+            supabase
+              .from("job_invitations")
+              .select("id, worker_id, status")
+              .eq("job_id", currentJob.id),
+          ]);
+
+          if (!jobResult.error) {
+            const confirmedCount = bookingResult.count || 0;
+            setCurrentJob((existing) =>
+              existing?.id === currentJob.id
+                ? { ...jobResult.data, confirmedCount }
+                : existing
+            );
+          }
+
+          if (!invitationsResult.error) {
+            const invitationRows = invitationsResult.data || [];
+            const declinedWorkerIds = new Set(
+              invitationRows
+                .filter((row) => row.status === "declined")
+                .map((row) => row.worker_id)
+            );
+
+            setMatches((current) =>
+              current.filter((worker) => !declinedWorkerIds.has(worker.id))
+            );
+
+            setInvitedIds(invitationRows.map((row) => row.worker_id));
+            setInvitationStatuses(
+              Object.fromEntries(
+                invitationRows.map((row) => [row.worker_id, row.status])
+              )
+            );
+            setInvitationByWorker(
+              Object.fromEntries(
+                invitationRows.map((row) => [row.worker_id, row])
+              )
+            );
+          }
+        }
+      } catch {
+        // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
+      }
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [company?.id, currentJob?.id, planSummary?.can_team_chat, companyMemberRole]);
+
+  async function loadEmployerNotifications() {
+    const result = await supabase
+      .from("job_notifications")
+      .select("id, job_id, invitation_id, event_type, created_at, read_at")
+      .is("read_at", null)
+      .order("created_at", { ascending: false });
+
+    if (result.error) throw result.error;
+    setEmployerNotifications(result.data || []);
+  }
+
+  function unreadEmployerNotifications(jobId) {
+    return employerNotifications.filter((item) => item.job_id === jobId);
+  }
+
+  function unreadEmployerGroupChatNotifications(jobId) {
+    return employerNotifications.filter(
+      (item) =>
+        item.job_id === jobId &&
+        item.event_type === "message" &&
+        !item.invitation_id
+    );
+  }
+
+  function unreadEmployerPrivateChatNotifications(invitationId) {
+    return employerNotifications.filter(
+      (item) =>
+        item.invitation_id === invitationId &&
+        item.event_type === "message"
+    );
+  }
+
+  async function markEmployerNotificationIdsRead(ids) {
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setEmployerNotifications((current) =>
+      current.filter((item) => !ids.includes(item.id))
+    );
+  }
+
+  async function markEmployerGroupChatRead(jobId) {
+    const ids = unreadEmployerGroupChatNotifications(jobId).map(
+      (item) => item.id
+    );
+    await markEmployerNotificationIdsRead(ids);
+  }
+
+  async function markEmployerPrivateChatRead(invitationId) {
+    const ids = unreadEmployerPrivateChatNotifications(invitationId).map(
+      (item) => item.id
+    );
+    await markEmployerNotificationIdsRead(ids);
+  }
+
+  async function markEmployerJobRead(jobId) {
+    const ids = unreadEmployerNotifications(jobId)
+      .filter((item) => item.event_type !== "message")
+      .map((item) => item.id);
+    await markEmployerNotificationIdsRead(ids);
+  }
+
+  function teamMemberName(userId) {
+    return (
+      teamMembers.find((member) => member.user_id === userId)?.display_name ||
+      (userId === user.id ? "Aš" : "Komandos narys")
+    );
+  }
+
+  async function loadCompanyTeamChatUnread(
+    companyId = company?.id,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_team_chat) {
+      setTeamChatUnread(0);
+      return 0;
+    }
+
+    const result = await supabase.rpc(
+      "get_company_team_chat_unread_count",
+      { p_company_id: companyId }
+    );
+
+    if (result.error) throw result.error;
+
+    const count = Number(result.data || 0);
+    setTeamChatUnread(count);
+    return count;
+  }
+
+  async function loadCompanyTeam(
+    companyId = company?.id,
+    role = companyMemberRole,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_team_management) {
+      setTeamMembers([]);
+      setTeamInvites([]);
+      return;
+    }
+
+    setTeamLoading(true);
+
+    try {
+      const membersResult = await supabase.rpc("get_company_team", {
+        p_company_id: companyId,
+      });
+
+      if (membersResult.error) throw membersResult.error;
+
+      setTeamMembers(membersResult.data || []);
+
+      if (role === "owner") {
+        const invitesResult = await supabase.rpc(
+          "get_company_team_invites",
+          { p_company_id: companyId }
+        );
+
+        if (invitesResult.error) throw invitesResult.error;
+        setTeamInvites(invitesResult.data || []);
+      } else {
+        setTeamInvites([]);
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti įmonės komandos.");
+    } finally {
+      setTeamLoading(false);
+    }
+  }
+
+  async function openCompanyTeam() {
+    if (!planSummary?.can_team_management) {
+      setShowPlans(true);
+      return;
+    }
+
+    setShowTeam(true);
+    setLastTeamInviteLink("");
+    await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
+  }
+
+  async function openCompanyTeamChat() {
+    if (!planSummary?.can_team_chat) {
+      setNotice(
+        "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    if (company?.id) {
+      const readResult = await supabase.rpc("mark_company_team_chat_read", {
+        p_company_id: company.id,
+      });
+
+      if (readResult.error) {
+        setError(readResult.error.message);
+        return;
+      }
+    }
+
+    setTeamChatUnread(0);
+    setShowTeamChat(true);
+  }
+
+  async function createTeamInvite() {
+    if (!company?.id || companyMemberRole !== "owner") return;
+
+    setTeamActionBusy(true);
+    setError("");
+    setNotice("");
+    setLastTeamInviteLink("");
+
+    try {
+      const result = await supabase.rpc("create_company_team_invite", {
+        p_company_id: company.id,
+        p_email: teamInviteForm.email.trim(),
+        p_display_name: teamInviteForm.displayName.trim(),
+        p_member_role: teamInviteForm.memberRole,
+      });
+
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0];
+      const link = companyTeamInviteLink(row?.token);
+      setLastTeamInviteLink(link);
+
+      try {
+        await navigator.clipboard.writeText(link);
+        setNotice("Kvietimas sukurtas. Nuoroda nukopijuota.");
+      } catch {
+        setNotice("Kvietimas sukurtas. Nukopijuokite nuorodą iš komandos lango.");
+      }
+
+      setTeamInviteForm({
+        displayName: "",
+        email: "",
+        memberRole: "recruiter",
+      });
+
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko sukurti komandos kvietimo.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function copyTeamInvite(token) {
+    const link = companyTeamInviteLink(token);
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice("Kvietimo nuoroda nukopijuota.");
+    } catch {
+      setLastTeamInviteLink(link);
+      setNotice("Kvietimo nuoroda paruošta kopijavimui.");
+    }
+  }
+
+  async function revokeTeamInvite(inviteId) {
+    if (!company?.id) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("revoke_company_team_invite", {
+        p_invite_id: inviteId,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Kvietimas atšauktas.");
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko atšaukti kvietimo.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function changeTeamMemberRole(member, memberRole) {
+    if (!company?.id || !member?.user_id) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc(
+        "update_company_team_member_role",
+        {
+          p_company_id: company.id,
+          p_user_id: member.user_id,
+          p_member_role: memberRole,
+        }
+      );
+
+      if (result.error) throw result.error;
+
+      setNotice("Komandos nario rolė atnaujinta.");
+      await loadCompanyTeam(company.id, companyMemberRole, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pakeisti rolės.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  async function removeTeamMember(member) {
+    if (!company?.id || !member?.user_id) return;
+
+    const confirmed = window.confirm(
+      `Pašalinti ${member.display_name} iš įmonės komandos? Jo atsakingi darbai bus perduoti įmonės savininkui.`
+    );
+
+    if (!confirmed) return;
+
+    setTeamActionBusy(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("remove_company_team_member", {
+        p_company_id: company.id,
+        p_user_id: member.user_id,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Komandos narys pašalintas.");
+      await Promise.all([
+        loadCompanyTeam(company.id, companyMemberRole, planSummary),
+        reloadJobs(company.id),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti komandos nario.");
+    } finally {
+      setTeamActionBusy(false);
+    }
+  }
+
+  function requireEmployerChatPlan() {
+    if (planSummary?.can_job_chat) return true;
+
+    setNotice(
+      "Darbo pokalbiai prieinami Business ir Business Pro planuose."
+    );
+    setShowPlans(true);
+    return false;
+  }
+
+  async function openEmployerPrivateConversation(invitationId, title) {
+    if (!requireEmployerChatPlan()) return;
+
+    setConversation({
+      invitationId,
+      title,
+    });
+  }
+
+  async function openEmployerGroupConversation(job) {
+    if (!requireEmployerChatPlan()) return;
+
+    setGroupConversation({
+      jobId: job.id,
+      title: job.title,
+    });
+  }
+
+  async function loadCompanyPlan(companyId = company?.id) {
+    if (!companyId) return null;
+
+    const result = await supabase.rpc("get_company_plan_summary", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const summary = result.data?.[0] || null;
+    setPlanSummary(summary);
+    return summary;
+  }
+
+  async function loadCompanyBillingStatus(companyId = company?.id) {
+    if (!companyId) {
+      setBillingStatus(null);
+      return null;
+    }
+
+    const result = await supabase.rpc("get_company_billing_status", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const status = result.data?.[0] || null;
+    setBillingStatus(status);
+    return status;
+  }
+
+  async function loadPendingPlanChange(companyId = company?.id) {
+    if (!companyId) {
+      setPendingPlanChange(null);
+      return null;
+    }
+
+    const result = await supabase.rpc("get_company_pending_plan_change", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const pending = result.data?.[0] || null;
+    const activePending = pending?.pending_plan_key
+      ? pending
+      : null;
+
+    setPendingPlanChange(activePending);
+    return activePending;
+  }
+
+  async function activatePlanForAdminTest(planKey) {
+    if (!company?.id || !onAdminReturn) return;
+
+    setPlanActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("admin_set_company_plan", {
+        p_company_id: company.id,
+        p_plan_key: planKey,
+        p_subscription_status: "active",
+        p_period_end: null,
+        p_reason: "Plano testavimas administratoriaus darbdavio režime",
+      });
+
+      if (result.error) throw result.error;
+
+      const billingInterval =
+        planKey === "basic" ? "monthly" : planBillingCycle;
+
+      const billingResult = await supabase.rpc(
+        "set_company_billing_preference",
+        {
+          p_company_id: company.id,
+          p_billing_interval: billingInterval,
+        }
+      );
+
+      if (billingResult.error) throw billingResult.error;
+
+      setCompany((current) =>
+        current
+          ? { ...current, billing_interval: billingInterval }
+          : current
+      );
+
+      await loadCompanyPlan(company.id);
+      setNotice(
+        `${employerPlanName(planKey)} planas aktyvuotas testavimui · ${
+          billingInterval === "yearly" ? "metinis" : "mėnesinis"
+        } atsiskaitymas.`
+      );
+      setShowPlans(false);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pakeisti plano.");
+    } finally {
+      setPlanActionBusy(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    if (!company?.id) return;
+
+    if (companyMemberRole !== "owner") {
+      setError("Prenumeratą gali valdyti tik įmonės savininkas.");
+      return;
+    }
+
+    setPlanActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "stripe-customer-portal",
+        {
+          body: { companyId: company.id },
+        }
+      );
+
+      if (invokeError) throw invokeError;
+      if (!data?.url) {
+        throw new Error("Stripe negrąžino prenumeratos valdymo nuorodos.");
+      }
+
+      window.location.assign(data.url);
+    } catch (err) {
+      setError(
+        await edgeFunctionErrorMessage(
+          err,
+          "Nepavyko atidaryti prenumeratos valdymo. Bandykite dar kartą."
+        )
+      );
+      setPlanActionBusy(false);
+    }
+  }
+
+  async function requestPaidPlan(planKey) {
+    const plan = EMPLOYER_PLANS.find((item) => item.key === planKey);
+    if (!plan || !company?.id) return;
+
+    if (companyMemberRole !== "owner") {
+      setError(
+        "Planą ir atsiskaitymo laikotarpį gali keisti tik įmonės savininkas."
+      );
+      return;
+    }
+
+    const hasPaidSubscription =
+      billingStatus?.effective_plan_key !== "basic" &&
+      ["active", "trialing", "past_due"].includes(
+        billingStatus?.subscription_status
+      );
+
+    if (plan.price === 0) {
+      if (hasPaidSubscription) {
+        setNotice(
+          "Mokama prenumerata galioja. Norėdami grįžti į Basic, pirmiausia valdykite arba nutraukite prenumeratą Stripe lange."
+        );
+        await openBillingPortal();
+        return;
+      }
+
+      setNotice("Basic planas jau yra nemokamas ir nereikalauja apmokėjimo.");
+      setShowPlans(false);
+      return;
+    }
+
+    if (hasPaidSubscription) {
+      setNotice(
+        "Jau turite aktyvią mokamą prenumeratą. Planą, atsiskaitymo laikotarpį ar atšaukimą valdykite prenumeratos lange."
+      );
+      await openBillingPortal();
+      return;
+    }
+
+    const billingInterval = planBillingCycle;
+
+    setPlanActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const billingResult = await supabase.rpc(
+        "set_company_billing_preference",
+        {
+          p_company_id: company.id,
+          p_billing_interval: billingInterval,
+        }
+      );
+
+      if (billingResult.error) throw billingResult.error;
+
+      const preferenceResult = await supabase.auth.updateUser({
+        data: {
+          preferred_plan: planKey,
+          preferred_billing_interval: billingInterval,
+        },
+      });
+
+      if (preferenceResult.error) throw preferenceResult.error;
+
+      setCompany((current) =>
+        current
+          ? { ...current, billing_interval: billingInterval }
+          : current
+      );
+
+      const { data, error: checkoutError } = await supabase.functions.invoke(
+        "stripe-create-checkout",
+        {
+          body: {
+            companyId: company.id,
+            planKey,
+            billingInterval,
+          },
+        }
+      );
+
+      if (checkoutError) throw checkoutError;
+      if (!data?.url) {
+        throw new Error("Stripe negrąžino apmokėjimo nuorodos.");
+      }
+
+      window.location.assign(data.url);
+    } catch (err) {
+      setError(
+        await edgeFunctionErrorMessage(
+          err,
+          "Nepavyko pradėti Stripe apmokėjimo. Bandykite dar kartą."
+        )
+      );
+      setPlanActionBusy(false);
+    }
+  }
+
+  async function loadSavedWorkers(
+    companyId = company?.id,
+    plan = planSummary
+  ) {
+    if (!companyId || !plan?.can_saved_workers) {
+      setSavedWorkers([]);
+      return [];
+    }
+
+    const result = await supabase.rpc("get_company_saved_workers", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const rows = (result.data || []).map((row) => ({
+      ...row,
+      id: row.worker_id,
+      name: shortWorkerName(row.display_name),
+      initials: workerInitials(row.display_name),
+      avatarUrl: workerAvatarUrl(row.avatar_path),
+      city: row.city || "",
+      yearsExperience: Number(row.years_experience || 0),
+      hasDrivingLicenseB: Boolean(row.has_driving_license_b),
+      attendanceRate: Number(row.attendance_rate ?? 100),
+      ratingAverage:
+        row.rating_average === null || row.rating_average === undefined
+          ? null
+          : Number(row.rating_average),
+      ratingCount: Number(row.rating_count || 0),
+      completedJobs: Number(row.completed_jobs || 0),
+    }));
+
+    setSavedWorkers(rows);
+    return rows;
+  }
+
+  async function loadCompanyWorkerReviews(companyId = company?.id) {
+    if (!companyId) {
+      setCompanyWorkerReviews([]);
+      return [];
+    }
+
+    const result = await supabase.rpc("get_company_worker_reviews", {
+      p_company_id: companyId,
+    });
+
+    if (result.error) throw result.error;
+
+    const rows = result.data || [];
+    setCompanyWorkerReviews(rows);
+    return rows;
+  }
+
+  async function loadEmployerDashboard() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const memberResult = await supabase
+        .from("company_members")
+        .select("company_id, member_role")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (memberResult.error) throw memberResult.error;
+      if (!memberResult.data?.company_id) {
+        throw new Error("Prie paskyros nerasta įmonė.");
+      }
+
+      const companyId = memberResult.data.company_id;
+      const loadedMemberRole = memberResult.data.member_role || null;
+      setCompanyMemberRole(loadedMemberRole);
+
+      const [
+        companyResult,
+        privateResult,
+        skillsResult,
+        jobsResult,
+        planResult,
+      ] = await Promise.all([
+          supabase
+            .from("companies")
+            .select(
+              "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+            )
+            .eq("id", companyId)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("skills")
+            .select("id, name")
+            .eq("is_active", true)
+            .order("name"),
+          supabase
+            .from("jobs")
+            .select(
+              "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+            )
+            .eq("company_id", companyId)
+            .order("created_at", { ascending: false })
+            .limit(12),
+          supabase.rpc("get_company_plan_summary", {
+            p_company_id: companyId,
+          }),
+        ]);
+
+      const failed = [
+        companyResult,
+        privateResult,
+        skillsResult,
+        jobsResult,
+        planResult,
+      ].find((result) => result.error);
+      if (failed?.error) throw failed.error;
+
+      setCompany(companyResult.data);
+      const loadedBilling = await loadCompanyBillingStatus(companyId);
+      setPlanBillingCycle(
+        loadedBilling?.billing_interval === "yearly"
+          ? "yearly"
+          : preferredPlanKey !== "basic" &&
+            user?.user_metadata?.preferred_billing_interval === "yearly"
+          ? "yearly"
+          : "monthly"
+      );
+      setCompanyForm({
+        name: companyResult.data?.name || "",
+        companyCode: companyResult.data?.company_code || "",
+        city: companyResult.data?.city || "",
+        phone: privateResult.data?.phone || "",
+        description: companyResult.data?.description || "",
+      });
+      setJobs(await addConfirmedCounts(jobsResult.data || []));
+      setSkills(skillsResult.data || []);
+      const loadedPlan = planResult.data?.[0] || null;
+      setPlanSummary(loadedPlan);
+
+      await Promise.all([
+        loadPendingPlanChange(companyId),
+        loadEmployerNotifications(),
+        loadEmployerStats(companyId, loadedMemberRole),
+        loadCompanyWorkerReviews(companyId),
+        loadedPlan?.can_saved_workers
+          ? loadSavedWorkers(companyId, loadedPlan)
+          : Promise.resolve(),
+        loadedPlan?.can_team_management
+          ? loadCompanyTeam(companyId, loadedMemberRole, loadedPlan)
+          : Promise.resolve(),
+        loadedPlan?.can_team_chat
+          ? loadCompanyTeamChatUnread(companyId, loadedPlan)
+          : Promise.resolve(),
+      ]);
+
+      setForm((current) => ({
+        ...current,
+        city: companyResult.data?.city || current.city,
+      }));
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbdavio paskyros.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateCompanyField(key, value) {
+    setCompanyForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveCompanyInformation() {
+    const name = companyForm.name.trim();
+    const cityInput = companyForm.city.trim();
+    const phone = companyForm.phone.trim();
+    const description = companyForm.description.trim();
+
+    if (!company?.id) return;
+
+    if (companyMemberRole !== "owner") {
+      setError("Įmonės informaciją gali redaguoti tik įmonės savininkas.");
+      return;
+    }
+
+    if (name.length < 2) {
+      setError("Įveskite įmonės pavadinimą.");
+      return;
+    }
+
+    if (cityInput.length < 2) {
+      setError("Pasirinkite įmonės miestą.");
+      return;
+    }
+
+    setCompanySaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const city = await canonicalCityName(cityInput);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const companyResult = await supabase
+        .from("companies")
+        .update({
+          name,
+          city,
+          description: description || null,
+        })
+        .eq("id", company.id)
+        .select(
+          "id, name, company_code, city, description, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+        )
+        .single();
+
+      if (companyResult.error) throw companyResult.error;
+
+      const privateResult = await supabase
+        .from("user_private")
+        .upsert(
+          {
+            user_id: user.id,
+            phone: phone || null,
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (privateResult.error) throw privateResult.error;
+
+      setCompany(companyResult.data);
+      setCompanyForm({
+        name: companyResult.data?.name || "",
+        companyCode: companyResult.data?.company_code || "",
+        city: companyResult.data?.city || "",
+        phone,
+        description: companyResult.data?.description || "",
+      });
+
+      setShowCompanyEditor(false);
+      setNotice("Įmonės informacija atnaujinta.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko atnaujinti įmonės informacijos.");
+    } finally {
+      setCompanySaving(false);
+    }
+  }
+
+  function updateField(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function loadEmployerStats(
+    companyId = company?.id,
+    memberRole = companyMemberRole
+  ) {
+    if (!companyId) return;
+
+    const [jobsResult, companyResult, penaltiesResult] = await Promise.all([
+      supabase
+        .from("jobs")
+        .select(
+          "id, status, workers_needed, work_date, created_by, responsible_user_id"
+        )
+        .eq("company_id", companyId),
+      supabase
+        .from("companies")
+        .select("reliability_rate, cancelled_confirmed_count, false_attendance_claim_count")
+        .eq("id", companyId)
+        .single(),
+      supabase
+        .from("employer_penalties")
+        .select("job_id, reliability_change, affected_workers, created_at")
+        .eq("company_id", companyId)
+        .eq("penalty_type", "job_cancelled")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (jobsResult.error) throw jobsResult.error;
+    if (companyResult.error) throw companyResult.error;
+    if (penaltiesResult.error) throw penaltiesResult.error;
+
+    const allJobRows = jobsResult.data || [];
+    const jobRows =
+      planSummary?.can_team_management && memberRole === "recruiter"
+        ? allJobRows.filter(
+            (job) =>
+              job.created_by === user.id ||
+              job.responsible_user_id === user.id
+          )
+        : allJobRows;
+    const jobIds = jobRows.map((job) => job.id);
+
+    let bookingRows = [];
+    let attendanceRows = [];
+
+    if (jobIds.length) {
+      const bookingsResult = await supabase
+        .from("bookings")
+        .select("id, worker_id, job_id, status")
+        .in("job_id", jobIds);
+
+      if (bookingsResult.error) throw bookingsResult.error;
+      bookingRows = bookingsResult.data || [];
+
+      const bookingIds = bookingRows.map((booking) => booking.id);
+
+      if (bookingIds.length) {
+        const attendanceResult = await supabase
+          .from("attendance")
+          .select("booking_id, final_outcome, finalized_at")
+          .in("booking_id", bookingIds)
+          .not("finalized_at", "is", null);
+
+        if (attendanceResult.error) throw attendanceResult.error;
+        attendanceRows = attendanceResult.data || [];
+      }
+    }
+
+    const confirmedByJob = {};
+    for (const booking of bookingRows) {
+      if (booking.status !== "confirmed") continue;
+
+      confirmedByJob[booking.job_id] =
+        (confirmedByJob[booking.job_id] || 0) + 1;
+    }
+
+    const attendanceByBooking = new Map(
+      attendanceRows.map((attendance) => [
+        attendance.booking_id,
+        attendance,
+      ])
+    );
+
+    const jobById = new Map(
+      jobRows.map((job) => [job.id, job])
+    );
+
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+
+    const nextMonthDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1
+    );
+    const nextMonthStart = `${nextMonthDate.getFullYear()}-${String(
+      nextMonthDate.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+
+    const monthlyWorkerIds = new Set();
+
+    for (const booking of bookingRows) {
+      const job = jobById.get(booking.job_id);
+      const attendance = attendanceByBooking.get(booking.id);
+
+      if (!job || !attendance?.finalized_at) continue;
+
+      const worked =
+        attendance.final_outcome === "full_day" ||
+        attendance.final_outcome === "left_early_agreed" ||
+        attendance.final_outcome === "left_early_unexcused";
+
+      if (
+        worked &&
+        job.work_date >= monthStart &&
+        job.work_date < nextMonthStart
+      ) {
+        monthlyWorkerIds.add(booking.worker_id);
+      }
+    }
+
+    const monthlyWorkersUsed = monthlyWorkerIds.size;
+
+    const today = localDateISO(new Date());
+
+    const filledJobs = jobRows.filter((job) => {
+      const confirmed = confirmedByJob[job.id] || 0;
+      return (
+        job.status !== "cancelled" &&
+        confirmed >= Number(job.workers_needed || 0) &&
+        job.work_date >= today
+      );
+    }).length;
+
+    const missingWorkers = jobRows
+      .filter(
+        (job) =>
+          job.status !== "cancelled" &&
+          job.status !== "completed" &&
+          job.work_date >= today
+      )
+      .reduce((sum, job) => {
+        const confirmed = confirmedByJob[job.id] || 0;
+        return sum + Math.max(0, Number(job.workers_needed || 0) - confirmed);
+      }, 0);
+
+    const completedJobs = jobRows.filter(
+      (job) => job.status === "completed"
+    ).length;
+
+    setEmployerStats({
+      totalJobs: jobRows.length,
+      filledJobs,
+      missingWorkers,
+      completedJobs,
+      cancelledJobs: jobRows.filter((job) => job.status === "cancelled").length,
+      monthlyWorkersUsed,
+      reliabilityRate: Number(companyResult.data?.reliability_rate ?? 100),
+      cancelledConfirmedCount: Number(
+        companyResult.data?.cancelled_confirmed_count || 0
+      ),
+      falseAttendanceClaimCount: Number(
+        companyResult.data?.false_attendance_claim_count || 0
+      ),
+    });
+
+    setEmployerPenaltyByJob(
+      Object.fromEntries(
+        (penaltiesResult.data || []).map((penalty) => [
+          penalty.job_id,
+          {
+            change: Number(penalty.reliability_change || 0),
+            affectedWorkers: Number(penalty.affected_workers || 0),
+            createdAt: penalty.created_at,
+          },
+        ])
+      )
+    );
+
+    setCompany((current) =>
+      current
+        ? {
+            ...current,
+            reliability_rate: companyResult.data?.reliability_rate ?? 100,
+            cancelled_confirmed_count:
+              companyResult.data?.cancelled_confirmed_count || 0,
+            false_attendance_claim_count:
+              companyResult.data?.false_attendance_claim_count || 0,
+          }
+        : current
+    );
+  }
+
+  async function addConfirmedCounts(jobRows) {
+    const rows = jobRows || [];
+    const ids = rows.map((job) => job.id);
+    if (!ids.length) return rows.map((job) => ({ ...job, confirmedCount: 0 }));
+
+    const result = await supabase
+      .from("bookings")
+      .select("job_id, status")
+      .in("job_id", ids)
+      .eq("status", "confirmed");
+
+    if (result.error) throw result.error;
+
+    const counts = {};
+    for (const booking of result.data || []) {
+      counts[booking.job_id] = (counts[booking.job_id] || 0) + 1;
+    }
+
+    return rows.map((job) => ({
+      ...job,
+      confirmedCount: counts[job.id] || 0,
+    }));
+  }
+
+  async function reloadJobs(companyId = company?.id) {
+    if (!companyId) return;
+
+    const result = await supabase
+      .from("jobs")
+      .select(
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+      )
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(12);
+
+    if (!result.error) {
+      try {
+        setJobs(await addConfirmedCounts(result.data || []));
+      } catch {
+        setJobs(result.data || []);
+      }
+
+      try {
+        await loadEmployerStats(companyId, companyMemberRole);
+      } catch {
+        // Statistikos klaida neturi blokuoti poreikių sąrašo.
+      }
+    }
+  }
+
+  async function loadCurrentJobWorkers(jobId) {
+    if (!jobId) {
+      setJobWorkers([]);
+      return;
+    }
+
+    const bookingsResult = await supabase
+      .from("bookings")
+      .select(
+        "id, worker_id, invitation_id, status, confirmed_at, cancelled_at, cancellation_reason"
+      )
+      .eq("job_id", jobId)
+      .order("confirmed_at", { ascending: true });
+
+    if (bookingsResult.error) throw bookingsResult.error;
+
+    const bookingRows = bookingsResult.data || [];
+    const workerIds = [...new Set(bookingRows.map((row) => row.worker_id))];
+    const bookingIds = bookingRows.map((row) => row.id);
+
+    if (!workerIds.length) {
+      setJobWorkers([]);
+      return;
+    }
+
+    const [profilesResult, workersResult, workerSkillsResult, attendanceResult, ratingsResult] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, display_name, city")
+          .in("id", workerIds),
+        supabase.rpc("get_employer_worker_profiles", {
+          p_job_id: jobId,
+          p_worker_ids: workerIds,
+        }),
+        supabase
+          .from("worker_skills")
+          .select("worker_id, skill_id")
+          .in("worker_id", workerIds),
+        supabase
+          .from("attendance")
+          .select(
+            "id, booking_id, status, worker_check_in_at, employer_check_in_at, worker_workday_claim, worker_claimed_at, employer_outcome, employer_marked_at, actual_end_time, employer_note, worker_response, worker_response_note, worker_responded_at, dispute_status, final_outcome, finalized_at, worked_minutes, resolution_note"
+          )
+          .in("booking_id", bookingIds),
+        supabase
+          .from("worker_ratings")
+          .select("booking_id, score, comment")
+          .in("booking_id", bookingIds),
+      ]);
+
+    const failed = [
+      profilesResult,
+      workersResult,
+      workerSkillsResult,
+      attendanceResult,
+      ratingsResult,
+    ].find((result) => result.error);
+
+    if (failed?.error) throw failed.error;
+
+    const profileMap = new Map(
+      (profilesResult.data || []).map((row) => [row.id, row])
+    );
+    const workerMap = new Map(
+      (workersResult.data || []).map((row) => [row.user_id, row])
+    );
+    const attendanceMap = new Map(
+      (attendanceResult.data || []).map((row) => [row.booking_id, row])
+    );
+    const ratingMap = new Map(
+      (ratingsResult.data || []).map((row) => [row.booking_id, row])
+    );
+
+    const skillNameMap = new Map(
+      skills.map((skill) => [Number(skill.id), skill.name])
+    );
+    const skillIdsByWorker = new Map();
+
+    for (const row of workerSkillsResult.data || []) {
+      const list = skillIdsByWorker.get(row.worker_id) || [];
+      list.push(Number(row.skill_id));
+      skillIdsByWorker.set(row.worker_id, list);
+    }
+
+    const publicStatsEntries = await Promise.all(
+      workerIds.map(async (workerId) => {
+        const result = await supabase.rpc("get_worker_public_stats", {
+          p_worker_id: workerId,
+        });
+        if (result.error) return [workerId, null];
+
+        const row = result.data?.[0] || {};
+        return [
+          workerId,
+          {
+            monthWorkedDays: Number(row.month_worked_days || 0),
+            monthWorkedMinutes: Number(row.month_worked_minutes || 0),
+            monthJobs: Number(row.month_jobs || 0),
+            activeJobs: Number(row.active_jobs || 0),
+            cancelledByEmployer: Number(row.cancelled_by_employer || 0),
+            attendanceRate:
+              row.attendance_rate === null ||
+              row.attendance_rate === undefined
+                ? null
+                : Number(row.attendance_rate),
+            ratingAverage:
+              row.rating_average === null || row.rating_average === undefined
+                ? null
+                : Number(row.rating_average),
+            ratingCount:
+              row.rating_count === null || row.rating_count === undefined
+                ? null
+                : Number(row.rating_count),
+            noShowCount:
+              row.no_show_count === null || row.no_show_count === undefined
+                ? null
+                : Number(row.no_show_count),
+            unexcusedEarlyLeaveCount:
+              row.unexcused_early_leave_count === null ||
+              row.unexcused_early_leave_count === undefined
+                ? null
+                : Number(row.unexcused_early_leave_count),
+          },
+        ];
+      })
+    );
+
+    const publicStatsMap = new Map();
+    for (const [workerId, stats] of publicStatsEntries) {
+      publicStatsMap.set(workerId, stats);
+    }
+
+    const rows = bookingRows
+      .map((booking) => {
+        const profile = profileMap.get(booking.worker_id);
+        const worker = workerMap.get(booking.worker_id);
+        if (!profile || !worker) return null;
+
+        const skillNames = (skillIdsByWorker.get(booking.worker_id) || [])
+          .map((id) => skillNameMap.get(id))
+          .filter(Boolean)
+          .slice(0, 6);
+
+        return {
+          id: booking.worker_id,
+          bookingId: booking.id,
+          invitationId: booking.invitation_id,
+          bookingStatus: booking.status,
+          name: shortWorkerName(profile.display_name),
+          initials: workerInitials(profile.display_name),
+          city: profile.city,
+          yearsExperience: Number(worker.years_experience || 0),
+          attendanceRate:
+            worker.attendance_rate === null ||
+            worker.attendance_rate === undefined
+              ? null
+              : Number(worker.attendance_rate),
+          ratingAverage:
+            worker.rating_average === null ||
+            worker.rating_average === undefined
+              ? null
+              : Number(worker.rating_average),
+          ratingCount:
+            worker.rating_count === null || worker.rating_count === undefined
+              ? null
+              : Number(worker.rating_count),
+          noShowCount:
+            worker.no_show_count === null || worker.no_show_count === undefined
+              ? null
+              : Number(worker.no_show_count),
+          unexcusedEarlyLeaveCount:
+            worker.unexcused_early_leave_count === null ||
+            worker.unexcused_early_leave_count === undefined
+              ? null
+              : Number(worker.unexcused_early_leave_count),
+          hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+          shortBio: worker.short_bio || "",
+          avatarUrl: workerAvatarUrl(worker.avatar_path),
+          skillNames,
+          attendance: attendanceMap.get(booking.id) || null,
+          rating: ratingMap.get(booking.id) || null,
+          publicStats: publicStatsMap.get(booking.worker_id) || null,
+        };
+      })
+      .filter(Boolean);
+
+    setJobWorkers(rows);
+  }
+
+  async function openWorkerProfile(worker) {
+    setError("");
+
+    if (worker?.publicStats) {
+      setSelectedWorker(worker);
+      return;
+    }
+
+    try {
+      const result = await supabase.rpc("get_worker_public_stats", {
+        p_worker_id: worker.id,
+      });
+      if (result.error) throw result.error;
+
+      const row = result.data?.[0] || {};
+      setSelectedWorker({
+        ...worker,
+        publicStats: {
+          monthWorkedDays: Number(row.month_worked_days || 0),
+          monthWorkedMinutes: Number(row.month_worked_minutes || 0),
+          monthJobs: Number(row.month_jobs || 0),
+          activeJobs: Number(row.active_jobs || 0),
+          cancelledByEmployer: Number(row.cancelled_by_employer || 0),
+          attendanceRate: canViewWorkerMetrics
+            ? row.attendance_rate === null ||
+              row.attendance_rate === undefined
+              ? worker.attendanceRate ?? null
+              : Number(row.attendance_rate)
+            : null,
+          ratingAverage: canViewWorkerMetrics
+            ? row.rating_average === null ||
+              row.rating_average === undefined
+              ? worker.ratingAverage ?? null
+              : Number(row.rating_average)
+            : null,
+          ratingCount: canViewWorkerMetrics
+            ? Number(row.rating_count || 0)
+            : null,
+          noShowCount: canViewWorkerMetrics
+            ? Number(row.no_show_count || worker.noShowCount || 0)
+            : null,
+          unexcusedEarlyLeaveCount: canViewWorkerMetrics
+            ? Number(
+                row.unexcused_early_leave_count ||
+                  worker.unexcusedEarlyLeaveCount ||
+                  0
+              )
+            : null,
+        },
+      });
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti darbuotojo profilio.");
+    }
+  }
+
+  async function employerCheckInWorker(target) {
+    if (!target?.bookingId) return;
+
+    setAttendanceSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("employer_check_in_worker", {
+        p_booking_id: target.bookingId,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice(
+        `Patvirtinote, kad ${target.name} atvyko į darbą. Darbo dieną vis tiek reikės uždaryti pasibaigus darbo laikui.`
+      );
+
+      await Promise.all([
+        loadCurrentJobWorkers(currentJob?.id),
+        loadEmployerNotifications(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti darbuotojo atvykimo.");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  }
+
+  async function recordEmployerAttendance(
+    target,
+    outcome,
+    actualEndTime = null,
+    note = ""
+  ) {
+    if (!target?.bookingId) return;
+
+    setAttendanceSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("employer_record_attendance", {
+        p_booking_id: target.bookingId,
+        p_outcome: outcome,
+        p_actual_end_time: actualEndTime || null,
+        p_note: note.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+
+      const returnedAttendance = Array.isArray(result.data)
+        ? result.data[0]
+        : result.data;
+
+      setNotice(
+        outcome === "full_day"
+          ? "Darbo diena uždaryta."
+          : returnedAttendance?.dispute_status === "disputed"
+          ? "Sistema aptiko nesutapimą ir automatiškai sukūrė ginčą. Darbuotojo reitingas nekeičiamas iki sprendimo."
+          : "Darbo dienos rezultatas perduotas darbuotojui patvirtinti. Kol darbuotojas nepatvirtino arba ginčas neišspręstas, galutinis rezultatas nefiksuojamas."
+      );
+
+      setAttendanceTarget(null);
+      setAttendanceMode(null);
+      setAttendanceEndTime("");
+      setAttendanceNote("");
+
+      await Promise.all([
+        loadCurrentJobWorkers(currentJob?.id),
+        reloadJobs(company?.id),
+        loadEmployerStats(company?.id),
+        loadEmployerNotifications(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko uždaryti darbo dienos.");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  }
+
+  async function submitWorkerRating() {
+    if (!ratingTarget?.bookingId) return;
+
+    if (!canViewWorkerMetrics) {
+      setError(
+        "Darbuotojų vertinimai prieinami tik Business ir Business Pro planuose."
+      );
+      return;
+    }
+
+    const responsibleUserId =
+      currentJob?.responsible_user_id || currentJob?.created_by || null;
+
+    if (!responsibleUserId || responsibleUserId !== user.id) {
+      setError(
+        "Darbuotoją už šį darbą gali įvertinti ir atsiliepimą palikti tik atsakingas žmogus, kuris kuravo darbą."
+      );
+      return;
+    }
+
+    const numericScore = Number(ratingScore);
+    if (!Number.isInteger(numericScore) || numericScore < 1 || numericScore > 10) {
+      setError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
+      return;
+    }
+
+    setRatingSaving(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const result = await supabase.rpc("submit_worker_rating", {
+        p_booking_id: ratingTarget.bookingId,
+        p_score: numericScore,
+        p_comment: ratingComment.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Darbuotojo įvertinimas išsaugotas.");
+      setRatingTarget(null);
+      setRatingScore(null);
+      setRatingComment("");
+
+      await loadCurrentJobWorkers(currentJob?.id);
+    } catch (err) {
+      const message = String(err?.message || "").toLowerCase();
+
+      setError(
+        message.includes("duplicate")
+          ? "Šis darbuotojas už šį darbą jau įvertintas."
+          : message.includes("row-level security") ||
+            message.includes("policy")
+          ? "Šį darbuotoją gali įvertinti tik už darbą atsakingas žmogus."
+          : err?.message || "Nepavyko išsaugoti įvertinimo."
+      );
+    } finally {
+      setRatingSaving(false);
+    }
+  }
+
+  async function findMatches(job) {
+    setSearching(true);
+    setError("");
+    setMatches([]);
+
+    try {
+      const candidateResult = await supabase.rpc("get_job_match_candidates", {
+        p_job_id: job.id,
+      });
+
+      if (candidateResult.error) throw candidateResult.error;
+
+      const candidateRows = candidateResult.data || [];
+      const workerIds = candidateRows.map((row) => row.worker_id);
+
+      if (!workerIds.length) {
+        setMatches([]);
+        return;
+      }
+
+      const [profilesResult, workersResult, workerSkillsResult] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, display_name, city, role")
+            .in("role", ["worker", "admin"])
+            .eq("is_active", true)
+            .in("id", workerIds),
+          supabase.rpc("get_employer_worker_profiles", {
+            p_job_id: job.id,
+            p_worker_ids: workerIds,
+          }),
+          supabase
+            .from("worker_skills")
+            .select("worker_id, skill_id")
+            .in("worker_id", workerIds),
+        ]);
+
+      const failed = [profilesResult, workersResult, workerSkillsResult].find(
+        (result) => result.error
+      );
+
+      if (failed?.error) throw failed.error;
+
+      const profileMap = new Map(
+        (profilesResult.data || []).map((row) => [row.id, row])
+      );
+      const workerMap = new Map(
+        (workersResult.data || []).map((row) => [row.user_id, row])
+      );
+      const candidateMap = new Map(
+        candidateRows.map((row) => [row.worker_id, row])
+      );
+
+      const skillIdsByWorker = new Map();
+      for (const row of workerSkillsResult.data || []) {
+        const list = skillIdsByWorker.get(row.worker_id) || [];
+        list.push(Number(row.skill_id));
+        skillIdsByWorker.set(row.worker_id, list);
+      }
+
+      const skillNameMap = new Map(
+        skills.map((skill) => [Number(skill.id), skill.name])
+      );
+
+      const combined = workerIds
+        .map((workerId) => {
+          const profile = profileMap.get(workerId);
+          const worker = workerMap.get(workerId);
+          const slot = candidateMap.get(workerId);
+          if (!profile || !worker || !slot) return null;
+
+          const skillNames = (skillIdsByWorker.get(workerId) || [])
+            .map((id) => skillNameMap.get(id))
+            .filter(Boolean)
+            .slice(0, 4);
+
+          return {
+            id: workerId,
+            name: shortWorkerName(profile.display_name),
+            initials: workerInitials(profile.display_name),
+            city: profile.city,
+            hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+            yearsExperience: Number(worker.years_experience || 0),
+            attendanceRate:
+              worker.attendance_rate === null ||
+              worker.attendance_rate === undefined
+                ? null
+                : Number(worker.attendance_rate),
+            completedJobs: Number(worker.completed_jobs || 0),
+            shortBio: worker.short_bio || "",
+            avatarUrl: workerAvatarUrl(worker.avatar_path),
+            travelRadiusKm: Number(worker.travel_radius_km || 0),
+            distanceKm:
+              slot.distance_km === null || slot.distance_km === undefined
+                ? null
+                : Number(slot.distance_km),
+            noShowCount: Number(worker.no_show_count || 0),
+            lastActiveAt: worker.last_active_at,
+            activityLabel: workerRecentActivityLabel(worker.last_active_at),
+            ratingAverage:
+              worker.rating_average === null ||
+              worker.rating_average === undefined
+                ? null
+                : Number(worker.rating_average),
+            availableFrom: slot.available_from?.slice(0, 5) || "",
+            availableTo: slot.available_to?.slice(0, 5) || "",
+            skillNames,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+          const distanceA =
+            a.distanceKm === null ? Number.POSITIVE_INFINITY : a.distanceKm;
+          const distanceB =
+            b.distanceKm === null ? Number.POSITIVE_INFINITY : b.distanceKm;
+
+          if (distanceA !== distanceB) return distanceA - distanceB;
+
+          const attendanceA = Number(a.attendanceRate || 0);
+          const attendanceB = Number(b.attendanceRate || 0);
+          if (attendanceB !== attendanceA) return attendanceB - attendanceA;
+
+          return Number(b.ratingAverage || 0) - Number(a.ratingAverage || 0);
+        });
+
+      const invitationsResult = await supabase
+        .from("job_invitations")
+        .select("id, worker_id, status")
+        .eq("job_id", job.id);
+
+      if (!invitationsResult.error) {
+        const invitationRows = invitationsResult.data || [];
+        const declinedWorkerIds = new Set(
+          invitationRows
+            .filter((row) => row.status === "declined")
+            .map((row) => row.worker_id)
+        );
+
+        setMatches(
+          combined.filter((worker) => !declinedWorkerIds.has(worker.id))
+        );
+
+        setInvitedIds(invitationRows.map((row) => row.worker_id));
+        setInvitationStatuses(
+          Object.fromEntries(
+            invitationRows.map((row) => [row.worker_id, row.status])
+          )
+        );
+        setInvitationByWorker(
+          Object.fromEntries(
+            invitationRows.map((row) => [row.worker_id, row])
+          )
+        );
+      } else {
+        setMatches(combined);
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko rasti darbuotojų.");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function saveJobAndFind() {
+    setNotice("");
+    setError("");
+
+    if (!company?.id) {
+      setError("Nerasta įmonė.");
+      return;
+    }
+
+    if (!form.title.trim()) {
+      setError("Įrašykite poreikio pavadinimą.");
+      return;
+    }
+
+    if (!form.workDate || !form.startTime) {
+      setError("Pasirinkite datą ir pradžios laiką.");
+      return;
+    }
+
+    if (!form.endTime || form.endTime <= form.startTime) {
+      setError("Nurodykite teisingą darbo pabaigos laiką.");
+      return;
+    }
+
+    if (
+      editingConfirmedCount === 0 &&
+      (!form.breakStartTime || !form.breakEndTime)
+    ) {
+      setError("Nurodykite pietų pertraukos pradžią ir pabaigą.");
+      return;
+    }
+
+    if (
+      (form.breakStartTime || form.breakEndTime) &&
+      (
+        !form.breakStartTime ||
+        !form.breakEndTime ||
+        form.breakStartTime < form.startTime ||
+        form.breakEndTime > form.endTime ||
+        form.breakEndTime <= form.breakStartTime
+      )
+    ) {
+      setError("Pietų pertrauka turi būti darbo laiko ribose.");
+      return;
+    }
+
+    if (form.description.trim().length < 10) {
+      setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
+      return;
+    }
+
+    if (!form.payAmount || Number(form.payAmount) <= 0) {
+      setError("Atlygis į rankas yra privalomas. Įveskite sumą.");
+      return;
+    }
+
+    if (!["hour", "day"].includes(form.payUnit)) {
+      setError("Pasirinkite, ar atlygis mokamas už valandą, ar už dieną.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const canonicalCity = await canonicalCityName(form.city);
+      if (!canonicalCity) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const payload = {
+        city: canonicalCity,
+        address_text: form.address.trim() || null,
+        work_date: form.workDate,
+        start_time: form.startTime,
+        end_time: form.endTime || null,
+        break_start_time: form.breakStartTime || null,
+        break_end_time: form.breakEndTime || null,
+        workers_needed: Number(form.workersNeeded) || 1,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        pay_amount: Number(form.payAmount),
+        pay_unit: form.payUnit,
+        transport_mode: form.transportMode,
+        responsible_user_id:
+          planSummary?.can_team_management
+            ? form.responsibleUserId || user.id
+            : user.id,
+      };
+
+      let job;
+
+      if (editingJobId) {
+        const updateResult = await supabase
+          .from("jobs")
+          .update(payload)
+          .eq("id", editingJobId)
+          .select(
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+          )
+          .single();
+
+        if (updateResult.error) throw updateResult.error;
+        job = updateResult.data;
+
+
+        setNotice("Poreikis atnaujintas.");
+      } else {
+        const insertResult = await supabase
+          .from("jobs")
+          .insert({
+            ...payload,
+            company_id: company.id,
+            created_by: user.id,
+            status: "open",
+          })
+          .select(
+            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+          )
+          .single();
+
+        if (insertResult.error) throw insertResult.error;
+        job = insertResult.data;
+
+        setNotice("Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai.");
+      }
+
+      setForm((current) => ({ ...current, city: canonicalCity }));
+      setCurrentJob({ ...job, confirmedCount: editingConfirmedCount || 0 });
+      setInvitedIds([]);
+      setInvitationStatuses({});
+      setInvitationByWorker({});
+      setEditingJobId(null);
+      setEditingConfirmedCount(0);
+      await reloadJobs(company.id);
+      await loadCompanyPlan(company.id);
+      await findMatches(job);
+      setShowJobForm(false);
+
+    } catch (err) {
+      setError(err?.message || "Nepavyko sukurti darbo pasiūlymo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function openExistingJob(job) {
+    setNotice("");
+    setError("");
+    setWorkerSource("available");
+    setEditingJobId(null);
+    setEditingConfirmedCount(0);
+    setShowJobForm(false);
+    setCurrentJob(job);
+
+    try {
+      setForm((current) => ({
+        ...current,
+        title: job.title || "",
+        city: job.city || "",
+        address: job.address_text || "",
+        workDate: job.work_date,
+        startTime: job.start_time?.slice(0, 5) || "08:00",
+        endTime: job.end_time?.slice(0, 5) || "17:00",
+        breakStartTime: job.break_start_time?.slice(0, 5) || "",
+        breakEndTime: job.break_end_time?.slice(0, 5) || "",
+        workersNeeded: job.workers_needed || 1,
+        transportMode:
+          job.transport_mode === "employer_pickup"
+            ? "employer_pickup"
+            : "self_arrival",
+        payAmount: job.pay_amount ?? "",
+        payUnit: job.pay_unit === "day" ? "day" : "hour",
+        description: job.description || "",
+        responsibleUserId: job.responsible_user_id || job.created_by || user.id,
+      }));
+
+      await Promise.all([
+        findMatches(job),
+        loadCurrentJobWorkers(job.id),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti poreikio.");
+    }
+  }
+
+  async function openSavedWorkerTeam() {
+    if (!planSummary?.can_saved_workers) {
+      setNotice(
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setShowSavedWorkers(true);
+    setSavedWorkersLoading(true);
+    setError("");
+
+    try {
+      await loadSavedWorkers(company?.id, planSummary);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti darbuotojų komandos.");
+    } finally {
+      setSavedWorkersLoading(false);
+    }
+  }
+
+  async function saveWorkerToTeam(worker) {
+    if (!company?.id || !worker?.id) return;
+
+    if (!planSummary?.can_saved_workers) {
+      setNotice(
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setSavedWorkerBusy(worker.id);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("save_worker_to_company_team", {
+        p_company_id: company.id,
+        p_worker_id: worker.id,
+      });
+
+      if (result.error) throw result.error;
+
+      await loadSavedWorkers(company.id, planSummary);
+      setNotice(`${worker.name || "Darbuotojas"} pridėtas į darbuotojų favoritus.`);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pridėti darbuotojo į komandą.");
+    } finally {
+      setSavedWorkerBusy("");
+    }
+  }
+
+  async function removeWorkerFromTeam(worker) {
+    if (!company?.id || !worker?.id) return;
+
+    setSavedWorkerBusy(worker.id);
+    setError("");
+
+    try {
+      const result = await supabase.rpc(
+        "remove_worker_from_company_team",
+        {
+          p_company_id: company.id,
+          p_worker_id: worker.id,
+        }
+      );
+
+      if (result.error) throw result.error;
+
+      await loadSavedWorkers(company.id, planSummary);
+      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš darbuotojų favoritų.`);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti darbuotojo iš komandos.");
+    } finally {
+      setSavedWorkerBusy("");
+    }
+  }
+
+  async function inviteSavedWorkerTeam() {
+    if (!currentJob?.id || !planSummary?.can_saved_workers) return;
+
+    setInvitingSavedTeam(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("invite_company_saved_workers", {
+        p_job_id: currentJob.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const summary = result.data?.[0] || {};
+      const invited = Number(summary.invited_count || 0);
+      const matching = Number(summary.matching_count || 0);
+      const saved = Number(summary.saved_count || 0);
+      const already = Number(summary.already_invited_count || 0);
+
+      await findMatches(currentJob);
+
+      if (!saved) {
+        setNotice("Darbuotojų favorituose dar nėra išsaugotų darbuotojų.");
+      } else if (!matching) {
+        setNotice(
+          "Šiam darbui šiuo metu netinka nė vienas darbuotojas iš favoritų pagal vietą, laiką, prieinamumą ir kitus darbo kriterijus."
+        );
+      } else if (invited) {
+        setNotice(
+          `Kvietimai išsiųsti ${invited} tinkamiems darbuotojams iš favoritų.${
+            already ? ` ${already} jau buvo pakviesti anksčiau.` : ""
+          }`
+        );
+      } else {
+        setNotice(
+          "Visi šiam darbui tinkami darbuotojai iš favoritų jau buvo pakviesti."
+        );
+      }
+    } catch (err) {
+      setError(err?.message || "Nepavyko pakviesti „Mano komandos“.");
+    } finally {
+      setInvitingSavedTeam(false);
+    }
+  }
+
+  function openUrgentSearch() {
+    const canUseUrgent = Boolean(planSummary?.can_team_management);
+
+    if (!canUseUrgent) {
+      setNotice(
+        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setUrgentSearchCity(company?.city || "");
+    setUrgentSearchResults([]);
+    setShowUrgentSearch(true);
+    setError("");
+  }
+
+  async function searchUrgentWorkers() {
+    if (!company?.id) return;
+
+    const city = urgentSearchCity.trim();
+    if (!city) {
+      setError("Nurodykite miestą.");
+      return;
+    }
+
+    setUrgentSearchLoading(true);
+    setError("");
+
+    try {
+      const canonicalCity = await canonicalCityName(city);
+
+      const result = await supabase.rpc("get_urgent_workers", {
+        p_company_id: company.id,
+        p_city: canonicalCity,
+      });
+
+      if (result.error) throw result.error;
+
+      setUrgentSearchCity(canonicalCity);
+      setUrgentSearchResults(
+        (result.data || []).map((row) => ({
+          ...row,
+          avatarUrl: workerAvatarUrl(row.avatar_path),
+        }))
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko rasti skubiai laisvų darbuotojų.");
+    } finally {
+      setUrgentSearchLoading(false);
+    }
+  }
+
+  async function copyUrgentPhone(phone) {
+    if (!phone) return;
+
+    try {
+      await navigator.clipboard.writeText(phone);
+      setUrgentPhoneCopied(phone);
+      window.setTimeout(() => setUrgentPhoneCopied(""), 1600);
+    } catch {
+      setError("Nepavyko nukopijuoti telefono numerio.");
+    }
+  }
+
+  function openNewJobForm() {
+    if (
+      planSummary &&
+      !planSummary.unlimited_jobs &&
+      Number(planSummary.jobs_remaining ?? 0) <= 0
+    ) {
+      setError(
+        planSummary.plan_key === "business"
+          ? "Business plano 25 darbo pasiūlymų limitas šį mėnesį išnaudotas. Business Pro plane darbų skaičius neribojamas."
+          : "Basic plano 5 darbo pasiūlymų limitas šį mėnesį išnaudotas."
+      );
+      setShowPlans(true);
+      return;
+    }
+
+    setEditingJobId(null);
+    setEditingConfirmedCount(0);
+    setCurrentJob(null);
+    setWorkerSource("available");
+    setMatches([]);
+    setJobWorkers([]);
+    setNotice("");
+    setError("");
+    setInvitedIds([]);
+    setInvitationStatuses({});
+    setInvitationByWorker({});
+    setForm({
+      title: "Statybų pagalbiniai",
+      city: company?.city || "Vilnius",
+      address: "",
+      workDate: employerTomorrowISO(),
+      startTime: "08:00",
+      endTime: "17:00",
+      breakStartTime: "12:00",
+      breakEndTime: "12:30",
+      workersNeeded: 1,
+      transportMode: "self_arrival",
+      payAmount: "",
+      payUnit: "hour",
+      description: "",
+      responsibleUserId: user.id,
+    });
+    setShowJobForm(true);
+    window.scrollTo({ top: 220, behavior: "smooth" });
+  }
+
+  async function startEditJob(job) {
+    await openExistingJob(job);
+    setShowJobForm(true);
+    setEditingJobId(job.id);
+    setEditingConfirmedCount(Number(job.confirmedCount || 0));
+    setNotice(
+      job.confirmedCount > 0
+        ? "Poreikis jau turi patvirtintų darbuotojų. Esminės sąlygos užrakintos."
+        : "Redaguojate esamą poreikį."
+    );
+    window.scrollTo({ top: 220, behavior: "smooth" });
+  }
+
+  async function requestRemoveOrCancelJob(job) {
+    setError("");
+    setNotice("");
+
+    const visibleConfirmedCount = Number(job.confirmedCount || 0);
+
+    // Jei darbdavys jau mato "Atšaukti", modalą rodome IŠKART.
+    // Galutinio atšaukimo metu DB vis tiek dar kartą patikrinama.
+    if (visibleConfirmedCount > 0) {
+      setCancelReason("");
+      setCancelJobTarget({
+        ...job,
+        confirmedCount: visibleConfirmedCount,
+      });
+
+      // Fone tik patiksliname skaičių. Tai neblokuoja modalo atsidarymo.
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", job.id)
+        .eq("status", "confirmed")
+        .then(({ count, error: countError }) => {
+          if (!countError && Number(count || 0) > 0) {
+            setCancelJobTarget((current) =>
+              current?.id === job.id
+                ? { ...current, confirmedCount: Number(count || 0) }
+                : current
+            );
+          }
+        });
+
+      return;
+    }
+
+    try {
+      const countResult = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", job.id)
+        .eq("status", "confirmed");
+
+      if (countResult.error) throw countResult.error;
+
+      const confirmedCount = Number(countResult.count || 0);
+
+      if (confirmedCount > 0) {
+        setCancelReason("");
+        setCancelJobTarget({
+          ...job,
+          confirmedCount,
+        });
+        return;
+      }
+
+      const shouldDelete = window.confirm(
+        "Šis poreikis neturi patvirtintų darbuotojų. Ar tikrai norite jį ištrinti?"
+      );
+
+      if (!shouldDelete) return;
+
+      const result = await supabase.from("jobs").delete().eq("id", job.id);
+      if (result.error) throw result.error;
+
+      setNotice("Poreikis ištrintas.");
+
+      if (currentJob?.id === job.id) {
+        setCurrentJob(null);
+        setMatches([]);
+      }
+
+      if (editingJobId === job.id) {
+        setEditingJobId(null);
+        setEditingConfirmedCount(0);
+      }
+
+      await reloadJobs(company.id);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti poreikio.");
+    }
+  }
+
+  async function confirmEmployerCancellation() {
+    if (!cancelJobTarget) return;
+
+    const reason = cancelReason.trim();
+
+    if (reason.length < 5) {
+      setError("Įrašykite aiškią atšaukimo priežastį.");
+      return;
+    }
+
+    setCancellingJob(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const now = new Date().toISOString();
+
+      const countResult = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", cancelJobTarget.id)
+        .eq("status", "confirmed");
+
+      if (countResult.error) throw countResult.error;
+
+      const confirmedCount = Number(countResult.count || 0);
+
+      if (confirmedCount === 0) {
+        throw new Error(
+          "Patvirtintų darbuotojų nebeliko. Atnaujinkite poreikį ir bandykite dar kartą."
+        );
+      }
+
+      const jobResult = await supabase
+        .from("jobs")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+          cancelled_at: now,
+        })
+        .eq("id", cancelJobTarget.id);
+
+      if (jobResult.error) throw jobResult.error;
+
+      const bookingsResult = await supabase
+        .from("bookings")
+        .update({
+          status: "cancelled_by_employer",
+          cancelled_at: now,
+          cancellation_reason: reason,
+        })
+        .eq("job_id", cancelJobTarget.id)
+        .eq("status", "confirmed");
+
+      if (bookingsResult.error) throw bookingsResult.error;
+
+      const invitationsResult = await supabase
+        .from("job_invitations")
+        .update({
+          status: "cancelled",
+          responded_at: now,
+        })
+        .eq("job_id", cancelJobTarget.id)
+        .in("status", ["pending", "accepted"]);
+
+      if (invitationsResult.error) throw invitationsResult.error;
+
+      setNotice("Poreikis atšauktas. Darbuotojai matys jūsų nurodytą priežastį.");
+
+      if (currentJob?.id === cancelJobTarget.id) {
+        setCurrentJob((existing) =>
+          existing
+            ? {
+                ...existing,
+                status: "cancelled",
+                cancellation_reason: reason,
+                cancelled_at: now,
+                confirmedCount: 0,
+              }
+            : existing
+        );
+        setMatches([]);
+      }
+
+      if (editingJobId === cancelJobTarget.id) {
+        setEditingJobId(null);
+        setEditingConfirmedCount(0);
+      }
+
+      setCancelJobTarget(null);
+      setCancelReason("");
+      await reloadJobs(company.id);
+      await loadEmployerNotifications();
+    } catch (err) {
+      setError(err?.message || "Nepavyko atšaukti poreikio.");
+    } finally {
+      setCancellingJob(false);
+    }
+  }
+
+
+  async function inviteWorker(workerId) {
+    if (!currentJob?.id) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      if (
+        currentJob.status !== "open" ||
+        Number(currentJob.confirmedCount || 0) >= Number(currentJob.workers_needed || 0)
+      ) {
+        throw new Error("Šis poreikis jau užpildytas arba uždarytas.");
+      }
+
+      const result = await supabase
+        .from("job_invitations")
+        .insert({
+          job_id: currentJob.id,
+          worker_id: workerId,
+          status: "pending",
+        })
+        .select("id, worker_id, status")
+        .single();
+
+      if (result.error) throw result.error;
+
+      setInvitedIds((current) => [...current, workerId]);
+      setInvitationStatuses((current) => ({
+        ...current,
+        [workerId]: "pending",
+      }));
+      setInvitationByWorker((current) => ({
+        ...current,
+        [workerId]: result.data,
+      }));
+      setNotice("Kvietimas darbuotojui išsiųstas.");
+    } catch (err) {
+      if (String(err?.message || "").toLowerCase().includes("duplicate")) {
+        const existingResult = await supabase
+          .from("job_invitations")
+          .select("id, worker_id, status")
+          .eq("job_id", currentJob.id)
+          .eq("worker_id", workerId)
+          .maybeSingle();
+
+        const existing = existingResult.data || null;
+
+        if (existing?.status === "declined") {
+          setMatches((current) =>
+            current.filter((worker) => worker.id !== workerId)
+          );
+          setInvitationStatuses((current) => ({
+            ...current,
+            [workerId]: "declined",
+          }));
+          setInvitationByWorker((current) => ({
+            ...current,
+            [workerId]: existing,
+          }));
+          setNotice(
+            "Šis darbuotojas jau atmetė šį darbą, todėl pakartotinai jam jo neberodome."
+          );
+        } else {
+          setInvitedIds((current) => [...new Set([...current, workerId])]);
+          setNotice("Šis darbuotojas jau buvo pakviestas į šį darbą.");
+        }
+      } else {
+        const message = String(err?.message || "");
+        if (
+          message
+            .toLowerCase()
+            .includes("darbuotojas šį darbą atmetė")
+        ) {
+          setMatches((current) =>
+            current.filter((worker) => worker.id !== workerId)
+          );
+          setNotice(
+            "Šis darbuotojas šį darbą atmetė, todėl pakartotinai jo kviesti negalima."
+          );
+        } else {
+          setError(message || "Nepavyko išsiųsti kvietimo.");
+        }
+      }
+    }
+  }
+
+  const canSeeAllCompanyJobs =
+    Boolean(planSummary?.can_team_management) &&
+    ["owner", "manager"].includes(companyMemberRole);
+
+  const currentJobResponsibleUserId =
+    currentJob?.responsible_user_id || currentJob?.created_by || null;
+
+  const canViewWorkerMetrics = Boolean(
+    planSummary?.can_advanced_analytics
+  );
+
+  const canRateCurrentJob =
+    canViewWorkerMetrics &&
+    Boolean(currentJobResponsibleUserId) &&
+    currentJobResponsibleUserId === user.id;
+
+  const savedWorkerIdSet = new Set(
+    savedWorkers.map((worker) => worker.id)
+  );
+
+  const baseCandidateWorkers = matches.filter(
+    (worker) => !jobWorkers.some((item) => item.id === worker.id)
+  );
+
+  const visibleCandidateWorkers =
+    workerSource === "team"
+      ? baseCandidateWorkers.filter((worker) =>
+          savedWorkerIdSet.has(worker.id)
+        )
+      : baseCandidateWorkers;
+
+  const matchingSavedWorkersCount = baseCandidateWorkers.filter((worker) =>
+    savedWorkerIdSet.has(worker.id)
+  ).length;
+
+  const visibleJobs =
+    planSummary?.can_team_management &&
+    (jobScope === "mine" || !canSeeAllCompanyJobs)
+      ? jobs.filter(
+          (job) =>
+            job.responsible_user_id === user.id ||
+            job.created_by === user.id
+        )
+      : jobs;
+
+  const employerDashboardToday = localDateISO(new Date());
+
+  function employerJobDashboardState(job) {
+    const confirmed = Number(job.confirmedCount || 0);
+    const needed = Number(job.workers_needed || 0);
+    const missing = Math.max(0, needed - confirmed);
+    const ended = jobHasEnded(job);
+    const isToday = job.work_date === employerDashboardToday;
+    const startMoment =
+      job.work_date && job.start_time
+        ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+        : null;
+    const started =
+      Boolean(startMoment) &&
+      !Number.isNaN(startMoment?.getTime()) &&
+      new Date() >= startMoment;
+
+    if (job.status === "cancelled") {
+      return {
+        key: "cancelled",
+        tone: "muted",
+        label: "Atšaukta",
+        detail: "Darbas atšauktas",
+        missing,
+      };
+    }
+
+    if (job.status === "completed") {
+      return {
+        key: "completed",
+        tone: "ok",
+        label: "Įvykdyta",
+        detail: "Darbo ciklas užbaigtas",
+        missing: 0,
+      };
+    }
+
+    if (ended && confirmed > 0) {
+      return {
+        key: "action",
+        tone: "danger",
+        label: "Reikia veiksmo",
+        detail: "Uždarykite pasibaigusią darbo dieną",
+        missing,
+      };
+    }
+
+    if (isToday && started) {
+      return {
+        key: "today",
+        tone: "live",
+        label: "Vyksta šiandien",
+        detail:
+          missing > 0
+            ? `Dar trūksta ${missing} ${missing === 1 ? "žmogaus" : "žmonių"}`
+            : "Komanda suformuota",
+        missing,
+      };
+    }
+
+    if (missing > 0) {
+      return {
+        key: "hiring",
+        tone: "action",
+        label: `Trūksta ${missing}`,
+        detail:
+          missing === 1
+            ? "Reikia dar 1 darbuotojo"
+            : `Reikia dar ${missing} darbuotojų`,
+        missing,
+      };
+    }
+
+    return {
+      key: "ready",
+      tone: "ok",
+      label: isToday ? "Paruošta šiandienai" : "Komanda suformuota",
+      detail: `${confirmed}/${needed} darbuotojai patvirtinti`,
+      missing: 0,
+    };
+  }
+
+  const dashboardActionJobs = visibleJobs.filter(
+    (job) => employerJobDashboardState(job).key === "action"
+  ).length;
+
+  const dashboardMissingWorkers = visibleJobs.reduce(
+    (sum, job) => sum + employerJobDashboardState(job).missing,
+    0
+  );
+
+  const dashboardTodayJobs = visibleJobs.filter(
+    (job) =>
+      job.work_date === employerDashboardToday &&
+      !["cancelled", "completed"].includes(job.status)
+  ).length;
+
+  const dashboardUnreadMessages = employerNotifications.filter(
+    (item) =>
+      item.event_type === "message" &&
+      visibleJobs.some((job) => job.id === item.job_id)
+  ).length;
+
+  const activeTeamMembers = teamMembers.filter((member) => member.is_active);
+  const pendingTeamInvites = teamInvites.filter(
+    (invite) =>
+      invite.status === "pending" &&
+      new Date(invite.expires_at) > new Date()
+  );
+  const usedTeamSeats =
+    activeTeamMembers.length + pendingTeamInvites.length;
+
+  const currentTeamMember = activeTeamMembers.find(
+    (member) => member.user_id === user.id
+  );
+
+  if (loading) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Kraunamas darbdavio darbo skydelis...</b>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ed-page">
+      <style>{`
+        .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
+        .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
+        .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
+        .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
+        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
+        .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
+        .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:8px;min-width:300px}
+        .ed-heading-actions>button{width:100%}
+        .ed-heading-primary-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .ed-heading-primary-row>button{width:100%}
+        .ed-urgent-btn{border:0;border-radius:10px;background:#102438;color:#fff;padding:12px 16px;font:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
+        .ed-urgent-btn:hover{background:#1d354d}
+        .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.ed-urgent-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
+        .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
+        .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
+        .ed-urgent-results{display:grid;gap:9px}.ed-urgent-row{border:1px solid #e4ebf0;border-radius:12px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+        .ed-urgent-worker{display:flex;align-items:center;gap:11px}.ed-urgent-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f5;display:grid;place-items:center;font-weight:800;flex:0 0 44px}.ed-urgent-avatar img{width:100%;height:100%;object-fit:cover}.ed-urgent-worker b{display:block}.ed-urgent-worker span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-urgent-contact{text-align:right}.ed-urgent-contact b{display:block;font-size:15px;margin-bottom:6px}.ed-urgent-empty{text-align:center;color:#6c7a88;padding:28px 10px}
+        .ed-worker-source{display:flex;align-items:center;gap:5px;margin-top:12px;padding:4px;background:#f1f4f6;border-radius:10px;width:max-content;max-width:100%}
+        .ed-worker-source button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 11px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-worker-source button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-worker-source button.locked{color:#9a6a3d}
+        .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-saved-modal{width:min(850px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-saved-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+        .ed-saved-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-saved-head p{margin:0;color:#6c7a88;line-height:1.5}
+        .ed-saved-list{display:grid;gap:10px}
+        .ed-saved-row{border:1px solid #e4ebf0;border-radius:13px;padding:14px;display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(180px,1fr) auto;gap:14px;align-items:center}
+        .ed-saved-main{display:flex;align-items:center;gap:11px}.ed-saved-main b{display:block}.ed-saved-main span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-saved-meta span{display:block;color:#7a8996;font-size:11px;margin-bottom:4px}.ed-saved-meta b{font-size:13px}
+        .ed-saved-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
+        .ed-team-add{border:1px solid #cfe4db;background:#f2faf6;color:#167a54;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-team-badge{display:inline-flex;align-items:center;border-radius:999px;background:#edf8f3;color:#167a54;padding:7px 9px;font-size:11px;font-weight:800}
+        .ed-team-chat-btn{position:relative}
+        .ed-team-chat-btn.locked{border-style:dashed}
+        .ed-chat-alert-btn{position:relative}
+        .ed-chat-alert{position:absolute;top:-9px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 0 0 3px #fff}
+        .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
+        .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+        .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
+        .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
+        .ed-profile-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+        .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
+        .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
+        .ed-profile-summary-card b{display:block;font-family:Manrope,Inter,sans-serif;font-size:16px;overflow-wrap:anywhere}
+        .ed-profile-summary-card small{display:block;color:#6c7a88;font-size:11px;margin-top:4px}
+        .ed-link-btn{border:0;background:transparent;color:#b85f0e;padding:0;margin-top:7px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
+        .ed-profile-readonly-note{margin-top:16px;border-radius:10px;background:#f4f6f8;color:#6c7a88;padding:11px 13px;font-size:12px}
+        .ed-company-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .ed-company-reviews{margin-top:18px;border-top:1px solid #e4ebf0;padding-top:18px}
+        .ed-company-reviews-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+        .ed-company-reviews-head h3{margin:0;font-size:17px}.ed-company-reviews-head span{color:#6c7a88;font-size:12px}
+        .ed-company-review-list{display:grid;gap:9px}
+        .ed-company-review{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:12px}
+        .ed-company-review-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:5px}
+        .ed-company-review-top b{font-size:13px}.ed-company-review-top span{font-size:11px;color:#7a8996}
+        .ed-company-review-meta{font-size:11px;color:#7a8996;margin-bottom:6px}
+        .ed-company-review p{margin:0;line-height:1.5;color:#405264;font-size:13px;white-space:pre-wrap}
+        .ed-company-editor-wide{grid-column:1/-1}
+        .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
+        .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
+        .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
+        .ed-kpi span{display:block;font-size:12px;color:#6c7a88;line-height:1.35;min-height:34px}
+        .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:12px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
+        .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
+        .ed-reliability-copy{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start}
+        .ed-reliability-title{
+          display:block;
+          width:100%;
+          margin-bottom:9px;
+        }
+        .ed-reliability-title-btn{
+          border:0;
+          background:transparent;
+          color:#6c7a88;
+          font-family:Inter,sans-serif;
+          font-size:12px;
+          line-height:1.25;
+          cursor:pointer;
+          padding:0;
+          margin:0;
+          text-align:left;
+        }
+        .ed-reliability-title-btn:hover{
+          color:#102438;
+          text-decoration:underline;
+          text-underline-offset:3px;
+        }
+        .ed-reliability-title-btn:focus-visible{
+          outline:2px solid rgba(240,138,40,.35);
+          outline-offset:4px;
+          border-radius:4px;
+        }
+        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
+        .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
+        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
+        .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
+        .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
+        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
+        .ed-textarea{min-height:90px;resize:vertical}
+        .ed-check{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;min-height:46px}.ed-check input{width:18px;height:18px;accent-color:#1c9b67}
+        .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
+        .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
+        .ed-plan-badge{border:1px solid #dbe4ea;background:#f8fafb;color:#102438;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-plan-badge strong{color:#f08a28}
+        .ed-plan-usage{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:14px 16px;margin-bottom:20px}
+        .ed-plan-usage-copy b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;margin-bottom:3px}
+        .ed-plan-usage-copy span{display:block;color:#6c7a88;font-size:13px;line-height:1.45}
+        .ed-plan-usage-meter{display:flex;align-items:center;gap:10px;min-width:250px}
+        .ed-plan-usage-bar{height:8px;flex:1;background:#edf1f4;border-radius:999px;overflow:hidden}
+        .ed-plan-usage-fill{height:100%;background:#f08a28;border-radius:999px}
+        .ed-plan-usage-meter b{font-size:12px;white-space:nowrap}
+        .ed-analytics-lock{margin-top:12px;border:1px dashed #d5dde4;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fafbfc}
+        .ed-analytics-lock b{display:block;font-size:13px}.ed-analytics-lock span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-plan-overlay{position:fixed;inset:0;z-index:9400;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
+        .ed-plan-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:26px}.ed-plan-head p{margin:0;color:#6c7a88}
+        .ed-billing-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:12px 14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
+        .ed-billing-row>span{font-size:12px;color:#526374;font-weight:800}
+        .ed-billing-toggle{display:flex;align-items:center;gap:4px;padding:4px;background:#eaf0f4;border-radius:10px}
+        .ed-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 12px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+        .ed-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-billing-discount{display:inline-flex;align-items:center;border-radius:999px;background:#eaf8f1;color:#167a54;padding:6px 9px;font-size:10px;font-weight:900}
+        .ed-billing-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+        .ed-billing-card{border:1px solid #e3eaf0;border-radius:13px;background:#fff;padding:12px 13px;min-width:0}
+        .ed-billing-card span{display:block;color:#6b7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+        .ed-billing-card b{display:block;color:#102438;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+        .ed-billing-card small{display:block;color:#6b7a88;font-size:10px;line-height:1.4;margin-top:4px}
+        .ed-billing-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:0 0 16px}
+        .ed-billing-warning{margin:0 0 16px;padding:12px 14px;border-radius:13px;border:1px solid #f2d7bc;background:#fff7ef;color:#102438;font-size:12px;line-height:1.55}
+        .ed-billing-warning b{font-weight:900}
+        .ed-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        .ed-plan-card{border:1px solid #e1e8ed;border-radius:16px;padding:20px;display:flex;flex-direction:column;min-height:390px;background:#fff}
+        .ed-plan-card.current{border-color:#f08a28;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
+        .ed-plan-card.pro{background:#102438;color:#fff;border-color:#102438}
+        .ed-plan-card .eyebrow{margin-bottom:6px}.ed-plan-card.pro .eyebrow{color:#f5a04c}
+        .ed-plan-card h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0}
+        .ed-plan-price{font-family:Manrope,Inter,sans-serif;font-size:31px;font-weight:900;margin:12px 0 2px}.ed-plan-price small{font:600 12px Inter,sans-serif;color:#7a8996}.ed-plan-card.pro .ed-plan-price small{color:#b7c2cc}
+        .ed-plan-yearly{min-height:30px;margin:5px 0 2px;color:#167a54;font-size:11px;font-weight:800;line-height:1.4}.ed-plan-card.pro .ed-plan-yearly{color:#65d5aa}
+        .ed-plan-desc{font-size:13px;color:#6c7a88;min-height:40px;line-height:1.5}.ed-plan-card.pro .ed-plan-desc{color:#c7d0d8}
+        .ed-plan-features{display:grid;gap:9px;margin:17px 0 20px;padding:0;list-style:none;flex:1}.ed-plan-features li{font-size:13px;line-height:1.4}.ed-plan-features li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:7px}.ed-plan-card.pro .ed-plan-features li:before{color:#65d5aa}
+        .ed-plan-current{display:inline-flex;width:max-content;background:#fff3e7;color:#b85f0e;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:9px}
+        .ed-plan-card.pro .ed-plan-current{background:rgba(255,255,255,.12);color:#fff}
+        .ed-plan-card .ed-primary,.ed-plan-card .ed-secondary{width:100%;min-height:43px}
+        .ed-plan-card.pro .ed-secondary{border-color:#526779;background:#fff;color:#102438}
+        .ed-plan-footnote{margin-top:16px;color:#778694;font-size:12px;line-height:1.5}
+        .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
+        .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-team-modal{width:min(980px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
+        .ed-team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
+        .ed-team-head h2{margin:3px 0 4px;font-family:Manrope,Inter,sans-serif;font-size:25px}
+        .ed-team-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.5}
+        .ed-team-seat{display:inline-flex;margin-top:9px;border-radius:999px;background:#eef3f6;color:#405264;padding:6px 9px;font-size:11px;font-weight:800}
+        .ed-team-layout{display:grid;grid-template-columns:1fr;gap:16px}
+        .ed-team-panel{border:1px solid #e4ebf0;border-radius:14px;padding:16px}
+        .ed-team-panel h3{margin:0 0 5px;font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .ed-team-panel>p{margin:0 0 14px;color:#6c7a88;font-size:12px;line-height:1.45}
+        .ed-team-list{display:grid;gap:9px}
+        .ed-team-member{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #edf1f4;border-radius:11px;padding:12px}
+        .ed-team-member b{display:block;font-size:14px}.ed-team-member span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
+        .ed-team-member-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+        .ed-team-role-select{border:1px solid #dbe4ea;border-radius:8px;padding:8px 9px;background:#fff;font:inherit;font-size:12px;font-weight:700}
+        .ed-team-remove{border:1px solid #e8bbae;background:#fff;color:#b64d2a;border-radius:8px;padding:8px 9px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-team-invite-form{display:grid;gap:10px}.ed-team-invite-form .ed-input,.ed-team-invite-form .ed-select{min-height:42px}
+        .ed-team-role-title{display:block;font-size:12px;font-weight:800;color:#405264;margin-bottom:7px}
+        .ed-team-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+        .ed-team-role-card{border:1px solid #dfe7ec;background:#fff;border-radius:12px;padding:13px;text-align:left;cursor:pointer;color:#102438;font:inherit;transition:border-color .15s,box-shadow .15s,background .15s}
+        .ed-team-role-card:hover{border-color:#bdcbd5}
+        .ed-team-role-card.active{border-color:#f08a28;background:#fff9f3;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
+        .ed-team-role-card b{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:Manrope,Inter,sans-serif;font-size:14px;margin-bottom:5px}
+        .ed-team-role-card b span{font-family:Inter,sans-serif;font-size:10px;color:#b85f0e;background:#fff0df;border-radius:999px;padding:4px 6px;white-space:nowrap}
+        .ed-team-role-card p{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
+        .ed-team-role-card ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+        .ed-team-role-card li{font-size:12px;line-height:1.45;color:#405264}
+        .ed-team-role-card li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:6px}
+        .ed-team-role-summary{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:11px 12px;margin-top:12px}
+        .ed-team-role-summary b{display:block;font-size:12px;margin-bottom:4px}
+        .ed-team-role-summary span{display:block;color:#6c7a88;font-size:11px;line-height:1.45}
+        .ed-team-invite-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+        .ed-team-invites{display:grid;gap:8px;margin-top:15px;padding-top:15px;border-top:1px solid #edf1f4}
+        .ed-team-invite{border:1px solid #edf1f4;border-radius:10px;padding:11px}
+        .ed-team-invite b{display:block;font-size:13px}.ed-team-invite span{display:block;color:#6c7a88;font-size:11px;margin-top:3px}
+        .ed-team-invite-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+        .ed-team-link{margin-top:12px;background:#f6f8fa;border-radius:10px;padding:11px;font-size:11px;overflow-wrap:anywhere;color:#405264}
+        .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+        .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
+        .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
+        .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
+        .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) 95px minmax(210px,1.35fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px}
+        .ed-worker.ed-worker-basic{grid-template-columns:minmax(190px,1.45fr) minmax(210px,1.8fr) minmax(210px,1.35fr)}
+        .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
+        .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
+        .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
+        .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
+        .ed-worker-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
+        .ed-attendance-panel h2{margin:0 0 4px}
+        .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
+        .ed-next-step{margin-top:9px;padding:9px 11px;border-left:3px solid #d7e0e7;border-radius:0 9px 9px 0;background:#f7f9fb;color:#526374;font-size:11.5px;line-height:1.45}
+        .ed-next-step b{display:block;color:#102438;margin-bottom:2px}
+        .ed-next-step.action{border-left-color:#f08a28;background:#fff8f1}
+        .ed-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}
+        .ed-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .ed-attendance-list{display:grid;gap:9px;margin-top:14px}
+        .ed-attendance-row{display:grid;grid-template-columns:minmax(220px,1.35fr) minmax(210px,.9fr) auto;gap:18px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:14px 15px}
+        .ed-worker-main{display:flex;flex-direction:column;gap:4px}.ed-worker-main b{display:block}.ed-worker-main span{font-size:13px;color:#6c7a88}.ed-member-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .ed-member-metric{padding:8px 10px;border-radius:10px;background:#f6f8fa}
+        .ed-member-metric span{display:block;color:#6c7a88;font-size:11px;margin-bottom:3px}
+        .ed-member-metric b{font-family:Manrope,Inter,sans-serif;font-size:17px}
+        .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+        .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+        .ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
+        .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-progress{font-size:13px;font-weight:800;color:#102438}.ed-job-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
+        .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
+        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
+        .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
+        .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
+        .ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
+        .ed-jobs{display:grid;gap:9px;margin-top:14px}.ed-job{display:grid;grid-template-columns:105px minmax(220px,1.4fr) 105px 112px minmax(260px,1fr);gap:14px;align-items:center;padding:13px 12px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-job-state{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:5px;color:#6c7a88;font-size:11px;line-height:1.35}
+        .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}
+        .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+        .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
+        .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
+        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:1fr 1fr}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:620px){.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+      `}</style>
+
+      <header className="ed-topbar">
+        <div className="ed-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {company && planSummary && (
+              <button
+                className="ed-plan-badge"
+                type="button"
+                onClick={() => setShowPlans(true)}
+                title="Peržiūrėti planą"
+              >
+                Planas: <strong>{planSummary.plan_name}</strong>
+              </button>
+            )}
+
+            {company && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() =>
+                  setShowCompanyEditor((current) => !current)
+                }
+              >
+                {showCompanyEditor ? "Uždaryti profilį" : "Profilis"}
+              </button>
+            )}
+
+            {onAdminReturn && (
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={onAdminReturn}
+              >
+                ← Administravimas
+              </button>
+            )}
+
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="ed-shell">
+        {!onAdminReturn && jobs.length === 0 && (
+          <section
+            style={{
+              marginBottom: 18,
+              padding: 16,
+              border: "1px solid #dfe7ed",
+              borderRadius: 16,
+              background: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div>
+                <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
+                <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Sukurkite pirmą darbo poreikį</h3>
+                <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
+                <button className="ed-primary" type="button" onClick={() => setShowJobForm(true)}>Sukurti pirmą darbą</button>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8, marginTop: 14 }}>
+              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
+              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
+              <div style={{ padding: 11, borderRadius: 11, background: "#fff7ef", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
+            </div>
+          </section>
+        )}
+        {showCompanyEditor && (
+          <section className="ed-company-editor">
+            <div className="ed-company-editor-head">
+              <div>
+                <div className="eyebrow">ĮMONĖS PROFILIS</div>
+                <h2>{company?.name || "Įmonės profilis"}</h2>
+                <p>
+                  Čia matote įmonės paskyros informaciją, savo rolę, planą ir
+                  pagrindinius komandos nustatymus.
+                  {companyMemberRole === "owner"
+                    ? " Įmonės savininkas taip pat gali redaguoti informaciją."
+                    : " Įmonės informaciją gali redaguoti tik savininkas."}
+                </p>
+              </div>
+
+            </div>
+
+            <div className="ed-profile-summary">
+              <div className="ed-profile-summary-card">
+                <span>Jūs prisijungę kaip</span>
+                <b>
+                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
+                </b>
+                <small>{companyTeamRoleLabel(companyMemberRole)}</small>
+              </div>
+
+              <div className="ed-profile-summary-card">
+                <span>Dabartinis planas</span>
+                <b>{planSummary?.plan_name || "Basic"}</b>
+                <button
+                  className="ed-link-btn"
+                  type="button"
+                  onClick={() => setShowPlans(true)}
+                >
+                  Peržiūrėti planus
+                </button>
+              </div>
+
+              <div className="ed-profile-summary-card">
+                <span>Komandos vietos</span>
+                <b>
+                  {planSummary?.can_team_management
+                    ? `${Math.max(1, activeTeamMembers.length)}/5`
+                    : "1/1"}
+                </b>
+                <button
+                  className="ed-link-btn"
+                  type="button"
+                  onClick={openCompanyTeam}
+                >
+                  {planSummary?.can_team_management
+                    ? "Valdyti komandą"
+                    : "Komanda · Business Pro"}
+                </button>
+              </div>
+            </div>
+
+            <div className="ed-company-editor-grid">
+              <label className="ed-label">
+                Įmonės pavadinimas *
+                <input
+                  className="ed-input"
+                  value={companyForm.name}
+                  maxLength={160}
+                  disabled={companyMemberRole !== "owner"}
+                  onChange={(e) =>
+                    updateCompanyField("name", e.target.value)
+                  }
+                />
+              </label>
+
+              <label className="ed-label">
+                Įmonės kodas
+                <input
+                  className="ed-input ed-company-readonly"
+                  value={companyForm.companyCode || "Nenurodytas"}
+                  readOnly
+                />
+              </label>
+
+              <label className="ed-label">
+                Miestas *
+                <CityAutocomplete
+                  className="ed-input"
+                  value={companyForm.city}
+                  disabled={companyMemberRole !== "owner"}
+                  onChange={(value) =>
+                    updateCompanyField("city", value)
+                  }
+                  placeholder="Pradėkite rašyti miestą"
+                />
+              </label>
+
+              <label className="ed-label">
+                Kontaktinis telefono numeris
+                <input
+                  className="ed-input"
+                  type="tel"
+                  value={companyForm.phone}
+                  maxLength={40}
+                  disabled={companyMemberRole !== "owner"}
+                  onChange={(e) =>
+                    updateCompanyField("phone", e.target.value)
+                  }
+                  placeholder="+370..."
+                />
+              </label>
+
+              <label className="ed-label ed-company-editor-wide">
+                Trumpai apie įmonę
+                <textarea
+                  className="ed-textarea"
+                  value={companyForm.description}
+                  maxLength={1200}
+                  disabled={companyMemberRole !== "owner"}
+                  onChange={(e) =>
+                    updateCompanyField("description", e.target.value)
+                  }
+                  placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..."
+                />
+              </label>
+            </div>
+
+            <div className="ed-company-reviews">
+              <div className="ed-company-reviews-head">
+                <div>
+                  <h3>Atsiliepimai apie įmonę</h3>
+                  <span>
+                    Atsiliepimus gali palikti tik darbuotojai, kurių ginčas
+                    oficialiai išspręstas jų naudai.
+                  </span>
+                </div>
+                <b>{companyWorkerReviews.length}</b>
+              </div>
+
+              {companyWorkerReviews.length ? (
+                <div className="ed-company-review-list">
+                  {companyWorkerReviews.map((review) => (
+                    <div className="ed-company-review" key={review.id}>
+                      <div className="ed-company-review-top">
+                        <b>
+                          {review.worker_name || "Darbuotojas"} · {review.score} / 10
+                        </b>
+                        <span>
+                          {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                        </span>
+                      </div>
+                      <div className="ed-company-review-meta">
+                        {review.job_title}
+                        {review.work_date ? ` · ${review.work_date}` : ""}
+                      </div>
+                      <p>{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ed-profile-readonly-note">
+                  Atsiliepimų po darbuotojų laimėtų ginčų dar nėra.
+                </div>
+              )}
+            </div>
+
+            {companyMemberRole === "owner" ? (
+              <div className="ed-company-editor-actions">
+                <button
+                  className="ed-secondary"
+                  type="button"
+                  disabled={companySaving}
+                  onClick={() => setShowCompanyEditor(false)}
+                >
+                  Uždaryti
+                </button>
+
+                <button
+                  className="ed-primary"
+                  type="button"
+                  disabled={companySaving}
+                  onClick={saveCompanyInformation}
+                >
+                  {companySaving ? "Saugoma..." : "Išsaugoti pakeitimus"}
+                </button>
+              </div>
+            ) : (
+              <div className="ed-profile-readonly-note">
+                Įmonės duomenis gali keisti tik paskyros Savininkas.
+              </div>
+            )}
+          </section>
+        )}
+
+        <div className="ed-heading">
+          <div>
+            <div className="eyebrow">DARBDAVIO PASKYRA</div>
+            <h1>Sukurkite darbuotojų kvietimą</h1>
+            <p>
+              Sistema rodys darbuotojus, kurie tą dieną ir tuo laiku pažymėjo,
+              kad gali dirbti ir yra arčiausiai jūsų vietovės.
+            </p>
+          </div>
+
+          <div className="ed-heading-actions">
+            <div className="ed-heading-primary-row">
+              <button
+                className="ed-primary"
+                type="button"
+                onClick={openNewJobForm}
+              >
+                + Sukurti darbo pasiūlymą
+              </button>
+
+              <button
+                className="ed-urgent-btn"
+                type="button"
+                onClick={openUrgentSearch}
+              >
+                {planSummary?.can_team_management
+                  ? "Skubiai!"
+                  : "Skubiai! · Pro"}
+              </button>
+            </div>
+
+            <button
+              className="ed-secondary"
+              type="button"
+              onClick={openSavedWorkerTeam}
+            >
+              {planSummary?.can_saved_workers
+                ? `Darbuotojai favoritai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
+                : "Darbuotojai favoritai · Business"}
+            </button>
+
+            <button
+              className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
+                planSummary?.can_team_chat ? "" : "locked"
+              }`}
+              type="button"
+              onClick={openCompanyTeamChat}
+            >
+              {planSummary?.can_team_chat
+                ? "Komandos pokalbis"
+                : "Komandos pokalbis · Pro"}
+
+              {planSummary?.can_team_chat && teamChatUnread > 0 && (
+                <span
+                  className="ed-chat-alert"
+                  title="Nauja žinutė komandos pokalbyje"
+                >
+                  {Math.min(9, teamChatUnread)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <section>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">
+              {planSummary?.can_team_management &&
+              companyMemberRole === "recruiter"
+                ? "MANO DARBŲ STATISTIKA"
+                : "ĮMONĖS STATISTIKA"}
+            </div>
+          </div>
+
+          <div className="ed-kpis">
+            <div className="ed-kpi">
+              <span>Sukurta darbo pasiūlymų</span>
+              <b>{employerStats.totalJobs}</b>
+            </div>
+
+            {planSummary?.can_advanced_analytics && (
+              <div className="ed-kpi">
+                <span>Pilnai žmonėmis užpildyti darbai</span>
+                <b>{employerStats.filledJobs}</b>
+              </div>
+            )}
+
+            <div className="ed-kpi">
+              <span>Trūksta darbuotojų</span>
+              <b>{employerStats.missingWorkers}</b>
+            </div>
+
+            <div className="ed-kpi">
+              <span>Įvykdyti darbai</span>
+              <b>{employerStats.completedJobs}</b>
+            </div>
+
+            {planSummary?.can_advanced_analytics && (
+              <>
+                <div className="ed-kpi">
+                  <span>Atšaukti darbai</span>
+                  <b>{employerStats.cancelledJobs}</b>
+                </div>
+
+                <div className="ed-kpi">
+                  <span>Panaudoti darbuotojai / mėn.</span>
+                  <b>{employerStats.monthlyWorkersUsed}</b>
+                </div>
+              </>
+            )}
+
+            <div className="ed-kpi ed-reliability-card">
+              <div className="ed-reliability-copy">
+                <div className="ed-reliability-title">
+                  <button
+                    type="button"
+                    className="ed-reliability-title-btn"
+                    aria-label="Atidaryti darbdavio patikimumo paaiškinimą"
+                    onClick={() => setShowReliabilityInfo(true)}
+                  >
+                    Patikimumas
+                  </button>
+                </div>
+
+                <b className="ed-reliability-label">
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </b>
+              </div>
+            </div>
+          </div>
+
+          {planSummary && !planSummary.can_advanced_analytics && (
+            <div className="ed-analytics-lock">
+              <div>
+                <b>Išplėstinė įmonės statistika</b>
+                <span>
+                  Užpildytų ir atšauktų darbų bei mėnesio darbuotojų analizė
+                  įtraukta į Business ir Business Pro.
+                </span>
+              </div>
+              <button
+                className="ed-secondary"
+                type="button"
+                onClick={() => setShowPlans(true)}
+              >
+                Peržiūrėti planus
+              </button>
+            </div>
+          )}
+        </section>
+
+        {notice && <div className="ed-note ok">{notice}</div>}
+        {error && <div className="ed-note err">{error}</div>}
+
+        {showJobForm && (
+        <section className="ed-card">
+          <h2>
+            {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
+          </h2>
+          <p className="ed-sub">
+            {editingJobId
+              ? "Atnaujinkite poreikį. Kai darbuotojas jau patvirtino darbą, esminės sąlygos užrakinamos."
+              : "Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių."}
+          </p>
+
+          <div className="ed-form-grid">
+            <label className="ed-label ed-span-2">
+              Darbo pasiūlymo pavadinimas
+              <input
+                className="ed-input"
+                value={form.title}
+                onChange={(e) => updateField("title", e.target.value)}
+                placeholder="Pvz. Reikia 2 statybų pagalbinių rytoj"
+              />
+            </label>
+
+            {planSummary?.can_team_management && (
+              <div className="ed-label ed-span-2">
+                Atsakingas žmogus
+                <RoundedSelect
+                  value={form.responsibleUserId}
+                  ariaLabel="Atsakingas žmogus"
+                  disabled={
+                    !["owner", "manager"].includes(companyMemberRole)
+                  }
+                  onChange={(userId) =>
+                    updateField("responsibleUserId", userId)
+                  }
+                  options={activeTeamMembers.map((member) => ({
+                    value: member.user_id,
+                    label: `${member.display_name} · ${companyTeamRoleLabel(member.member_role)}`,
+                  }))}
+                />
+                <span
+                  style={{
+                    color: "#7a8996",
+                    fontSize: 11,
+                    fontWeight: 500,
+                  }}
+                >
+                  Vadybininkui naujas darbas automatiškai priskiriamas jam
+                  pačiam. Savininkas ir vadovas gali pakeisti atsakingą žmogų.
+                </span>
+              </div>
+            )}
+
+            <label className="ed-label">
+              Miestas
+              <CityAutocomplete
+                className="ed-input"
+                value={form.city}
+                disabled={editingConfirmedCount > 0}
+                onChange={(value) => updateField("city", value)}
+                placeholder="Pradėkite rašyti miestą"
+              />
+            </label>
+
+            <label className="ed-label">
+              Žmonių skaičius
+              <input
+                className="ed-input"
+                type="number"
+                min="1"
+                max="100"
+                value={form.workersNeeded}
+                onChange={(e) => updateField("workersNeeded", e.target.value)}
+              />
+            </label>
+
+            <label className="ed-label ed-span-2">
+              Objekto vieta / adresas
+              <input
+                className="ed-input"
+                value={form.address}
+                disabled={editingConfirmedCount > 0}
+                onChange={(e) => updateField("address", e.target.value)}
+                placeholder="Pvz. Naujamiestis, Vilnius"
+              />
+            </label>
+
+<label className="ed-label ed-span-2">
+  Data
+  <input
+    className="ed-input"
+    type="date"
+    value={form.workDate}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("workDate", e.target.value)}
+  />
+</label>
+
+{!editingJobId && (
+  <div
+    className="ed-span-2"
+    style={{
+      border: "1px solid #dfe7ed",
+      borderRadius: 13,
+      padding: "12px 14px",
+      background: "#f7f9fb",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <b style={{ display: "block", color: "#102438", fontSize: 13 }}>
+          Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
+        </b>
+        <span style={{ display: "block", marginTop: 3, color: "#6c7a87", fontSize: 11 }}>
+          Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <span
+          style={{
+            borderRadius: 999,
+            padding: "7px 10px",
+            background: "#fff",
+            border: "1px solid #dfe7ed",
+            color: "#102438",
+            fontSize: 11,
+            fontWeight: 900,
+          }}
+        >
+          {cityWorkerSignalLoading
+            ? "Skaičiuojama..."
+            : cityWorkerSignal
+            ? `${cityWorkerSignal.availableWorkers} tinkamų pagal dieną`
+            : "Pasiūla tikrinama"}
+        </span>
+
+        {planSummary?.plan_key === "business_pro" &&
+          cityWorkerSignal?.urgentWorkersNow !== null && (
+            <span
+              style={{
+                borderRadius: 999,
+                padding: "7px 10px",
+                background: "#fff1e5",
+                border: "1px solid #f3d2b1",
+                color: "#a7550d",
+                fontSize: 11,
+                fontWeight: 900,
+              }}
+            >
+              {cityWorkerSignal.urgentWorkersNow} „Laisvas dabar“
+            </span>
+          )}
+      </div>
+    </div>
+
+    {!cityWorkerSignalLoading &&
+      cityWorkerSignal &&
+      cityWorkerSignal.availableWorkers === 0 && (
+        <div
+          style={{
+            marginTop: 9,
+            color: "#8a5d32",
+            fontSize: 11,
+            lineHeight: 1.45,
+          }}
+        >
+          Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek
+          galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
+        </div>
+      )}
+  </div>
+)}
+
+<div className="ed-label ed-span-2">
+  Darbo laikas
+  <div className="ed-time-pair">
+    <label className="ed-label">Nuo
+      <input className="ed-input" type="time" value={form.startTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("startTime", e.target.value)} />
+    </label>
+    <label className="ed-label">Iki
+      <input className="ed-input" type="time" value={form.endTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("endTime", e.target.value)} />
+    </label>
+  </div>
+</div>
+
+<div className="ed-label ed-span-2">
+  Pietų pertrauka
+  <div className="ed-time-pair">
+    <label className="ed-label">Nuo *
+      <input className="ed-input" type="time" required value={form.breakStartTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakStartTime", e.target.value)} />
+    </label>
+    <label className="ed-label">Iki *
+      <input className="ed-input" type="time" required value={form.breakEndTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakEndTime", e.target.value)} />
+    </label>
+  </div>
+</div>
+
+<label className="ed-label">
+  Atlygis į rankas (€) *
+  <input
+    className="ed-input"
+    type="number"
+    min="1"
+    step="0.01"
+    required
+    value={form.payAmount}
+    disabled={editingConfirmedCount > 0}
+    onChange={(e) => updateField("payAmount", e.target.value)}
+    placeholder="Pvz. 12"
+  />
+</label>
+
+<div className="ed-label">
+  Mokėjimo tipas *
+  <RoundedSelect
+    ariaLabel="Mokėjimo tipas"
+    value={form.payUnit}
+    disabled={editingConfirmedCount > 0}
+    onChange={(value) => updateField("payUnit", value)}
+    options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
+  />
+</div>
+
+<div className="ed-label ed-span-2">
+  Atvykimas į darbo vietą *
+  <RoundedSelect
+    ariaLabel="Atvykimas į darbo vietą"
+    value={form.transportMode}
+    disabled={editingConfirmedCount > 0}
+    onChange={(value) => updateField("transportMode", value)}
+    options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
+  />
+</div>
+
+            <label className="ed-label ed-span-4">
+              Darbo aprašymas *
+              <textarea
+                className="ed-textarea"
+                required
+                value={form.description}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="Aprašykite, ką reikės daryti, darbo sąlygas, ar suteikiami įrankiai, kokia apranga reikalinga ir kitą svarbią informaciją."
+              />
+            </label>
+          </div>
+
+          <div className="ed-actions">
+            <button
+              className="ed-secondary"
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                setShowJobForm(false);
+                setEditingJobId(null);
+                setEditingConfirmedCount(0);
+              }}
+            >
+              Uždaryti
+            </button>
+
+            <button
+              className="ed-primary"
+              disabled={saving}
+              onClick={saveJobAndFind}
+            >
+              {saving
+                ? "Saugoma..."
+                : editingJobId
+                ? "Išsaugoti pakeitimus"
+                : "Sukurti darbo pasiūlymą"}
+            </button>
+          </div>
+        </section>
+        )}
+
+        {currentJob && (
+          <section className="ed-card">
+            {unreadEmployerNotifications(currentJob.id).some((item) => item.event_type !== "message") && (() => {
+              const currentNews = unreadEmployerNotifications(currentJob.id)
+                .filter((item) => item.event_type !== "message");
+              const currentPresentation = notificationPresentation(currentNews);
+              return (
+                <div className={`ed-note ${currentPresentation.tone === "red" ? "err" : "ok"}`} style={{ marginBottom: 16 }}>
+                  {currentPresentation.label}
+                  {currentNews.length > 1 ? ` · ${currentNews.length} naujienos` : ""}
+                  <button
+                    className="ed-secondary"
+                    style={{ marginLeft: 10 }}
+                    onClick={() => markEmployerJobRead(currentJob.id)}
+                  >
+                    Peržiūrėta
+                  </button>
+                </div>
+              );
+            })()}
+
+            {currentJob.status === "cancelled" && (
+              <div className="ed-note err" style={{ marginBottom: 16 }}>
+                <b>Poreikis atšauktas.</b>
+                <div style={{ marginTop: 4 }}>
+                  Priežastis:{" "}
+                  {currentJob.cancellation_reason || "Priežastis nenurodyta."}
+                </div>
+              </div>
+            )}
+
+            {currentJob.status === "filled" && (
+              <div className="ed-note ok" style={{ marginBottom: 16 }}>
+                Poreikis užpildytas: {currentJob.confirmedCount}/{currentJob.workers_needed}.
+                Darbuotojų paieška automatiškai uždaryta.
+              </div>
+            )}
+
+            {jobWorkers.length > 0 && (
+              <div className="ed-attendance-panel">
+                <h2>Patvirtinti darbuotojai ir darbo diena</h2>
+                <p className="ed-attendance-help">
+                  Atvykimas → darbo dienos uždarymas → įvertinimas → favoritas.
+                  Kiekvienam darbuotojui rodome, ko šiuo metu reikia iš jūsų.
+                </p>
+
+                <div className="ed-attendance-list">
+                  {jobWorkers.map((worker) => {
+                    const attendance = worker.attendance || {};
+                    const ended = jobHasEnded(currentJob);
+                    const checkInOpen = jobCheckInWindowOpen(currentJob);
+                    const isConfirmed = worker.bookingStatus === "confirmed";
+                    const pendingNegative =
+                      !attendance.finalized_at &&
+                      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+                        attendance.employer_outcome
+                      );
+                    const disputed =
+                      attendance.dispute_status === "disputed";
+                    const canClose =
+                      isConfirmed &&
+                      ended &&
+                      !attendance.finalized_at &&
+                      !attendance.employer_outcome;
+
+                    const employerNextStep =
+                      currentJob.status === "cancelled"
+                        ? {
+                            tone: "",
+                            title: "Darbas atšauktas",
+                            text: "Papildomų veiksmų šiai darbo dienai nereikia.",
+                          }
+                        : attendance.finalized_at
+                        ? attendance.final_outcome === "no_show"
+                          ? {
+                              tone: "ok",
+                              title: "Darbo diena uždaryta",
+                              text: "Užfiksuotas neatvykimas. Atskiro darbuotojo vertinimo šiuo atveju nėra.",
+                            }
+                          : !worker.rating && canRateCurrentJob
+                          ? {
+                              tone: "action",
+                              title: "Kitas žingsnis – įvertinkite darbuotoją",
+                              text: "Darbo diena užbaigta. Palikite 1–10 įvertinimą; vertinti gali tik už darbą atsakingas žmogus.",
+                            }
+                          : worker.rating &&
+                            !savedWorkerIdSet.has(worker.id) &&
+                            planSummary?.can_saved_workers
+                          ? {
+                              tone: "action",
+                              title: "Darbo ciklas užbaigtas",
+                              text: "Jei norite šį žmogų greitai kviesti ateityje, galite pridėti jį į favoritus.",
+                            }
+                          : {
+                              tone: "ok",
+                              title: "Darbo ciklas užbaigtas",
+                              text: worker.rating
+                                ? `Darbuotojas įvertintas ${worker.rating.score}/10.`
+                                : "Galutinis darbo dienos rezultatas užfiksuotas.",
+                            }
+                        : disputed
+                        ? {
+                            tone: "danger",
+                            title: "Laukiama administratoriaus sprendimo",
+                            text: "Kol ginčas neišspręstas, darbuotojo reitingas ir galutinis rezultatas nekeičiami.",
+                          }
+                        : pendingNegative
+                        ? {
+                            tone: "action",
+                            title: "Laukiama darbuotojo atsakymo",
+                            text: "Jūs pateikėte darbo dienos rezultatą. Darbuotojas turi jį patvirtinti arba ginčyti.",
+                          }
+                        : canClose
+                        ? {
+                            tone: "action",
+                            title: "Reikia uždaryti darbo dieną",
+                            text: "Darbo laikas pasibaigė. Pasirinkite „Uždaryti dieną“ ir užfiksuokite rezultatą.",
+                          }
+                        : checkInOpen &&
+                          isConfirmed &&
+                          !attendance.employer_check_in_at
+                        ? {
+                            tone: "action",
+                            title: "Patvirtinkite atvykimą",
+                            text: attendance.worker_check_in_at
+                              ? "Darbuotojas jau pažymėjo „Atvykau“. Jei jis objekte, patvirtinkite jo atvykimą."
+                              : "Jei darbuotojas jau objekte, galite patvirtinti jo atvykimą.",
+                          }
+                        : attendance.employer_check_in_at
+                        ? {
+                            tone: "ok",
+                            title: "Atvykimas patvirtintas",
+                            text: "Po numatyto darbo laiko pabaigos čia atsiras darbo dienos uždarymo veiksmas.",
+                          }
+                        : {
+                            tone: "",
+                            title: "Darbas dar neprasidėjo",
+                            text: "Atvykimą galėsite patvirtinti nuo 2 valandų prieš darbo pradžią.",
+                          };
+
+                    return (
+                      <div
+                        className="ed-attendance-row"
+                        key={worker.bookingId}
+                      >
+                        <div className="ed-worker-id">
+                          <div className="ed-worker-main">
+                            <b>{worker.name}</b>
+                            <span>
+                              {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
+                            </span>
+
+                            <div className="ed-worker-status">
+                              {attendance.worker_check_in_at && (
+                                <span className="ed-attendance-badge green">
+                                  ✓ Darbuotojas pažymėjo „Atvykau“
+                                </span>
+                              )}
+
+                              {attendance.employer_check_in_at && (
+                                <span className="ed-attendance-badge green">
+                                  ✓ Atvykimą patvirtinote
+                                </span>
+                              )}
+
+                              {attendance.finalized_at && (
+                                <span
+                                  className={`ed-attendance-badge ${
+                                    attendance.final_outcome === "no_show" ||
+                                    attendance.final_outcome ===
+                                      "left_early_unexcused"
+                                      ? "red"
+                                      : "green"
+                                  }`}
+                                >
+                                  {attendanceOutcomeLabel(attendance)}
+                                  {attendance.worked_minutes > 0
+                                    ? ` · ${formatWorkedMinutes(
+                                        attendance.worked_minutes
+                                      )}`
+                                    : ""}
+                                </span>
+                              )}
+
+                              {pendingNegative && !disputed && (
+                                <span className="ed-attendance-badge orange">
+                                  Laukiama darbuotojo patvirtinimo
+                                </span>
+                              )}
+
+                              {disputed && (
+                                <span className="ed-attendance-badge red">
+                                  Ginčas · reitingas nekeičiamas
+                                </span>
+                              )}
+
+                              {canClose && (
+                                <span className="ed-attendance-badge orange">
+                                  Neuždaryta darbo diena
+                                </span>
+                              )}
+
+                              {!ended &&
+                                isConfirmed &&
+                                !attendance.finalized_at &&
+                                !attendance.employer_check_in_at && (
+                                  <span className="ed-attendance-badge muted">
+                                    {checkInOpen
+                                      ? "Darbo diena vyksta"
+                                      : "Darbo diena dar neprasidėjo"}
+                                  </span>
+                                )}
+                            </div>
+
+                            <div
+                              className={`ed-next-step ${
+                                employerNextStep.tone || ""
+                              }`}
+                            >
+                              <b>{employerNextStep.title}</b>
+                              {employerNextStep.text}
+                            </div>
+                          </div>
+                        </div>
+
+                        {canViewWorkerMetrics && (
+                          <div className="ed-member-metrics">
+                            <div className="ed-member-metric">
+                              <span>Atvykimo patikimumas</span>
+                              <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                            </div>
+
+                            <div className="ed-member-metric">
+                              <span>Darbdavių įvertinimas</span>
+                              <b>
+                                {worker.ratingAverage === null
+                                  ? "—"
+                                  : `${worker.ratingAverage.toFixed(1)} / 10`}
+                              </b>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="ed-attendance-actions">
+                          <button
+                            className="ed-secondary"
+                            onClick={() => openWorkerProfile(worker)}
+                          >
+                            Profilis
+                          </button>
+
+                          <button
+                            className="ed-secondary ed-chat-alert-btn"
+                            onClick={() =>
+                              openEmployerGroupConversation(currentJob)
+                            }
+                          >
+                            {planSummary?.can_job_chat
+                              ? "Darbo pokalbis"
+                              : "Darbo pokalbis · Business"}
+                            {unreadEmployerGroupChatNotifications(
+                              currentJob.id
+                            ).length > 0 && (
+                              <span
+                                className="ed-chat-alert"
+                                title="Nauja žinutė darbo pokalbyje"
+                              >
+                                {Math.min(
+                                  9,
+                                  unreadEmployerGroupChatNotifications(
+                                    currentJob.id
+                                  ).length
+                                )}
+                              </span>
+                            )}
+                          </button>
+
+                          {checkInOpen &&
+                            isConfirmed &&
+                            !attendance.finalized_at &&
+                            !attendance.employer_check_in_at && (
+                              <button
+                                className="ed-secondary"
+                                disabled={attendanceSaving}
+                                onClick={() => employerCheckInWorker(worker)}
+                              >
+                                Patvirtinti atvykimą
+                              </button>
+                            )}
+
+                          {canClose && (
+                            <button
+                              className="ed-primary"
+                              disabled={attendanceSaving}
+                              title="Uždaryti šio darbuotojo darbo dieną"
+                              onClick={() => {
+                                setAttendanceTarget(worker);
+                                setAttendanceMode("choose");
+                                setAttendanceEndTime("");
+                                setAttendanceNote("");
+                              }}
+                            >
+                              Uždaryti dieną
+                            </button>
+                          )}
+
+                          {attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            !worker.rating &&
+                            canRateCurrentJob && (
+                              <button
+                                className="ed-primary"
+                                onClick={() => {
+                                  setRatingTarget(worker);
+                                  setRatingScore(null);
+                                  setRatingComment("");
+                                }}
+                              >
+                                Įvertinti
+                              </button>
+                            )}
+
+                          {attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            (savedWorkerIdSet.has(worker.id) ? (
+                              <span className="ed-team-badge">
+                                Favorituose
+                              </span>
+                            ) : (
+                              <button
+                                className="ed-team-add"
+                                type="button"
+                                disabled={savedWorkerBusy === worker.id}
+                                onClick={() => saveWorkerToTeam(worker)}
+                              >
+                                {savedWorkerBusy === worker.id
+                                  ? "Pridedama..."
+                                  : planSummary?.can_saved_workers
+                                  ? "Pridėti į favoritus"
+                                  : "Pridėti į favoritus · Business"}
+                              </button>
+                            ))}
+
+                          {canViewWorkerMetrics &&
+                            attendance.finalized_at &&
+                            attendance.final_outcome !== "no_show" &&
+                            !worker.rating &&
+                            !canRateCurrentJob && (
+                              <span className="ed-attendance-badge muted">
+                                Vertina atsakingas:{" "}
+                                {teamMemberName(currentJobResponsibleUserId)}
+                              </span>
+                            )}
+
+                          {canViewWorkerMetrics && worker.rating && (
+                            <span className="ed-attendance-badge green">
+                              Įvertinta {worker.rating.score}/10
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="ed-results-head">
+              <div>
+                <h2>
+                  {workerSource === "team"
+                    ? "Kviesti darbuotojus iš favoritų"
+                    : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
+                </h2>
+                <p>
+                  Rodomi tik per paskutines 24 val. aktyvūs, savo grafiką
+                  patvirtinę ir šiam darbui tinkami darbuotojai.
+                </p>
+
+                <div className="ed-worker-source">
+                  <button
+                    type="button"
+                    className={workerSource === "available" ? "active" : ""}
+                    onClick={() => setWorkerSource("available")}
+                  >
+                    Laisvi darbuotojai
+                  </button>
+                  <button
+                    type="button"
+                    className={`${
+                      workerSource === "team" ? "active" : ""
+                    } ${planSummary?.can_saved_workers ? "" : "locked"}`}
+                    onClick={() => {
+                      if (!planSummary?.can_saved_workers) {
+                        setNotice(
+                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+                        );
+                        setShowPlans(true);
+                        return;
+                      }
+                      setWorkerSource("team");
+                    }}
+                  >
+                    {planSummary?.can_saved_workers
+                      ? `Darbuotojai favoritai · ${matchingSavedWorkersCount}`
+                      : "Darbuotojai favoritai · Business"}
+                  </button>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <b>{visibleCandidateWorkers.length} rasti</b>
+                <div className="ed-progress">
+                  {currentJob.status === "completed"
+                    ? "Darbo diena užbaigta"
+                    : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
+                </div>
+
+                {workerSource === "team" &&
+                  planSummary?.can_saved_workers &&
+                  currentJob.status === "open" && (
+                    <button
+                      className="ed-primary"
+                      type="button"
+                      style={{ marginTop: 10 }}
+                      disabled={
+                        invitingSavedTeam ||
+                        matchingSavedWorkersCount === 0
+                      }
+                      onClick={inviteSavedWorkerTeam}
+                    >
+                      {invitingSavedTeam
+                        ? "Siunčiami kvietimai..."
+                        : "Pakviesti visus tinkamus"}
+                    </button>
+                  )}
+              </div>
+            </div>
+
+            {searching ? (
+              <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
+            ) : visibleCandidateWorkers.length ? (
+              <div className="ed-results">
+                {visibleCandidateWorkers.map((worker) => {
+                  const invited = invitedIds.includes(worker.id);
+                  return (
+                    <div
+                      className={
+                        canViewWorkerMetrics
+                          ? "ed-worker"
+                          : "ed-worker ed-worker-basic"
+                      }
+                      key={worker.id}
+                    >
+                      <div className="ed-worker-id">
+                        <div className="ed-avatar">
+                          {worker.avatarUrl ? (
+                            <img src={worker.avatarUrl} alt={worker.name} />
+                          ) : (
+                            worker.initials
+                          )}
+                        </div>
+                        <div>
+                          <b>{worker.name}</b>
+                          <span>
+                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
+                            {worker.distanceKm !== null
+                              ? ` · ${worker.distanceKm} km nuo darbo`
+                              : ""}
+                          </span>
+                          {worker.activityLabel && (
+                            <div className="ed-worker-status">
+                              <span className="ed-attendance-badge green">
+                                {worker.activityLabel}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="ed-tags">
+                        {worker.skillNames.map((skill) => (
+                          <span className="ed-tag" key={skill}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+
+                      {canViewWorkerMetrics && (
+                        <div className="ed-metric">
+                          <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                          <span>atvykimas</span>
+                        </div>
+                      )}
+
+                      <div className="ed-worker-actions">
+                        <button
+                          className="ed-secondary"
+                          onClick={() => openWorkerProfile(worker)}
+                        >
+                          Profilis
+                        </button>
+
+                        <button
+                          className={invited ? "ed-invite sent" : "ed-invite"}
+                          disabled={invited || currentJob.status !== "open"}
+                          onClick={() => inviteWorker(worker.id)}
+                        >
+                          {!invited
+                            ? "Kviesti"
+                            : invitationStatuses[worker.id] === "accepted"
+                            ? "Priėmė"
+                            : invitationStatuses[worker.id] === "declined"
+                            ? "Atmetė"
+                            : invitationStatuses[worker.id] === "expired"
+                            ? "Užpildyta"
+                            : "Pakviestas"}
+                        </button>
+
+                        {invitationByWorker[worker.id] && (
+                          <button
+                            className="ed-secondary ed-chat-alert-btn"
+                            onClick={() =>
+                              openEmployerPrivateConversation(
+                                invitationByWorker[worker.id].id,
+                                `${worker.name} · ${currentJob.title}`
+                              )
+                            }
+                          >
+                            {planSummary?.can_job_chat
+                              ? "Žinutė"
+                              : "Žinutė · Business"}
+                            {unreadEmployerPrivateChatNotifications(
+                              invitationByWorker[worker.id].id
+                            ).length > 0 && (
+                              <span
+                                className="ed-chat-alert"
+                                title="Nauja privati žinutė"
+                              >
+                                {Math.min(
+                                  9,
+                                  unreadEmployerPrivateChatNotifications(
+                                    invitationByWorker[worker.id].id
+                                  ).length
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ed-empty compact">
+                {workerSource === "team"
+                  ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
+                  : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="ed-card">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h2 style={{ marginBottom: 6 }}>
+                {planSummary?.can_team_management
+                  ? jobScope === "mine"
+                    ? "Mano darbai"
+                    : "Visi įmonės darbai"
+                  : "Mano poreikiai"}
+              </h2>
+              {!planSummary?.can_team_management && (
+                <p className="ed-sub">
+                  Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas.
+                </p>
+              )}
+            </div>
+
+            {canSeeAllCompanyJobs && (
+              <div className="ed-job-scope">
+                <button
+                  className={jobScope === "mine" ? "active" : ""}
+                  type="button"
+                  onClick={() => setJobScope("mine")}
+                >
+                  Mano darbai
+                </button>
+                <button
+                  className={jobScope === "all" ? "active" : ""}
+                  type="button"
+                  onClick={() => setJobScope("all")}
+                >
+                  Visi įmonės darbai
+                </button>
+              </div>
+            )}
+          </div>
+
+          {visibleJobs.length ? (
+            <>
+              <div className="ed-job-overview">
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardActionJobs ? "danger" : ""
+                  }`}
+                >
+                  <span>Reikia veiksmo</span>
+                  <b>{dashboardActionJobs}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardMissingWorkers ? "alert" : ""
+                  }`}
+                >
+                  <span>Trūksta žmonių</span>
+                  <b>{dashboardMissingWorkers}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardTodayJobs ? "live" : ""
+                  }`}
+                >
+                  <span>Šiandienos darbai</span>
+                  <b>{dashboardTodayJobs}</b>
+                </div>
+
+                <div
+                  className={`ed-job-overview-card ${
+                    dashboardUnreadMessages ? "alert" : ""
+                  }`}
+                >
+                  <span>Naujos žinutės</span>
+                  <b>{dashboardUnreadMessages}</b>
+                </div>
+              </div>
+
+              <div className="ed-jobs">
+              {visibleJobs.map((job) => {
+                const unreadNews = unreadEmployerNotifications(job.id);
+                const newsPresentation = notificationPresentation(unreadNews);
+                const unreadMessages = unreadNews.filter(
+                  (item) => item.event_type === "message"
+                );
+                const unreadGroupMessages =
+                  unreadEmployerGroupChatNotifications(job.id);
+                const jobDashboardState = employerJobDashboardState(job);
+
+                return (
+                  <div
+                    className={[
+                      "ed-job",
+                      currentJob?.id === job.id ? "ed-job-active" : "",
+                      jobDashboardState.tone === "danger"
+                        ? "ed-job-priority-danger"
+                        : jobDashboardState.tone === "action"
+                        ? "ed-job-priority-action"
+                        : jobDashboardState.tone === "live"
+                        ? "ed-job-priority-live"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    key={job.id}
+                  >
+                    <b>{job.work_date}</b>
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <b>{job.title}</b>
+                        {currentJob?.id === job.id && (
+                          <span className="ed-opened-badge">Atidarytas</span>
+                        )}
+                      </div>
+                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                        {job.city} · {job.start_time?.slice(0, 5)}
+                        {job.pay_amount
+                          ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                          : ""}
+                      </div>
+                      {planSummary?.can_team_management && (
+                        <span className="ed-responsible">
+                          Atsakingas:{" "}
+                          {teamMemberName(
+                            job.responsible_user_id || job.created_by
+                          )}
+                        </span>
+                      )}
+                      {jobHasEnded(job) &&
+                        Number(job.confirmedCount || 0) > 0 &&
+                        !["cancelled", "completed"].includes(job.status) && (
+                          <div style={{ marginTop: 7 }}>
+                            <span className="ed-attendance-badge orange">
+                              Neuždaryta darbo diena · patvirtinkite rezultatą
+                            </span>
+                          </div>
+                        )}
+                      {unreadNews.length > 0 && (
+                        <div className="ed-news">
+                          <span className={`rs-alert ${newsPresentation.tone}`}>
+                            {newsPresentation.label}
+                            {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                          </span>
+                          {unreadMessages.length > 0 && (
+                            <span
+                              style={{
+                                marginLeft: 7,
+                                color: "#b9342b",
+                                fontSize: 11,
+                                fontWeight: 900,
+                              }}
+                            >
+                              Naujos žinutės · {unreadMessages.length}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {job.status === "cancelled" &&
+                        employerPenaltyByJob[job.id] && (
+                          <div
+                            style={{
+                              marginTop: 7,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#b64d2a",
+                            }}
+                          >
+                            Šis atšaukimas sumažino jūsų patikimumą{" "}
+                            {employerPenaltyByJob[job.id].change} taškų.
+                          </div>
+                        )}
+                    </div>
+                    <span className="ed-progress">
+                      {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
+                    </span>
+
+                    <div>
+                      <span
+                        className={`ed-job-state ${jobDashboardState.tone}`}
+                      >
+                        {jobDashboardState.label}
+                      </span>
+                      <span className="ed-job-state-detail">
+                        {jobDashboardState.detail}
+                      </span>
+                    </div>
+
+                    <div className="ed-job-actions">
+                      <button onClick={() => openExistingJob(job)}>Atidaryti</button>
+
+                      <button
+                        className={`ed-job-chat-btn ${
+                          unreadGroupMessages.length ? "has-unread" : ""
+                        }`}
+                        type="button"
+                        onClick={() => openEmployerGroupConversation(job)}
+                      >
+                        {planSummary?.can_job_chat ? "Pokalbis" : "Pokalbis · Business"}
+                        {unreadGroupMessages.length > 0 && (
+                          <span className="ed-job-chat-new">
+                            Nauja {Math.min(9, unreadGroupMessages.length)}
+                          </span>
+                        )}
+                      </button>
+
+                      {job.status !== "cancelled" && job.status !== "completed" && (
+                        <button onClick={() => startEditJob(job)}>Redaguoti</button>
+                      )}
+                      {job.status !== "cancelled" && job.status !== "completed" && (
+                        <button
+                          className="ed-danger"
+                          onClick={() => requestRemoveOrCancelJob(job)}
+                        >
+                          {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            </>
+          ) : (
+            <div className="ed-empty">
+              {planSummary?.can_team_management && jobScope === "mine"
+                ? "Šiuo metu neturite jums priskirtų darbų."
+                : "Dar neturite sukurtų poreikių."}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {attendanceTarget && attendanceMode && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !attendanceSaving) {
+              setAttendanceTarget(null);
+              setAttendanceMode(null);
+              setAttendanceEndTime("");
+              setAttendanceNote("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
+                <h2>
+                  {attendanceMode === "choose"
+                    ? "Kaip baigėsi darbuotojo darbo diena?"
+                    : attendanceMode === "no_show"
+                    ? "Pažymėti, kad darbuotojas neatvyko?"
+                    : "Darbuotojas išėjo anksčiau"}
+                </h2>
+              </div>
+
+              <button
+                className="rs-close"
+                disabled={attendanceSaving}
+                onClick={() => {
+                  setAttendanceTarget(null);
+                  setAttendanceMode(null);
+                  setAttendanceEndTime("");
+                  setAttendanceNote("");
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#f6f8fa",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <b>{attendanceTarget.name}</b>
+              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                {currentJob?.title} · {currentJob?.work_date}
+              </div>
+            </div>
+
+            {attendanceMode === "choose" && (
+              <div style={{ display: "grid", gap: 10 }}>
+                <button
+                  className="ed-primary"
+                  disabled={attendanceSaving}
+                  onClick={() =>
+                    recordEmployerAttendance(
+                      attendanceTarget,
+                      "full_day"
+                    )
+                  }
+                >
+                  Išdirbo visą dieną
+                </button>
+
+                <button
+                  className="ed-secondary"
+                  disabled={attendanceSaving}
+                  onClick={() => {
+                    setAttendanceMode("left_early_agreed");
+                    setAttendanceEndTime("");
+                    setAttendanceNote("");
+                  }}
+                >
+                  Išėjo anksčiau
+                </button>
+
+                {!attendanceTarget?.attendance?.employer_check_in_at && (
+                  <button
+                    className="ed-secondary ed-danger"
+                    disabled={attendanceSaving}
+                    onClick={() => {
+                      setAttendanceMode("no_show");
+                      setAttendanceEndTime("");
+                      setAttendanceNote("");
+                    }}
+                  >
+                    Neatvyko
+                  </button>
+                )}
+              </div>
+            )}
+
+            {attendanceMode !== "choose" &&
+              attendanceMode !== "no_show" && (
+                <>
+                  <div className="ed-label" style={{ marginBottom: 14 }}>
+                    Ankstyvo išėjimo tipas *
+                    <RoundedSelect
+                      ariaLabel="Ankstyvo išėjimo tipas"
+                      value={attendanceMode}
+                      onChange={setAttendanceMode}
+                      options={[{ value: "left_early_agreed", label: "Išėjo anksčiau – suderinta" }, { value: "left_early_unexcused", label: "Išėjo anksčiau be pateisinamos priežasties" }]}
+                    />
+                  </div>
+
+                  <label className="ed-label" style={{ marginBottom: 14 }}>
+                    Faktinis išėjimo laikas *
+                    <input
+                      className="ed-input"
+                      type="time"
+                      value={attendanceEndTime}
+                      onChange={(e) => setAttendanceEndTime(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+
+            {attendanceMode !== "choose" && (
+              <>
+                <label className="ed-label">
+                  {attendanceMode === "left_early_agreed"
+                    ? "Pastaba"
+                    : "Paaiškinimas *"}
+                  <textarea
+                    className="ed-textarea"
+                    maxLength={1000}
+                    value={attendanceNote}
+                    onChange={(e) => setAttendanceNote(e.target.value)}
+                    placeholder={
+                      attendanceMode === "no_show"
+                        ? "Trumpai parašykite, kodėl pažymite neatvykimą."
+                        : attendanceMode === "left_early_unexcused"
+                        ? "Trumpai aprašykite, kas įvyko."
+                        : "Pvz. Išėjimas buvo suderintas iš anksto."
+                    }
+                  />
+                </label>
+
+                {["no_show", "left_early_unexcused"].includes(
+                  attendanceMode
+                ) && (
+                  <div className="ed-note err" style={{ marginTop: 14 }}>
+                    Šis neigiamas pažymėjimas{" "}
+                    <b>darbuotojo reitingo iškart nemažina</b>. Darbuotojas
+                    galės jį patvirtinti arba ginčyti.
+                  </div>
+                )}
+
+                {attendanceMode === "left_early_agreed" && (
+                  <div className="ed-note ok" style={{ marginTop: 14 }}>
+                    Suderintas ankstyvas išėjimas darbuotojo patikimumo
+                    nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas
+                    laikas.
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 9,
+                    marginTop: 18,
+                  }}
+                >
+                  <button
+                    className="ed-secondary"
+                    disabled={attendanceSaving}
+                    onClick={() => {
+                      setAttendanceMode("choose");
+                      setAttendanceEndTime("");
+                      setAttendanceNote("");
+                    }}
+                  >
+                    Grįžti
+                  </button>
+
+                  <button
+                    className={
+                      ["no_show", "left_early_unexcused"].includes(
+                        attendanceMode
+                      )
+                        ? "ed-secondary ed-danger"
+                        : "ed-primary"
+                    }
+                    disabled={
+                      attendanceSaving ||
+                      (attendanceMode !== "no_show" && !attendanceEndTime) ||
+                      (["no_show", "left_early_unexcused"].includes(
+                        attendanceMode
+                      ) &&
+                        attendanceNote.trim().length < 5)
+                    }
+                    onClick={() =>
+                      recordEmployerAttendance(
+                        attendanceTarget,
+                        attendanceMode,
+                        attendanceEndTime || null,
+                        attendanceNote
+                      )
+                    }
+                  >
+                    {attendanceSaving
+                      ? "Saugoma..."
+                      : "Patvirtinti rezultatą"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {ratingTarget && canViewWorkerMetrics && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !ratingSaving) {
+              setRatingTarget(null);
+              setRatingScore(null);
+              setRatingComment("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
+                <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
+                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
+                  Pasirinkite bendrą įvertinimą nuo 1 iki 10. Vertinimą ir
+                  komentarą paliekate kaip už šį darbą atsakingas žmogus.
+                </div>
+              </div>
+              <button
+                className="rs-close"
+                disabled={ratingSaving}
+                onClick={() => {
+                  setRatingTarget(null);
+                  setRatingScore(null);
+                  setRatingComment("");
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                  <button
+                    key={score}
+                    type="button"
+                    className={
+                      Number(ratingScore) === score
+                        ? "ed-primary"
+                        : "ed-secondary"
+                    }
+                    style={{ minWidth: 46 }}
+                    onClick={() => setRatingScore(score)}
+                  >
+                    {score}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="ed-label">
+              Komentaras apie darbuotoją
+              <textarea
+                className="ed-textarea"
+                maxLength={1000}
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                placeholder="Pvz. punktualus, gerai atliko užduotis, lengva susitarti..."
+              />
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="ed-secondary"
+                disabled={ratingSaving}
+                onClick={() => {
+                  setRatingTarget(null);
+                  setRatingScore(null);
+                  setRatingComment("");
+                }}
+              >
+                Grįžti
+              </button>
+              <button
+                className="ed-primary"
+                disabled={ratingSaving || !ratingScore}
+                onClick={submitWorkerRating}
+              >
+                {ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTeam && (
+        <div
+          className="ed-team-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !teamActionBusy) {
+              setShowTeam(false);
+            }
+          }}
+        >
+          <div className="ed-team-modal">
+            <div className="ed-team-head">
+              <div>
+                <div className="eyebrow">BUSINESS PRO · ĮMONĖS KOMANDA</div>
+                <h2>{company?.name} komanda</h2>
+                <p>
+                  Kiekvienas žmogus jungiasi savo el. paštu. Darbai ir žinutės
+                  lieka aiškiai priskirti konkrečiam įmonės atstovui.
+                </p>
+                <span className="ed-team-seat">
+                  Panaudota {usedTeamSeats} iš 5 komandos vietų
+                </span>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={teamActionBusy}
+                onClick={() => setShowTeam(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="ed-team-layout">
+              <div className="ed-team-panel">
+                <h3>Komandos nariai</h3>
+                <p>
+                  Savininkas ir vadovas gali matyti visus įmonės darbus.
+                  Vadybininkas pagal nutylėjimą dirba tik su savo darbais.
+                </p>
+
+                {teamLoading ? (
+                  <div className="ed-empty compact">Kraunama komanda...</div>
+                ) : activeTeamMembers.length ? (
+                  <div className="ed-team-list">
+                    {activeTeamMembers.map((member) => (
+                      <div className="ed-team-member" key={member.user_id}>
+                        <div>
+                          <b>
+                            {member.display_name}
+                            {member.user_id === user.id ? " · Jūs" : ""}
+                          </b>
+                          <span>{member.email}</span>
+                          <span>
+                            {companyTeamRoleLabel(member.member_role)} ·{" "}
+                            {Number(member.jobs_responsible || 0)} atsakingi darbai
+                          </span>
+                        </div>
+
+                        <div className="ed-team-member-actions">
+                          {companyMemberRole === "owner" &&
+                          member.member_role !== "owner" ? (
+                            <>
+                              <RoundedSelect
+                                className="ed-team-role-select"
+                                ariaLabel={`${member.display_name} rolė`}
+                                value={member.member_role}
+                                disabled={teamActionBusy}
+                                onChange={(value) =>
+                                  changeTeamMemberRole(
+                                    member,
+                                    value
+                                  )
+                                }
+                                options={[{ value: "manager", label: "Vadovas" }, { value: "recruiter", label: "Vadybininkas" }]}
+                              />
+
+                              <button
+                                className="ed-team-remove"
+                                type="button"
+                                disabled={teamActionBusy}
+                                onClick={() => removeTeamMember(member)}
+                              >
+                                Pašalinti
+                              </button>
+                            </>
+                          ) : (
+                            <span
+                              className="ed-opened-badge"
+                              style={{ margin: 0 }}
+                            >
+                              {companyTeamRoleLabel(member.member_role)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ed-empty compact">Komandos narių nerasta.</div>
+                )}
+              </div>
+
+              <div className="ed-team-panel">
+                {companyMemberRole === "owner" ? (
+                  <>
+                    <h3>Pakviesti žmogų</h3>
+                    <p>
+                      Įveskite vardą ir asmeninį darbo el. paštą, tada
+                      pasirinkite, kiek teisių žmogui reikia. Sukursime
+                      vienkartinę 7 dienas galiojančią registracijos nuorodą.
+                    </p>
+
+                    <div className="ed-team-invite-form">
+                      <label className="ed-label">
+                        Vardas
+                        <input
+                          className="ed-input"
+                          value={teamInviteForm.displayName}
+                          maxLength={120}
+                          onChange={(e) =>
+                            setTeamInviteForm((current) => ({
+                              ...current,
+                              displayName: e.target.value,
+                            }))
+                          }
+                          placeholder="Pvz. Tomas"
+                        />
+                      </label>
+
+                      <label className="ed-label">
+                        El. paštas
+                        <input
+                          className="ed-input"
+                          type="email"
+                          value={teamInviteForm.email}
+                          onChange={(e) =>
+                            setTeamInviteForm((current) => ({
+                              ...current,
+                              email: e.target.value,
+                            }))
+                          }
+                          placeholder="tomas@imone.lt"
+                        />
+                      </label>
+
+                      <div>
+                        <span className="ed-team-role-title">
+                          Pasirinkite žmogaus rolę
+                        </span>
+
+                        <div className="ed-team-role-grid">
+                          <button
+                            className={`ed-team-role-card ${
+                              teamInviteForm.memberRole === "recruiter"
+                                ? "active"
+                                : ""
+                            }`}
+                            type="button"
+                            onClick={() =>
+                              setTeamInviteForm((current) => ({
+                                ...current,
+                                memberRole: "recruiter",
+                              }))
+                            }
+                          >
+                            <b>
+                              Vadybininkas
+                              {teamInviteForm.memberRole === "recruiter" && (
+                                <span>Pasirinkta</span>
+                              )}
+                            </b>
+                            <p>
+                              Skirtas žmogui, kuris pats kuria ir prižiūri savo
+                              darbo pasiūlymus.
+                            </p>
+                            <ul>
+                              <li>Mato savo sukurtus ir jam priskirtus darbus</li>
+                              <li>Gali kviesti darbuotojus į savo darbus</li>
+                              <li>Gali vesti pokalbius apie savo darbus</li>
+                              <li>Mato savo darbų statistiką</li>
+                              <li>Negali valdyti kitų vadybininkų darbų</li>
+                            </ul>
+                          </button>
+
+                          <button
+                            className={`ed-team-role-card ${
+                              teamInviteForm.memberRole === "manager"
+                                ? "active"
+                                : ""
+                            }`}
+                            type="button"
+                            onClick={() =>
+                              setTeamInviteForm((current) => ({
+                                ...current,
+                                memberRole: "manager",
+                              }))
+                            }
+                          >
+                            <b>
+                              Vadovas
+                              {teamInviteForm.memberRole === "manager" && (
+                                <span>Pasirinkta</span>
+                              )}
+                            </b>
+                            <p>
+                              Skirtas žmogui, kuris koordinuoja kelių
+                              vadybininkų darbus ir visos įmonės samdymą.
+                            </p>
+                            <ul>
+                              <li>Mato visus įmonės darbo pasiūlymus</li>
+                              <li>Gali valdyti ir redaguoti visus įmonės darbus</li>
+                              <li>Gali perskirstyti atsakingus žmones</li>
+                              <li>Mato visos įmonės statistiką</li>
+                              <li>Negali keisti komandos narių rolių ar jų šalinti</li>
+                            </ul>
+                          </button>
+                        </div>
+
+                        <div className="ed-team-role-summary">
+                          <b>
+                            {teamInviteForm.memberRole === "manager"
+                              ? "Kviečiate kaip Vadovą"
+                              : "Kviečiate kaip Vadybininką"}
+                          </b>
+                          <span>
+                            {teamInviteForm.memberRole === "manager"
+                              ? "Šis žmogus galės koordinuoti visus įmonės darbus ir perskirstyti juos tarp komandos narių, tačiau komandos sudėtį vis tiek valdys tik Savininkas."
+                              : "Šis žmogus dirbs tik su savo sukurtais arba jam priskirtais darbais ir nematys kitų vadybininkų darbų kaip valdomų savo darbų."}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        className="ed-primary"
+                        type="button"
+                        disabled={
+                          teamActionBusy ||
+                          usedTeamSeats >= 5 ||
+                          !teamInviteForm.displayName.trim() ||
+                          !teamInviteForm.email.trim()
+                        }
+                        onClick={createTeamInvite}
+                      >
+                        {teamActionBusy
+                          ? "Kuriamas kvietimas..."
+                          : usedTeamSeats >= 5
+                          ? "Visos 5 vietos panaudotos"
+                          : "Sukurti kvietimą"}
+                      </button>
+                    </div>
+
+                    {lastTeamInviteLink && (
+                      <div className="ed-team-link">
+                        <b>Kvietimo nuoroda</b>
+                        <div style={{ marginTop: 5 }}>
+                          {lastTeamInviteLink}
+                        </div>
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          style={{ marginTop: 9 }}
+                          onClick={() =>
+                            navigator.clipboard
+                              .writeText(lastTeamInviteLink)
+                              .then(() =>
+                                setNotice("Kvietimo nuoroda nukopijuota.")
+                              )
+                              .catch(() => {})
+                          }
+                        >
+                          Kopijuoti
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="ed-team-invites">
+                      <h3 style={{ marginBottom: 0 }}>Laukiantys kvietimai</h3>
+
+                      {pendingTeamInvites.length ? (
+                        pendingTeamInvites.map((invite) => (
+                          <div className="ed-team-invite" key={invite.invite_id}>
+                            <b>{invite.display_name}</b>
+                            <span>
+                              {invite.email} ·{" "}
+                              {companyTeamRoleLabel(invite.member_role)}
+                            </span>
+                            <span>
+                              Galioja iki{" "}
+                              {new Date(invite.expires_at).toLocaleDateString(
+                                "lt-LT"
+                              )}
+                            </span>
+
+                            <div className="ed-team-invite-actions">
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                onClick={() => copyTeamInvite(invite.token)}
+                              >
+                                Kopijuoti nuorodą
+                              </button>
+                              <button
+                                className="ed-team-remove"
+                                type="button"
+                                disabled={teamActionBusy}
+                                onClick={() =>
+                                  revokeTeamInvite(invite.invite_id)
+                                }
+                              >
+                                Atšaukti
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ color: "#7a8996", fontSize: 12 }}>
+                          Laukiančių kvietimų nėra.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3>Komandos valdymas</h3>
+                    <p>
+                      Narius kviesti, keisti jų roles ir šalinti gali įmonės
+                      savininkas. Jūs galite matyti komandą ir dirbti pagal savo
+                      rolės teises.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSavedWorkers && (
+        <div
+          className="ed-saved-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !savedWorkerBusy) {
+              setShowSavedWorkers(false);
+            }
+          }}
+        >
+          <div className="ed-saved-modal">
+            <div className="ed-saved-head">
+              <div>
+                <div className="eyebrow">DARBUOTOJAI FAVORITAI</div>
+                <h2>Patikrinti darbuotojai, su kuriais jau dirbote</h2>
+                <p>
+                  Čia galite kaupti gerai pasirodžiusius darbuotojus. Sukūrus
+                  naują darbą sistema iš jų parodys tik tuos, kurie tuo metu
+                  atitinka darbo vietą, grafiką ir kitus kriterijus.
+                </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={Boolean(savedWorkerBusy)}
+                onClick={() => setShowSavedWorkers(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {savedWorkersLoading ? (
+              <div className="ed-empty">Kraunami darbuotojai favoritai...</div>
+            ) : savedWorkers.length ? (
+              <div className="ed-saved-list">
+                {savedWorkers.map((worker) => (
+                  <div className="ed-saved-row" key={worker.id}>
+                    <div className="ed-saved-main">
+                      <div className="ed-avatar">
+                        {worker.avatarUrl ? (
+                          <img src={worker.avatarUrl} alt={worker.name} />
+                        ) : (
+                          worker.initials
+                        )}
+                      </div>
+                      <div>
+                        <b>{worker.name}</b>
+                        <span>
+                          {worker.city || "Miestas nenurodytas"} ·{" "}
+                          Atlikta darbų: {Number(worker.completedJobs || 0)}
+                          {worker.hasDrivingLicenseB ? " · B kategorija" : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ed-saved-meta">
+                      <span>Paskutinis darbas su jumis</span>
+                      <b>
+                        {worker.last_job_title || "Įvykdytas darbas"}
+                        {worker.last_work_date
+                          ? ` · ${worker.last_work_date}`
+                          : ""}
+                      </b>
+                      <span style={{ marginTop: 7 }}>
+                        Patikimumas {Math.round(worker.attendanceRate)}%
+                        {worker.ratingAverage !== null
+                          ? ` · ${worker.ratingAverage.toFixed(1)}/10`
+                          : ""}
+                      </span>
+                    </div>
+
+                    <div className="ed-saved-actions">
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        disabled={savedWorkerBusy === worker.id}
+                        onClick={() => removeWorkerFromTeam(worker)}
+                      >
+                        {savedWorkerBusy === worker.id
+                          ? "Šalinama..."
+                          : "Pašalinti"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ed-empty">
+                Darbuotojų favoritų sąrašas dar tuščias. Užbaigę darbo dieną prie patikusio
+                darbuotojo spauskite „Pridėti į favoritus“.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showUrgentSearch && (
+        <div
+          className="ed-urgent-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !urgentSearchLoading) {
+              setShowUrgentSearch(false);
+            }
+          }}
+        >
+          <div className="ed-urgent-modal">
+            <div className="ed-urgent-head">
+              <div>
+                <div className="eyebrow">SKUBIAI!</div>
+                <h2>Kas gali atvykti dirbti dabar?</h2>
+                <p>
+                  Pasirinkite miestą. Rodomi tik darbuotojai, kurie patys
+                  įjungė režimą „Laisvas dabar“ ir sutiko parodyti savo
+                  telefono numerį Business Pro darbdaviams.
+                </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={urgentSearchLoading}
+                onClick={() => setShowUrgentSearch(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="ed-urgent-note">
+              Ši paieška nesukuria darbo pasiūlymo ir nesiunčia kvietimų.
+              Susisiekę su darbuotoju darbo sąlygas suderinate tiesiogiai.
+              Darbuotojo numeris iš sąrašo dingsta, kai pats darbuotojas
+              išjungia „Laisvas dabar“ režimą. Rodomi tik per paskutines 24 val.
+              platformoje aktyvūs darbuotojai.
+            </div>
+
+            <div className="ed-urgent-filter">
+              <label className="ed-label">
+                Miestas
+                <CityAutocomplete
+                  className="ed-input"
+                  value={urgentSearchCity}
+                  onChange={setUrgentSearchCity}
+                  placeholder="Pvz. Vilnius"
+                />
+              </label>
+
+              <button
+                className="ed-primary"
+                type="button"
+                disabled={urgentSearchLoading}
+                onClick={searchUrgentWorkers}
+              >
+                {urgentSearchLoading ? "Ieškoma..." : "Filtruoti"}
+              </button>
+            </div>
+
+            {urgentSearchResults.length ? (
+              <div className="ed-urgent-results">
+                {urgentSearchResults.map((worker) => (
+                  <div className="ed-urgent-row" key={worker.worker_id}>
+                    <div className="ed-urgent-worker">
+                      <div className="ed-urgent-avatar">
+                        {worker.avatarUrl ? (
+                          <img
+                            src={worker.avatarUrl}
+                            alt={worker.display_name || "Darbuotojas"}
+                          />
+                        ) : (
+                          workerInitials(worker.display_name)
+                        )}
+                      </div>
+
+                      <div>
+                        <b>{shortWorkerName(worker.display_name)}</b>
+                        <span>
+                          {worker.city}
+                          {Number(worker.years_experience || 0) > 0
+                            ? ` · ${Number(worker.years_experience)} m. patirties`
+                            : ""}
+                          {worker.has_driving_license_b ? " · B kategorija" : ""}
+                        </span>
+                        <span style={{ color: "#167a54", fontWeight: 800 }}>
+                          Laisvas dabar
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="ed-urgent-contact">
+                      <b>{worker.phone}</b>
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        onClick={() => copyUrgentPhone(worker.phone)}
+                      >
+                        {urgentPhoneCopied === worker.phone
+                          ? "Nukopijuota"
+                          : "Kopijuoti numerį"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="ed-urgent-empty">
+                {urgentSearchLoading
+                  ? "Ieškome darbuotojų..."
+                  : "Pasirinkite miestą ir spauskite „Filtruoti“."}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showPlans && (
+        <div
+          className="ed-plan-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !planActionBusy) {
+              setShowPlans(false);
+            }
+          }}
+        >
+          <div className="ed-plan-modal">
+            <div className="ed-plan-head">
+              <div>
+                <div className="eyebrow">DARBDAVIO PLANAI</div>
+                <h2>Rinkitės planą pagal savo prioritetus</h2>
+                <p>
+                  Jei norite tik išbandyti sistemą – rinkitės Basic. Jei
+                  darbuotojų ieškote nuolat – Business. Jei dirbate komandoje ir
+                  norite pasiskirstyti darbus, vidinį komandos pokalbį bei
+                  daugiau valdymo – Business Pro.
+                </p>
+              </div>
+
+              <button
+                className="rs-close"
+                type="button"
+                disabled={planActionBusy}
+                onClick={() => setShowPlans(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {billingStatus && (
+              <>
+                <div className="ed-billing-overview">
+                  <div className="ed-billing-card">
+                    <span>Aktyvus planas</span>
+                    <b>{billingStatus.effective_plan_name || planSummary?.plan_name || "Basic"}</b>
+                    <small>{employerSubscriptionStatusLabel(billingStatus.subscription_status)}</small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>Kaina</span>
+                    <b>
+                      {billingStatus.effective_plan_key === "basic"
+                        ? "0 € / mėn."
+                        : `${formatPlanPrice(Number(billingStatus.amount_cents || 0) / 100)} € / ${
+                            billingStatus.billing_interval === "yearly"
+                              ? "metus"
+                              : "mėn."
+                          }`}
+                    </b>
+                    <small>
+                      {billingStatus.billing_interval === "yearly"
+                        ? "Metinis atsiskaitymas"
+                        : "Mėnesinis atsiskaitymas"}
+                    </small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>
+                      {billingStatus.cancel_at_period_end
+                        ? "Galioja iki"
+                        : "Kitas laikotarpis"}
+                    </span>
+                    <b>
+                      {billingStatus.current_period_end
+                        ? new Intl.DateTimeFormat("lt-LT", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }).format(new Date(billingStatus.current_period_end))
+                        : "—"}
+                    </b>
+                    <small>
+                      {billingStatus.cancel_at_period_end
+                        ? "Po datos prenumerata nebus pratęsta"
+                        : billingStatus.effective_plan_key === "basic"
+                        ? "Nemokamas planas"
+                        : "Prenumerata pratęsiama pagal Stripe būseną"}
+                    </small>
+                  </div>
+
+                  <div className="ed-billing-card">
+                    <span>Paskutinis apmokėjimas</span>
+                    <b>
+                      {billingStatus.last_payment_at
+                        ? new Intl.DateTimeFormat("lt-LT", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }).format(new Date(billingStatus.last_payment_at))
+                        : "—"}
+                    </b>
+                    <small>
+                      {billingStatus.last_invoice_id
+                        ? "Sąskaita yra Stripe istorijoje"
+                        : "Dar nėra užfiksuotos sąskaitos"}
+                    </small>
+                  </div>
+                </div>
+
+                {billingStatus.in_payment_grace && (
+                  <div className="ed-billing-warning">
+                    <b>Nepavyko automatiškai apmokėti prenumeratos.</b>{" "}
+                    Mokamo plano teisės laikinai paliktos iki{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(billingStatus.payment_grace_until))}
+                    </b>
+                    . Atnaujinkite mokėjimo būdą Stripe lange, kad planas
+                    nenukristų į Basic.
+                  </div>
+                )}
+
+                {companyMemberRole === "owner" &&
+                  billingStatus.effective_plan_key !== "basic" &&
+                  !onAdminReturn && (
+                    <div className="ed-billing-actions">
+                      <button
+                        className="ed-secondary"
+                        type="button"
+                        disabled={planActionBusy}
+                        onClick={openBillingPortal}
+                      >
+                        {planActionBusy
+                          ? "Atidaroma..."
+                          : "Valdyti prenumeratą ir sąskaitas"}
+                      </button>
+                    </div>
+                  )}
+              </>
+            )}
+
+            <div className="ed-billing-row">
+              <span>Atsiskaitymo laikotarpis</span>
+
+              <div className="ed-billing-toggle">
+                <button
+                  type="button"
+                  className={planBillingCycle === "monthly" ? "active" : ""}
+                  onClick={() => setPlanBillingCycle("monthly")}
+                >
+                  Kas mėnesį
+                </button>
+                <button
+                  type="button"
+                  className={planBillingCycle === "yearly" ? "active" : ""}
+                  onClick={() => setPlanBillingCycle("yearly")}
+                >
+                  Už metus
+                </button>
+              </div>
+
+              <span className="ed-billing-discount">
+                Metams · 20% pigiau
+              </span>
+            </div>
+
+            {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
+              <div className="ed-note" style={{ background: "#fff7ef", border: "1px solid #f2d7bc", color: "#102438", marginBottom: 16 }}>
+                Registruodamiesi pasirinkote {employerPlanName(preferredPlanKey)}. Žemiau patvirtinkite atsiskaitymo laikotarpį ir atlikite saugų apmokėjimą per Stripe. Iki Stripe patvirtinimo aktyvus lieka Basic planas.
+              </div>
+            )}
+
+            {planSummary?.cancel_at_period_end && (
+              <div
+                className="ed-note"
+                style={{
+                  background: "#fff7ef",
+                  border: "1px solid #f2d7bc",
+                  color: "#102438",
+                  marginBottom: 16,
+                }}
+              >
+                <b>Prenumeratos atšaukimas suplanuotas.</b>{" "}
+                {planSummary?.plan_name || employerPlanName(planSummary?.plan_key)} teisės
+                {planSummary?.current_period_end && (
+                  <>
+                    {" "}galioja iki{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(planSummary.current_period_end))}
+                    </b>
+                  </>
+                )}
+                . Po šios datos planas automatiškai taps <b>Basic</b>.
+              </div>
+            )}
+
+            {pendingPlanChange?.pending_plan_key && (
+              <div
+                className="ed-note"
+                style={{
+                  background: "#eef6ff",
+                  border: "1px solid #cfe1f4",
+                  color: "#102438",
+                  marginBottom: 16,
+                }}
+              >
+                <b>Suplanuotas plano pakeitimas:</b>{" "}
+                {pendingPlanChange.pending_plan_name ||
+                  employerPlanName(pendingPlanChange.pending_plan_key)}
+                {pendingPlanChange.pending_billing_interval === "yearly"
+                  ? " · metinis atsiskaitymas"
+                  : " · mėnesinis atsiskaitymas"}
+                {pendingPlanChange.pending_effective_at && (
+                  <>
+                    {" "}nuo{" "}
+                    <b>
+                      {new Intl.DateTimeFormat("lt-LT", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(pendingPlanChange.pending_effective_at))}
+                    </b>
+                  </>
+                )}
+                . Iki tol lieka galioti <b>{planSummary?.plan_name}</b> teisės.
+              </div>
+            )}
+
+            <div className="ed-plan-grid">
+              {EMPLOYER_PLANS.map((plan) => {
+                const samePlan = planSummary?.plan_key === plan.key;
+                const selectedBilling =
+                  plan.price === 0 ? "monthly" : planBillingCycle;
+                const currentBilling =
+                  billingStatus?.billing_interval === "yearly"
+                    ? "yearly"
+                    : "monthly";
+                const current =
+                  samePlan &&
+                  (plan.price === 0 || currentBilling === selectedBilling);
+                const isPro = plan.key === "business_pro";
+                const shownPrice =
+                  plan.price === 0
+                    ? 0
+                    : planBillingCycle === "yearly"
+                    ? employerPlanAnnualPrice(plan)
+                    : plan.price;
+
+                return (
+                  <div
+                    className={`ed-plan-card ${current ? "current" : ""} ${
+                      isPro ? "pro" : ""
+                    }`}
+                    key={plan.key}
+                  >
+                    <div className="eyebrow">
+                      {plan.key === "basic"
+                        ? "PRADŽIA"
+                        : plan.key === "business"
+                        ? "REKOMENDUOJAMAS"
+                        : "KOMANDAI"}
+                    </div>
+                    <h3>{plan.name}</h3>
+                    <div className="ed-plan-price">
+                      {formatPlanPrice(shownPrice)} €{" "}
+                      <small>
+                        {plan.price === 0
+                          ? "/ mėn."
+                          : planBillingCycle === "yearly"
+                          ? "/ metus"
+                          : "/ mėn."}
+                      </small>
+                    </div>
+
+                    {plan.price > 0 && planBillingCycle === "yearly" ? (
+                      <div className="ed-plan-yearly">
+                        {formatPlanPrice(
+                          employerPlanAnnualMonthlyEquivalent(plan)
+                        )}{" "}
+                        € / mėn. · sutaupote{" "}
+                        {formatPlanPrice(employerPlanAnnualSavings(plan))} € per
+                        metus
+                      </div>
+                    ) : (
+                      <div className="ed-plan-yearly" />
+                    )}
+
+                    <div className="ed-plan-desc">{plan.description}</div>
+
+                    {current && (
+                      <span className="ed-plan-current">
+                        Dabartinis planas
+                      </span>
+                    )}
+                    {!current && preferredPlanKey === plan.key && planSummary?.plan_key === "basic" && (
+                      <span className="ed-plan-current">Pasirinktas registruojantis</span>
+                    )}
+
+                    <ul className="ed-plan-features">
+                      {plan.features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
+                    </ul>
+
+                    {current ? (
+                      plan.price > 0 && !onAdminReturn ? (
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          disabled={planActionBusy}
+                          onClick={openBillingPortal}
+                        >
+                          {planActionBusy
+                            ? "Atidaroma..."
+                            : "Valdyti prenumeratą"}
+                        </button>
+                      ) : (
+                        <button
+                          className="ed-secondary"
+                          type="button"
+                          disabled
+                        >
+                          Aktyvus planas
+                        </button>
+                      )
+                    ) : onAdminReturn ? (
+                      <button
+                        className={isPro ? "ed-secondary" : "ed-primary"}
+                        type="button"
+                        disabled={planActionBusy}
+                        onClick={() => activatePlanForAdminTest(plan.key)}
+                      >
+                        {planActionBusy
+                          ? "Keičiama..."
+                          : "Aktyvuoti testavimui"}
+                      </button>
+                    ) : (
+                      <button
+                        className={isPro ? "ed-secondary" : "ed-primary"}
+                        type="button"
+                        disabled={planActionBusy}
+                        onClick={() => requestPaidPlan(plan.key)}
+                      >
+                        {planActionBusy
+                          ? "Atidaroma..."
+                          : plan.price === 0
+                          ? "Pasirinkti Basic"
+                          : samePlan
+                          ? planBillingCycle === "yearly"
+                            ? "Keisti į metinį atsiskaitymą"
+                            : "Keisti į mėnesinį atsiskaitymą"
+                          : `Apmokėti ${plan.name}`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="ed-plan-footnote">
+              Business ir Business Pro apmokami saugiai per Stripe. Galite
+              mokėti kas mėnesį arba iš karto už 12 mėnesių; metiniam
+              atsiskaitymui taikoma 20% nuolaida. Mokamo plano teisės
+              aktyvuojamos tik tada, kai Stripe patvirtina prenumeratą.
+              Kortelės duomenų RankosStatybose.lt nesaugo.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReliabilityInfo && (
+        <div
+          className="reliability-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowReliabilityInfo(false);
+          }}
+        >
+          <style>{`
+            .reliability-modal-overlay{
+              position:fixed;
+              inset:0;
+              z-index:3000;
+              display:grid;
+              place-items:center;
+              padding:24px;
+              background:rgba(16,36,56,.62);
+              backdrop-filter:blur(2px);
+              font-family:Inter,sans-serif;
+            }
+            .reliability-modal{
+              width:min(620px,100%);
+              max-height:calc(100vh - 48px);
+              overflow:auto;
+              background:#fff;
+              border:1px solid rgba(16,36,56,.08);
+              border-radius:20px;
+              box-shadow:0 28px 90px rgba(16,36,56,.28);
+              padding:26px;
+              color:#102438;
+            }
+            .reliability-modal-head{
+              display:flex;
+              justify-content:space-between;
+              align-items:flex-start;
+              gap:18px;
+              margin-bottom:20px;
+            }
+            .reliability-modal-eyebrow{
+              color:#f08a28;
+              font-size:12px;
+              font-weight:800;
+              letter-spacing:.08em;
+              margin-bottom:7px;
+            }
+            .reliability-modal h2{
+              margin:0;
+              font-family:Manrope,Inter,sans-serif;
+              font-size:28px;
+              line-height:1.15;
+              letter-spacing:-.025em;
+              color:#102438;
+            }
+            .reliability-modal-close{
+              width:38px;
+              height:38px;
+              flex:0 0 auto;
+              border:0;
+              border-radius:10px;
+              background:#f1f4f6;
+              color:#102438;
+              font-family:Inter,sans-serif;
+              font-size:22px;
+              line-height:1;
+              cursor:pointer;
+            }
+            .reliability-score-box{
+              display:flex;
+              align-items:center;
+              gap:16px;
+              padding:15px;
+              margin-bottom:20px;
+              border:1px solid #e3e9ed;
+              border-radius:14px;
+              background:#f7f9fa;
+            }
+            .reliability-score-ring{
+              width:64px;
+              height:64px;
+              flex:0 0 auto;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+            }
+            .reliability-score-ring-inner{
+              width:49px;
+              height:49px;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+              background:#fff;
+              box-shadow:inset 0 0 0 1px rgba(16,36,56,.05);
+              font-family:Manrope,Inter,sans-serif;
+              font-size:15px;
+              font-weight:800;
+            }
+            .reliability-score-copy strong{
+              display:block;
+              font-family:Manrope,Inter,sans-serif;
+              font-size:18px;
+              margin-bottom:4px;
+            }
+            .reliability-score-copy span{
+              color:#6c7a88;
+              font-size:13px;
+              line-height:1.45;
+            }
+            .reliability-rules{
+              display:grid;
+              gap:10px;
+            }
+            .reliability-rule{
+              display:grid;
+              grid-template-columns:28px 1fr;
+              gap:10px;
+              align-items:flex-start;
+              padding:12px 0;
+              border-bottom:1px solid #edf1f4;
+            }
+            .reliability-rule:last-child{border-bottom:0}
+            .reliability-rule-icon{
+              width:28px;
+              height:28px;
+              border-radius:50%;
+              display:grid;
+              place-items:center;
+              background:#f1f4f6;
+              font-weight:800;
+              font-size:12px;
+              color:#425466;
+            }
+            .reliability-rule p{
+              margin:0;
+              color:#425466;
+              font-size:14px;
+              line-height:1.55;
+            }
+            .reliability-note{
+              margin-top:16px;
+              padding:13px 14px;
+              border-radius:12px;
+              background:#fff3e7;
+              color:#8a531d;
+              font-size:13px;
+              line-height:1.5;
+            }
+            .reliability-modal-actions{
+              display:flex;
+              justify-content:flex-end;
+              margin-top:20px;
+            }
+            .reliability-modal-actions button{
+              border:0;
+              border-radius:10px;
+              padding:11px 17px;
+              background:#f08a28;
+              color:#fff;
+              font-family:Manrope,Inter,sans-serif;
+              font-weight:800;
+              cursor:pointer;
+            }
+            @media(max-width:600px){
+              .reliability-modal-overlay{padding:12px}
+              .reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}
+              .reliability-modal h2{font-size:23px}
+              .reliability-score-box{align-items:flex-start}
+            }
+          `}</style>
+
+          <div
+            className="reliability-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reliability-modal-title"
+          >
+            <div className="reliability-modal-head">
+              <div>
+                <div className="reliability-modal-eyebrow">
+                  PATIKIMUMO REITINGAS
+                </div>
+                <h2 id="reliability-modal-title">
+                  Kaip veikia darbdavio patikimumas?
+                </h2>
+              </div>
+
+              <button
+                className="reliability-modal-close"
+                type="button"
+                aria-label="Uždaryti"
+                onClick={() => setShowReliabilityInfo(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="reliability-score-box">
+              <div className="reliability-score-copy">
+                <strong>
+                  Dabartinis patikimumas:{" "}
+                  {Math.round(employerStats.reliabilityRate)} / 100
+                </strong>
+                <span>
+                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
+                </span>
+              </div>
+            </div>
+
+            <div className="reliability-rules">
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">100</div>
+                <p>
+                  Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−10</div>
+                <p>
+                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys visą
+                  darbą atšaukia, patikimumas sumažėja <b>10 taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">0</div>
+                <p>
+                  Pažymėjus „Neatvyko“ ar „Išėjo anksčiau be pateisinamos
+                  priežasties“, darbuotojo reitingas <b>nesumažėja iškart</b>.
+                  Darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−20</div>
+                <p>
+                  Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
+                  darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
+                  patikimumas sumažėja <b>20 taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">i</div>
+                <p>
+                  Patvirtintų nepagrįstų darbo dienos pažymėjimų istorija
+                  saugoma sistemoje. Šiuo metu jų:{" "}
+                  <b>{employerStats.falseAttendanceClaimCount}</b>.
+                </p>
+              </div>
+            </div>
+
+            <div className="reliability-note">
+              <b>Svarbu:</b> nei darbdavys, nei darbuotojas negali vienašališkai
+              sugadinti kitos pusės reitingo ginčytinoje situacijoje. Ginčo metu
+              sankcijos sustabdomos iki sprendimo.
+            </div>
+
+            <div className="reliability-modal-actions">
+              <button
+                type="button"
+                onClick={() => setShowReliabilityInfo(false)}
+              >
+                Supratau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelJobTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !cancellingJob) {
+              setCancelJobTarget(null);
+              setCancelReason("");
+            }
+          }}
+        >
+          <div className="rs-modal-card">
+            <style>{`
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2100;display:grid;place-items:center;padding:20px}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+              .rs-modal-head h2{margin:0;font-size:22px}
+              .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+              .rs-cancel-warning{background:#fff0ec;color:#9f4529;border-radius:12px;padding:14px;line-height:1.5;margin-bottom:16px}
+              .rs-cancel-reason{width:100%;min-height:105px;border:1px solid #dbe4ea;border-radius:10px;padding:12px;font:inherit;resize:vertical}
+              .rs-cancel-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
+            `}</style>
+
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">DARBO ATŠAUKIMAS</div>
+                <h2>Ar tikrai norite atšaukti šį darbą?</h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={cancellingJob}
+                onClick={() => {
+                  setCancelJobTarget(null);
+                  setCancelReason("");
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="rs-cancel-warning">
+              <b>
+                Šį darbą jau patvirtino {cancelJobTarget.confirmedCount}{" "}
+                {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}.
+              </b>
+              <div style={{ marginTop: 5 }}>
+                Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus
+                uždarytas, o darbuotojai matys jūsų nurodytą atšaukimo priežastį.
+              </div>
+              <div style={{ marginTop: 5 }}>
+                Kadangi darbą jau patvirtino darbuotojas, atšaukimas sumažins
+                jūsų darbdavio patikimumo reitingą 10 punktų.
+              </div>
+            </div>
+
+            <label className="ed-label">
+              Atšaukimo priežastis *
+              <textarea
+                className="rs-cancel-reason"
+                value={cancelReason}
+                maxLength={500}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę."
+              />
+            </label>
+
+            <div
+              style={{
+                marginTop: 6,
+                color: "#6c7a88",
+                fontSize: 12,
+              }}
+            >
+              Šią priežastį matys darbą patvirtinę darbuotojai.
+            </div>
+
+            <div className="rs-cancel-actions">
+              <button
+                className="ed-secondary"
+                disabled={cancellingJob}
+                onClick={() => {
+                  setCancelJobTarget(null);
+                  setCancelReason("");
+                }}
+              >
+                Ne, grįžti
+              </button>
+              <button
+                className="ed-primary"
+                style={{ background: "#b64d2a" }}
+                disabled={cancellingJob || cancelReason.trim().length < 5}
+                onClick={confirmEmployerCancellation}
+              >
+                {cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CompanyTeamChatModal
+        open={showTeamChat}
+        onClose={() => setShowTeamChat(false)}
+        companyId={company?.id}
+        companyName={company?.name}
+        user={user}
+        onRead={() => setTeamChatUnread(0)}
+      />
+
+      <WorkerProfileModal
+        worker={selectedWorker}
+        jobId={currentJob?.id || null}
+        canViewWorkerMetrics={canViewWorkerMetrics}
+        onClose={() => setSelectedWorker(null)}
+      />
+
+      <ConversationModal
+        open={Boolean(conversation)}
+        onClose={() => setConversation(null)}
+        onRead={() => conversation && markEmployerPrivateChatRead(conversation.invitationId)}
+        invitationId={conversation?.invitationId}
+        title={conversation?.title}
+        user={user}
+        senderMode={onAdminReturn ? "employer" : null}
+      />
+      <GroupConversationModal
+        open={Boolean(groupConversation)}
+        onClose={() => setGroupConversation(null)}
+        onRead={() => groupConversation && markEmployerGroupChatRead(groupConversation.jobId)}
+        jobId={groupConversation?.jobId}
+        title={groupConversation?.title}
+        user={user}
+        senderMode={onAdminReturn ? "employer" : null}
+      />
+    </div>
+  );
+}
+
+
+
+
+function AdminSetupModal({
+  eyebrow,
+  title,
+  description,
+  error,
+  onClose,
+  children,
+}) {
+  return (
+    <div
+      className="admin-setup-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-setup-card{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:24px;color:#102438}
+        .admin-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+        .admin-setup-head h2{font-family:Manrope,Inter,sans-serif;margin:4px 0 0;font-size:25px}
+        .admin-setup-head p{margin:7px 0 0;color:#6c7a88;line-height:1.5;max-width:620px}
+        .admin-setup-close{border:0;background:#f1f4f6;color:#102438;border-radius:9px;width:38px;height:38px;font:inherit;font-size:20px;cursor:pointer}
+        .admin-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .admin-setup-wide{grid-column:1/-1}
+        .admin-setup-label{display:grid;gap:6px;font-size:13px;font-weight:800;color:#526374}
+        .admin-setup-input{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:11px 12px;font:inherit;color:#102438;background:#fff;outline:none}
+        .admin-setup-input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-setup-textarea{min-height:105px;resize:vertical}
+        .admin-setup-check{display:flex;align-items:center;gap:9px;min-height:44px;color:#102438;font-size:13px;font-weight:800}
+        .admin-setup-error{margin-bottom:14px;border-radius:10px;padding:11px 12px;background:#fff0ec;color:#b64d2a;font-size:13px;font-weight:700}
+        .admin-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+        .admin-setup-cancel,.admin-setup-save{border-radius:10px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer}
+        .admin-setup-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438}
+        .admin-setup-save{border:0;background:#f08a28;color:#fff}
+        .admin-setup-save:disabled,.admin-setup-cancel:disabled{opacity:.55;cursor:wait}
+        @media(max-width:620px){.admin-setup-grid{grid-template-columns:1fr}.admin-setup-wide{grid-column:auto}.admin-setup-card{padding:18px}}
+      `}</style>
+
+      <div className="admin-setup-card">
+        <div className="admin-setup-head">
+          <div>
+            <div className="eyebrow">{eyebrow}</div>
+            <h2>{title}</h2>
+            <p>{description}</p>
+          </div>
+          <button
+            className="admin-setup-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        {error && <div className="admin-setup-error">{error}</div>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
+  const [checking, setChecking] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    displayName: "",
+    city: "Vilnius",
+    phone: "",
+    travelRadius: 30,
+    hasDrivingLicenseB: false,
+    yearsExperience: 0,
+    shortBio: "",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkWorkerMode() {
+      setChecking(true);
+      setError("");
+
+      try {
+        const [profileResult, privateResult, workerResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("display_name, city")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("worker_profiles")
+            .select("user_id")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (privateResult.error) throw privateResult.error;
+        if (workerResult.error) throw workerResult.error;
+
+        if (cancelled) return;
+
+        setForm((current) => ({
+          ...current,
+          displayName: profileResult.data?.display_name || "",
+          city: profileResult.data?.city || "Vilnius",
+          phone: privateResult.data?.phone || "",
+        }));
+
+        setReady(Boolean(workerResult.data?.user_id));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko patikrinti darbuotojo režimo.");
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }
+
+    checkWorkerMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  async function activateWorkerMode() {
+    setSaving(true);
+    setError("");
+
+    try {
+      const city = await canonicalCityName(form.city);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const result = await supabase.rpc("admin_register_worker_mode", {
+        p_display_name: form.displayName.trim(),
+        p_city: city,
+        p_phone: form.phone.trim() || null,
+        p_travel_radius_km: Number(form.travelRadius) || 0,
+        p_has_driving_license_b: Boolean(form.hasDrivingLicenseB),
+        p_years_experience: Number(form.yearsExperience) || 0,
+        p_short_bio: form.shortBio.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+      setReady(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko aktyvuoti darbuotojo režimo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (checking) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Tikrinamas darbuotojo režimas...</b>
+      </div>
+    );
+  }
+
+  if (ready) {
+    return (
+      <WorkerDashboard
+        user={user}
+        onLogout={onLogout}
+        onAdminReturn={onAdminReturn}
+      />
+    );
+  }
+
+  return (
+    <AdminSetupModal
+      eyebrow="ADMIN · DARBUOTOJO REŽIMAS"
+      title="Aktyvuoti darbuotojo profilį"
+      description="Administratoriaus rolė išliks. Užpildykite informaciją ir galėsite naudotis sistema taip pat kaip darbuotojas."
+      error={error}
+      onClose={onAdminReturn}
+    >
+      <div className="admin-setup-grid">
+        <label className="admin-setup-label">
+          Vardas
+          <input
+            className="admin-setup-input"
+            value={form.displayName}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, displayName: e.target.value }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Miestas
+          <CityAutocomplete
+            className="admin-setup-input"
+            value={form.city}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, city: value }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Telefonas
+          <input
+            className="admin-setup-input"
+            value={form.phone}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, phone: e.target.value }))
+            }
+            placeholder="+370..."
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Kiek km galite nuvykti?
+          <input
+            className="admin-setup-input"
+            type="number"
+            min="0"
+            max="300"
+            value={form.travelRadius}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, travelRadius: e.target.value }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Patirtis statybose (metais)
+          <input
+            className="admin-setup-input"
+            type="number"
+            min="0"
+            step="0.5"
+            value={form.yearsExperience}
+            onChange={(e) =>
+              setForm((current) => ({
+                ...current,
+                yearsExperience: e.target.value,
+              }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-check">
+          <input
+            type="checkbox"
+            checked={form.hasDrivingLicenseB}
+            onChange={(e) =>
+              setForm((current) => ({
+                ...current,
+                hasDrivingLicenseB: e.target.checked,
+              }))
+            }
+          />
+          Turiu B kategorijos vairuotojo pažymėjimą
+        </label>
+
+        <label className="admin-setup-label admin-setup-wide">
+          Trumpai apie save
+          <textarea
+            className="admin-setup-input admin-setup-textarea"
+            value={form.shortBio}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, shortBio: e.target.value }))
+            }
+          />
+        </label>
+      </div>
+
+      <div className="admin-setup-actions">
+        <button
+          className="admin-setup-cancel"
+          type="button"
+          disabled={saving}
+          onClick={onAdminReturn}
+        >
+          Atšaukti
+        </button>
+        <button
+          className="admin-setup-save"
+          type="button"
+          disabled={saving}
+          onClick={activateWorkerMode}
+        >
+          {saving ? "Aktyvuojama..." : "Aktyvuoti darbuotojo režimą"}
+        </button>
+      </div>
+    </AdminSetupModal>
+  );
+
+}function AdminEmployerGateway({ user, onAdminReturn, onLogout }) {
+  const [checking, setChecking] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    companyName: "",
+    companyCode: "",
+    city: "Vilnius",
+    phone: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkEmployerMode() {
+      setChecking(true);
+      setError("");
+
+      try {
+        const [memberResult, profileResult, privateResult] = await Promise.all([
+          supabase
+            .from("company_members")
+            .select("company_id")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("city")
+            .eq("id", user.id)
+            .single(),
+          supabase
+            .from("user_private")
+            .select("phone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
+
+        if (memberResult.error) throw memberResult.error;
+        if (profileResult.error) throw profileResult.error;
+        if (privateResult.error) throw privateResult.error;
+
+        if (cancelled) return;
+
+        setReady(Boolean(memberResult.data?.company_id));
+        setForm((current) => ({
+          ...current,
+          city: profileResult.data?.city || "Vilnius",
+          phone: privateResult.data?.phone || "",
+        }));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko patikrinti darbdavio režimo.");
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }
+
+    checkEmployerMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  async function activateEmployerMode() {
+    setSaving(true);
+    setError("");
+
+    try {
+      const city = await canonicalCityName(form.city);
+      if (!city) {
+        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+      }
+
+      const result = await supabase.rpc("admin_register_employer_mode", {
+        p_company_name: form.companyName.trim(),
+        p_company_code: form.companyCode.trim() || null,
+        p_city: city,
+        p_phone: form.phone.trim() || null,
+        p_description: form.description.trim() || null,
+      });
+
+      if (result.error) throw result.error;
+      setReady(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko aktyvuoti darbdavio režimo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (checking) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Tikrinamas darbdavio režimas...</b>
+      </div>
+    );
+  }
+
+  if (ready) {
+    return (
+      <EmployerDashboard
+        user={user}
+        onLogout={onLogout}
+        onAdminReturn={onAdminReturn}
+      />
+    );
+  }
+
+  return (
+    <AdminSetupModal
+      eyebrow="ADMIN · DARBDAVIO REŽIMAS"
+      title="Užregistruoti savo įmonę"
+      description="Administratoriaus rolė išliks. Užpildykite įmonės informaciją ir galėsite kurti darbus kaip įprastas darbdavys."
+      error={error}
+      onClose={onAdminReturn}
+    >
+      <div className="admin-setup-grid">
+        <label className="admin-setup-label">
+          Įmonės pavadinimas
+          <input
+            className="admin-setup-input"
+            value={form.companyName}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, companyName: e.target.value }))
+            }
+            placeholder="UAB ..."
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Įmonės kodas
+          <input
+            className="admin-setup-input"
+            value={form.companyCode}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, companyCode: e.target.value }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Miestas
+          <CityAutocomplete
+            className="admin-setup-input"
+            value={form.city}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, city: value }))
+            }
+          />
+        </label>
+
+        <label className="admin-setup-label">
+          Telefonas
+          <input
+            className="admin-setup-input"
+            value={form.phone}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, phone: e.target.value }))
+            }
+            placeholder="+370..."
+          />
+        </label>
+
+        <label className="admin-setup-label admin-setup-wide">
+          Trumpai apie įmonę
+          <textarea
+            className="admin-setup-input admin-setup-textarea"
+            value={form.description}
+            onChange={(e) =>
+              setForm((current) => ({ ...current, description: e.target.value }))
+            }
+          />
+        </label>
+      </div>
+
+      <div className="admin-setup-actions">
+        <button
+          className="admin-setup-cancel"
+          type="button"
+          disabled={saving}
+          onClick={onAdminReturn}
+        >
+          Atšaukti
+        </button>
+        <button
+          className="admin-setup-save"
+          type="button"
+          disabled={saving}
+          onClick={activateEmployerMode}
+        >
+          {saving ? "Kuriama..." : "Aktyvuoti darbdavio režimą"}
+        </button>
+      </div>
+    </AdminSetupModal>
+  );
+
+}
+function AdminJobChatModal({ job, user, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!job?.job_id) return undefined;
+
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const result = await supabase.rpc("get_admin_job_chat_messages", {
+          p_job_id: job.job_id,
+        });
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setMessages(result.data || []);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko įkelti darbo pokalbio.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [job?.job_id]);
+
+  async function sendMessage(e) {
+    e.preventDefault();
+
+    const body = textValue.trim();
+    if (!body || !job?.job_id || sending) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("admin_send_job_chat_message", {
+        p_job_id: job.job_id,
+        p_body: body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+
+      const refreshed = await supabase.rpc("get_admin_job_chat_messages", {
+        p_job_id: job.job_id,
+      });
+
+      if (refreshed.error) throw refreshed.error;
+      setMessages(refreshed.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!job) return null;
+
+  return (
+    <div
+      className="admin-chat-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose();
+      }}
+    >
+      <style>{`
+        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-chat-card{width:min(700px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:flex;flex-direction:column}
+        .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:13px}
+        .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .admin-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
+        .admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+        .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}
+        .admin-chat-messages{display:grid;gap:10px;min-height:180px;max-height:390px;overflow-y:auto;padding:3px 3px 13px}
+        .admin-chat-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+        .admin-chat-message.mine{margin-left:auto;background:#fff3e7}
+        .admin-chat-message.admin-other{background:#eef3f8}
+        .admin-chat-message b{display:block;font-size:12px;margin-bottom:4px}
+        .admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+        .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}
+        .admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
+        .admin-chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+        .admin-chat-form textarea{min-height:52px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit;color:#102438}
+        .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
+        .admin-chat-form button:disabled{opacity:.55;cursor:wait}
+        @media(max-width:560px){.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:94%}}
+      `}</style>
+
+      <div className="admin-chat-card">
+        <div className="admin-chat-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIUS · DARBO POKALBIS</div>
+            <h2>{job.title || "Darbo pokalbis"}</h2>
+            <div className="admin-chat-meta">
+              {job.company_name || "Įmonė"} · {job.city || "—"} ·{" "}
+              {job.work_date || "—"}
+            </div>
+          </div>
+
+          <button
+            className="rs-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        <div
+          className={`admin-chat-info ${
+            job.status === "cancelled" ? "cancelled" : ""
+          }`}
+        >
+          {job.status === "cancelled"
+            ? "Darbas atšauktas. Administratorius vis tiek gali peržiūrėti istoriją ir rašyti administracinę žinutę."
+            : "Matote visą šio darbo grupinio pokalbio istoriją. Jūsų žinutė bus siunčiama kaip administratoriaus žinutė darbo komandai."}
+        </div>
+
+        {error && <div className="admin-chat-error">{error}</div>}
+
+        <div className="admin-chat-messages">
+          {loading ? (
+            <div className="admin-chat-empty">Kraunamas pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => {
+              const mine = message.sender_id === user?.id;
+              const adminOther =
+                !mine && String(message.sender_role || "") === "admin";
+
+              return (
+                <div
+                  className={`admin-chat-message ${
+                    mine ? "mine" : adminOther ? "admin-other" : ""
+                  }`}
+                  key={message.message_id}
+                >
+                  <b>{message.sender_name || "Vartotojas"}</b>
+                  <p>{message.body}</p>
+                  <time>
+                    {new Date(message.created_at).toLocaleString("lt-LT", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </time>
+                </div>
+              );
+            })
+          ) : (
+            <div className="admin-chat-empty">
+              Šiame darbe žinučių dar nėra.
+            </div>
+          )}
+        </div>
+
+        <form className="admin-chat-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            maxLength={2000}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) {
+                  sendMessage(e);
+                }
+              }
+            }}
+            placeholder="Administratoriaus žinutė darbo komandai..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+function AdminCompanyTeamChatModal({ chat, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!chat?.company_id) return undefined;
+
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const result = await supabase.rpc(
+          "get_admin_company_team_chat_messages",
+          { p_company_id: chat.company_id }
+        );
+
+        if (result.error) throw result.error;
+
+        if (!cancelled) {
+          setMessages(result.data || []);
+          setError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    refresh();
+    const timer = window.setInterval(refresh, 4000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [chat?.company_id]);
+
+  if (!chat) return null;
+
+  return (
+    <div
+      className="admin-team-chat-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
+        .admin-team-chat-card{width:min(760px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:flex;flex-direction:column}
+        .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+        .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
+        .admin-team-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
+        .admin-team-chat-note{background:#f6f8fa;color:#526374;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
+        .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
+        .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:260px;max-height:520px;overflow:auto;padding:4px 2px 8px}
+        .admin-team-chat-message{width:fit-content;max-width:min(78%,560px);border-radius:12px;padding:10px 12px;background:#f2f5f7}
+        .admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:4px}
+        .admin-team-chat-role{font-weight:600;color:#7a8996}
+        .admin-team-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+        .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}
+        @media(max-width:560px){.admin-team-chat-message{max-width:94%}.admin-team-chat-card{padding:17px}}
+      `}</style>
+
+      <div className="admin-team-chat-card">
+        <div className="admin-team-chat-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIUS · KOMANDOS POKALBIS</div>
+            <h2>{chat.company_name || "Įmonės komanda"}</h2>
+            <div className="admin-team-chat-meta">
+              {employerPlanName(chat.plan_key)} ·{" "}
+              {Number(chat.active_members || 0)} komandos nariai ·{" "}
+              {Number(chat.message_count || 0)} žinutės
+            </div>
+          </div>
+
+          <button className="rs-close" type="button" onClick={onClose}>
+            <CloseMark />
+          </button>
+        </div>
+
+        <div className="admin-team-chat-note">
+          Tik skaitymui. Čia administratorius mato vidinį įmonės komandos
+          susirašinėjimą, bet iš šios skilties žinučių siųsti negali.
+        </div>
+
+        {error && <div className="admin-team-chat-error">{error}</div>}
+
+        <div className="admin-team-chat-messages">
+          {loading && !messages.length ? (
+            <div className="admin-team-chat-empty">Kraunamas pokalbis...</div>
+          ) : messages.length ? (
+            messages.map((message) => (
+              <div className="admin-team-chat-message" key={message.id}>
+                <b>
+                  {message.sender_label || "Komandos narys"}{" "}
+                  <span className="admin-team-chat-role">
+                    · {companyTeamRoleLabel(message.sender_role)}
+                  </span>
+                </b>
+                <p>{message.body}</p>
+                <time>
+                  {new Date(message.created_at).toLocaleString("lt-LT", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+            ))
+          ) : (
+            <div className="admin-team-chat-empty">
+              Šios įmonės komandos pokalbyje žinučių nėra.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function AdminDashboard({
+  user,
+  onLogout,
+  onOpenWorker,
+  onOpenEmployer,
+}) {
+  const [activeTab, setActiveTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({});
+  const [disputes, setDisputes] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [employers, setEmployers] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [ratings, setRatings] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [teamChats, setTeamChats] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [actionDialog, setActionDialog] = useState(null);
+  const [actionDays, setActionDays] = useState(7);
+  const [actionReason, setActionReason] = useState("");
+  const [actionConfirm, setActionConfirm] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [resolvingId, setResolvingId] = useState(null);
+  const [deletingRatingId, setDeletingRatingId] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [adminConversation, setAdminConversation] = useState(null);
+  const [adminTeamConversation, setAdminTeamConversation] = useState(null);
+  const [editorForm, setEditorForm] = useState({});
+  const [editorSaving, setEditorSaving] = useState(false);
+
+  const tabs = [
+    ["overview", "Suvestinė"],
+    ["disputes", `Ginčai${disputes.length ? ` (${disputes.length})` : ""}`],
+    ["workers", "Darbuotojai"],
+    ["employers", "Darbdaviai"],
+    ["jobs", "Darbai"],
+    ["teamChats", "Komandų pokalbiai"],
+    ["ratings", "Atsiliepimai"],
+    ["files", "Failai"],
+    ["audit", "Veiksmų istorija"],
+  ];
+
+  useEffect(() => {
+    loadAdminData();
+
+    const timer = setInterval(() => {
+      loadAdminData(true).catch(() => {});
+    }, 30000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setNotice("");
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  async function createSafeFileUrl(bucketId, storagePath) {
+    if (!bucketId || !storagePath) return null;
+
+    const signedResult = await supabase.storage
+      .from(bucketId)
+      .createSignedUrl(storagePath, 60 * 60);
+
+    return signedResult.error
+      ? null
+      : signedResult.data?.signedUrl || null;
+  }
+
+  async function loadAdminData(silent = false) {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+
+    try {
+      const [
+        statsResult,
+        disputesResult,
+        workersResult,
+        employersResult,
+        jobsResult,
+        ratingsResult,
+        filesResult,
+        teamChatsResult,
+        auditResult,
+      ] = await Promise.all([
+        supabase.rpc("get_admin_dashboard_stats"),
+        supabase.rpc("get_attendance_disputes"),
+        supabase.rpc("get_admin_workers"),
+        supabase.rpc("get_admin_employers"),
+        supabase.rpc("get_admin_jobs"),
+        supabase.rpc("get_admin_ratings"),
+        supabase.rpc("get_admin_files"),
+        supabase.rpc("get_admin_company_team_chats"),
+        supabase.rpc("get_admin_audit_log"),
+      ]);
+
+      const failed = [
+        statsResult,
+        disputesResult,
+        workersResult,
+        employersResult,
+        jobsResult,
+        ratingsResult,
+        filesResult,
+        teamChatsResult,
+        auditResult,
+      ].find((result) => result.error);
+
+      if (failed?.error) throw failed.error;
+
+      const disputeRows = await Promise.all(
+        (disputesResult.data || []).map(async (row) => ({
+          ...row,
+          evidenceUrl: row.worker_evidence_path
+            ? await createSafeFileUrl(
+                "attendance-evidence",
+                row.worker_evidence_path
+              )
+            : null,
+        }))
+      );
+
+      const fileRows = await Promise.all(
+        (filesResult.data || []).map(async (row) => ({
+          ...row,
+          signedUrl: await createSafeFileUrl(
+            row.bucket_id,
+            row.storage_path
+          ),
+        }))
+      );
+
+      setStats(statsResult.data || {});
+      setDisputes(disputeRows);
+      setWorkers(workersResult.data || []);
+      setEmployers(employersResult.data || []);
+      setJobs(jobsResult.data || []);
+      setRatings(ratingsResult.data || []);
+      setFiles(fileRows);
+      setTeamChats(teamChatsResult.data || []);
+      setAuditLog(auditResult.data || []);
+      setError("");
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti administratoriaus duomenų.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  async function resolveDispute(dispute, resolution) {
+    const workerWon = resolution === "worker";
+    const finalOutcome = workerWon
+      ? dispute.employer_outcome === "no_show"
+        ? "full_day"
+        : dispute.employer_outcome === "left_early_unexcused"
+        ? "left_early_agreed"
+        : "full_day"
+      : dispute.employer_outcome;
+
+    const actualEndTime = ["left_early_agreed", "left_early_unexcused"].includes(
+      finalOutcome
+    )
+      ? dispute.actual_end_time
+      : null;
+
+    const question = workerWon
+      ? "Patvirtinti sprendimą darbuotojo naudai? Jei darbdavio neigiamas pažymėjimas nepasitvirtino, darbdavio patikimumui bus pritaikyta sistemos numatyta bauda."
+      : "Patvirtinti sprendimą darbdavio naudai? Darbuotojui bus pritaikytas galutinis darbo dienos rezultatas.";
+
+    if (!window.confirm(question)) return;
+
+    setResolvingId(dispute.attendance_id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("admin_resolve_attendance_dispute", {
+        p_attendance_id: dispute.attendance_id,
+        p_resolution: resolution,
+        p_final_outcome: finalOutcome,
+        p_actual_end_time: actualEndTime || null,
+        p_note:
+          resolution === "worker"
+            ? "Ginčas peržiūrėtas ir išspręstas darbuotojo naudai."
+            : "Ginčas peržiūrėtas ir išspręstas darbdavio naudai.",
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Ginčas išspręstas.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išspręsti ginčo.");
+    } finally {
+      setResolvingId(null);
+    }
+  }
+
+  function openWorkerEditor(worker) {
+    setEditor({ type: "worker", id: worker.user_id });
+    setEditorForm({
+      displayName: worker.display_name || "",
+      legalName: worker.legal_name || "",
+      phone: worker.phone || "",
+      city: worker.city || "",
+      isActive: Boolean(worker.is_active),
+      travelRadiusKm: Number(worker.travel_radius_km ?? 30),
+      hasDrivingLicenseB: Boolean(worker.has_driving_license_b),
+      yearsExperience: Number(worker.years_experience || 0),
+      shortBio: worker.short_bio || "",
+    });
+  }
+
+  function openEmployerEditor(employer) {
+    setEditor({
+      type: "employer",
+      id: employer.company_id,
+      ownerId: employer.owner_id,
+      originalPlanKey: employer.plan_key || "basic",
+      originalSubscriptionStatus: employer.subscription_status || "active",
+      originalPlanPeriodEnd: employer.plan_current_period_end
+        ? String(employer.plan_current_period_end).slice(0, 10)
+        : "",
+    });
+    setEditorForm({
+      displayName: employer.display_name || "",
+      phone: employer.phone || "",
+      name: employer.company_name || "",
+      companyCode: employer.company_code || "",
+      vatCode: employer.vat_code || "",
+      city: employer.city || "",
+      description: employer.description || "",
+      isVerified: Boolean(employer.is_verified),
+      ownerActive: Boolean(employer.is_active),
+      planKey: employer.plan_key || "basic",
+      subscriptionStatus: employer.subscription_status || "active",
+      planPeriodEnd: employer.plan_current_period_end
+        ? String(employer.plan_current_period_end).slice(0, 10)
+        : "",
+    });
+  }
+
+  function openJobEditor(job) {
+    setEditor({ type: "job", id: job.job_id });
+    setEditorForm({
+      title: job.title || "",
+      city: job.city || "",
+      addressText: job.address_text || "",
+      workDate: job.work_date || "",
+      startTime: job.start_time?.slice(0, 5) || "08:00",
+      endTime: job.end_time?.slice(0, 5) || "17:00",
+      breakStartTime: job.break_start_time?.slice(0, 5) || "",
+      breakEndTime: job.break_end_time?.slice(0, 5) || "",
+      workersNeeded: Number(job.workers_needed || 1),
+      payAmount: job.pay_amount ?? "",
+      payUnit: job.pay_unit === "day" ? "day" : "hour",
+      transportMode:
+        job.transport_mode === "employer_pickup"
+          ? "employer_pickup"
+          : "self_arrival",
+      description: job.description || "",
+    });
+  }
+
+  function updateEditorField(key, value) {
+    setEditorForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveEditor() {
+    if (!editor) return;
+
+    setEditorSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      if (editor.type === "worker") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const [profileResult, contactResult] = await Promise.all([
+          supabase.rpc("admin_update_worker", {
+            p_user_id: editor.id,
+            p_display_name: editorForm.displayName.trim(),
+            p_city: city,
+            p_is_active: Boolean(editorForm.isActive),
+            p_travel_radius_km: Number(editorForm.travelRadiusKm) || 0,
+            p_has_driving_license_b: Boolean(
+              editorForm.hasDrivingLicenseB
+            ),
+            p_years_experience: Number(editorForm.yearsExperience) || 0,
+            p_short_bio: editorForm.shortBio.trim() || null,
+          }),
+          supabase.rpc("admin_update_account_contact", {
+            p_user_id: editor.id,
+            p_display_name: editorForm.displayName.trim(),
+            p_legal_name: editorForm.legalName.trim() || null,
+            p_phone: editorForm.phone.trim() || null,
+          }),
+        ]);
+
+        if (profileResult.error) throw profileResult.error;
+        if (contactResult.error) throw contactResult.error;
+      }
+
+      if (editor.type === "employer") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const [companyResult, contactResult] = await Promise.all([
+          supabase.rpc("admin_update_company", {
+            p_company_id: editor.id,
+            p_name: editorForm.name.trim(),
+            p_company_code: editorForm.companyCode.trim() || null,
+            p_vat_code: editorForm.vatCode.trim() || null,
+            p_city: city,
+            p_description: editorForm.description.trim() || null,
+            p_is_verified: Boolean(editorForm.isVerified),
+            p_owner_active: Boolean(editorForm.ownerActive),
+          }),
+          supabase.rpc("admin_update_account_contact", {
+            p_user_id: editor.ownerId,
+            p_display_name: editorForm.displayName.trim(),
+            p_legal_name: null,
+            p_phone: editorForm.phone.trim() || null,
+          }),
+        ]);
+
+        if (companyResult.error) throw companyResult.error;
+        if (contactResult.error) throw contactResult.error;
+
+        const planChanged =
+          editorForm.planKey !== editor.originalPlanKey ||
+          editorForm.subscriptionStatus !==
+            editor.originalSubscriptionStatus ||
+          editorForm.planPeriodEnd !== editor.originalPlanPeriodEnd;
+
+        if (planChanged) {
+          const periodEnd = editorForm.planPeriodEnd
+            ? `${editorForm.planPeriodEnd}T23:59:59+03:00`
+            : null;
+
+          const planResult = await supabase.rpc("admin_set_company_plan", {
+            p_company_id: editor.id,
+            p_plan_key: editorForm.planKey,
+            p_subscription_status: editorForm.subscriptionStatus,
+            p_period_end: periodEnd,
+            p_reason: "Planas pakeistas administratoriaus valdymo centre",
+          });
+
+          if (planResult.error) throw planResult.error;
+        }
+      }
+
+      if (editor.type === "job") {
+        const city = await canonicalCityName(editorForm.city);
+        if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
+
+        const result = await supabase.rpc("admin_update_job", {
+          p_job_id: editor.id,
+          p_title: editorForm.title.trim(),
+          p_city: city,
+          p_address_text: editorForm.addressText.trim() || null,
+          p_work_date: editorForm.workDate,
+          p_start_time: editorForm.startTime,
+          p_end_time: editorForm.endTime,
+          p_break_start_time: editorForm.breakStartTime || null,
+          p_break_end_time: editorForm.breakEndTime || null,
+          p_workers_needed: Number(editorForm.workersNeeded) || 1,
+          p_pay_amount: Number(editorForm.payAmount),
+          p_pay_unit: editorForm.payUnit,
+          p_transport_mode: editorForm.transportMode,
+          p_description: editorForm.description.trim() || null,
+        });
+
+        if (result.error) throw result.error;
+      }
+
+      setEditor(null);
+      setNotice("Pakeitimai išsaugoti.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti pakeitimų.");
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  async function deleteRating(rating) {
+    if (
+      !window.confirm(
+        `Pašalinti ${rating.worker_name} įvertinimą ${rating.score}/10?`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingRatingId(rating.rating_id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("admin_delete_worker_rating", {
+        p_rating_id: rating.rating_id,
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice("Atsiliepimas pašalintas ir darbuotojo vidurkis perskaičiuotas.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pašalinti atsiliepimo.");
+    } finally {
+      setDeletingRatingId(null);
+    }
+  }
+
+  function isCurrentlySuspended(record) {
+    if (!record?.suspended_until) return false;
+    const until = new Date(record.suspended_until);
+    return !Number.isNaN(until.getTime()) && until > new Date();
+  }
+
+  function openAccountAction(type, record, role) {
+    const userId = role === "worker" ? record.user_id : record.owner_id;
+    const name =
+      role === "worker"
+        ? record.display_name || record.email || "Darbuotojas"
+        : record.company_name || record.display_name || record.email || "Darbdavys";
+
+    setActionDialog({
+      type,
+      role,
+      userId,
+      companyId: role === "employer" ? record.company_id : null,
+      name,
+      email: record.email || "",
+    });
+    setActionDays(7);
+    setActionReason(
+      type === "unsuspend"
+        ? "Administratoriaus sprendimu suspendavimas panaikintas."
+        : ""
+    );
+    setActionConfirm("");
+  }
+
+  function openJobDelete(job) {
+    setActionDialog({
+      type: "deleteJob",
+      jobId: job.job_id,
+      name: job.title || "Darbas",
+      companyId: job.company_id || null,
+    });
+    setActionDays(7);
+    setActionReason("");
+    setActionConfirm("");
+  }
+
+  async function removeStorageRows(rows) {
+    const unique = new Map();
+
+    for (const row of rows || []) {
+      if (!row?.bucket_id || !row?.storage_path) continue;
+      unique.set(`${row.bucket_id}:${row.storage_path}`, row);
+    }
+
+    const grouped = new Map();
+
+    for (const row of unique.values()) {
+      if (!grouped.has(row.bucket_id)) grouped.set(row.bucket_id, []);
+      grouped.get(row.bucket_id).push(row.storage_path);
+    }
+
+    for (const [bucketId, paths] of grouped.entries()) {
+      if (!paths.length) continue;
+      const result = await supabase.storage.from(bucketId).remove(paths);
+      if (result.error) throw result.error;
+    }
+  }
+
+  async function performAdminAction() {
+    if (!actionDialog) return;
+
+    const destructive =
+      actionDialog.type === "deleteAccount" ||
+      actionDialog.type === "deleteJob";
+
+    if (actionDialog.type === "suspend") {
+      const days = Number(actionDays);
+
+      if (!Number.isInteger(days) || days < 1 || days > 3650) {
+        setError("Suspendavimo trukmė turi būti nuo 1 iki 3650 dienų.");
+        return;
+      }
+    }
+
+    if (
+      actionDialog.type !== "unsuspend" &&
+      actionReason.trim().length < 5
+    ) {
+      setError("Įrašykite aiškią priežastį (bent 5 simboliai).");
+      return;
+    }
+
+    if (destructive && actionConfirm.trim().toUpperCase() !== "ISTRINTI") {
+      setError('Norėdami patvirtinti trynimą, įrašykite „ISTRINTI“.');
+      return;
+    }
+
+    setActionBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      if (actionDialog.type === "suspend") {
+        const result = await supabase.rpc("admin_suspend_user", {
+          p_user_id: actionDialog.userId,
+          p_days: Number(actionDays),
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        setNotice(
+          `${actionDialog.name} paskyra suspenduota ${Number(actionDays)} d.`
+        );
+      }
+
+      if (actionDialog.type === "unsuspend") {
+        const result = await supabase.rpc("admin_unsuspend_user", {
+          p_user_id: actionDialog.userId,
+          p_reason: actionReason.trim() || null,
+        });
+
+        if (result.error) throw result.error;
+        setNotice(`${actionDialog.name} suspendavimas panaikintas.`);
+      }
+
+      if (actionDialog.type === "deleteAccount") {
+        const targetJobIds = new Set();
+
+        if (actionDialog.role === "employer" && actionDialog.companyId) {
+          for (const job of jobs) {
+            if (job.company_id === actionDialog.companyId) {
+              targetJobIds.add(job.job_id);
+            }
+          }
+        }
+
+        const relatedFiles = files.filter(
+          (file) =>
+            file.owner_user_id === actionDialog.userId ||
+            (file.job_id && targetJobIds.has(file.job_id))
+        );
+
+        const result = await supabase.rpc("admin_delete_user_account", {
+          p_user_id: actionDialog.userId,
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        let cleanupWarning = "";
+        try {
+          await removeStorageRows(relatedFiles);
+        } catch {
+          cleanupWarning =
+            " Paskyra pašalinta, bet dalies failų automatiškai išvalyti nepavyko.";
+        }
+
+        setEditor(null);
+        setNotice(
+          `${actionDialog.name} paskyra visiškai pašalinta.${cleanupWarning}`
+        );
+      }
+
+      if (actionDialog.type === "deleteJob") {
+        const relatedFiles = files.filter(
+          (file) => file.job_id === actionDialog.jobId
+        );
+
+        const result = await supabase.rpc("admin_delete_job", {
+          p_job_id: actionDialog.jobId,
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        let cleanupWarning = "";
+        try {
+          await removeStorageRows(relatedFiles);
+        } catch {
+          cleanupWarning =
+            " Darbas pašalintas, bet dalies susijusių failų automatiškai išvalyti nepavyko.";
+        }
+
+        if (editor?.type === "job" && editor.id === actionDialog.jobId) {
+          setEditor(null);
+        }
+
+        setNotice(
+          `Darbas „${actionDialog.name}“ ištrintas.${cleanupWarning}`
+        );
+      }
+
+      setActionDialog(null);
+      setActionReason("");
+      setActionConfirm("");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Administratoriaus veiksmo atlikti nepavyko.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function formatAdminDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString("lt-LT", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  }
+
+  function bytesLabel(value) {
+    const bytes = Number(value);
+    if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  if (loading) {
+    return (
+      <div className="ed-loading">
+        <div className="ed-spinner" />
+        <b>Kraunamas administratoriaus skydelis...</b>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-page">
+      <style>{`
+        .admin-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .admin-topbar{min-height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:100}
+        .admin-topbar-inner{width:min(1280px,calc(100% - 40px));margin:auto;display:flex;justify-content:space-between;align-items:center;gap:18px}
+        .admin-top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+        .admin-mode{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .admin-mode.primary{border-color:#f08a28;background:#f08a28;color:#fff}
+        .admin-shell{width:min(1280px,calc(100% - 40px));margin:28px auto 70px}
+        .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+        .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
+        .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
+        .admin-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+        .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
+        .admin-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
+        .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
+        .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
+        .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
+        .admin-toast-stack{position:fixed;top:86px;right:22px;z-index:9800;display:grid;gap:8px;width:min(380px,calc(100vw - 44px))}
+        .admin-toast{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-radius:12px;padding:12px 13px;box-shadow:0 16px 44px rgba(16,36,56,.18);font-size:13px;font-weight:700;line-height:1.45}
+        .admin-toast.ok{background:#edf8f3;border:1px solid #bfe6d3;color:#146f4d}
+        .admin-toast.err{background:#fff0ec;border:1px solid #efc4b7;color:#a6462b}
+        .admin-toast button{border:0;background:transparent;color:inherit;font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 1px}
+        .admin-section{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(16,36,56,.035)}
+        .admin-section+.admin-section{margin-top:14px}
+        .admin-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+        .admin-section h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
+        .admin-muted{color:#6c7a88;font-size:13px;line-height:1.5}
+        .admin-list{display:grid;gap:10px}
+        .admin-row{width:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(240px,1.35fr) repeat(3,minmax(130px,.72fr)) minmax(110px,auto);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:12px;padding:13px 15px}
+        .admin-row-title b{display:block;font-size:14px}.admin-row-title span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
+        .admin-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}.admin-cell b{font-size:13px}
+        .admin-pill{display:inline-flex;width:max-content;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}
+        .admin-pill.green{background:#edf8f3;color:#167a54}.admin-pill.orange{background:#fff3e7;color:#b85f0e}.admin-pill.red{background:#fff0ec;color:#b64d2a}.admin-pill.gray{background:#f1f4f6;color:#667788}
+        .admin-small-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .admin-small-btn.danger{color:#b64d2a;border-color:#e8bbae}
+        .admin-small-btn.warning{color:#b85f0e;border-color:#efc88e}
+        .admin-small-btn:disabled{opacity:.55;cursor:wait}
+        .admin-row-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+        .admin-dispute{border:1px solid #e4ebf0;border-radius:14px;padding:18px}.admin-dispute+.admin-dispute{margin-top:10px}
+        .admin-dispute-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+        .admin-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.admin-fact{background:#f6f8fa;border-radius:10px;padding:11px}.admin-fact span{display:block;color:#6c7a88;font-size:10px;margin-bottom:4px}.admin-fact b{font-size:13px}
+        .admin-note{margin-top:10px;padding:11px;border-radius:10px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
+        .admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
+        .admin-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:9000;display:grid;place-items:center;padding:20px}
+        .admin-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28)}
+        .admin-modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:17px}.admin-modal-head h2{margin:2px 0 0;font-family:Manrope,Inter,sans-serif;font-size:22px}
+        .admin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-wide{grid-column:1/-1}
+        .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
+        .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
+        .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
+        @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
+      `}</style>
+
+      <header className="admin-topbar">
+        <div className="admin-topbar-inner">
+          <a className="brand" href="#">
+            <span className="logo-mark">⌂</span>
+            <span>
+              rankos<span>statybose</span>.lt
+            </span>
+          </a>
+
+          <div className="admin-top-actions">
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenWorker}
+            >
+              Darbuotojo režimas
+            </button>
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenEmployer}
+            >
+              Darbdavio režimas
+            </button>
+            <button
+              className="admin-mode primary"
+              type="button"
+              disabled={refreshing}
+              onClick={() => loadAdminData(true)}
+            >
+              {refreshing ? "Atnaujinama..." : "Atnaujinti"}
+            </button>
+            <button className="btn ghost" onClick={onLogout}>
+              Atsijungti
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="admin-shell">
+        <div className="admin-head">
+          <div>
+            <div className="eyebrow">ADMINISTRATORIAUS VALDYMO CENTRAS</div>
+            <h1>Svetainės suvestinė ir valdymas</h1>
+            <p>
+              Čia matote realų sistemos naudojimą, ginčus, vartotojus, darbus,
+              įmonių komandų pokalbius, atsiliepimus ir įkeltus failus.
+            </p>
+          </div>
+
+          <span className="admin-pill green">Administratorius</span>
+        </div>
+
+        <div className="admin-tabs">
+          {tabs.map(([key, label]) => (
+            <button
+              key={key}
+              className={`admin-tab ${activeTab === key ? "active" : ""}`}
+              onClick={() => setActiveTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {(notice || error) && (
+          <div className="admin-toast-stack">
+            {notice && (
+              <div className="admin-toast ok">
+                <span>{notice}</span>
+                <button
+                  type="button"
+                  aria-label="Uždaryti pranešimą"
+                  onClick={() => setNotice("")}
+                >
+                  <CloseMark />
+                </button>
+              </div>
+            )}
+
+            {error && (
+              <div className="admin-toast err">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  aria-label="Uždaryti klaidos pranešimą"
+                  onClick={() => setError("")}
+                >
+                  <CloseMark />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "overview" && (
+          <div className="admin-kpis">
+            <div className="admin-kpi">
+              <span>Darbuotojai</span>
+              <b>{Number(stats.totalWorkers || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Darbdaviai</span>
+              <b>{Number(stats.totalEmployers || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Aktyvūs darbai</span>
+              <b>{Number(stats.openJobs || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Įvykdyti darbai</span>
+              <b>{Number(stats.completedJobs || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Atšaukti darbai</span>
+              <b>{Number(stats.cancelledJobs || 0)}</b>
+            </div>
+
+            <div
+              className={`admin-kpi ${
+                Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
+              }`}
+            >
+              <span>Neišspręsti ginčai</span>
+              <b>{Number(stats.unresolvedDisputes || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Panaudoti darbuotojai / mėn.</span>
+              <b>{Number(stats.workersUsedThisMonth || 0)}</b>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "disputes" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbo dienos ginčai</h2>
+                <div className="admin-muted">
+                  Įvertinkite abiejų pusių informaciją ir įrodymus. Kol ginčas
+                  neišspręstas, darbuotojo reitingas nekeičiamas.
+                </div>
+              </div>
+              <span className={`admin-pill ${disputes.length ? "red" : "green"}`}>
+                {disputes.length} neišspręsta
+              </span>
+            </div>
+
+            {disputes.length ? (
+              disputes.map((dispute) => {
+                const busy = resolvingId === dispute.attendance_id;
+                return (
+                  <div className="admin-dispute" key={dispute.attendance_id}>
+                    <div className="admin-dispute-head">
+                      <div>
+                        <div className="eyebrow">GINČAS</div>
+                        <h2>{dispute.job_title}</h2>
+                        <div className="admin-muted">
+                          {dispute.work_date} · {dispute.start_time?.slice(0, 5)}
+                          {dispute.end_time
+                            ? `–${dispute.end_time.slice(0, 5)}`
+                            : ""}
+                        </div>
+                      </div>
+                      <span className="admin-pill red">
+                        {attendanceOutcomeLabel({
+                          employer_outcome: dispute.employer_outcome,
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="admin-facts">
+                      <div className="admin-fact">
+                        <span>Darbuotojas</span>
+                        <b>{dispute.worker_name}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbdavys</span>
+                        <b>{dispute.company_name}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbuotojo „Atvykau“</span>
+                        <b>{formatAdminDate(dispute.worker_check_in_at)}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbdavio atvykimo patvirtinimas</span>
+                        <b>{formatAdminDate(dispute.employer_check_in_at)}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Faktinis išėjimo laikas</span>
+                        <b>{dispute.actual_end_time?.slice(0, 5) || "—"}</b>
+                      </div>
+                      <div className="admin-fact">
+                        <span>Darbuotojo dienos pareiškimas</span>
+                        <b>{dispute.worker_workday_claim || "—"}</b>
+                      </div>
+                    </div>
+
+                    {dispute.employer_note && (
+                      <div className="admin-note">
+                        <b>Darbdavio paaiškinimas:</b> {dispute.employer_note}
+                      </div>
+                    )}
+
+                    {dispute.worker_response_note && (
+                      <div className="admin-note">
+                        <b>Darbuotojo paaiškinimas:</b>{" "}
+                        {dispute.worker_response_note}
+                      </div>
+                    )}
+
+                    {dispute.worker_evidence_path && (
+                      <div className="admin-note">
+                        <b>Darbuotojo įrodymas:</b>{" "}
+                        {dispute.evidenceUrl ? (
+                          <a
+                            className="admin-file-link"
+                            href={dispute.evidenceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {dispute.worker_evidence_name || "Atidaryti failą"}
+                          </a>
+                        ) : (
+                          <span>
+                            {dispute.worker_evidence_name || "Failas įkeltas"} ·
+                            saugios peržiūros nuorodos sukurti nepavyko
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="admin-actions">
+                      <button
+                        className="admin-small-btn danger"
+                        disabled={busy}
+                        onClick={() => resolveDispute(dispute, "employer")}
+                      >
+                        Darbdavio naudai
+                      </button>
+                      <button
+                        className="admin-small-btn"
+                        style={{
+                          background: "#1c9b67",
+                          color: "#fff",
+                          borderColor: "#1c9b67",
+                        }}
+                        disabled={busy}
+                        onClick={() => resolveDispute(dispute, "worker")}
+                      >
+                        {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="admin-empty">
+                Šiuo metu neišspręstų ginčų nėra.
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "workers" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbuotojai</h2>
+                <div className="admin-muted">
+                  Profiliai, aktyvumas, suspendavimai, patikimumas ir pagrindinių
+                  duomenų redagavimas.
+                </div>
+              </div>
+              <b>{workers.length}</b>
+            </div>
+
+            {workers.length ? (
+              <div className="admin-list">
+                {workers.map((worker) => {
+                  const suspended = isCurrentlySuspended(worker);
+                  const isSelf = worker.user_id === user?.id;
+
+                  return (
+                    <div className="admin-row" key={worker.user_id}>
+                      <div className="admin-row-title">
+                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
+                        <span>
+                          {worker.email || "—"} ·{" "}
+                          {worker.city || "Miestas nenurodytas"}
+                        </span>
+                        {suspended && (
+                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
+                            Suspenduota iki {formatAdminDate(worker.suspended_until)}
+                            {worker.suspension_reason
+                              ? ` · ${worker.suspension_reason}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Patikimumas</span>
+                        <b>{Math.round(Number(worker.attendance_rate ?? 100))}%</b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Įvertinimas</span>
+                        <b>
+                          {worker.rating_average === null
+                            ? "—"
+                            : `${Number(worker.rating_average).toFixed(1)} / 10`}
+                        </b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Suspendavimų istorija</span>
+                        <b>{Number(worker.suspension_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-row-actions">
+                        <span
+                          className={`admin-pill ${
+                            suspended
+                              ? "red"
+                              : worker.is_active
+                              ? "green"
+                              : "gray"
+                          }`}
+                        >
+                          {suspended
+                            ? "Suspenduotas"
+                            : worker.is_active
+                            ? "Aktyvus"
+                            : "Išjungtas"}
+                        </span>
+
+                        <button
+                          className="admin-small-btn"
+                          onClick={() => openWorkerEditor(worker)}
+                        >
+                          Redaguoti
+                        </button>
+
+                        {!isSelf && (
+                          <>
+                            <button
+                              className="admin-small-btn"
+                              onClick={() =>
+                                openAccountAction(
+                                  suspended ? "unsuspend" : "suspend",
+                                  worker,
+                                  "worker"
+                                )
+                              }
+                            >
+                              {suspended
+                                ? "Nuimti suspendavimą"
+                                : "Suspenduoti"}
+                            </button>
+
+                            <button
+                              className="admin-small-btn danger"
+                              onClick={() =>
+                                openAccountAction(
+                                  "deleteAccount",
+                                  worker,
+                                  "worker"
+                                )
+                              }
+                            >
+                              Ištrinti paskyrą
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbuotojų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "employers" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbdaviai ir įmonės</h2>
+                <div className="admin-muted">
+                  Įmonės informacija, suspendavimai, patikimumas, atšaukimai ir
+                  patvirtinimo būsena.
+                </div>
+              </div>
+              <b>{employers.length}</b>
+            </div>
+
+            {employers.length ? (
+              <div className="admin-list">
+                {employers.map((employer) => {
+                  const suspended = isCurrentlySuspended(employer);
+                  const isSelf = employer.owner_id === user?.id;
+
+                  return (
+                    <div
+                      className="admin-row"
+                      key={employer.company_id || employer.owner_id}
+                    >
+                      <div className="admin-row-title">
+                        <b>{employer.company_name || "Įmonė"}</b>
+                        <span>
+                          {employer.email || "—"} ·{" "}
+                          {employer.city || "Miestas nenurodytas"}
+                        </span>
+                        <span style={{ fontWeight: 800, color: "#405264" }}>
+                          Planas: {employerPlanName(employer.plan_key)} ·{" "}
+                          {employer.subscription_status || "active"} ·{" "}
+                          {Number(employer.jobs_used_this_month || 0)} darbai šį mėn.
+                        </span>
+                        {suspended && (
+                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
+                            Suspenduota iki{" "}
+                            {formatAdminDate(employer.suspended_until)}
+                            {employer.suspension_reason
+                              ? ` · ${employer.suspension_reason}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Patikimumas</span>
+                        <b>
+                          {Number(employer.reliability_rate ?? 100).toFixed(0)} / 100
+                        </b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Darbų</span>
+                        <b>{Number(employer.jobs_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-cell">
+                        <span>Suspendavimų istorija</span>
+                        <b>{Number(employer.suspension_count || 0)}</b>
+                      </div>
+
+                      <div className="admin-row-actions">
+                        <span
+                          className={`admin-pill ${
+                            suspended
+                              ? "red"
+                              : employer.is_verified
+                              ? "green"
+                              : "gray"
+                          }`}
+                        >
+                          {suspended
+                            ? "Suspenduotas"
+                            : employer.is_verified
+                            ? "Patvirtinta"
+                            : "Nepatvirtinta"}
+                        </span>
+
+                        <button
+                          className="admin-small-btn"
+                          onClick={() => openEmployerEditor(employer)}
+                        >
+                          Redaguoti
+                        </button>
+
+                        {!isSelf && employer.account_role !== "admin" && (
+                          <>
+                            <button
+                              className="admin-small-btn"
+                              onClick={() =>
+                                openAccountAction(
+                                  suspended ? "unsuspend" : "suspend",
+                                  employer,
+                                  "employer"
+                                )
+                              }
+                            >
+                              {suspended
+                                ? "Nuimti suspendavimą"
+                                : "Suspenduoti"}
+                            </button>
+
+                            <button
+                              className="admin-small-btn danger"
+                              onClick={() =>
+                                openAccountAction(
+                                  "deleteAccount",
+                                  employer,
+                                  "employer"
+                                )
+                              }
+                            >
+                              Ištrinti paskyrą
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbdavių dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "jobs" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Visi darbai</h2>
+                <div className="admin-muted">
+                  Administratorius gali redaguoti darbo duomenis, atidaryti
+                  visą darbo pokalbį, rašyti darbo komandai arba pašalinti darbą.
+                </div>
+              </div>
+              <b>{jobs.length}</b>
+            </div>
+
+            {jobs.length ? (
+              <div className="admin-list">
+                {jobs.map((job) => (
+                  <div className="admin-row" key={job.job_id}>
+                    <div className="admin-row-title">
+                      <b>{job.title}</b>
+                      <span>
+                        {job.company_name} · {job.city} · {job.work_date}
+                      </span>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Būsena</span>
+                      <b>{job.status}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Žmonių</span>
+                      <b>
+                        {Number(job.confirmed_workers || 0)} /{" "}
+                        {Number(job.workers_needed || 0)}
+                      </b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Atlygis</span>
+                      <b>{formatNetPay(job.pay_amount, job.pay_unit)}</b>
+                    </div>
+
+                    <div className="admin-row-actions">
+                      <button
+                        className="admin-small-btn"
+                        onClick={() => setAdminConversation(job)}
+                      >
+                        Darbo pokalbis
+                      </button>
+
+                      <button
+                        className="admin-small-btn"
+                        onClick={() => openJobEditor(job)}
+                      >
+                        Redaguoti
+                      </button>
+
+                      <button
+                        className="admin-small-btn danger"
+                        onClick={() => openJobDelete(job)}
+                      >
+                        Ištrinti darbą
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "teamChats" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Įmonių komandų pokalbiai</h2>
+                <div className="admin-muted">
+                  Vidinis Business Pro įmonių susirašinėjimas. Administratorius
+                  gali peržiūrėti pokalbių istoriją, tačiau iš šios skilties
+                  žinučių nesiunčia.
+                </div>
+              </div>
+              <b>{teamChats.length}</b>
+            </div>
+
+            {teamChats.length ? (
+              <div className="admin-list">
+                {teamChats.map((chat) => (
+                  <div className="admin-row" key={chat.company_id}>
+                    <div className="admin-row-title">
+                      <b>{chat.company_name || "Įmonė"}</b>
+                      <span>
+                        Paskutinė žinutė:{" "}
+                        {chat.last_sender_label || "Komandos narys"}
+                        {chat.last_sender_role
+                          ? ` · ${companyTeamRoleLabel(chat.last_sender_role)}`
+                          : ""}
+                      </span>
+                      {chat.last_message_preview && (
+                        <span style={{ color: "#405264", marginTop: 6 }}>
+                          „{chat.last_message_preview}“
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Planas</span>
+                      <b>{employerPlanName(chat.plan_key)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Komandos narių</span>
+                      <b>{Number(chat.active_members || 0)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Žinučių</span>
+                      <b>{Number(chat.message_count || 0)}</b>
+                    </div>
+
+                    <div className="admin-row-actions">
+                      <span className="admin-pill gray">
+                        {formatAdminDate(chat.last_message_at)}
+                      </span>
+                      <button
+                        className="admin-small-btn"
+                        type="button"
+                        onClick={() => setAdminTeamConversation(chat)}
+                      >
+                        Skaityti pokalbį
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">
+                Įmonių komandų pokalbių dar nėra.
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "ratings" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Darbuotojų atsiliepimai</h2>
+                <div className="admin-muted">
+                  Matomi visi darbdavių palikti balai ir komentarai. Administratorius
+                  gali pašalinti netinkamą ar piktnaudžiaujantį atsiliepimą.
+                </div>
+              </div>
+              <b>{ratings.length}</b>
+            </div>
+
+            {ratings.length ? (
+              <div className="admin-list">
+                {ratings.map((rating) => (
+                  <div className="admin-row" key={rating.rating_id}>
+                    <div className="admin-row-title">
+                      <b>
+                        {rating.worker_name} · {rating.score} / 10
+                      </b>
+                      <span>
+                        {rating.company_name} · {rating.job_title}
+                      </span>
+                      {rating.comment && (
+                        <span style={{ color: "#405264", marginTop: 7 }}>
+                          „{rating.comment}“
+                        </span>
+                      )}
+                    </div>
+                    <div className="admin-cell">
+                      <span>Data</span>
+                      <b>{formatAdminDate(rating.created_at)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Darbdavys</span>
+                      <b>{rating.company_name}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Darbas</span>
+                      <b>{rating.job_title}</b>
+                    </div>
+                    <button
+                      className="admin-small-btn danger"
+                      disabled={deletingRatingId === rating.rating_id}
+                      onClick={() => deleteRating(rating)}
+                    >
+                      {deletingRatingId === rating.rating_id
+                        ? "Šalinama..."
+                        : "Pašalinti"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Atsiliepimų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "files" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Įkelti failai</h2>
+                <div className="admin-muted">
+                  Administratoriui rodomas visų sistemos Storage bucketų failų
+                  sąrašas. Šiuo metu naudojami ginčų įrodymų failai; atsiradus
+                  kitoms įkėlimo funkcijoms, jų failai taip pat pateks čia.
+                </div>
+              </div>
+              <b>{files.length}</b>
+            </div>
+
+            {files.length ? (
+              <div className="admin-list">
+                {files.map((file) => (
+                  <div className="admin-row" key={file.object_id}>
+                    <div className="admin-row-title">
+                      <b>{file.file_name || file.storage_path}</b>
+                      <span>
+                        {file.bucket_id} · {file.owner_name || "Savininkas nenustatytas"}
+                      </span>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Įkelta</span>
+                      <b>{formatAdminDate(file.uploaded_at)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Dydis</span>
+                      <b>{bytesLabel(file.size_bytes)}</b>
+                    </div>
+                    <div className="admin-cell">
+                      <span>Susijęs darbas</span>
+                      <b>{file.job_title || "—"}</b>
+                    </div>
+                    {file.signedUrl ? (
+                      <a
+                        className="admin-small-btn"
+                        href={file.signedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ textDecoration: "none" }}
+                      >
+                        Atidaryti
+                      </a>
+                    ) : (
+                      <span className="admin-pill gray">Peržiūra negalima</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Įkeltų failų šiuo metu nėra.</div>
+            )}
+          </section>
+        )}
+        {activeTab === "audit" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Administratoriaus veiksmų istorija</h2>
+                <div className="admin-muted">
+                  Suspendavimai, suspendavimo panaikinimai ir negrįžtami
+                  trynimai registruojami audito istorijoje.
+                </div>
+              </div>
+              <b>{auditLog.length}</b>
+            </div>
+
+            {auditLog.length ? (
+              <div className="admin-list">
+                {auditLog.map((item) => (
+                  <div className="admin-row" key={item.audit_id}>
+                    <div className="admin-row-title">
+                      <b>
+                        {item.action === "suspend_user"
+                          ? "Paskyra suspenduota"
+                          : item.action === "unsuspend_user"
+                          ? "Suspendavimas panaikintas"
+                          : item.action === "delete_user_account"
+                          ? "Paskyra ištrinta"
+                          : item.action === "delete_job"
+                          ? "Darbas ištrintas"
+                          : item.action}
+                      </b>
+                      <span>
+                        {item.target_email || item.target_user_id || "—"}
+                        {item.target_role ? ` · ${item.target_role}` : ""}
+                      </span>
+                      {item.reason && (
+                        <span style={{ color: "#405264", marginTop: 6 }}>
+                          {item.reason}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Administratorius</span>
+                      <b>{item.admin_name || item.admin_email || "—"}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Data</span>
+                      <b>{formatAdminDate(item.created_at)}</b>
+                    </div>
+
+                    <div className="admin-cell">
+                      <span>Veiksmas</span>
+                      <b>{item.action}</b>
+                    </div>
+
+                    <span className="admin-pill gray">Auditas</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">Administratoriaus veiksmų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+      </main>
+
+
+      <AdminJobChatModal
+        job={adminConversation}
+        user={user}
+        onClose={() => setAdminConversation(null)}
+      />
+
+      <AdminCompanyTeamChatModal
+        chat={adminTeamConversation}
+        onClose={() => setAdminTeamConversation(null)}
+      />
+
+      {editor && (
+        <div
+          className="admin-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !editorSaving) {
+              setEditor(null);
+            }
+          }}
+        >
+          <div className="admin-modal">
+            <div className="admin-modal-head">
+              <div>
+                <div className="eyebrow">ADMINISTRATORIAUS REDAGAVIMAS</div>
+                <h2>
+                  {editor.type === "worker"
+                    ? "Darbuotojo informacija"
+                    : editor.type === "employer"
+                    ? "Darbdavio informacija"
+                    : "Darbo pasiūlymas"}
+                </h2>
+              </div>
+              <button
+                className="rs-close"
+                disabled={editorSaving}
+                onClick={() => setEditor(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {editor.type === "worker" && (
+              <div className="admin-grid-2">
+                <label className="admin-label">
+                  Rodomas vardas
+                  <input
+                    className="admin-input"
+                    value={editorForm.displayName}
+                    onChange={(e) =>
+                      updateEditorField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Teisinis vardas / pavardė
+                  <input
+                    className="admin-input"
+                    value={editorForm.legalName}
+                    onChange={(e) =>
+                      updateEditorField("legalName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Telefonas
+                  <input
+                    className="admin-input"
+                    value={editorForm.phone}
+                    onChange={(e) =>
+                      updateEditorField("phone", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Kelionės spindulys, km
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    value={editorForm.travelRadiusKm}
+                    onChange={(e) =>
+                      updateEditorField("travelRadiusKm", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Patirtis, metais
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editorForm.yearsExperience}
+                    onChange={(e) =>
+                      updateEditorField("yearsExperience", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.hasDrivingLicenseB}
+                      onChange={(e) =>
+                        updateEditorField(
+                          "hasDrivingLicenseB",
+                          e.target.checked
+                        )
+                      }
+                    />{" "}
+                    B kategorija
+                  </span>
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.isActive}
+                      onChange={(e) =>
+                        updateEditorField("isActive", e.target.checked)
+                      }
+                    />{" "}
+                    Paskyra aktyvi
+                  </span>
+                </label>
+                <label className="admin-label admin-wide">
+                  Aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.shortBio}
+                    onChange={(e) =>
+                      updateEditorField("shortBio", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            {editor.type === "employer" && (
+              <div className="admin-grid-2">
+                <label className="admin-label">
+                  Paskyros vardas
+                  <input
+                    className="admin-input"
+                    value={editorForm.displayName}
+                    onChange={(e) =>
+                      updateEditorField("displayName", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Telefonas
+                  <input
+                    className="admin-input"
+                    value={editorForm.phone}
+                    onChange={(e) =>
+                      updateEditorField("phone", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Įmonės pavadinimas
+                  <input
+                    className="admin-input"
+                    value={editorForm.name}
+                    onChange={(e) => updateEditorField("name", e.target.value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Įmonės kodas
+                  <input
+                    className="admin-input"
+                    value={editorForm.companyCode}
+                    onChange={(e) =>
+                      updateEditorField("companyCode", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  PVM kodas
+                  <input
+                    className="admin-input"
+                    value={editorForm.vatCode}
+                    onChange={(e) =>
+                      updateEditorField("vatCode", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.isVerified}
+                      onChange={(e) =>
+                        updateEditorField("isVerified", e.target.checked)
+                      }
+                    />{" "}
+                    Įmonė patvirtinta
+                  </span>
+                </label>
+                <label className="admin-label">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={editorForm.ownerActive}
+                      onChange={(e) =>
+                        updateEditorField("ownerActive", e.target.checked)
+                      }
+                    />{" "}
+                    Savininko paskyra aktyvi
+                  </span>
+                </label>
+                <div className="admin-label">
+                  Planas
+                  <RoundedSelect
+                    className="admin-input"
+                    ariaLabel="Įmonės planas"
+                    value={editorForm.planKey}
+                    onChange={(value) => updateEditorField("planKey", value)}
+                    options={[{ value: "basic", label: "Basic · 0 €" }, { value: "business", label: "Business · 29 €" }, { value: "business_pro", label: "Business Pro · 59 €" }]}
+                  />
+                </div>
+
+                <div className="admin-label">
+                  Prenumeratos būsena
+                  <RoundedSelect
+                    className="admin-input"
+                    ariaLabel="Prenumeratos būsena"
+                    value={editorForm.subscriptionStatus}
+                    onChange={(value) => updateEditorField("subscriptionStatus", value)}
+                    options={[{ value: "active", label: "Aktyvi" }, { value: "trialing", label: "Bandomoji" }, { value: "past_due", label: "Laukiama apmokėjimo" }, { value: "cancelled", label: "Nutraukta" }]}
+                  />
+                </div>
+
+                <label className="admin-label">
+                  Apmokėta iki / laikotarpio pabaiga
+                  <input
+                    className="admin-input"
+                    type="date"
+                    value={editorForm.planPeriodEnd}
+                    onChange={(e) =>
+                      updateEditorField("planPeriodEnd", e.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="admin-label admin-wide">
+                  Įmonės aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.description}
+                    onChange={(e) =>
+                      updateEditorField("description", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            {editor.type === "job" && (
+              <div className="admin-grid-2">
+                <label className="admin-label admin-wide">
+                  Pavadinimas
+                  <input
+                    className="admin-input"
+                    value={editorForm.title}
+                    onChange={(e) => updateEditorField("title", e.target.value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Miestas
+                  <CityAutocomplete
+                    className="admin-input"
+                    value={editorForm.city}
+                    onChange={(value) => updateEditorField("city", value)}
+                  />
+                </label>
+                <label className="admin-label">
+                  Adresas
+                  <input
+                    className="admin-input"
+                    value={editorForm.addressText}
+                    onChange={(e) =>
+                      updateEditorField("addressText", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Data
+                  <input
+                    className="admin-input"
+                    type="date"
+                    value={editorForm.workDate}
+                    onChange={(e) =>
+                      updateEditorField("workDate", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Žmonių skaičius
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editorForm.workersNeeded}
+                    onChange={(e) =>
+                      updateEditorField("workersNeeded", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pradžia
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.startTime}
+                    onChange={(e) =>
+                      updateEditorField("startTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pabaiga
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.endTime}
+                    onChange={(e) =>
+                      updateEditorField("endTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pietų pradžia
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.breakStartTime}
+                    onChange={(e) =>
+                      updateEditorField("breakStartTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Pietų pabaiga
+                  <input
+                    className="admin-input"
+                    type="time"
+                    value={editorForm.breakEndTime}
+                    onChange={(e) =>
+                      updateEditorField("breakEndTime", e.target.value)
+                    }
+                  />
+                </label>
+                <label className="admin-label">
+                  Atlygis
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editorForm.payAmount}
+                    onChange={(e) =>
+                      updateEditorField("payAmount", e.target.value)
+                    }
+                  />
+                </label>
+                <div className="admin-label">
+                  Atlygio vienetas
+                  <RoundedSelect
+                    className="admin-input"
+                    ariaLabel="Atlygio vienetas"
+                    value={editorForm.payUnit}
+                    onChange={(value) => updateEditorField("payUnit", value)}
+                    options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
+                  />
+                </div>
+                <div className="admin-label admin-wide">
+                  Atvykimas
+                  <RoundedSelect
+                    className="admin-input"
+                    ariaLabel="Atvykimas"
+                    value={editorForm.transportMode}
+                    onChange={(value) => updateEditorField("transportMode", value)}
+                    options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
+                  />
+                </div>
+                <label className="admin-label admin-wide">
+                  Aprašymas
+                  <textarea
+                    className="admin-input admin-textarea"
+                    value={editorForm.description}
+                    onChange={(e) =>
+                      updateEditorField("description", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="admin-actions">
+              {editor.type === "job" && (
+                <button
+                  className="admin-small-btn danger"
+                  disabled={editorSaving}
+                  onClick={() =>
+                    openJobDelete({
+                      job_id: editor.id,
+                      title: editorForm.title || "Darbas",
+                      company_id: null,
+                    })
+                  }
+                  style={{ marginRight: "auto" }}
+                >
+                  Ištrinti darbą
+                </button>
+              )}
+
+              <button
+                className="admin-small-btn"
+                disabled={editorSaving}
+                onClick={() => setEditor(null)}
+              >
+                Atšaukti
+              </button>
+              <button
+                className="admin-small-btn"
+                style={{
+                  background: "#f08a28",
+                  color: "#fff",
+                  borderColor: "#f08a28",
+                }}
+                disabled={editorSaving}
+                onClick={saveEditor}
+              >
+                {editorSaving ? "Saugoma..." : "Išsaugoti"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {actionDialog && (
+        <div
+          className="admin-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !actionBusy) {
+              setActionDialog(null);
+            }
+          }}
+        >
+          <div className="admin-modal" style={{ width: "min(600px,100%)" }}>
+            <div className="admin-modal-head">
+              <div>
+                <div className="eyebrow">
+                  {actionDialog.type === "suspend"
+                    ? "PASKYROS SUSPENDAVIMAS"
+                    : actionDialog.type === "unsuspend"
+                    ? "SUSPENDAVIMO PANAIKINIMAS"
+                    : actionDialog.type === "deleteJob"
+                    ? "DARBO TRYNIMAS"
+                    : "PASKYROS TRYNIMAS"}
+                </div>
+                <h2>
+                  {actionDialog.type === "suspend"
+                    ? `Suspenduoti: ${actionDialog.name}`
+                    : actionDialog.type === "unsuspend"
+                    ? `Nuimti suspendavimą: ${actionDialog.name}`
+                    : actionDialog.type === "deleteJob"
+                    ? `Ištrinti darbą: ${actionDialog.name}`
+                    : `Visiškai ištrinti: ${actionDialog.name}`}
+                </h2>
+              </div>
+
+              <button
+                className="rs-close"
+                disabled={actionBusy}
+                onClick={() => setActionDialog(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {actionDialog.type === "suspend" && (
+              <label className="admin-label">
+                Kiek dienų suspenduoti?
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={actionDays}
+                  onChange={(e) => setActionDays(e.target.value)}
+                />
+              </label>
+            )}
+
+            <label className="admin-label" style={{ marginTop: 13 }}>
+              {actionDialog.type === "unsuspend" ? "Pastaba" : "Priežastis *"}
+              <textarea
+                className="admin-input admin-textarea"
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                placeholder={
+                  actionDialog.type === "suspend"
+                    ? "Pvz. Pakartotinis neatvykimas ir taisyklių pažeidimas..."
+                    : actionDialog.type === "deleteAccount"
+                    ? "Pvz. Pakartotiniai rimti pažeidimai..."
+                    : actionDialog.type === "deleteJob"
+                    ? "Kodėl šis darbo pasiūlymas šalinamas?"
+                    : "Administratoriaus pastaba..."
+                }
+              />
+            </label>
+
+            {(actionDialog.type === "deleteAccount" ||
+              actionDialog.type === "deleteJob") && (
+              <div
+                className="admin-note"
+                style={{ background: "#fff0ec", color: "#9f4529" }}
+              >
+                <b>Negrįžtamas veiksmas.</b>{" "}
+                {actionDialog.type === "deleteAccount"
+                  ? "Bus pašalinta paskyra ir su ja susiję sistemos duomenys."
+                  : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."}
+
+                <label className="admin-label" style={{ marginTop: 12 }}>
+                  Patvirtinimui įrašykite ISTRINTI
+                  <input
+                    className="admin-input"
+                    value={actionConfirm}
+                    onChange={(e) => setActionConfirm(e.target.value)}
+                    placeholder="ISTRINTI"
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="admin-actions">
+              <button
+                className="admin-small-btn"
+                disabled={actionBusy}
+                onClick={() => setActionDialog(null)}
+              >
+                Atšaukti
+              </button>
+
+              <button
+                className={`admin-small-btn ${
+                  actionDialog.type === "deleteAccount" ||
+                  actionDialog.type === "deleteJob"
+                    ? "danger"
+                    : ""
+                }`}
+                disabled={actionBusy}
+                onClick={performAdminAction}
+                style={
+                  actionDialog.type === "deleteAccount" ||
+                  actionDialog.type === "deleteJob"
+                    ? undefined
+                    : {
+                        background: "#102438",
+                        color: "#fff",
+                        borderColor: "#102438",
+                      }
+                }
+              >
+                {actionBusy
+                  ? "Vykdoma..."
+                  : actionDialog.type === "suspend"
+                  ? "Suspenduoti"
+                  : actionDialog.type === "unsuspend"
+                  ? "Nuimti suspendavimą"
+                  : actionDialog.type === "deleteJob"
+                  ? "Ištrinti darbą"
+                  : "Ištrinti paskyrą"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function SuspendedAccount({
+  onLogout,
+  suspendedUntil,
+  reason,
+  disabled = false,
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f6f8fa",
+        display: "grid",
+        placeItems: "center",
+        padding: 20,
+        color: "#102438",
+      }}
+    >
+      <div
+        style={{
+          width: "min(620px,100%)",
+          background: "#fff",
+          border: "1px solid #e4ebf0",
+          borderRadius: 18,
+          padding: 26,
+          boxShadow: "0 18px 55px rgba(16,36,56,.10)",
+        }}
+      >
+        <div className="eyebrow">
+          {disabled ? "PASKYRA IŠJUNGTA" : "PASKYRA SUSPENDUOTA"}
+        </div>
+
+        <h1
+          style={{
+            fontFamily: "Manrope,Inter,sans-serif",
+            margin: "6px 0 10px",
+            fontSize: 28,
+          }}
+        >
+          {disabled
+            ? "Šios paskyros naudojimas išjungtas"
+            : "Šios paskyros naudojimas laikinai sustabdytas"}
+        </h1>
+
+        <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+          {disabled
+            ? "Administratoriaus sprendimu ši paskyra šiuo metu negali naudotis platformos funkcijomis."
+            : `Paskyra suspenduota iki ${
+                suspendedUntil
+                  ? new Date(suspendedUntil).toLocaleString("lt-LT", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
+                  : "nurodyto termino"
+              }.`}
+        </p>
+
+        {reason && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 13,
+              borderRadius: 10,
+              background: "#fff3e7",
+              color: "#8a531d",
+              lineHeight: 1.5,
+            }}
+          >
+            <b>Priežastis:</b> {reason}
+          </div>
+        )}
+
+        <div
+          style={{
+            marginTop: 20,
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button className="btn ghost" onClick={onLogout}>
+            Atsijungti
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicLandingPage({
+  onLogin,
+  onEmployerSignup,
+  onWorkerSignup,
+  pricingBillingCycle,
+  setPricingBillingCycle,
+}) {
+  const plans = EMPLOYER_PLANS;
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [landingStats, setLandingStats] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    let cancelled = false;
+    supabase
+      .rpc("get_landing_statistics")
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error(error);
+          return;
+        }
+        setLandingStats(data?.[0] || null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="home-page">
+      <style>{`
+        .home-page{--navy:#102438;--orange:#f08a28;--muted:#607180;--line:#e2e9ee;color:var(--navy);background:#fff;font-family:Inter,system-ui,sans-serif;line-height:1.5}
+        .home-page *{box-sizing:border-box}.home-wrap{width:min(1120px,calc(100% - 40px));margin:auto}.home-page button{font:inherit;cursor:pointer}.home-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+        .home-nav{min-height:72px;display:flex;align-items:center;gap:30px}.home-brand{color:var(--navy);font:900 18px Manrope,Inter,sans-serif;text-decoration:none;white-space:nowrap}.home-brand b{color:var(--orange)}.home-brand-mark{display:inline-grid;place-items:center;width:34px;height:34px;margin-right:9px;background:var(--orange);border-radius:10px;color:#fff}
+        .home-navlinks{display:flex;align-items:center;gap:24px;margin-left:22px}.home-navlinks a{color:#526374;text-decoration:none;font-size:12px;font-weight:800}.home-navlinks a:hover{color:#d87319}
+        .home-login{border:0;background:none;color:#405264;font-size:13px;font-weight:750}.home-login:hover{color:#d87319}.home-actions{display:flex;align-items:center;gap:14px;margin-left:auto}
+        .home-btn{border:1px solid var(--orange);border-radius:10px;background:var(--orange);color:#fff;padding:12px 18px;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.home-btn:hover{background:#dd761b}.home-btn.outline{border-color:#cdd8df;background:#fff;color:var(--navy)}.home-btn.outline:hover{background:#f4f7f9}.home-btn.dark{background:var(--navy);border-color:var(--navy)}
+        .home-hero{position:relative;overflow:hidden;background:radial-gradient(circle at 80% 10%,#fff1e4 0%,transparent 34%),linear-gradient(125deg,#f4f8fb 0%,#fff 68%);border-bottom:1px solid var(--line)}.home-hero:before{content:"";position:absolute;right:-220px;bottom:-360px;width:750px;height:750px;border:1px solid #f0e1d2;border-radius:50%;pointer-events:none}.home-hero-grid{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center;padding:106px 0 100px}.home-kicker{font-size:11px;font-weight:900;letter-spacing:.13em;color:#b85f0e;text-transform:uppercase}.home-hero h1{font:900 clamp(38px,4.5vw,57px)/1.08 Manrope,Inter,sans-serif;letter-spacing:-.045em;margin:16px 0 20px}.home-hero h1 em{color:var(--orange);font-style:normal}.home-lead{font-size:18px;line-height:1.65;color:var(--muted);max-width:580px;margin:0}.home-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin:30px 0 18px}.home-micro{font-size:12px;color:#667988}
+        .home-flow{position:relative;background:#fff;color:var(--navy);border:1px solid #dce5eb;border-radius:24px;padding:30px;box-shadow:0 25px 65px rgba(16,36,56,.12)}.home-flow:before{content:"";position:absolute;top:-12px;right:26px;width:34%;height:12px;background:#f08a28;border-radius:9px 9px 0 0}.home-flow-label{display:inline-block;color:#ac5a10;background:#fff1e4;padding:7px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.12em;margin-bottom:16px}.home-flow-title{font:850 18px Manrope,Inter,sans-serif;margin:0 0 6px}.home-flow-intro{font-size:12px;color:var(--muted);margin:0 0 18px}.home-flow-row{display:flex;gap:15px;align-items:flex-start;border-top:1px solid var(--line);padding:21px 0}.home-flow-row:last-child{padding-bottom:0}.home-flow-number{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:#c56a18;background:#fff0e1;font-size:14px;font-weight:900}.home-flow-row b{display:block;font-size:15px}.home-flow-row span:not(.home-flow-number){display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.55}.home-flow-row .home-flow-number{display:grid;place-items:center;margin:0;color:#c56a18;line-height:1}.home-flow-number svg{width:20px;height:20px;display:block}
+        .home-stats{border-bottom:1px solid var(--line);background:#fff}.home-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:27px 0}.home-stat{padding:9px 24px;border-left:1px solid var(--line)}.home-stat:first-child{border-left:0}.home-stat strong{display:block;font:900 30px Manrope,Inter,sans-serif;color:var(--navy)}.home-stat span{font-size:12px;color:var(--muted)}
+        .home-section{padding:82px 0}.home-section.soft{background:#f7f9fb}.home-section h2,.home-cta h2{font:850 clamp(29px,3.2vw,40px)/1.16 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 12px}.home-intro{color:var(--muted);max-width:680px;margin:0 0 32px}
+        .home-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px}.home-step{border:1px solid var(--line);border-radius:16px;background:#fff;padding:23px}.home-step strong{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#102438;color:#fff;font-size:12px;margin-bottom:18px}.home-step h3{font:850 17px Manrope,Inter,sans-serif;margin:0 0 8px}.home-step p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+        .home-about{display:grid;grid-template-columns:1fr 1fr;gap:22px}.home-about-main,.home-about-note{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-about-main{background:linear-gradient(135deg,#102438,#173b5c);color:#fff}.home-about-main .home-kicker{color:#ffc68d}.home-about-main p{color:#d6e1e9;line-height:1.7}.home-about-note p{color:var(--muted);line-height:1.7}.home-about-points{display:grid;gap:10px;margin-top:18px}.home-about-point{display:flex;gap:10px;align-items:flex-start;font-size:13px}.home-about-point b{color:#f08a28}
+        .home-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.home-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:25px}.home-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e5;color:#bb661c;font-size:20px;font-weight:900}.home-card h3{font:850 18px Manrope,Inter,sans-serif;margin:18px 0 8px}.home-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
+        .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:18px}.home-audience{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff)}.home-audience h3{font:850 25px Manrope,Inter,sans-serif;margin:10px 0}.home-audience p{color:var(--muted);font-size:14px;line-height:1.6}.home-audience ul,.home-plan ul{list-style:none;padding:0;display:grid;gap:12px;margin:24px 0}.home-audience li,.home-plan li{font-size:13px;padding-left:24px;position:relative}.home-audience li:before,.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-audience .home-btn{margin-top:10px}
+        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px}.home-toggle{display:flex;background:#eaf0f4;border-radius:10px;padding:4px}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:12px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px #10243818}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:17px;padding:24px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 18px 42px #f08a2827;margin-top:-8px;padding:30px 26px}.home-plan-badge{position:absolute;right:20px;top:-13px;background:var(--orange);color:#fff;padding:5px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 22px Manrope,Inter,sans-serif;margin:0}.home-plan>p{min-height:62px;color:var(--muted);font-size:13px;margin:12px 0 14px}.home-amount{font:900 36px Manrope,Inter,sans-serif}.home-amount small{font:700 12px Inter,sans-serif;color:var(--muted)}.home-year-note{min-height:26px;color:#167a54;font-size:11px;font-weight:750;margin-top:5px}.home-plan ul{flex:1;align-content:start;grid-auto-rows:max-content;gap:9px;margin:14px 0 22px}.home-plan .home-btn{width:100%}
+        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:none;margin:0 auto;text-align:center}@media(min-width:850px){.home-cta p{white-space:nowrap;font-size:clamp(14px,1.4vw,18px)}}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+        @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{gap:30px}.home-benefits{grid-template-columns:1fr 1fr}.home-steps{grid-template-columns:1fr 1fr}.home-prices{gap:9px}}
+        @media(max-width:700px){.home-stats-grid{gap:0}.home-stat{padding:7px}.home-stat strong{font-size:23px}.home-stat span{font-size:10px}.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:64px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px;min-height:38px}.home-login{font-size:11px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices,.home-about{grid-template-columns:1fr}.home-steps{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
+        @media(max-width:420px){.home-brand{font-size:13px}.home-brand-mark{display:none}.home-actions{gap:5px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}}
+        @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important}}
+      `}</style>
+
+      <header className="home-header"><div className="home-wrap home-nav">
+        <a className="home-brand" href="#pradzia"><span className="home-brand-mark">⌂</span>rankos<b>statybose</b>.lt</a>
+        <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
+          <a href="#kaip">Kaip tai veikia</a>
+          <a href="#darbdaviams">Darbdaviams</a>
+          <a href="#darbuotojams">Darbuotojams</a>
+          <a href="#kainodara">Kainodara</a>
+          <a href="#duk">DUK</a>
+        </nav>
+        <div className="home-actions"><button className="home-login" type="button" onClick={onLogin}>Prisijungti</button><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis</button></div>
+      </div></header>
+
+      <main id="pradzia">
+        <section className="home-hero"><div className="home-wrap home-hero-grid"><div>
+          <div className="home-kicker">Darbuotojų paieška statyboms</div>
+          <h1>Objektui reikia žmonių? <em>Ieškokite pagal realų prieinamumą.</em></h1>
+          <p className="home-lead">RankosStatybose.lt sujungia statybų darbdavius su žmonėmis, kurie konkrečią dieną gali dirbti. Nurodote miestą, datą, laiką ir kiek žmonių reikia – sistema padeda atrinkti realiai tinkamus kandidatus.</p>
+          <div className="home-hero-actions"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Ieškau darbuotojų →</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button></div>
+          <div className="home-micro">✓ Paieška pagal prieinamumą &nbsp; ✓ Aiškus atlygis &nbsp; ✓ Darbo eiga vienoje vietoje</div>
+        </div><div className="home-flow" aria-label="Darbo organizavimo eiga">
+          <div className="home-flow-label">KODĖL MES</div><h2 className="home-flow-title">Ne CV skelbimų lenta – reali darbuotojų paieška</h2><p className="home-flow-intro">Padedame ieškoti žmogaus čia ir dabar pagal patvirtintą prieinamumą. Nuo pirmo kvietimo iki darbo dienos rezultato.</p>
+          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span><div><b>Žmonės pagal realų prieinamumą</b><span>Paieška atsižvelgia į patvirtintą grafiką, aktyvumą, vietą ir esamus darbus.</span></div></div>
+          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span><div><b>Aiškus pasiūlymas abiem pusėms</b><span>Darbuotojas mato darbo vietą, laiką ir atlygį dar prieš priimdamas kvietimą.</span></div></div>
+          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg></span><div><b>Patikimumas iš tikrų darbo dienų</b><span>Atvykimo ir darbo uždarymo įrašai padeda vertinti būsimą bendradarbiavimą.</span></div></div>
+          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h4"/></svg></span><div><b>Patogus ir lengvas sistemos valdymas</b><span>Darbus, kvietimus ir darbo dienų eigą valdote vienoje vietoje.</span></div></div>
+          
+        </div></div></section>
+
+        <section className="home-stats" aria-label="Platformos statistika">
+          <div className="home-wrap home-stats-grid">
+            <div className="home-stat"><strong>{Number(landingStats?.workers || 0)}</strong><span>darbuotojų paskyrų</span></div>
+            <div className="home-stat"><strong>{Number(landingStats?.employers || 0)}</strong><span>darbdavių paskyrų</span></div>
+            <div className="home-stat"><strong>{Number(landingStats?.jobs || 0)}</strong><span>sukurtų darbų</span></div>
+          </div>
+        </section>
+
+        <section className="home-section" id="kaip">
+          <div className="home-wrap">
+            <div className="home-kicker">Kaip tai veikia</div>
+            <h2>Nuo poreikio iki patvirtinto žmogaus – aiškiais žingsniais.</h2>
+            <p className="home-intro">Platforma orientuota ne į CV kaupimą, o į konkretų darbą konkrečiai dienai.</p>
+            <div className="home-steps">
+              <article className="home-step"><strong>01</strong><h3>Nurodote poreikį</h3><p>Miestas, data, darbo laikas, atlygis ir kiek žmonių reikia objektui.</p></article>
+              <article className="home-step"><strong>02</strong><h3>Gaunate tinkamus žmones</h3><p>Atranka remiasi darbuotojo grafiku, aktyvumu, vieta, atvykimo galimybe ir kitais tinkamumo kriterijais.</p></article>
+              <article className="home-step"><strong>03</strong><h3>Siunčiate kvietimus</h3><p>Darbuotojas prieš priimdamas mato darbo sąlygas, vietą, laiką ir atlygį.</p></article>
+              <article className="home-step"><strong>04</strong><h3>Uždarote darbo dieną</h3><p>Atvykimas, dienos rezultatas, įvertinimas ir istorija lieka sistemoje kitam sprendimui.</p></article>
+            </div>
+          </div>
+        </section>
+
+        <section className="home-section soft" id="apie">
+          <div className="home-wrap home-about">
+            <article className="home-about-main">
+              <div className="home-kicker">Kas mes</div>
+              <h2>Statybų darbo organizavimo platforma, o ne dar viena CV lenta.</h2>
+              <p>RankosStatybose.lt skirta trumpalaikiam ir dienos darbui statybose, kai svarbiausia ne turėti šimtus profilių, o greitai rasti žmogų, kuris gali atvykti būtent tada, kada jo reikia.</p>
+              <div className="home-about-points">
+                <div className="home-about-point"><b>✓</b><span>Darbdavys formuoja konkretų darbo poreikį.</span></div>
+                <div className="home-about-point"><b>✓</b><span>Darbuotojas pats valdo savo prieinamumą.</span></div>
+                <div className="home-about-point"><b>✓</b><span>Patikimumas formuojamas iš realių darbo dienų.</span></div>
+              </div>
+            </article>
+            <article className="home-about-note">
+              <div className="home-kicker">Svarbu žinoti</div>
+              <h2>Platforma padeda susitikti ir organizuoti darbą.</h2>
+              <p>RankosStatybose.lt nėra darbuotojo darbdavys ir pati nemoka darbo užmokesčio. Teisinį darbo pagrindą, atsiskaitymą ir kitas darbo sąlygas darbdavys ir darbuotojas susitaria tiesiogiai pagal taikomus teisės aktus.</p>
+              <p>Platformos patikimumo, darbo dienos uždarymo ir ginčų funkcijos padeda fiksuoti bendradarbiavimo istoriją, tačiau nepakeičia šalių teisinių teisių ir pareigų.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="home-section soft" id="nauda"><div className="home-wrap"><div className="home-kicker">Sukurta darbdavio darbo ritmui</div><h2>Nuo skubaus poreikio iki kito sėkmingo kvietimo.</h2><p className="home-intro">Paskelbkite konkretų darbą, pakvieskite tinkamus žmones ir sekite jo eigą. Kiekvienas žingsnis padeda taupyti organizavimo laiką ir priimti pagrįstesnius sprendimus.</p>
+          <div className="home-benefits"><article className="home-card"><span className="home-icon">⌕</span><h3>Ne vien profilis, o prieinamumas</h3><p>Darbdavio paieškoje atsižvelgiama į patvirtintą grafiką, aktyvumą ir galimybę atvykti. Taip kviečiate žmones pagal konkretų darbą.</p></article><article className="home-card"><span className="home-icon">↗</span><h3>Sąlygos aiškios prieš sutikimą</h3><p>Darbo vieta, laikas, aprašymas ir atlygis pateikiami kvietime. Darbo pokalbiai leidžia patikslinti detales neišeinant iš platformos.</p></article><article className="home-card"><span className="home-icon">✓</span><h3>Patikimumas, paremtas darbu</h3><p>Atvykimas ir uždaryta darbo diena kuria istoriją. Patikimumo duomenys padeda vertinti ankstesnę darbo eigą, o gerai dirbusius žmones galima pakviesti dar kartą.</p></article><article className="home-card"><span className="home-icon">↺</span><h3>Favoritai kitam objektui</h3><p>Išsaugokite pasiteisinusius darbuotojus ir pakvieskite juos į naują darbą, kai jų grafikas vėl tinka.</p></article><article className="home-card"><span className="home-icon">ϟ</span><h3>Skubus poreikis</h3><p>Skubiai prireikus raskite darbuotojus, kurie patys įjungė „Laisvas dabar“ režimą pasirinktame mieste.</p></article><article className="home-card"><span className="home-icon">◉</span><h3>Vieninga komandos eiga</h3><p>Paskirstykite darbus įmonės nariams ir aptarkite organizacinius klausimus vidiniame pokalbyje.</p></article></div>
+        </div></section>
+
+        <section className="home-section" id="darbdaviams"><div className="home-wrap"><div className="home-kicker">Ką gaunate naudodamiesi platforma</div><h2>Nauda darbdaviui ir darbuotojui.</h2><div className="home-audiences">
+          <article className="home-audience employer"><div className="home-kicker">Darbdaviams</div><h3>Mažiau laiko ieškant žmogaus objektui.</h3><p>Vienoje vietoje paskelbkite darbą, atrinkite tinkamus žmones, išsiųskite kvietimus ir sekite jų atsakymus.</p><ul><li>Kviečiate pagal grafiką, darbo laiką ir atvykimo galimybę</li><li>Matote kvietimų būseną, atvykimą ir dienos rezultatą</li><li>Business: sprendžiate pagal patikimumą ir vėl samdote favoritus</li><li>Business Pro: pasiekiate „Laisvas dabar“ darbuotojus ir valdote komandą</li><li>Vienoje darbo vietoje tvarkote kvietimus, pokalbius ir dienos pabaigą</li></ul></article>
+          <article className="home-audience worker" id="darbuotojams"><div className="home-kicker">Darbuotojams</div><h3>Daugiau kontrolės renkantis darbą.</h3><p>Jūsų grafikas padeda gauti tinkamus kvietimus, o sprendimą priimate matydami konkrečią darbo informaciją.</p><ul><li>Prieš priimdami matote vietą, laiką, atlygį ir aprašymą</li><li>Kvietimai, darbo detalės ir dienos eiga vienoje vietoje</li><li>Patys įjungiate arba išjungiate „Laisvas dabar“ režimą</li><li>Registracija ir darbo kvietimų gavimas nemokami</li></ul></article>
+        </div></div></section>
+
+        <section className="home-section soft" id="kainodara"><div className="home-wrap"><div className="home-price-head"><div><div className="home-kicker">Darbdavių planai</div><h2>Pasirinkite planą pagal savo darbų apimtį.</h2></div><div className="home-toggle" aria-label="Mokėjimo laikotarpis"><button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button></div></div>
+          <div className="home-prices">{plans.map((item) => { const plan = item; const paid = item.key !== "basic"; const yearly = pricingBillingCycle === "yearly"; return <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>{item.key === "business" && <span className="home-plan-badge">REKOMENDUOJAMAS</span>}{item.key === "business_pro" && <span className="home-plan-badge">DIDŽIAUSIA NAUDA</span>}<h3>{item.name}</h3><p>{plan.description}</p><div className="home-amount">{paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(plan)) : formatPlanPrice(plan.price) : "0"} € <small>/ {paid && yearly ? "metus" : "mėn."}</small></div><div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(plan))} € per metus` : ""}</div><ul>{plan.features.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul><button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={() => onEmployerSignup(item.key)}>{item.key === "basic" ? "Pradėti nemokamai" : `Rinktis ${item.name}`}</button></article>; })}</div>
+          
+        </div></section>
+
+        <section className="home-section" id="duk"><div className="home-wrap home-faq"><div className="home-kicker">Dažniausi klausimai</div><h2>Prieš pradedant</h2>
+          <details><summary>Kaip atrenkami darbuotojai?</summary><p>Paieškoje vertinamas patvirtintas grafikas, darbo laikas, vieta, atvykimo galimybė, aktyvumas ir kiti tinkamumo kriterijai.</p></details>
+          <details><summary>Ar darbuotojas mato atlygį prieš priimdamas?</summary><p>Taip. Kvietime matomas siūlomas atlygis ir išsami darbo informacija.</p></details>
+          <details><summary>Kuo skiriasi Business ir Business Pro?</summary><p>Business suteikia patikimumo duomenis, favoritus ir darbo pokalbius. Business Pro papildomai suteikia „Skubiai!“, daugiau komandos vartotojų ir neribotą darbų skaičių.</p></details>
+          <details><summary>Ar darbuotojui platforma mokama?</summary><p>Ne. Darbuotojo registracija ir kvietimų gavimas nemokami.</p></details>
+          <details><summary>Kas vyksta kilus ginčui?</summary><p>Darbo dienos žymėjimą galima ginčyti pateikiant paaiškinimą. Sprendimą priima administratorius, o jo istorija lieka sistemoje.</p></details>
+        </div></section>
+        <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
+      </main>
+      <footer className="home-footer"><div className="home-wrap home-footer-inner"><a className="home-brand" href="#pradzia">rankos<b>statybose</b>.lt</a><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><span>© 2026 RankosStatybose.lt</span></div></footer>
+      <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
+    </div>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [accountRole, setAccountRole] = useState(null);
+  const [accountStatus, setAccountStatus] = useState({
+    isActive: true,
+    suspendedUntil: null,
+    suspensionReason: null,
+  });
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authRole, setAuthRole] = useState("worker");
+  const [pricingBillingCycle, setPricingBillingCycle] = useState("monthly");
+  const [signupPlanKey, setSignupPlanKey] = useState("basic");
+  const [adminMode, setAdminMode] = useState("admin");
+  const [teamInviteToken, setTeamInviteToken] = useState(() =>
+    new URLSearchParams(window.location.search).get("team_invite")
+  );
+  const [teamInvite, setTeamInvite] = useState(null);
+  const [teamInviteLoading, setTeamInviteLoading] = useState(false);
+  const [teamInviteError, setTeamInviteError] = useState("");
+  const [teamInviteAccepting, setTeamInviteAccepting] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setUser(data.session?.user ?? null));
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!teamInviteToken || !supabase) {
+      setTeamInvite(null);
+      setTeamInviteError("");
+      setTeamInviteLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTeamInviteLoading(true);
+    setTeamInviteError("");
+
+    supabase
+      .rpc("get_company_team_invite_public", {
+        p_token: teamInviteToken,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+
+        if (error) {
+          setTeamInvite(null);
+          setTeamInviteError(
+            error.message || "Nepavyko patikrinti komandos kvietimo."
+          );
+        } else {
+          setTeamInvite(data?.[0] || null);
+        }
+
+        setTeamInviteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamInviteToken]);
+
+  useEffect(() => {
+    if (!user || !supabase) {
+      setAccountRole(null);
+      setAccountStatus({
+        isActive: true,
+        suspendedUntil: null,
+        suspensionReason: null,
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    supabase
+      .rpc("get_my_account_status")
+      .then(({ data, error }) => {
+        if (!cancelled) {
+          if (error) {
+            console.error(error);
+            setAccountRole(null);
+          } else {
+            const status = data?.[0] || null;
+            setAccountRole(status?.role || null);
+            setAccountStatus({
+              isActive: status?.is_active !== false,
+              suspendedUntil: status?.suspended_until || null,
+              suspensionReason: status?.suspension_reason || null,
+            });
+          }
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || accountRole !== "admin") {
+      setAdminMode("admin");
+    }
+  }, [user?.id, accountRole]);
+
+  const openLogin = () => {
+    setAuthMode("login");
+    setAuthRole("worker");
+    setAuthOpen(true);
+  };
+
+  const openEmployerSignup = (planKey = "basic") => {
+    setSignupPlanKey(
+      EMPLOYER_PLANS.some((plan) => plan.key === planKey) ? planKey : "basic"
+    );
+    setAuthMode("signup");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const openWorkerSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("worker");
+    setAuthOpen(true);
+  };
+
+  const clearTeamInvite = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("team_invite");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setTeamInviteToken(null);
+    setTeamInvite(null);
+    setTeamInviteError("");
+  };
+
+  const openTeamInviteLogin = () => {
+    setAuthMode("login");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const openTeamInviteSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const acceptTeamInvite = async () => {
+    if (!teamInviteToken || !user) return;
+
+    setTeamInviteAccepting(true);
+    setTeamInviteError("");
+
+    try {
+      const result = await supabase.rpc("accept_company_team_invite", {
+        p_token: teamInviteToken,
+      });
+
+      if (result.error) throw result.error;
+
+      const profileResult = await supabase.rpc("get_my_account_status");
+
+      if (profileResult.error) throw profileResult.error;
+
+      const profileStatus = profileResult.data?.[0] || null;
+      setAccountRole(profileStatus?.role || "employer");
+      setAccountStatus({
+        isActive: profileStatus?.is_active !== false,
+        suspendedUntil: profileStatus?.suspended_until || null,
+        suspensionReason: profileStatus?.suspension_reason || null,
+      });
+
+      clearTeamInvite();
+    } catch (err) {
+      setTeamInviteError(
+        err?.message || "Nepavyko prisijungti prie įmonės komandos."
+      );
+    } finally {
+      setTeamInviteAccepting(false);
+    }
+  };
+
+  const logout = async () => {
+    if (supabase) await supabase.auth.signOut();
+  };
+
+  const accountIsSuspended =
+    accountRole !== "admin" &&
+    accountStatus.suspendedUntil &&
+    new Date(accountStatus.suspendedUntil) > new Date();
+
+  if (
+    user &&
+    accountRole !== "admin" &&
+    (!accountStatus.isActive || accountIsSuspended)
+  ) {
+    return (
+      <SuspendedAccount
+        onLogout={logout}
+        disabled={!accountStatus.isActive}
+        suspendedUntil={accountStatus.suspendedUntil}
+        reason={accountStatus.suspensionReason}
+      />
+    );
+  }
+
+  if (teamInviteToken) {
+    return (
+      <>
+        <TeamInvitePage
+          invite={teamInvite}
+          loading={teamInviteLoading}
+          error={teamInviteError}
+          user={user}
+          accepting={teamInviteAccepting}
+          onLogin={openTeamInviteLogin}
+          onSignup={openTeamInviteSignup}
+          onAccept={acceptTeamInvite}
+          onCancel={clearTeamInvite}
+        />
+
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode={authMode}
+          initialRole="employer"
+          teamInvite={
+            teamInvite
+              ? { ...teamInvite, token: teamInviteToken }
+              : null
+          }
+        />
+      </>
+    );
+  }
+
+  if (user && accountRole === "worker") {
+    return <WorkerDashboard user={user} onLogout={logout} />;
+  }
+
+  if (user && accountRole === "employer") {
+    return <EmployerDashboard user={user} onLogout={logout} />;
+  }
+
+  if (user && accountRole === "admin") {
+    if (adminMode === "worker") {
+      return (
+        <AdminWorkerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    if (adminMode === "employer") {
+      return (
+        <AdminEmployerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    return (
+      <AdminDashboard
+        user={user}
+        onLogout={logout}
+        onOpenWorker={() => setAdminMode("worker")}
+        onOpenEmployer={() => setAdminMode("employer")}
+      />
+    );
+  }
+
+  return (
+    <>
+      <PublicLandingPage
+        onLogin={openLogin}
+        onEmployerSignup={openEmployerSignup}
+        onWorkerSignup={openWorkerSignup}
+        pricingBillingCycle={pricingBillingCycle}
+        setPricingBillingCycle={setPricingBillingCycle}
+      />
+
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        initialMode={authMode}
+        initialRole={authRole}
+        selectedPlanKey={signupPlanKey}
+        selectedBillingCycle={pricingBillingCycle}
+      />
+    </>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<><style>{unifiedCloseStyles}</style><App /></>);
