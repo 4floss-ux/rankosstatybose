@@ -1503,6 +1503,7 @@ function notificationPresentation(events = []) {
 function ConversationModal({
   open,
   onClose,
+  onRead,
   invitationId,
   title,
   user,
@@ -1517,10 +1518,27 @@ function ConversationModal({
   const [planLocked, setPlanLocked] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedConversationRef = useRef(null);
 
   useEffect(() => {
-    if (open && invitationId) loadMessages();
+    if (open && invitationId) {
+      scrollOnLoadRef.current = true;
+      loadedConversationRef.current = null;
+      setMessages([]);
+      loadMessages();
+    }
   }, [open, invitationId, senderMode]);
+
+  useEffect(() => {
+    if (!open || loading || loadedConversationRef.current !== invitationId) return;
+    if (scrollOnLoadRef.current && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      scrollOnLoadRef.current = false;
+    }
+    if (document.visibilityState === "visible") onRead?.();
+  }, [open, loading, messages, invitationId]);
 
   async function loadMessages() {
     setLoading(true);
@@ -1564,6 +1582,7 @@ function ConversationModal({
       setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = result.data || [];
+      loadedConversationRef.current = invitationId;
       setMessages(rows);
 
       const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
@@ -1616,6 +1635,7 @@ function ConversationModal({
       if (result.error) throw result.error;
 
       setTextValue("");
+      scrollOnLoadRef.current = true;
       await loadMessages();
     } catch (err) {
       setError(err?.message || "Nepavyko išsiųsti žinutės.");
@@ -1659,7 +1679,7 @@ function ConversationModal({
 
         {error && <div className="rs-error">{error}</div>}
 
-        <div className="rs-messages">
+        <div className="rs-messages" ref={messagesRef}>
           {loading ? (
             <div className="rs-empty">Kraunama...</div>
           ) : messages.length ? (
@@ -1755,6 +1775,7 @@ function ConversationModal({
 function GroupConversationModal({
   open,
   onClose,
+  onRead,
   jobId,
   title,
   user,
@@ -1769,14 +1790,29 @@ function GroupConversationModal({
   const [planLocked, setPlanLocked] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedConversationRef = useRef(null);
 
   useEffect(() => {
     if (!open || !jobId) return;
 
+    scrollOnLoadRef.current = true;
+    loadedConversationRef.current = null;
+    setMessages([]);
     loadMessages();
     const timer = setInterval(loadMessages, 3000);
     return () => clearInterval(timer);
   }, [open, jobId, senderMode]);
+
+  useEffect(() => {
+    if (!open || loading || loadedConversationRef.current !== jobId) return;
+    if (scrollOnLoadRef.current && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      scrollOnLoadRef.current = false;
+    }
+    if (document.visibilityState === "visible") onRead?.();
+  }, [open, loading, messages, jobId]);
 
   async function loadMessages() {
     if (!messages.length) setLoading(true);
@@ -1811,6 +1847,7 @@ function GroupConversationModal({
       setCancellationReason(jobResult.data?.cancellation_reason || "");
 
       const rows = messagesResult.data || [];
+      loadedConversationRef.current = jobId;
       setMessages(rows);
 
       const ids = [...new Set(rows.map((row) => row.sender_id).filter(Boolean))];
@@ -1864,6 +1901,7 @@ function GroupConversationModal({
       if (result.error) throw result.error;
 
       setTextValue("");
+      scrollOnLoadRef.current = true;
       await loadMessages();
     } catch (err) {
       setError(err?.message || "Nepavyko išsiųsti žinutės.");
@@ -1922,7 +1960,7 @@ function GroupConversationModal({
 
         {error && <div className="rs-error">{error}</div>}
 
-        <div className="rs-messages">
+        <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="rs-empty">Kraunama...</div>
           ) : messages.length ? (
@@ -3169,7 +3207,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openWorkerGroupConversation(job) {
-    await markWorkerJobNotificationsRead(job.id);
     setGroupConversation({
       jobId: job.id,
       title: job.title,
@@ -4716,8 +4753,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                         <button
                           className="wd-decline"
-                          onClick={async () => {
-                            await markWorkerNotificationsRead(invitation.id);
+                          onClick={() => {
                             setConversation({
                               invitationId: invitation.id,
                               title: `${invitation.companyName} · ${job.title}`,
@@ -5803,6 +5839,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       <ConversationModal
         open={Boolean(conversation)}
         onClose={() => setConversation(null)}
+        onRead={() => conversation && markWorkerNotificationsRead(conversation.invitationId)}
         invitationId={conversation?.invitationId}
         title={conversation?.title}
         user={user}
@@ -5812,6 +5849,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       <GroupConversationModal
         open={Boolean(groupConversation)}
         onClose={() => setGroupConversation(null)}
+        onRead={() => groupConversation && markWorkerJobNotificationsRead(groupConversation.jobId)}
         jobId={groupConversation?.jobId}
         title={groupConversation?.title}
         user={user}
@@ -6484,8 +6522,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openEmployerPrivateConversation(invitationId, title) {
     if (!requireEmployerChatPlan()) return;
 
-    await markEmployerPrivateChatRead(invitationId);
-
     setConversation({
       invitationId,
       title,
@@ -6494,8 +6530,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function openEmployerGroupConversation(job) {
     if (!requireEmployerChatPlan()) return;
-
-    await markEmployerGroupChatRead(job.id);
 
     setGroupConversation({
       jobId: job.id,
@@ -11495,6 +11529,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <ConversationModal
         open={Boolean(conversation)}
         onClose={() => setConversation(null)}
+        onRead={() => conversation && markEmployerPrivateChatRead(conversation.invitationId)}
         invitationId={conversation?.invitationId}
         title={conversation?.title}
         user={user}
@@ -11503,6 +11538,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <GroupConversationModal
         open={Boolean(groupConversation)}
         onClose={() => setGroupConversation(null)}
+        onRead={() => groupConversation && markEmployerGroupChatRead(groupConversation.jobId)}
         jobId={groupConversation?.jobId}
         title={groupConversation?.title}
         user={user}
