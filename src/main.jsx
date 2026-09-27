@@ -27,7 +27,7 @@ function CloseMark() {
   );
 }
 
-function RoundedTeamSelect({ value, options, disabled, onChange }) {
+function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
@@ -53,11 +53,11 @@ function RoundedTeamSelect({ value, options, disabled, onChange }) {
   }, [open]);
 
   return (
-    <div ref={containerRef} style={{ position: "relative" }}>
+    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
       <button
         ref={triggerRef}
         type="button"
-        className="ed-select"
+        className={className}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -71,18 +71,18 @@ function RoundedTeamSelect({ value, options, disabled, onChange }) {
         }}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", background: "#fff", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer" }}
       >
-        <span>{selected?.label || "Pasirinkite atsakingą žmogų"}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected?.label || "Pasirinkite"}</span>
         <span aria-hidden="true" style={{ marginLeft: 12 }}>⌄</span>
       </button>
       {open && !disabled && (
-        <div role="listbox" aria-label="Atsakingas žmogus" style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(16,36,56,.14)" }}>
+        <div role="listbox" aria-label={ariaLabel} style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(16,36,56,.14)" }}>
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
               role="option"
               aria-selected={option.value === value}
-              onClick={() => { onChange(option.value); setOpen(false); }}
+              onClick={() => { onChange(option.value); setOpen(false); triggerRef.current?.focus(); }}
               onKeyDown={(event) => {
                 if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
                 event.preventDefault();
@@ -410,9 +410,9 @@ function CityAutocomplete({
             maxHeight: 270,
             overflowY: "auto",
             background: "#fff",
-            border: "1px solid #d6e0e7",
-            borderRadius: 11,
-            boxShadow: "0 16px 42px rgba(16,36,56,.20)",
+            border: "1px solid #dfe7ed",
+            borderRadius: 12,
+            boxShadow: "0 14px 35px rgba(16,36,56,.14)",
             padding: 5,
           }}
         >
@@ -433,7 +433,7 @@ function CityAutocomplete({
                   border: 0,
                   background:
                     normalizeCityKey(value) === city.city_key
-                      ? "#eef3f6"
+                      ? "#fff1e5"
                       : "#fff",
                   color: "#102438",
                   textAlign: "left",
@@ -4010,21 +4010,20 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span>{day.label}</span>
                       </div>
 
-                      <label className="wd-availability-choice">
+                      <div className="wd-availability-choice">
                         <span>Būsena</span>
-                        <select
+                        <RoundedSelect
                           className="wd-status-select"
+                          ariaLabel={`${day.label} prieinamumas`}
                           value={state.available ? "available" : "unavailable"}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateAvailability(day.iso, {
-                              available: e.target.value === "available",
+                              available: value === "available",
                             })
                           }
-                        >
-                          <option value="unavailable">Užimtas</option>
-                          <option value="available">Laisvas</option>
-                        </select>
-                      </label>
+                          options={[{ value: "unavailable", label: "Užimtas" }, { value: "available", label: "Laisvas" }]}
+                        />
+                      </div>
 
                       <label className="wd-time-field">
                         <span>Nuo</span>
@@ -8643,7 +8642,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
-        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
+        .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
         .ed-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
         .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
@@ -9184,8 +9183,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {planSummary?.can_team_management && (
               <div className="ed-label ed-span-2">
                 Atsakingas žmogus
-                <RoundedTeamSelect
+                <RoundedSelect
                   value={form.responsibleUserId}
+                  ariaLabel="Atsakingas žmogus"
                   disabled={
                     !["owner", "manager"].includes(companyMemberRole)
                   }
@@ -9244,7 +9244,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               />
             </label>
 
-<label className="ed-label">
+<label className="ed-label ed-span-2">
   Data
   <input
     className="ed-input"
@@ -9255,64 +9255,29 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   />
 </label>
 
-<label className="ed-label">
-  Nuo
-  <input
-    className="ed-input"
-    type="time"
-    value={form.startTime}
-    disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("startTime", e.target.value)}
-  />
-</label>
+<div className="ed-label ed-span-2">
+  Darbo laikas
+  <div className="ed-time-pair">
+    <label className="ed-label">Nuo
+      <input className="ed-input" type="time" value={form.startTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("startTime", e.target.value)} />
+    </label>
+    <label className="ed-label">Iki
+      <input className="ed-input" type="time" value={form.endTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("endTime", e.target.value)} />
+    </label>
+  </div>
+</div>
 
-<label className="ed-label">
-  Iki
-  <input
-    className="ed-input"
-    type="time"
-    value={form.endTime}
-    disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("endTime", e.target.value)}
-  />
-</label>
-
-<label className="ed-label">
-  Pietų pertrauka nuo *
-  <input
-    className="ed-input"
-    type="time"
-    required
-    value={form.breakStartTime}
-    disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("breakStartTime", e.target.value)}
-  />
-</label>
-
-<label className="ed-label">
-  Pietų pertrauka iki *
-  <input
-    className="ed-input"
-    type="time"
-    required
-    value={form.breakEndTime}
-    disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("breakEndTime", e.target.value)}
-  />
-</label>
-
-<label className="ed-label">
-  Žmonių skaičius
-  <input
-    className="ed-input"
-    type="number"
-    min="1"
-    max="20"
-    value={form.workersNeeded}
-    disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("workersNeeded", e.target.value)}
-  />
-</label>
+<div className="ed-label ed-span-2">
+  Pietų pertrauka
+  <div className="ed-time-pair">
+    <label className="ed-label">Nuo *
+      <input className="ed-input" type="time" required value={form.breakStartTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakStartTime", e.target.value)} />
+    </label>
+    <label className="ed-label">Iki *
+      <input className="ed-input" type="time" required value={form.breakEndTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakEndTime", e.target.value)} />
+    </label>
+  </div>
+</div>
 
 <label className="ed-label">
   Atlygis į rankas (€) *
@@ -9329,32 +9294,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   />
 </label>
 
-<label className="ed-label">
+<div className="ed-label">
   Mokėjimo tipas *
-  <select
-    className="ed-select"
-    required
+  <RoundedSelect
+    ariaLabel="Mokėjimo tipas"
     value={form.payType}
     disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("payType", e.target.value)}
-  >
-    <option value="hour">Už valandą</option>
-    <option value="day">Už dieną</option>
-  </select>
-</label>
+    onChange={(value) => updateField("payType", value)}
+    options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
+  />
+</div>
 
-<label className="ed-label ed-span-2">
+<div className="ed-label ed-span-2">
   Atvykimas į darbo vietą *
-  <select
-    className="ed-select"
+  <RoundedSelect
+    ariaLabel="Atvykimas į darbo vietą"
     value={form.transportMode}
     disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("transportMode", e.target.value)}
-  >
-    <option value="self_arrival">Darbuotojas atvyksta pats</option>
-    <option value="employer_pickup">Darbdavys paima darbuotoją</option>
-  </select>
-</label>
+    onChange={(value) => updateField("transportMode", value)}
+    options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
+  />
+</div>
 
             <label className="ed-label ed-span-4">
               Darbo aprašymas *
@@ -10137,21 +10097,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {attendanceMode !== "choose" &&
               attendanceMode !== "no_show" && (
                 <>
-                  <label className="ed-label" style={{ marginBottom: 14 }}>
+                  <div className="ed-label" style={{ marginBottom: 14 }}>
                     Ankstyvo išėjimo tipas *
-                    <select
-                      className="ed-select"
+                    <RoundedSelect
+                      ariaLabel="Ankstyvo išėjimo tipas"
                       value={attendanceMode}
-                      onChange={(e) => setAttendanceMode(e.target.value)}
-                    >
-                      <option value="left_early_agreed">
-                        Išėjo anksčiau – suderinta
-                      </option>
-                      <option value="left_early_unexcused">
-                        Išėjo anksčiau be pateisinamos priežasties
-                      </option>
-                    </select>
-                  </label>
+                      onChange={setAttendanceMode}
+                      options={[{ value: "left_early_agreed", label: "Išėjo anksčiau – suderinta" }, { value: "left_early_unexcused", label: "Išėjo anksčiau be pateisinamos priežasties" }]}
+                    />
+                  </div>
 
                   <label className="ed-label" style={{ marginBottom: 14 }}>
                     Faktinis išėjimo laikas *
@@ -10425,20 +10379,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           {companyMemberRole === "owner" &&
                           member.member_role !== "owner" ? (
                             <>
-                              <select
+                              <RoundedSelect
                                 className="ed-team-role-select"
+                                ariaLabel={`${member.display_name} rolė`}
                                 value={member.member_role}
                                 disabled={teamActionBusy}
-                                onChange={(e) =>
+                                onChange={(value) =>
                                   changeTeamMemberRole(
                                     member,
-                                    e.target.value
+                                    value
                                   )
                                 }
-                              >
-                                <option value="manager">Vadovas</option>
-                                <option value="recruiter">Vadybininkas</option>
-                              </select>
+                                options={[{ value: "manager", label: "Vadovas" }, { value: "recruiter", label: "Vadybininkas" }]}
+                              />
 
                               <button
                                 className="ed-team-remove"
@@ -14126,36 +14079,27 @@ function AdminDashboard({
                     Savininko paskyra aktyvi
                   </span>
                 </label>
-                <label className="admin-label">
+                <div className="admin-label">
                   Planas
-                  <select
+                  <RoundedSelect
                     className="admin-input"
+                    ariaLabel="Įmonės planas"
                     value={editorForm.planKey}
-                    onChange={(e) =>
-                      updateEditorField("planKey", e.target.value)
-                    }
-                  >
-                    <option value="basic">Basic · 0 €</option>
-                    <option value="business">Business · 29 €</option>
-                    <option value="business_pro">Business Pro · 59 €</option>
-                  </select>
-                </label>
+                    onChange={(value) => updateEditorField("planKey", value)}
+                    options={[{ value: "basic", label: "Basic · 0 €" }, { value: "business", label: "Business · 29 €" }, { value: "business_pro", label: "Business Pro · 59 €" }]}
+                  />
+                </div>
 
-                <label className="admin-label">
+                <div className="admin-label">
                   Prenumeratos būsena
-                  <select
+                  <RoundedSelect
                     className="admin-input"
+                    ariaLabel="Prenumeratos būsena"
                     value={editorForm.subscriptionStatus}
-                    onChange={(e) =>
-                      updateEditorField("subscriptionStatus", e.target.value)
-                    }
-                  >
-                    <option value="active">Aktyvi</option>
-                    <option value="trialing">Bandomoji</option>
-                    <option value="past_due">Laukiama apmokėjimo</option>
-                    <option value="cancelled">Nutraukta</option>
-                  </select>
-                </label>
+                    onChange={(value) => updateEditorField("subscriptionStatus", value)}
+                    options={[{ value: "active", label: "Aktyvi" }, { value: "trialing", label: "Bandomoji" }, { value: "past_due", label: "Laukiama apmokėjimo" }, { value: "cancelled", label: "Nutraukta" }]}
+                  />
+                </div>
 
                 <label className="admin-label">
                   Apmokėta iki / laikotarpio pabaiga
@@ -14291,36 +14235,26 @@ function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <div className="admin-label">
                   Atlygio vienetas
-                  <select
+                  <RoundedSelect
                     className="admin-input"
+                    ariaLabel="Atlygio vienetas"
                     value={editorForm.payUnit}
-                    onChange={(e) =>
-                      updateEditorField("payUnit", e.target.value)
-                    }
-                  >
-                    <option value="hour">Už valandą</option>
-                    <option value="day">Už dieną</option>
-                  </select>
-                </label>
-                <label className="admin-label admin-wide">
+                    onChange={(value) => updateEditorField("payUnit", value)}
+                    options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
+                  />
+                </div>
+                <div className="admin-label admin-wide">
                   Atvykimas
-                  <select
+                  <RoundedSelect
                     className="admin-input"
+                    ariaLabel="Atvykimas"
                     value={editorForm.transportMode}
-                    onChange={(e) =>
-                      updateEditorField("transportMode", e.target.value)
-                    }
-                  >
-                    <option value="self_arrival">
-                      Darbuotojas atvyksta pats
-                    </option>
-                    <option value="employer_pickup">
-                      Darbdavys paima darbuotoją
-                    </option>
-                  </select>
-                </label>
+                    onChange={(value) => updateEditorField("transportMode", value)}
+                    options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
+                  />
+                </div>
                 <label className="admin-label admin-wide">
                   Aprašymas
                   <textarea
