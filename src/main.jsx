@@ -5806,7 +5806,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     className="wd-accept"
                     type="button"
                     disabled={
-                      busy ||
+                      respondingInvitation === workdayDetailsTarget.id ||
                       invitationHasConflict(workdayDetailsTarget) ||
                       (metrics.restrictedUntil &&
                         new Date(metrics.restrictedUntil) > new Date())
