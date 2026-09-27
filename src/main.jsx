@@ -529,6 +529,7 @@ function AuthModal({
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [signupPlan, setSignupPlan] = useState(selectedPlanKey);
 
   useEffect(() => {
     if (open) {
@@ -537,6 +538,7 @@ function AuthModal({
       setMessage("");
       setSuccess(false);
       setTermsAccepted(false);
+      setSignupPlan(selectedPlanKey);
 
       if (teamInvite) {
         setForm((current) => ({
@@ -546,7 +548,7 @@ function AuthModal({
         }));
       }
     }
-  }, [open, initialMode, initialRole, teamInvite]);
+  }, [open, initialMode, initialRole, teamInvite, selectedPlanKey]);
 
   if (!open) return null;
 
@@ -627,11 +629,12 @@ function AuthModal({
               role: teamInvite ? "employer" : role,
               preferred_plan:
                 role === "employer" && !teamInvite &&
-                EMPLOYER_PLANS.some((plan) => plan.key === selectedPlanKey)
-                  ? selectedPlanKey
+                EMPLOYER_PLANS.some((plan) => plan.key === signupPlan)
+                  ? signupPlan
                   : "basic",
               preferred_billing_interval:
-                selectedBillingCycle === "yearly" ? "yearly" : "monthly",
+                signupPlan !== "basic" && selectedBillingCycle === "yearly"
+                  ? "yearly" : "monthly",
               display_name: form.name.trim(),
               legal_name: form.name.trim(),
               city: canonicalCity,
@@ -805,13 +808,21 @@ function AuthModal({
         )}
 
         {mode === "signup" && role === "employer" && !teamInvite && (
-          <div style={{ background: "#fff7ef", border: "1px solid #f2d7bc", borderRadius: 10, padding: "11px 13px", fontSize: 13, lineHeight: 1.5 }}>
-            <b>Pasirinktas planas: {employerPlanName(selectedPlanKey)}</b>
-            {selectedPlanKey !== "basic" && (
-              <span style={{ display: "block", color: "#607180", marginTop: 3 }}>
-                {selectedBillingCycle === "yearly" ? "Metinis" : "Mėnesinis"} atsiskaitymas. Mokamas planas bus aktyvus tik po atskiro apmokėjimo.
-              </span>
-            )}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 9 }}>Pasirinkite darbdavio planą</div>
+            <div role="group" aria-label="Darbdavio planas" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+              {EMPLOYER_PLANS.map((plan) => (
+                <button key={plan.key} type="button" onClick={() => setSignupPlan(plan.key)} aria-pressed={signupPlan === plan.key} style={{ minWidth: 0, minHeight: 76, border: signupPlan === plan.key ? "2px solid #f08a28" : "1px solid #dfe7ed", borderRadius: 11, padding: "10px 6px", background: signupPlan === plan.key ? "#fff7ef" : "#fff", color: "#102438", textAlign: "center", cursor: "pointer", font: "inherit" }}>
+                  <b style={{ display: "block", fontSize: 13 }}>{plan.name}</b>
+                  <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#607180" }}>{plan.price ? selectedBillingCycle === "yearly" ? `${formatPlanPrice(employerPlanAnnualPrice(plan))} € / metus` : `${formatPlanPrice(plan.price)} € / mėn.` : "Nemokamai"}</span>
+                </button>
+              ))}
+            </div>
+            <p style={{ color: "#607180", fontSize: 12, lineHeight: 1.5, margin: "8px 0 0" }}>
+              {signupPlan === "basic"
+                ? "Pradėkite nemokamai. Planą vėliau galėsite pakeisti darbdavio paskyroje."
+                : `${selectedBillingCycle === "yearly" ? "Pasirinktas metinis atsiskaitymas." : "Pasirinktas mėnesinis atsiskaitymas."} Mokamas planas bus aktyvuotas tik po apmokėjimo. Pasirinkimą galėsite keisti darbdavio paskyroje.`}
+            </p>
           </div>
         )}
 
