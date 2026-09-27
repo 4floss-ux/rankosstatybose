@@ -6735,7 +6735,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planSummary, setPlanSummary] = useState(null);
   const [billingStatus, setBillingStatus] = useState(null);
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
-  const [showPlans, setShowPlans] = useState(preferredPlanKey !== "basic" && !onAdminReturn);
+  const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
   const billingReturnHandledRef = useRef(false);
   const [planBillingCycle, setPlanBillingCycle] = useState(
@@ -7204,7 +7204,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function openCompanyTeam() {
     if (!planSummary?.can_team_management) {
-      setShowPlans(true);
+      setNotice("Įmonės komandos valdymas prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“.");
       return;
     }
 
@@ -7216,9 +7216,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openCompanyTeamChat() {
     if (!planSummary?.can_team_chat) {
       setNotice(
-        "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane."
+        "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
       );
-      setShowPlans(true);
       return;
     }
 
@@ -7377,9 +7376,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (planSummary?.can_job_chat) return true;
 
     setNotice(
-      "Darbo pokalbiai prieinami Business ir Business Pro planuose."
+      "Darbo pokalbiai prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
     );
-    setShowPlans(true);
     return false;
   }
 
@@ -8962,9 +8960,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openSavedWorkerTeam() {
     if (!planSummary?.can_saved_workers) {
       setNotice(
-        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
       );
-      setShowPlans(true);
       return;
     }
 
@@ -8986,9 +8983,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (!planSummary?.can_saved_workers) {
       setNotice(
-        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
       );
-      setShowPlans(true);
       return;
     }
 
@@ -9089,9 +9085,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (!canUseUrgent) {
       setNotice(
-        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane."
+        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
       );
-      setShowPlans(true);
       return;
     }
 
@@ -9157,10 +9152,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     ) {
       setError(
         planSummary.plan_key === "business"
-          ? "Business plano 25 darbo pasiūlymų limitas šį mėnesį išnaudotas. Business Pro plane darbų skaičius neribojamas."
-          : "Basic plano 5 darbo pasiūlymų limitas šį mėnesį išnaudotas."
+          ? "Business plano 25 darbo pasiūlymų limitas šį mėnesį išnaudotas. Business Pro plane darbų skaičius neribojamas. Planus galite peržiūrėti paspaudę „Planai“."
+          : "Basic plano 5 darbo pasiūlymų limitas šį mėnesį išnaudotas. Planus galite peržiūrėti paspaudę „Planai“."
       );
-      setShowPlans(true);
       return;
     }
 
@@ -9774,7 +9768,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-analytics-lock{margin-top:12px;border:1px dashed #d5dde4;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fafbfc}
         .ed-analytics-lock b{display:block;font-size:13px}.ed-analytics-lock span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
         .ed-plan-overlay{position:fixed;inset:0;z-index:9400;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
         .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
         .ed-plan-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:26px}.ed-plan-head p{margin:0;color:#6c7a88}
         .ed-billing-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:12px 14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
@@ -11039,9 +11033,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     onClick={() => {
                       if (!planSummary?.can_saved_workers) {
                         setNotice(
-                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose."
+                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
                         );
-                        setShowPlans(true);
                         return;
                       }
                       setWorkerSource("team");
