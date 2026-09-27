@@ -6215,7 +6215,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function markEmployerJobRead(jobId) {
-    const ids = unreadEmployerNotifications(jobId).map((item) => item.id);
+    const ids = unreadEmployerNotifications(jobId)
+      .filter((item) => item.event_type !== "message")
+      .map((item) => item.id);
     await markEmployerNotificationIdsRead(ids);
   }
 
@@ -7989,8 +7991,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         findMatches(job),
         loadCurrentJobWorkers(job.id),
       ]);
-      await markEmployerJobRead(job.id);
-      window.scrollTo({ top: 430, behavior: "smooth" });
     } catch (err) {
       setError(err?.message || "Nepavyko atidaryti poreikio.");
     }
@@ -9400,8 +9400,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         {currentJob && (
           <section className="ed-card">
-            {unreadEmployerNotifications(currentJob.id).length > 0 && (() => {
-              const currentNews = unreadEmployerNotifications(currentJob.id);
+            {unreadEmployerNotifications(currentJob.id).some((item) => item.event_type !== "message") && (() => {
+              const currentNews = unreadEmployerNotifications(currentJob.id)
+                .filter((item) => item.event_type !== "message");
               const currentPresentation = notificationPresentation(currentNews);
               return (
                 <div className={`ed-note ${currentPresentation.tone === "red" ? "err" : "ok"}`} style={{ marginBottom: 16 }}>
