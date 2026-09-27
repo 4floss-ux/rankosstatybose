@@ -11175,14 +11175,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </div>
                       </div>
 
-                      <div className="ed-tags">
-                        {worker.skillNames.map((skill) => (
-                          <span className="ed-tag" key={skill}>
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-
                       {canViewWorkerMetrics && (
                         <div className="ed-metric">
                           <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
