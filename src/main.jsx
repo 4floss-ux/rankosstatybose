@@ -9604,7 +9604,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           <div className="ed-worker-main">
                             <b>{worker.name}</b>
                             <span>
-                              {worker.city} · {worker.yearsExperience} m. patirties
+                              {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
                             </span>
 
                             <div className="ed-worker-status">
@@ -9914,7 +9914,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <div>
                           <b>{worker.name}</b>
                           <span>
-                            {worker.city} · {worker.yearsExperience} m. patirties
+                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
                             {worker.distanceKm !== null
                               ? ` · ${worker.distanceKm} km nuo darbo`
                               : ""}
@@ -10881,7 +10881,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <b>{worker.name}</b>
                         <span>
                           {worker.city || "Miestas nenurodytas"} ·{" "}
-                          {worker.yearsExperience} m. patirties
+                          Atlikta darbų: {Number(worker.completedJobs || 0)}
                           {worker.hasDrivingLicenseB ? " · B kategorija" : ""}
                         </span>
                       </div>
