@@ -2846,8 +2846,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return Boolean(urgentAvailability.active);
   }
 
+  function hasCurrentScheduledWork() {
+    return workdays.some((item) =>
+      ["confirmed", "no_show"].includes(item.status) &&
+      ["open", "filled", "in_progress"].includes(item.job?.status) &&
+      jobCheckInWindowOpen(item.job) && !jobHasEnded(item.job)
+    );
+  }
+
   async function enableUrgentAvailability() {
     const city = urgentForm.city.trim();
+
+    if (hasCurrentScheduledWork()) {
+      setError("Šiuo metu turite patvirtintą darbą. „Laisvas dabar“ galėsite įjungti pasibaigus suplanuotam darbo laikui.");
+      return;
+    }
 
     if (!city) {
       setError("Nurodykite miestą, kuriame šiuo metu galite dirbti.");
@@ -3747,7 +3760,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
         .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .wd-urgent-btn{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(240,138,40,.18)}
-        .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}
+        .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}.wd-urgent-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
         .wd-urgent-status{font-size:11px;color:#167a54;font-weight:800;text-align:right;margin-top:-4px}
         .wd-profile-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,36,56,.045);margin-bottom:22px}
         .wd-profile-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:4px}
@@ -3895,7 +3908,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {urgentAvailabilityIsActive() && (
               <div className="wd-urgent-status">
-                {urgentAvailability.city} · matomas „Skubiai!“ paieškoje
+                {hasCurrentScheduledWork()
+                  ? "Šiuo metu skubioje paieškoje nerodomas: vyksta patvirtinto darbo laikas."
+                  : `${urgentAvailability.city} · matomas „Skubiai!“ paieškoje`}
               </div>
             )}
 
@@ -5218,6 +5233,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               kol patys šio režimo neišjungsite.
             </div>
 
+            {hasCurrentScheduledWork() && (
+              <div className="wd-note err" style={{ marginBottom: 14 }}>
+                Dabar turite patvirtintą darbą. Net jei į jį neatvykote, „Laisvas dabar“
+                galėsite įjungti tik pasibaigus suplanuotam darbo laikui.
+              </div>
+            )}
+
             <div style={{ display: "grid", gap: 14 }}>
               <label className="wd-label">
                 Miestas
@@ -5270,7 +5292,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <button
                   className="wd-urgent-btn"
                   type="button"
-                  disabled={urgentSaving}
+                  disabled={urgentSaving || hasCurrentScheduledWork()}
                   onClick={enableUrgentAvailability}
                 >
                   {urgentSaving ? "Saugoma..." : "Esu laisvas dabar"}
