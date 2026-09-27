@@ -1653,8 +1653,14 @@ function ConversationModal({
   useEffect(() => {
     if (!open || loading || loadedConversationRef.current !== invitationId) return;
     if (scrollOnLoadRef.current && messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-      scrollOnLoadRef.current = false;
+      const frame = requestAnimationFrame(() => {
+        if (messagesRef.current) {
+          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+        }
+        scrollOnLoadRef.current = false;
+      });
+      if (document.visibilityState === "visible") onRead?.();
+      return () => cancelAnimationFrame(frame);
     }
     if (document.visibilityState === "visible") onRead?.();
   }, [open, loading, messages, invitationId]);
@@ -1927,8 +1933,14 @@ function GroupConversationModal({
   useEffect(() => {
     if (!open || loading || loadedConversationRef.current !== jobId) return;
     if (scrollOnLoadRef.current && messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-      scrollOnLoadRef.current = false;
+      const frame = requestAnimationFrame(() => {
+        if (messagesRef.current) {
+          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+        }
+        scrollOnLoadRef.current = false;
+      });
+      if (document.visibilityState === "visible") onRead?.();
+      return () => cancelAnimationFrame(frame);
     }
     if (document.visibilityState === "visible") onRead?.();
   }, [open, loading, messages, jobId]);
@@ -2187,17 +2199,36 @@ function CompanyTeamChatModal({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedCompanyRef = useRef(null);
 
   useEffect(() => {
     if (!open || !companyId) return;
 
+    scrollOnLoadRef.current = true;
+    loadedCompanyRef.current = null;
+    setMessages([]);
     loadMessages();
     const timer = setInterval(loadMessages, 3000);
     return () => clearInterval(timer);
   }, [open, companyId]);
 
+  useEffect(() => {
+    if (!open || loading || loadedCompanyRef.current !== companyId) return;
+    if (!scrollOnLoadRef.current || !messagesRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, loading, messages, companyId]);
+
   async function loadMessages() {
-    if (!messages.length) setLoading(true);
+    if (loadedCompanyRef.current !== companyId) setLoading(true);
     setError("");
 
     try {
@@ -2206,6 +2237,7 @@ function CompanyTeamChatModal({
       });
 
       if (result.error) throw result.error;
+      loadedCompanyRef.current = companyId;
       setMessages(result.data || []);
 
       const readResult = await supabase.rpc("mark_company_team_chat_read", {
@@ -2239,6 +2271,7 @@ function CompanyTeamChatModal({
       if (result.error) throw result.error;
 
       setTextValue("");
+      scrollOnLoadRef.current = true;
       await loadMessages();
     } catch (err) {
       setError(err?.message || "Nepavyko išsiųsti žinutės.");
@@ -2303,7 +2336,7 @@ function CompanyTeamChatModal({
 
         {error && <div className="ctc-error">{error}</div>}
 
-        <div className="ctc-messages">
+        <div className="ctc-messages" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="ctc-empty">Kraunamas komandos pokalbis...</div>
           ) : messages.length ? (
@@ -2355,7 +2388,7 @@ function CompanyTeamChatModal({
               }
             }}
             maxLength={2000}
-            placeholder="Parašykite komandai..."
+            placeholder="Žinutė įmonės komandai..."
           />
           <button disabled={sending || !textValue.trim()}>
             {sending ? "Siunčiama..." : "Siųsti"}
@@ -6594,6 +6627,7 @@ async function edgeFunctionErrorMessage(error, fallback) {
 }
 
 function companyTeamRoleLabel(role) {
+  if (role === "admin") return "Administratorius";
   if (role === "owner") return "Savininkas";
   if (role === "manager") return "Vadovas";
   return "Vadybininkas";
@@ -13411,11 +13445,18 @@ function AdminJobChatModal({ job, user, onClose }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedJobRef = useRef(null);
 
   useEffect(() => {
     if (!job?.job_id) return undefined;
 
     let cancelled = false;
+    scrollOnLoadRef.current = true;
+    loadedJobRef.current = null;
+    setMessages([]);
+    setLoading(true);
 
     async function refresh() {
       try {
@@ -13426,6 +13467,7 @@ function AdminJobChatModal({ job, user, onClose }) {
         if (result.error) throw result.error;
 
         if (!cancelled) {
+          loadedJobRef.current = job.job_id;
           setMessages(result.data || []);
           setError("");
         }
@@ -13447,6 +13489,19 @@ function AdminJobChatModal({ job, user, onClose }) {
     };
   }, [job?.job_id]);
 
+  useEffect(() => {
+    if (!job?.job_id || loading || loadedJobRef.current !== job.job_id) return;
+    if (!scrollOnLoadRef.current || !messagesRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [job?.job_id, loading, messages]);
+
   async function sendMessage(e) {
     e.preventDefault();
 
@@ -13465,12 +13520,14 @@ function AdminJobChatModal({ job, user, onClose }) {
       if (result.error) throw result.error;
 
       setTextValue("");
+      scrollOnLoadRef.current = true;
 
       const refreshed = await supabase.rpc("get_admin_job_chat_messages", {
         p_job_id: job.job_id,
       });
 
       if (refreshed.error) throw refreshed.error;
+      loadedJobRef.current = job.job_id;
       setMessages(refreshed.data || []);
     } catch (err) {
       setError(err?.message || "Nepavyko išsiųsti žinutės.");
@@ -13496,7 +13553,7 @@ function AdminJobChatModal({ job, user, onClose }) {
         .admin-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
         .admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
         .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}
-        .admin-chat-messages{display:grid;gap:10px;min-height:180px;max-height:390px;overflow-y:auto;padding:3px 3px 13px}
+        .admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:180px;max-height:390px;overflow-y:auto;padding:3px 3px 13px}
         .admin-chat-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
         .admin-chat-message.mine{margin-left:auto;background:#fff3e7}
         .admin-chat-message.admin-other{background:#eef3f8}
@@ -13545,8 +13602,8 @@ function AdminJobChatModal({ job, user, onClose }) {
 
         {error && <div className="admin-chat-error">{error}</div>}
 
-        <div className="admin-chat-messages">
-          {loading ? (
+        <div className="admin-chat-messages" ref={messagesRef}>
+          {loading && !messages.length ? (
             <div className="admin-chat-empty">Kraunamas pokalbis...</div>
           ) : messages.length ? (
             messages.map((message) => {
@@ -13607,16 +13664,24 @@ function AdminJobChatModal({ job, user, onClose }) {
   );
 }
 
-
-function AdminCompanyTeamChatModal({ chat, onClose }) {
+function AdminCompanyTeamChatModal({ chat, user, onClose }) {
   const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+  const loadedCompanyRef = useRef(null);
 
   useEffect(() => {
     if (!chat?.company_id) return undefined;
 
     let cancelled = false;
+    scrollOnLoadRef.current = true;
+    loadedCompanyRef.current = null;
+    setMessages([]);
+    setLoading(true);
 
     async function refresh() {
       try {
@@ -13628,6 +13693,7 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
         if (result.error) throw result.error;
 
         if (!cancelled) {
+          loadedCompanyRef.current = chat.company_id;
           setMessages(result.data || []);
           setError("");
         }
@@ -13649,13 +13715,68 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
     };
   }, [chat?.company_id]);
 
+  useEffect(() => {
+    if (
+      !chat?.company_id ||
+      loading ||
+      loadedCompanyRef.current !== chat.company_id ||
+      !scrollOnLoadRef.current ||
+      !messagesRef.current
+    ) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [chat?.company_id, loading, messages]);
+
+  async function sendMessage(e) {
+    e.preventDefault();
+
+    const body = textValue.trim();
+    if (!body || !chat?.company_id || sending) return;
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("admin_send_company_team_message", {
+        p_company_id: chat.company_id,
+        p_body: body,
+      });
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      scrollOnLoadRef.current = true;
+
+      const refreshed = await supabase.rpc(
+        "get_admin_company_team_chat_messages",
+        { p_company_id: chat.company_id }
+      );
+
+      if (refreshed.error) throw refreshed.error;
+      loadedCompanyRef.current = chat.company_id;
+      setMessages(refreshed.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   if (!chat) return null;
 
   return (
     <div
       className="admin-team-chat-overlay"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !sending) onClose();
       }}
     >
       <style>{`
@@ -13664,16 +13785,21 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
         .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
         .admin-team-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
-        .admin-team-chat-note{background:#f6f8fa;color:#526374;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
+        .admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
         .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
         .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:260px;max-height:520px;overflow:auto;padding:4px 2px 8px}
         .admin-team-chat-message{width:fit-content;max-width:min(78%,560px);border-radius:12px;padding:10px 12px;background:#f2f5f7}
+        .admin-team-chat-message.mine{justify-self:end;background:#fff3e7}
         .admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
         .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:4px}
         .admin-team-chat-role{font-weight:600;color:#7a8996}
         .admin-team-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
         .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}
-        @media(max-width:560px){.admin-team-chat-message{max-width:94%}.admin-team-chat-card{padding:17px}}
+        .admin-team-chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+        .admin-team-chat-form textarea{min-height:52px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit;color:#102438}
+        .admin-team-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
+        .admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
+        @media(max-width:560px){.admin-team-chat-message{max-width:94%}.admin-team-chat-card{padding:17px}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
       `}</style>
 
       <div className="admin-team-chat-card">
@@ -13688,24 +13814,34 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
             </div>
           </div>
 
-          <button className="rs-close" type="button" onClick={onClose}>
+          <button
+            className="rs-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+          >
             <CloseMark />
           </button>
         </div>
 
         <div className="admin-team-chat-note">
-          Tik skaitymui. Čia administratorius mato vidinį įmonės komandos
-          susirašinėjimą, bet iš šios skilties žinučių siųsti negali.
+          Matote visą įmonės komandos pokalbį ir galite parašyti administratoriaus
+          žinutę visai komandai.
         </div>
 
         {error && <div className="admin-team-chat-error">{error}</div>}
 
-        <div className="admin-team-chat-messages">
+        <div className="admin-team-chat-messages" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="admin-team-chat-empty">Kraunamas pokalbis...</div>
           ) : messages.length ? (
             messages.map((message) => (
-              <div className="admin-team-chat-message" key={message.id}>
+              <div
+                className={`admin-team-chat-message ${
+                  message.sender_id === user?.id ? "mine" : ""
+                }`}
+                key={message.id}
+              >
                 <b>
                   {message.sender_label || "Komandos narys"}{" "}
                   <span className="admin-team-chat-role">
@@ -13727,11 +13863,32 @@ function AdminCompanyTeamChatModal({ chat, onClose }) {
             </div>
           )}
         </div>
+
+        <form className="admin-team-chat-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            maxLength={2000}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) sendMessage(e);
+              }
+            }}
+            placeholder="Administratoriaus žinutė įmonės komandai..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
       </div>
     </div>
   );
 }
-
 
 function AdminDashboard({
   user,
@@ -14165,6 +14322,12 @@ function AdminDashboard({
     return !Number.isNaN(until.getTime()) && until > new Date();
   }
 
+  function isWorkerModeRestricted(record) {
+    if (!record?.restricted_until) return false;
+    const until = new Date(record.restricted_until);
+    return !Number.isNaN(until.getTime()) && until > new Date();
+  }
+
   function openAccountAction(type, record, role) {
     const userId = role === "worker" ? record.user_id : record.owner_id;
     const name =
@@ -14182,7 +14345,7 @@ function AdminDashboard({
     });
     setActionDays(7);
     setActionReason(
-      type === "unsuspend"
+      type === "unsuspend" || type === "unsuspendWorkerMode"
         ? "Administratoriaus sprendimu suspendavimas panaikintas."
         : ""
     );
@@ -14230,7 +14393,10 @@ function AdminDashboard({
       actionDialog.type === "deleteAccount" ||
       actionDialog.type === "deleteJob";
 
-    if (actionDialog.type === "suspend") {
+    if (
+      actionDialog.type === "suspend" ||
+      actionDialog.type === "suspendWorkerMode"
+    ) {
       const days = Number(actionDays);
 
       if (!Number.isInteger(days) || days < 1 || days > 3650) {
@@ -14241,6 +14407,7 @@ function AdminDashboard({
 
     if (
       actionDialog.type !== "unsuspend" &&
+      actionDialog.type !== "unsuspendWorkerMode" &&
       actionReason.trim().length < 5
     ) {
       setError("Įrašykite aiškią priežastį (bent 5 simboliai).");
@@ -14257,6 +14424,30 @@ function AdminDashboard({
     setNotice("");
 
     try {
+      if (actionDialog.type === "suspendWorkerMode") {
+        const result = await supabase.rpc("admin_suspend_worker_mode", {
+          p_user_id: actionDialog.userId,
+          p_days: Number(actionDays),
+          p_reason: actionReason.trim(),
+        });
+
+        if (result.error) throw result.error;
+
+        setNotice(
+          `${actionDialog.name} darbuotojo režimas suspenduotas ${Number(actionDays)} d.`
+        );
+      }
+
+      if (actionDialog.type === "unsuspendWorkerMode") {
+        const result = await supabase.rpc("admin_unsuspend_worker_mode", {
+          p_user_id: actionDialog.userId,
+          p_reason: actionReason.trim() || null,
+        });
+
+        if (result.error) throw result.error;
+        setNotice(`${actionDialog.name} darbuotojo režimo suspendavimas panaikintas.`);
+      }
+
       if (actionDialog.type === "suspend") {
         const result = await supabase.rpc("admin_suspend_user", {
           p_user_id: actionDialog.userId,
@@ -14732,7 +14923,9 @@ function AdminDashboard({
               <div className="admin-list">
                 {workers.map((worker) => {
                   const suspended = isCurrentlySuspended(worker);
+                  const workerModeRestricted = isWorkerModeRestricted(worker);
                   const isSelf = worker.user_id === user?.id;
+                  const actionSuspended = isSelf ? workerModeRestricted : suspended;
 
                   return (
                     <div className="admin-row" key={worker.user_id}>
@@ -14744,10 +14937,15 @@ function AdminDashboard({
                         </span>
                         {suspended && (
                           <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Suspenduota iki {formatAdminDate(worker.suspended_until)}
+                            Paskyra suspenduota iki {formatAdminDate(worker.suspended_until)}
                             {worker.suspension_reason
                               ? ` · ${worker.suspension_reason}`
                               : ""}
+                          </span>
+                        )}
+                        {workerModeRestricted && (
+                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
+                            Darbuotojo režimas apribotas iki {formatAdminDate(worker.restricted_until)}
                           </span>
                         )}
                       </div>
@@ -14774,7 +14972,7 @@ function AdminDashboard({
                       <div className="admin-row-actions">
                         <span
                           className={`admin-pill ${
-                            suspended
+                            suspended || workerModeRestricted
                               ? "red"
                               : worker.is_active
                               ? "green"
@@ -14783,6 +14981,8 @@ function AdminDashboard({
                         >
                           {suspended
                             ? "Suspenduotas"
+                            : workerModeRestricted
+                            ? "Darbuotojo režimas suspenduotas"
                             : worker.is_active
                             ? "Aktyvus"
                             : "Išjungtas"}
@@ -14795,36 +14995,44 @@ function AdminDashboard({
                           Redaguoti
                         </button>
 
-                        {!isSelf && (
-                          <>
-                            <button
-                              className="admin-small-btn"
-                              onClick={() =>
-                                openAccountAction(
-                                  suspended ? "unsuspend" : "suspend",
-                                  worker,
-                                  "worker"
-                                )
-                              }
-                            >
-                              {suspended
-                                ? "Nuimti suspendavimą"
-                                : "Suspenduoti"}
-                            </button>
+                        <button
+                          className="admin-small-btn"
+                          onClick={() =>
+                            openAccountAction(
+                              isSelf
+                                ? actionSuspended
+                                  ? "unsuspendWorkerMode"
+                                  : "suspendWorkerMode"
+                                : actionSuspended
+                                ? "unsuspend"
+                                : "suspend",
+                              worker,
+                              "worker"
+                            )
+                          }
+                        >
+                          {actionSuspended
+                            ? isSelf
+                              ? "Nuimti darbuotojo režimo suspendavimą"
+                              : "Nuimti suspendavimą"
+                            : isSelf
+                            ? "Suspenduoti darbuotojo režimą"
+                            : "Suspenduoti"}
+                        </button>
 
-                            <button
-                              className="admin-small-btn danger"
-                              onClick={() =>
-                                openAccountAction(
-                                  "deleteAccount",
-                                  worker,
-                                  "worker"
-                                )
-                              }
-                            >
-                              Ištrinti paskyrą
-                            </button>
-                          </>
+                        {!isSelf && (
+                          <button
+                            className="admin-small-btn danger"
+                            onClick={() =>
+                              openAccountAction(
+                                "deleteAccount",
+                                worker,
+                                "worker"
+                              )
+                            }
+                          >
+                            Ištrinti paskyrą
+                          </button>
                         )}
                       </div>
                     </div>
@@ -15046,8 +15254,8 @@ function AdminDashboard({
                 <h2>Įmonių komandų pokalbiai</h2>
                 <div className="admin-muted">
                   Vidinis Business Pro įmonių susirašinėjimas. Administratorius
-                  gali peržiūrėti pokalbių istoriją, tačiau iš šios skilties
-                  žinučių nesiunčia.
+                  gali peržiūrėti pokalbių istoriją ir parašyti administratoriaus
+                  žinutę visai komandai.
                 </div>
               </div>
               <b>{teamChats.length}</b>
@@ -15060,11 +15268,13 @@ function AdminDashboard({
                     <div className="admin-row-title">
                       <b>{chat.company_name || "Įmonė"}</b>
                       <span>
-                        Paskutinė žinutė:{" "}
-                        {chat.last_sender_label || "Komandos narys"}
-                        {chat.last_sender_role
-                          ? ` · ${companyTeamRoleLabel(chat.last_sender_role)}`
-                          : ""}
+                        {chat.last_message_at
+                          ? `Paskutinė žinutė: ${chat.last_sender_label || "Komandos narys"}${
+                              chat.last_sender_role
+                                ? ` · ${companyTeamRoleLabel(chat.last_sender_role)}`
+                                : ""
+                            }`
+                          : "Pokalbis dar tuščias"}
                       </span>
                       {chat.last_message_preview && (
                         <span style={{ color: "#405264", marginTop: 6 }}>
@@ -15097,7 +15307,7 @@ function AdminDashboard({
                         type="button"
                         onClick={() => setAdminTeamConversation(chat)}
                       >
-                        Skaityti pokalbį
+                        Atidaryti pokalbį
                       </button>
                     </div>
                   </div>
@@ -15251,6 +15461,10 @@ function AdminDashboard({
                           ? "Paskyra suspenduota"
                           : item.action === "unsuspend_user"
                           ? "Suspendavimas panaikintas"
+                          : item.action === "suspend_worker_mode"
+                          ? "Darbuotojo režimas suspenduotas"
+                          : item.action === "unsuspend_worker_mode"
+                          ? "Darbuotojo režimo suspendavimas panaikintas"
                           : item.action === "delete_user_account"
                           ? "Paskyra ištrinta"
                           : item.action === "delete_job"
@@ -15304,6 +15518,7 @@ function AdminDashboard({
 
       <AdminCompanyTeamChatModal
         chat={adminTeamConversation}
+        user={user}
         onClose={() => setAdminTeamConversation(null)}
       />
 
@@ -15769,7 +15984,11 @@ function AdminDashboard({
             <div className="admin-modal-head">
               <div>
                 <div className="eyebrow">
-                  {actionDialog.type === "suspend"
+                  {actionDialog.type === "suspendWorkerMode"
+                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMAS"
+                    : actionDialog.type === "unsuspendWorkerMode"
+                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMO PANAIKINIMAS"
+                    : actionDialog.type === "suspend"
                     ? "PASKYROS SUSPENDAVIMAS"
                     : actionDialog.type === "unsuspend"
                     ? "SUSPENDAVIMO PANAIKINIMAS"
@@ -15778,7 +15997,11 @@ function AdminDashboard({
                     : "PASKYROS TRYNIMAS"}
                 </div>
                 <h2>
-                  {actionDialog.type === "suspend"
+                  {actionDialog.type === "suspendWorkerMode"
+                    ? `Suspenduoti darbuotojo režimą: ${actionDialog.name}`
+                    : actionDialog.type === "unsuspendWorkerMode"
+                    ? `Nuimti darbuotojo režimo suspendavimą: ${actionDialog.name}`
+                    : actionDialog.type === "suspend"
                     ? `Suspenduoti: ${actionDialog.name}`
                     : actionDialog.type === "unsuspend"
                     ? `Nuimti suspendavimą: ${actionDialog.name}`
@@ -15797,7 +16020,8 @@ function AdminDashboard({
               </button>
             </div>
 
-            {actionDialog.type === "suspend" && (
+            {(actionDialog.type === "suspend" ||
+              actionDialog.type === "suspendWorkerMode") && (
               <label className="admin-label">
                 Kiek dienų suspenduoti?
                 <input
@@ -15812,13 +16036,17 @@ function AdminDashboard({
             )}
 
             <label className="admin-label" style={{ marginTop: 13 }}>
-              {actionDialog.type === "unsuspend" ? "Pastaba" : "Priežastis *"}
+              {actionDialog.type === "unsuspend" ||
+              actionDialog.type === "unsuspendWorkerMode"
+                ? "Pastaba"
+                : "Priežastis *"}
               <textarea
                 className="admin-input admin-textarea"
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
                 placeholder={
-                  actionDialog.type === "suspend"
+                  actionDialog.type === "suspend" ||
+                  actionDialog.type === "suspendWorkerMode"
                     ? "Pvz. Pakartotinis neatvykimas ir taisyklių pažeidimas..."
                     : actionDialog.type === "deleteAccount"
                     ? "Pvz. Pakartotiniai rimti pažeidimai..."
@@ -15883,6 +16111,10 @@ function AdminDashboard({
               >
                 {actionBusy
                   ? "Vykdoma..."
+                  : actionDialog.type === "suspendWorkerMode"
+                  ? "Suspenduoti darbuotojo režimą"
+                  : actionDialog.type === "unsuspendWorkerMode"
+                  ? "Nuimti darbuotojo režimo suspendavimą"
                   : actionDialog.type === "suspend"
                   ? "Suspenduoti"
                   : actionDialog.type === "unsuspend"
@@ -15997,28 +16229,6 @@ function PublicLandingPage({
   const plans = EMPLOYER_PLANS;
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [landingStats, setLandingStats] = useState(null);
-
-  useEffect(() => {
-    if (!supabase) return;
-
-    let cancelled = false;
-    supabase
-      .rpc("get_landing_statistics")
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error(error);
-          return;
-        }
-        setLandingStats(data?.[0] || null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <div className="home-page">
       <style>{`
@@ -16030,14 +16240,13 @@ function PublicLandingPage({
         .home-btn{border:1px solid var(--orange);border-radius:10px;background:var(--orange);color:#fff;padding:12px 18px;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.home-btn:hover{background:#dd761b}.home-btn.outline{border-color:#cdd8df;background:#fff;color:var(--navy)}.home-btn.outline:hover{background:#f4f7f9}.home-btn.dark{background:var(--navy);border-color:var(--navy)}
         .home-hero{position:relative;overflow:hidden;background:radial-gradient(circle at 80% 10%,#fff1e4 0%,transparent 34%),linear-gradient(125deg,#f4f8fb 0%,#fff 68%);border-bottom:1px solid var(--line)}.home-hero:before{content:"";position:absolute;right:-220px;bottom:-360px;width:750px;height:750px;border:1px solid #f0e1d2;border-radius:50%;pointer-events:none}.home-hero-grid{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center;padding:106px 0 100px}.home-kicker{font-size:11px;font-weight:900;letter-spacing:.13em;color:#b85f0e;text-transform:uppercase}.home-hero h1{font:900 clamp(38px,4.5vw,57px)/1.08 Manrope,Inter,sans-serif;letter-spacing:-.045em;margin:16px 0 20px}.home-hero h1 em{color:var(--orange);font-style:normal}.home-lead{font-size:18px;line-height:1.65;color:var(--muted);max-width:580px;margin:0}.home-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin:30px 0 18px}.home-micro{font-size:12px;color:#667988}
         .home-flow{position:relative;background:#fff;color:var(--navy);border:1px solid #dce5eb;border-radius:24px;padding:30px;box-shadow:0 25px 65px rgba(16,36,56,.12)}.home-flow:before{content:"";position:absolute;top:-12px;right:26px;width:34%;height:12px;background:#f08a28;border-radius:9px 9px 0 0}.home-flow-label{display:inline-block;color:#ac5a10;background:#fff1e4;padding:7px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.12em;margin-bottom:16px}.home-flow-title{font:850 18px Manrope,Inter,sans-serif;margin:0 0 6px}.home-flow-intro{font-size:12px;color:var(--muted);margin:0 0 18px}.home-flow-row{display:flex;gap:15px;align-items:flex-start;border-top:1px solid var(--line);padding:21px 0}.home-flow-row:last-child{padding-bottom:0}.home-flow-number{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:#c56a18;background:#fff0e1;font-size:14px;font-weight:900}.home-flow-row b{display:block;font-size:15px}.home-flow-row span:not(.home-flow-number){display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.55}.home-flow-row .home-flow-number{display:grid;place-items:center;margin:0;color:#c56a18;line-height:1}.home-flow-number svg{width:20px;height:20px;display:block}
-        .home-stats{border-bottom:1px solid var(--line);background:#fff}.home-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:27px 0}.home-stat{padding:9px 24px;border-left:1px solid var(--line)}.home-stat:first-child{border-left:0}.home-stat strong{display:block;font:900 30px Manrope,Inter,sans-serif;color:var(--navy)}.home-stat span{font-size:12px;color:var(--muted)}
         .home-section{padding:82px 0}.home-section.soft{background:#f7f9fb}.home-section h2,.home-cta h2{font:850 clamp(29px,3.2vw,40px)/1.16 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 12px}.home-intro{color:var(--muted);max-width:680px;margin:0 0 32px}
         .home-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.home-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:25px}.home-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e5;color:#bb661c;font-size:20px;font-weight:900}.home-card h3{font:850 18px Manrope,Inter,sans-serif;margin:18px 0 8px}.home-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:18px}.home-audience{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff)}.home-audience h3{font:850 25px Manrope,Inter,sans-serif;margin:10px 0}.home-audience p{color:var(--muted);font-size:14px;line-height:1.6}.home-audience ul,.home-plan ul{list-style:none;padding:0;display:grid;gap:12px;margin:24px 0}.home-audience li,.home-plan li{font-size:13px;padding-left:24px;position:relative}.home-audience li:before,.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-audience .home-btn{margin-top:10px}
         .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px}.home-toggle{display:flex;background:#eaf0f4;border-radius:10px;padding:4px}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:12px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px #10243818}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:17px;padding:24px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 18px 42px #f08a2827;margin-top:-8px;padding:30px 26px}.home-plan-badge{position:absolute;right:20px;top:-13px;background:var(--orange);color:#fff;padding:5px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 22px Manrope,Inter,sans-serif;margin:0}.home-plan>p{min-height:62px;color:var(--muted);font-size:13px;margin:12px 0 14px}.home-amount{font:900 36px Manrope,Inter,sans-serif}.home-amount small{font:700 12px Inter,sans-serif;color:var(--muted)}.home-year-note{min-height:26px;color:#167a54;font-size:11px;font-weight:750;margin-top:5px}.home-plan ul{flex:1;align-content:start;grid-auto-rows:max-content;gap:9px;margin:14px 0 22px}.home-plan .home-btn{width:100%}
         .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:none;margin:0 auto;text-align:center}@media(min-width:850px){.home-cta p{white-space:nowrap;font-size:clamp(14px,1.4vw,18px)}}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{gap:30px}.home-benefits{grid-template-columns:1fr 1fr}.home-prices{gap:9px}}
-        @media(max-width:700px){.home-stats-grid{gap:0}.home-stat{padding:7px}.home-stat strong{font-size:23px}.home-stat span{font-size:10px}.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:64px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px;min-height:38px}.home-login{font-size:11px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
+        @media(max-width:700px){.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:64px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px;min-height:38px}.home-login{font-size:11px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
         @media(max-width:420px){.home-brand{font-size:13px}.home-brand-mark{display:none}.home-actions{gap:5px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}}
         @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important}}
       `}</style>
@@ -16046,9 +16255,8 @@ function PublicLandingPage({
         <a className="home-brand" href="#pradzia"><span className="home-brand-mark">⌂</span>rankos<b>statybose</b>.lt</a>
         <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
           <a href="#kaip">Kaip tai veikia</a>
-          <a href="#darbdaviams">Darbdaviams</a>
-          <a href="#darbuotojams">Darbuotojams</a>
-          <a href="#kainodara">Kainodara</a>
+          <a href="#nauda">Nauda</a>
+          <a href="#planai">Planai</a>
           <a href="#duk">DUK</a>
         </nav>
         <div className="home-actions"><button className="home-login" type="button" onClick={onLogin}>Prisijungti</button><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis</button></div>
@@ -16070,24 +16278,16 @@ function PublicLandingPage({
           
         </div></div></section>
 
-        <section className="home-stats" aria-label="Platformos statistika">
-          <div className="home-wrap home-stats-grid">
-            <div className="home-stat"><strong>{Number(landingStats?.workers || 0)}</strong><span>darbuotojų paskyrų</span></div>
-            <div className="home-stat"><strong>{Number(landingStats?.employers || 0)}</strong><span>darbdavių paskyrų</span></div>
-            <div className="home-stat"><strong>{Number(landingStats?.jobs || 0)}</strong><span>sukurtų darbų</span></div>
-          </div>
-        </section>
-
         <section className="home-section soft" id="nauda"><div className="home-wrap"><div className="home-kicker">Sukurta darbdavio darbo ritmui</div><h2>Nuo skubaus poreikio iki kito sėkmingo kvietimo.</h2><p className="home-intro">Paskelbkite konkretų darbą, pakvieskite tinkamus žmones ir sekite jo eigą. Kiekvienas žingsnis padeda taupyti organizavimo laiką ir priimti pagrįstesnius sprendimus.</p>
           <div className="home-benefits"><article className="home-card"><span className="home-icon">⌕</span><h3>Ne vien profilis, o prieinamumas</h3><p>Darbdavio paieškoje atsižvelgiama į patvirtintą grafiką, aktyvumą ir galimybę atvykti. Taip kviečiate žmones pagal konkretų darbą.</p></article><article className="home-card"><span className="home-icon">↗</span><h3>Sąlygos aiškios prieš sutikimą</h3><p>Darbo vieta, laikas, aprašymas ir atlygis pateikiami kvietime. Darbo pokalbiai leidžia patikslinti detales neišeinant iš platformos.</p></article><article className="home-card"><span className="home-icon">✓</span><h3>Patikimumas, paremtas darbu</h3><p>Atvykimas ir uždaryta darbo diena kuria istoriją. Patikimumo duomenys padeda vertinti ankstesnę darbo eigą, o gerai dirbusius žmones galima pakviesti dar kartą.</p></article><article className="home-card"><span className="home-icon">↺</span><h3>Favoritai kitam objektui</h3><p>Išsaugokite pasiteisinusius darbuotojus ir pakvieskite juos į naują darbą, kai jų grafikas vėl tinka.</p></article><article className="home-card"><span className="home-icon">ϟ</span><h3>Skubus poreikis</h3><p>Skubiai prireikus raskite darbuotojus, kurie patys įjungė „Laisvas dabar“ režimą pasirinktame mieste.</p></article><article className="home-card"><span className="home-icon">◉</span><h3>Vieninga komandos eiga</h3><p>Paskirstykite darbus įmonės nariams ir aptarkite organizacinius klausimus vidiniame pokalbyje.</p></article></div>
         </div></section>
 
-        <section className="home-section" id="darbdaviams"><div className="home-wrap"><div className="home-kicker">Ką gaunate naudodamiesi platforma</div><h2>Nauda darbdaviui ir darbuotojui.</h2><div className="home-audiences">
-          <article className="home-audience employer"><div className="home-kicker">Darbdaviams</div><h3>Mažiau laiko ieškant žmogaus objektui.</h3><p>Vienoje vietoje paskelbkite darbą, atrinkite tinkamus žmones, išsiųskite kvietimus ir sekite jų atsakymus.</p><ul><li>Kviečiate pagal grafiką, darbo laiką ir atvykimo galimybę</li><li>Matote kvietimų būseną, atvykimą ir dienos rezultatą</li><li>Business: sprendžiate pagal patikimumą ir vėl samdote favoritus</li><li>Business Pro: pasiekiate „Laisvas dabar“ darbuotojus ir valdote komandą</li><li>Vienoje darbo vietoje tvarkote kvietimus, pokalbius ir dienos pabaigą</li></ul></article>
-          <article className="home-audience worker" id="darbuotojams"><div className="home-kicker">Darbuotojams</div><h3>Daugiau kontrolės renkantis darbą.</h3><p>Jūsų grafikas padeda gauti tinkamus kvietimus, o sprendimą priimate matydami konkrečią darbo informaciją.</p><ul><li>Prieš priimdami matote vietą, laiką, atlygį ir aprašymą</li><li>Kvietimai, darbo detalės ir dienos eiga vienoje vietoje</li><li>Patys įjungiate arba išjungiate „Laisvas dabar“ režimą</li><li>Registracija ir darbo kvietimų gavimas nemokami</li></ul></article>
+        <section className="home-section"><div className="home-wrap"><div className="home-kicker">Nauda abiem pusėms</div><h2>Ką platforma duoda kasdienėje darbo eigoje.</h2><div className="home-audiences">
+          <article className="home-audience employer"><div className="home-kicker">Darbdaviui</div><h3>Mažiau chaoso, daugiau aiškumo kiekvienam objektui.</h3><p>Visa darbuotojų paieškos ir darbo organizavimo eiga vienoje vietoje – nuo pirmo kvietimo iki uždarytos darbo dienos.</p><ul><li>Greičiau randate žmones konkrečiai dienai, laikui ir miestui</li><li>Matote, kas priėmė kvietimą, kas neatvyko ir kaip užsibaigė darbo diena</li><li>Mažiau skambučių ir susirašinėjimo skirtinguose kanaluose – viskas vienoje sistemoje</li><li>Lengviau pakartotinai kviesti pasiteisinusius žmones į kitą objektą</li><li>Aiškesnė darbo istorija padeda priimti sprendimus remiantis realia patirtimi, o ne pažadais</li><li>Greičiau reaguojate į pasikeitimus, kai žmogaus reikia skubiai ar paskutinei minutei</li></ul></article>
+          <article className="home-audience worker"><div className="home-kicker">Darbuotojui</div><h3>Daugiau aiškumo prieš sutinkant ir mažiau neaiškumų darbo dieną.</h3><p>Darbo pasiūlymus gaunate su svarbiausia informacija iš anksto, todėl lengviau atsirinkti tai, kas jums iš tikro tinka.</p><ul><li>Prieš atsakydami matote darbo vietą, laiką, atlygį ir aprašymą</li><li>Galite rodyti savo prieinamumą ir gauti kvietimus tada, kai realiai galite dirbti</li><li>Visi kvietimai, žinutės ir darbo eigos žingsniai laikomi vienoje vietoje</li><li>Mažiau painiavos dėl to, kur atvykti, kada pradėti ir su kuo susisiekti</li><li>Patikimumo istorija padeda parodyti, kad esate atsakingas ir verta jus kviesti dar kartą</li><li>Registracija, profilio sukūrimas ir darbo kvietimų gavimas darbuotojui nieko nekainuoja</li></ul></article>
         </div></div></section>
 
-        <section className="home-section soft" id="kainodara"><div className="home-wrap"><div className="home-price-head"><div><div className="home-kicker">Darbdavių planai</div><h2>Pasirinkite planą pagal savo darbų apimtį.</h2></div><div className="home-toggle" aria-label="Mokėjimo laikotarpis"><button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button></div></div>
+        <section className="home-section soft" id="planai"><div className="home-wrap"><div className="home-price-head"><div><div className="home-kicker">Darbdavių planai</div><h2>Pasirinkite planą pagal savo darbų apimtį.</h2></div><div className="home-toggle" aria-label="Mokėjimo laikotarpis"><button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button></div></div>
           <div className="home-prices">{plans.map((item) => { const plan = item; const paid = item.key !== "basic"; const yearly = pricingBillingCycle === "yearly"; return <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>{item.key === "business" && <span className="home-plan-badge">REKOMENDUOJAMAS</span>}{item.key === "business_pro" && <span className="home-plan-badge">DIDŽIAUSIA NAUDA</span>}<h3>{item.name}</h3><p>{plan.description}</p><div className="home-amount">{paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(plan)) : formatPlanPrice(plan.price) : "0"} € <small>/ {paid && yearly ? "metus" : "mėn."}</small></div><div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(plan))} € per metus` : ""}</div><ul>{plan.features.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul><button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={() => onEmployerSignup(item.key)}>{item.key === "basic" ? "Pradėti nemokamai" : `Rinktis ${item.name}`}</button></article>; })}</div>
           
         </div></section>
