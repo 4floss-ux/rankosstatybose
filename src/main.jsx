@@ -3780,6 +3780,184 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const profileAvatarUrl =
     avatarPreview || workerAvatarUrl(form.avatarPath);
 
+  const workerDashboardToday = localDateISO(new Date());
+
+  const workerTodayJobs = workdays.filter(
+    (item) =>
+      item.job?.work_date === workerDashboardToday &&
+      !["cancelled_by_employer", "completed", "no_show"].includes(item.status)
+  );
+
+  const workerUnreadMessages = workerNotifications.filter(
+    (item) => item.event_type === "message"
+  );
+
+  const workerActionWorkdays = workdays.filter((item) => {
+    const attendance = item.attendance || {};
+    if (item.status !== "confirmed" || attendance.finalized_at) return false;
+
+    const pendingNegative =
+      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+        attendance.employer_outcome
+      ) && attendance.dispute_status !== "disputed";
+
+    const needsClose =
+      jobHasEnded(item.job) &&
+      !attendance.employer_outcome &&
+      attendance.worker_workday_claim !== "worked";
+
+    const canCheckIn =
+      jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+
+    return pendingNegative || needsClose || canCheckIn;
+  });
+
+  const nextConfirmedWorkday = [...workdays]
+    .filter(
+      (item) =>
+        item.status === "confirmed" &&
+        !item.attendance?.finalized_at &&
+        item.job?.status !== "cancelled"
+    )
+    .sort((a, b) => {
+      const aKey = `${a.job?.work_date || "9999-12-31"}T${
+        a.job?.start_time?.slice(0, 5) || "23:59"
+      }`;
+      const bKey = `${b.job?.work_date || "9999-12-31"}T${
+        b.job?.start_time?.slice(0, 5) || "23:59"
+      }`;
+      return aKey.localeCompare(bKey);
+    })[0];
+
+  const firstPendingReview = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return (
+      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
+        attendance.employer_outcome
+      ) && attendance.dispute_status !== "disputed"
+    );
+  });
+
+  const firstNeedsClose = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return (
+      jobHasEnded(item.job) &&
+      !attendance.employer_outcome &&
+      attendance.worker_workday_claim !== "worked"
+    );
+  });
+
+  const firstCanCheckIn = workerActionWorkdays.find((item) => {
+    const attendance = item.attendance || {};
+    return jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+  });
+
+  const workerPrimaryFocus = needsAvailabilityConfirm
+    ? {
+        tone: "action",
+        title: "Patvirtinkite savo prieinamumą",
+        text: "Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų darbuotojų paieškoje.",
+        action: "Patvirtinti grafiką",
+        target: "availability",
+      }
+    : metrics.restrictedUntil &&
+      new Date(metrics.restrictedUntil) > new Date()
+    ? {
+        tone: "danger",
+        title: "Paskyrai taikomas laikinas apribojimas",
+        text: `Naujų darbų priimti negalite iki ${new Date(
+          metrics.restrictedUntil
+        ).toLocaleString("lt-LT", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })}.`,
+        action: "Peržiūrėti darbus",
+        target: "workdays",
+      }
+    : firstPendingReview
+    ? {
+        tone: "danger",
+        title: "Reikia atsakyti į darbdavio pažymėtą rezultatą",
+        text: `${firstPendingReview.job?.title || "Darbo diena"} · pasirinkite „Patvirtinti“ arba „Ginčyti“.`,
+        action: "Peržiūrėti",
+        target: "workdays",
+      }
+    : firstNeedsClose
+    ? {
+        tone: "action",
+        title: "Reikia uždaryti darbo dieną",
+        text: `${firstNeedsClose.job?.title || "Darbas"} jau pasibaigė. Užfiksuokite, ar dirbote.`,
+        action: "Uždaryti dieną",
+        target: "workdays",
+      }
+    : firstCanCheckIn
+    ? {
+        tone: "live",
+        title: "Galite pažymėti atvykimą",
+        text: `${firstCanCheckIn.job?.title || "Darbas"} · atvykimo langas jau atidarytas.`,
+        action: "Atidaryti darbą",
+        target: "workdays",
+      }
+    : invitations.length
+    ? {
+        tone: "action",
+        title: `Turite ${invitations.length} ${
+          invitations.length === 1 ? "darbo kvietimą" : "darbo kvietimus"
+        }`,
+        text: "Peržiūrėkite datą, laiką, atlyginimą ir atsakykite darbdaviui.",
+        action: "Peržiūrėti kvietimus",
+        target: "invitations",
+      }
+    : workerUnreadMessages.length
+    ? {
+        tone: "action",
+        title: `Turite ${workerUnreadMessages.length} ${
+          workerUnreadMessages.length === 1 ? "naują žinutę" : "naujas žinutes"
+        }`,
+        text: "Atidarykite darbo arba kvietimo pokalbį, kad žinutės būtų pažymėtos perskaitytomis.",
+        action: "Peržiūrėti pokalbius",
+        target: "workdays",
+      }
+    : nextConfirmedWorkday
+    ? {
+        tone: "live",
+        title: "Artimiausias patvirtintas darbas",
+        text: `${nextConfirmedWorkday.job?.title || "Darbas"} · ${
+          nextConfirmedWorkday.job?.work_date || ""
+        } · ${nextConfirmedWorkday.job?.start_time?.slice(0, 5) || ""}`,
+        action: "Peržiūrėti",
+        target: "workdays",
+      }
+    : {
+        tone: "",
+        title: "Šiuo metu veiksmų nereikia",
+        text: "Atnaujinkite prieinamumą ir laukite naujų tinkamų darbo kvietimų.",
+        action: "Tvarkyti profilį",
+        target: "profile",
+      };
+
+  function openWorkerDashboardTarget(target) {
+    if (target === "profile") {
+      setShowProfileEditor(true);
+      return;
+    }
+
+    if (target === "availability") {
+      if (needsAvailabilityConfirm) {
+        confirmCurrentAvailability();
+      } else {
+        setShowProfileEditor(true);
+      }
+      return;
+    }
+
+    document
+      .getElementById(
+        target === "invitations" ? "worker-invitations" : "worker-workdays"
+      )
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   if (loading) {
     return (
       <div className="wd-loading">
@@ -3802,6 +3980,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
+        .wd-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
+        .wd-focus{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding:16px 18px;border:1px solid #dfe7ed;border-radius:15px;background:#fff}.wd-focus.action{border-color:#efc99e;background:#fff9f2}.wd-focus.live{border-color:#cce5d8;background:#f4faf7}.wd-focus.danger{border-color:#efc7bb;background:#fff5f2}.wd-focus-copy b{display:block;color:#102438;font-size:15px;margin-bottom:4px}.wd-focus-copy span{display:block;color:#607180;font-size:12px;line-height:1.5}.wd-focus-btn{border:0;border-radius:9px;background:#102438;color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}.wd-focus.action .wd-focus-btn{background:#f08a28}.wd-focus.live .wd-focus-btn{background:#1c9b67}.wd-focus.danger .wd-focus-btn{background:#b64d2a}
         .wd-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:104px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
@@ -3816,11 +3996,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
-        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:#fff}.wd-invite.has-unread{border-left:4px solid #f08a28}.wd-invite.has-conflict{border-color:#efc7bb;background:#fffafa}
         .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
         .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
         .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
-        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
+        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-chat-btn{position:relative}.wd-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-chat-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}.wd-conflict{display:inline-flex;margin-top:10px;border-radius:999px;padding:6px 9px;background:#fff0ec;color:#b64d2a;font-size:11px;font-weight:900}
+        .wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
         .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
@@ -3846,7 +4027,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -3877,11 +4058,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:wdspin .8s linear infinite}
         @keyframes wdspin{to{transform:rotate(360deg)}}
         @media(max-width:1180px){
+          .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
         }
         @media(max-width:760px){
           .wd-topbar-inner,.wd-shell{width:min(100% - 24px,1320px)}
           .wd-heading{align-items:flex-start;flex-direction:column}
+          .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .wd-focus{align-items:flex-start;flex-direction:column}
+          .wd-focus-btn{width:100%}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
@@ -4022,6 +4207,59 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 : "Tvarkyti mano informaciją"}
             </button>
           </div>
+        </div>
+
+        <div className="wd-overview">
+          <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
+            <span>Nauji kvietimai</span>
+            <b>{invitations.length}</b>
+          </div>
+
+          <div className={`wd-overview-card ${workerTodayJobs.length ? "live" : ""}`}>
+            <span>Šiandienos darbai</span>
+            <b>{workerTodayJobs.length}</b>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerActionWorkdays.length ? "danger" : ""
+            }`}
+          >
+            <span>Reikia veiksmo</span>
+            <b>{workerActionWorkdays.length}</b>
+          </div>
+
+          <div
+            className={`wd-overview-card ${
+              workerUnreadMessages.length ? "action" : ""
+            }`}
+          >
+            <span>Naujos žinutės</span>
+            <b>{workerUnreadMessages.length}</b>
+          </div>
+        </div>
+
+        <div className={`wd-focus ${workerPrimaryFocus.tone || ""}`}>
+          <div className="wd-focus-copy">
+            <div className="eyebrow">DABAR SVARBIAUSIA</div>
+            <b>{workerPrimaryFocus.title}</b>
+            <span>{workerPrimaryFocus.text}</span>
+          </div>
+
+          <button
+            className="wd-focus-btn"
+            type="button"
+            disabled={
+              workerPrimaryFocus.target === "availability" &&
+              confirmingAvailability
+            }
+            onClick={() => openWorkerDashboardTarget(workerPrimaryFocus.target)}
+          >
+            {workerPrimaryFocus.target === "availability" &&
+            confirmingAvailability
+              ? "Patvirtinama..."
+              : workerPrimaryFocus.action}
+          </button>
         </div>
 
         {showProfileEditor && (
@@ -4412,7 +4650,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
 
         <div className="wd-form">
-          <section className="wd-card">
+          <section className="wd-card" id="worker-workdays">
             <h2>Mano darbo dienos</h2>
             <p className="wd-card-sub">
               Pasibaigus darbo laikui darbo dieną turi uždaryti bent viena pusė.
@@ -4702,11 +4940,30 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           item.status
                         ) && (
                           <button
-                            className="wd-decline"
+                            className={`wd-decline wd-workday-chat ${
+                              unreadWorkerJobNotifications(job.id).some(
+                                (item) => item.event_type === "message"
+                              )
+                                ? "has-unread"
+                                : ""
+                            }`}
                             type="button"
                             onClick={() => openWorkerGroupConversation(job)}
                           >
                             Darbo pokalbis
+                            {unreadWorkerJobNotifications(job.id).filter(
+                              (item) => item.event_type === "message"
+                            ).length > 0 && (
+                              <span className="wd-chat-count">
+                                Nauja{" "}
+                                {Math.min(
+                                  9,
+                                  unreadWorkerJobNotifications(job.id).filter(
+                                    (item) => item.event_type === "message"
+                                  ).length
+                                )}
+                              </span>
+                            )}
                           </button>
                         )}
 
@@ -4817,7 +5074,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card">
+          <section className="wd-card" id="worker-invitations">
             <h2>Darbo kvietimai</h2>
             <p className="wd-card-sub">
               Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
@@ -4832,6 +5089,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   const busy = respondingInvitation === invitation.id;
                   const unreadNews = unreadWorkerNotifications(invitation.id);
                   const unreadPresentation = notificationPresentation(unreadNews);
+                  const unreadPrivateMessages = unreadNews.filter(
+                    (item) => item.event_type === "message"
+                  );
+                  const hasConflict = invitationHasConflict(invitation);
                   const statusLabel =
                     invitation.status === "accepted"
                       ? "Priimta"
@@ -4844,7 +5105,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       : "Laukia atsakymo";
 
                   return (
-                    <div className="wd-invite" key={invitation.id}>
+                    <div
+                      className={[
+                        "wd-invite",
+                        unreadPrivateMessages.length ? "has-unread" : "",
+                        hasConflict ? "has-conflict" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      key={invitation.id}
+                    >
                       <div className="wd-invite-main">
                         {unreadNews.length > 0 && (
                           <div>
@@ -4865,6 +5135,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <h3>{job.title}</h3>
                         <div className="wd-invite-summary">
                           <b>{invitation.companyName}</b>
+                          <span>
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </span>
                           <span>{job.city || "Miestas nenurodytas"}</span>
                           <span>
                             {job.pay_amount
@@ -4887,6 +5161,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </span>
                           )}
                         </div>
+
+                        {hasConflict && (
+                          <span className="wd-conflict">
+                            Laikas sutampa su jau priimtu darbu
+                          </span>
+                        )}
 
                         {job.status === "cancelled" && (
                           <div
@@ -4917,7 +5197,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               className="wd-accept"
                               disabled={
                                 busy ||
-                                invitationHasConflict(invitation) ||
+                                hasConflict ||
                                 (metrics.restrictedUntil &&
                                   new Date(metrics.restrictedUntil) > new Date())
                               }
@@ -4928,7 +5208,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             >
                               {busy
                                 ? "Prašome..."
-                                : invitationHasConflict(invitation)
+                                : hasConflict
                                 ? "Laikas užimtas"
                                 : "Priimti"}
                             </button>
@@ -4949,7 +5229,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         )}
 
                         <button
-                          className="wd-decline"
+                          className={`wd-decline wd-chat-btn ${
+                            unreadPrivateMessages.length ? "has-unread" : ""
+                          }`}
                           onClick={() => {
                             setConversation({
                               invitationId: invitation.id,
@@ -4958,6 +5240,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           }}
                         >
                           Žinutės
+                          {unreadPrivateMessages.length > 0 && (
+                            <span className="wd-chat-count">
+                              Nauja {Math.min(9, unreadPrivateMessages.length)}
+                            </span>
+                          )}
                         </button>
                       </div>
                     </div>
