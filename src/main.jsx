@@ -102,6 +102,71 @@ function RoundedSelect({ value, options, disabled, onChange, className = "ed-sel
   );
 }
 
+function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left" }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const [hour = "08", minute = "00"] = String(value || "08:00").split(":");
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      containerRef.current?.querySelectorAll(".wd-time-options").forEach((list) => {
+        const selected = list.querySelector(".selected");
+        if (selected) list.scrollTop = selected.offsetTop - list.offsetTop - list.clientHeight / 2;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
+      <button ref={triggerRef} type="button" className="wd-time wd-time-trigger"
+        disabled={disabled} aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}>
+        <span>{hour}:{minute}</span><span aria-hidden="true">◷</span>
+      </button>
+      {open && !disabled && (
+        <div role="dialog" aria-label={ariaLabel} className="wd-time-popover"
+          style={align === "right" ? { right: 0 } : { left: 0 }}>
+          {[{ title: "Valandos", count: 24, selected: hour, set: (next) => onChange(`${next}:${minute}`) },
+            { title: "Minutės", count: 60, selected: minute, set: (next) => { onChange(`${hour}:${next}`); setOpen(false); triggerRef.current?.focus(); } }].map((column) => (
+            <div key={column.title} className="wd-time-column">
+              <b>{column.title}</b>
+              <div className="wd-time-options">
+                {Array.from({ length: column.count }, (_, index) => String(index).padStart(2, "0")).map((option) => (
+                  <button key={option} type="button" className={option === column.selected ? "selected" : ""}
+                    aria-label={`${column.title}: ${option}`} aria-pressed={option === column.selected}
+                    onClick={() => column.set(option)}>{option}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const unifiedCloseStyles = `
   button.rs-close, button.ctc-close, button.wd-profile-editor-close,
   button.reliability-modal-close, button.admin-setup-close,
@@ -3798,6 +3863,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
         .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
+        .wd-time-trigger{display:flex;align-items:center;justify-content:space-between;min-height:44px;text-align:left;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8;color:#a0aab3;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:60;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.14)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
         .wd-time-field{display:grid;gap:5px}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
         .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
         .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
@@ -4101,35 +4167,34 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         />
                       </div>
 
-                      <label className="wd-time-field">
+                      <div className="wd-time-field">
                         <span>Nuo</span>
-                        <input
-                          className="wd-time"
-                          type="time"
+                        <RoundedTimeSelect
+                          ariaLabel={`${day.label} nuo`}
                           disabled={!state.available}
                           value={state.from}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateAvailability(day.iso, {
-                              from: e.target.value,
+                              from: value,
                             })
                           }
                         />
-                      </label>
+                      </div>
 
-                      <label className="wd-time-field">
+                      <div className="wd-time-field">
                         <span>Iki</span>
-                        <input
-                          className="wd-time"
-                          type="time"
+                        <RoundedTimeSelect
+                          ariaLabel={`${day.label} iki`}
+                          align="right"
                           disabled={!state.available}
                           value={state.to}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateAvailability(day.iso, {
-                              to: e.target.value,
+                              to: value,
                             })
                           }
                         />
-                      </label>
+                      </div>
                     </div>
                   );
                 })}
