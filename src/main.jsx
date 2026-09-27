@@ -7926,12 +7926,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
-      const result = await supabase.from("worker_ratings").insert({
-        booking_id: ratingTarget.bookingId,
-        worker_id: ratingTarget.id,
-        rater_id: user.id,
-        score: numericScore,
-        comment: ratingComment.trim() || null,
+      const result = await supabase.rpc("submit_worker_rating", {
+        p_booking_id: ratingTarget.bookingId,
+        p_score: numericScore,
+        p_comment: ratingComment.trim() || null,
       });
 
       if (result.error) throw result.error;
