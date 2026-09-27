@@ -9695,7 +9695,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
-        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 70px;display:grid;gap:20px}
+        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 0;display:grid;gap:20px;padding-bottom:70px}
         .ed-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
         .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:8px;min-width:300px}
         .ed-heading-actions>button{width:100%}
