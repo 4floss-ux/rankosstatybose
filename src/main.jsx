@@ -9215,7 +9215,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       responsibleUserId: user.id,
     });
     setShowJobForm(true);
-    window.scrollTo({ top: 220, behavior: "smooth" });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById("employer-job-form")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
   }
 
   async function startEditJob(job) {
@@ -9228,7 +9235,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         ? "Poreikis jau turi patvirtintų darbuotojų. Esminės sąlygos užrakintos."
         : "Redaguojate esamą poreikį."
     );
-    window.scrollTo({ top: 220, behavior: "smooth" });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById("employer-job-form")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
   }
 
   async function requestRemoveOrCancelJob(job) {
@@ -10385,7 +10399,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         {error && <div className="ed-note err">{error}</div>}
 
         {showJobForm && (
-        <section className="ed-card">
+        <section
+          className="ed-card"
+          id="employer-job-form"
+          style={{ scrollMarginTop: 92 }}
+        >
           <h2>
             {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
           </h2>
