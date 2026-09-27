@@ -2524,25 +2524,14 @@ function WorkerProfileModal({
           </div>
         )}
 
-        {worker.shortBio && (
-          <div className="rs-profile-section">
-            <b>Apie patirtį</b>
-            <p style={{ color: "#6c7a88", lineHeight: 1.55 }}>
-              {worker.shortBio}
-            </p>
-          </div>
-        )}
-
-        {!!(worker.skillNames || []).length && (
-          <div className="rs-profile-section">
-            <b>Įgūdžiai</b>
-            <div className="ed-tags" style={{ marginTop: 9 }}>
-              {(worker.skillNames || []).map((skill) => (
-                <span className="ed-tag" key={skill}>{skill}</span>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="rs-profile-section">
+          <b>Trumpai apie patirtį</b>
+          <p style={{ color: "#526374", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: "8px 0 0" }}>
+            {worker.shortBio?.trim() || (Number(worker.yearsExperience || 0) > 0
+              ? `Profilyje nurodyta ${Number(worker.yearsExperience)} m. patirtis. Išsamesnio aprašymo darbuotojas dar nepateikė.`
+              : "Darbuotojas dar nepateikė savo patirties aprašymo.")}
+          </p>
+        </div>
 
         {canViewWorkerMetrics && (
           <div className="rs-profile-section">
