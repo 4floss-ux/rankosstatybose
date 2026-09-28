@@ -6516,78 +6516,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               )}
 
-              {workdayDetailsTarget.companyReviews?.length > 0 && (
-                <div
-                  style={{
-                    border: "1px solid #f0d1b2",
-                    borderRadius: 12,
-                    padding: 14,
-                    background: "#fffaf5",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      color: "#102438",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Atsiliepimai po darbuotojų laimėtų ginčų
-                  </div>
-
-                  <div style={{ display: "grid", gap: 9 }}>
-                    {workdayDetailsTarget.companyReviews.map((review) => (
-                      <div
-                        key={review.id}
-                        style={{
-                          background: "#fff",
-                          border: "1px solid #eadfd5",
-                          borderRadius: 10,
-                          padding: 11,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: 10,
-                            flexWrap: "wrap",
-                            marginBottom: 5,
-                          }}
-                        >
-                          <b>{review.score} / 10</b>
-                          <span
-                            style={{
-                              color: "#7a8996",
-                              fontSize: 11,
-                            }}
-                          >
-                            {review.work_date || ""}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            color: "#6c7a88",
-                            fontSize: 11,
-                            marginBottom: 5,
-                          }}
-                        >
-                          {review.job_title}
-                        </div>
-                        <div
-                          style={{
-                            lineHeight: 1.5,
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {review.comment}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div
                 style={{
                   display: "grid",
@@ -6749,6 +6677,79 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     "Darbdavys papildomo darbo aprašymo nepateikė."}
                 </div>
               </div>
+
+
+              {workdayDetailsTarget.companyReviews?.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #f0d1b2",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fffaf5",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      color: "#102438",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Darbuotojų atsiliepimai apie įmonę
+                  </div>
+
+                  <div style={{ display: "grid", gap: 9 }}>
+                    {workdayDetailsTarget.companyReviews.map((review) => (
+                      <div
+                        key={review.id}
+                        style={{
+                          background: "#fff",
+                          border: "1px solid #eadfd5",
+                          borderRadius: 10,
+                          padding: 11,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            flexWrap: "wrap",
+                            marginBottom: 5,
+                          }}
+                        >
+                          <b>{review.score} / 10</b>
+                          <span
+                            style={{
+                              color: "#7a8996",
+                              fontSize: 11,
+                            }}
+                          >
+                            {review.work_date || ""}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            color: "#6c7a88",
+                            fontSize: 11,
+                            marginBottom: 5,
+                          }}
+                        >
+                          {review.job_title}
+                        </div>
+                        <div
+                          style={{
+                            lineHeight: 1.5,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {review.comment}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div
