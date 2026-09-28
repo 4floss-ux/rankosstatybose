@@ -9946,6 +9946,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-attendance-person span{display:block;color:#6c7a88;margin-top:4px;font-size:13px}
         .ed-attendance-choice{display:grid;gap:10px}
         .ed-attendance-choice>button{width:100%;min-height:48px}
+        .ed-rating-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-rating-modal{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-rating-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+        .ed-rating-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
+        .ed-rating-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
+        .ed-rating-close:disabled{opacity:.55;cursor:not-allowed}
+        .ed-rating-scores{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px;margin-bottom:16px}
+        .ed-rating-scores>button{min-width:0;padding:10px 0}
+        .ed-rating-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
         .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.ed-urgent-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
         .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
         .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
@@ -9966,6 +9975,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-saved-meta span{display:block;color:#7a8996;font-size:11px;margin-bottom:4px}.ed-saved-meta b{font-size:13px}
         .ed-saved-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
         .ed-team-add{border:1px solid #cfe4db;background:#f2faf6;color:#167a54;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-team-add.saved{cursor:default}
         .ed-team-badge{display:inline-flex;align-items:center;border-radius:999px;background:#edf8f3;color:#167a54;padding:7px 9px;font-size:11px;font-weight:800}
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
@@ -11286,9 +11296,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           {attendance.finalized_at &&
                             attendance.final_outcome !== "no_show" &&
                             (savedWorkerIdSet.has(worker.id) ? (
-                              <span className="ed-team-badge">
+                              <button
+                                className="ed-team-add saved"
+                                type="button"
+                                aria-disabled="true"
+                              >
                                 Favorituose
-                              </span>
+                              </button>
                             ) : (
                               <button
                                 className="ed-team-add"
@@ -11766,6 +11780,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       {attendanceTarget && attendanceMode && (
         <div
           className="ed-attendance-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9600,
+            background: "rgba(16,36,56,.64)",
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+          }}
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !attendanceSaving) {
@@ -11778,6 +11801,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div
             className="ed-attendance-modal"
+            style={{
+              width: "min(560px, 100%)",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "auto",
+              background: "#fff",
+              borderRadius: 20,
+              padding: 22,
+              boxShadow: "0 30px 100px rgba(16,36,56,.32)",
+              color: "#102438",
+            }}
             role="dialog"
             aria-modal="true"
             aria-label="Darbo dienos uždarymas"
@@ -11980,7 +12013,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       {ratingTarget && canViewWorkerMetrics && (
         <div
-          className="rs-modal-overlay"
+          className="ed-rating-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9700,
+            background: "rgba(16,36,56,.64)",
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+          }}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !ratingSaving) {
               setRatingTarget(null);
@@ -11989,8 +12031,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
+          <div
+            className="ed-rating-modal"
+            style={{
+              width: "min(620px, 100%)",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "auto",
+              background: "#fff",
+              borderRadius: 20,
+              padding: 22,
+              boxShadow: "0 30px 100px rgba(16,36,56,.32)",
+              color: "#102438",
+            }}
+          >
+            <div className="ed-rating-head">
               <div>
                 <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
                 <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
@@ -12000,7 +12054,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
               <button
-                className="rs-close"
+                className="ed-rating-close"
                 disabled={ratingSaving}
                 onClick={() => {
                   setRatingTarget(null);
@@ -12013,13 +12067,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="ed-rating-scores">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
                   <button
                     key={score}
@@ -12049,14 +12097,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               />
             </label>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 9,
-                marginTop: 18,
-              }}
-            >
+            <div className="ed-rating-actions">
               <button
                 className="ed-secondary"
                 disabled={ratingSaving}
