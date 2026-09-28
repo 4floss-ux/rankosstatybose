@@ -6945,6 +6945,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
   const payAmountInputRef = useRef(null);
+  const descriptionInputRef = useRef(null);
   const [form, setForm] = useState({
     title: "Statybų pagalbiniai",
     city: "Vilnius",
@@ -8102,8 +8103,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-    if (key === "payAmount") {
-      setJobFormErrors((current) => ({ ...current, payAmount: "" }));
+    if (key === "payAmount" || key === "description") {
+      setJobFormErrors((current) => ({ ...current, [key]: "" }));
     }
   }
 
@@ -8952,7 +8953,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (!form.payAmount || Number(form.payAmount) <= 0) {
       const message = "Įveskite atlygio sumą prieš kuriant darbo pasiūlymą.";
-      setError(message);
       setJobFormErrors({ payAmount: message });
       requestAnimationFrame(() => {
         payAmountInputRef.current?.focus();
@@ -8965,7 +8965,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (form.description.trim().length < 10) {
-      setError("Aprašykite darbą išsamiau, kad darbuotojui būtų aišku, ką reikės daryti.");
+      const message =
+        form.description.trim().length === 0
+          ? "Įrašykite darbo aprašymą."
+          : "Darbo aprašymas turi būti bent 10 simbolių.";
+      setJobFormErrors({ description: message });
+      requestAnimationFrame(() => {
+        descriptionInputRef.current?.focus();
+        descriptionInputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
       return;
     }
 
@@ -10590,12 +10601,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <label className="ed-label ed-span-4">
               Darbo aprašymas *
               <textarea
+                ref={descriptionInputRef}
                 className="ed-textarea"
                 required
+                aria-invalid={Boolean(jobFormErrors.description)}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 placeholder="Aprašykite, ką reikės daryti, darbo sąlygas, ar suteikiami įrankiai, kokia apranga reikalinga ir kitą svarbią informaciją."
+                style={jobFormErrors.description ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
               />
+              {jobFormErrors.description && (
+                <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
+                  {jobFormErrors.description}
+                </span>
+              )}
             </label>
 
             {!editingJobId && (
