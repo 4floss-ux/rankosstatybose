@@ -5743,6 +5743,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
+        {notice && <div className="wd-note ok">{notice}</div>}
+        {error && <div className="wd-note err">{error}</div>}
+        {metrics.restrictedUntil &&
+          new Date(metrics.restrictedUntil) > new Date() && (
+            <div className="wd-note err">
+              Paskyrai taikomas laikinas apribojimas: naujų darbų priimti negalite iki{" "}
+              {new Date(metrics.restrictedUntil).toLocaleString("lt-LT", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}.
+            </div>
+          )}
+
         <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
 
         <div className="wd-overview">
@@ -6314,19 +6327,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           </section>
         )}
-
-        {notice && <div className="wd-note ok">{notice}</div>}
-        {error && <div className="wd-note err">{error}</div>}
-        {metrics.restrictedUntil &&
-          new Date(metrics.restrictedUntil) > new Date() && (
-            <div className="wd-note err">
-              Paskyrai taikomas laikinas apribojimas: naujų darbų priimti negalite iki{" "}
-              {new Date(metrics.restrictedUntil).toLocaleString("lt-LT", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })}.
-            </div>
-          )}
 
         <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
           <div
