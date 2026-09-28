@@ -10617,7 +10617,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
         .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
-        .ed-worker-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-worker-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         @media(max-width:900px){.ed-worker{grid-template-columns:1fr}.ed-worker.ed-worker-basic{grid-template-columns:1fr}.ed-worker-actions{justify-self:stretch;max-width:none}}
         .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
