@@ -2381,14 +2381,15 @@ function DisputeConversationModal({
   }
 
   function senderLabel(message) {
+    if (message.sender_name) return message.sender_name;
     if (message.sender_role === "admin") return "Administratorius";
     if (message.sender_role === "worker") {
-      return message.sender_name || workerName || "Darbuotojas";
+      return workerName ? `Darbuotojas ${workerName}` : "Darbuotojas";
     }
     if (message.sender_role === "employer") {
-      return message.sender_name || companyName || "Darbdavys";
+      return companyName ? `${companyName} · Darbdavys` : "Darbdavys";
     }
-    return message.sender_name || "Vartotojas";
+    return "Vartotojas";
   }
 
   if (!open) return null;
@@ -2453,7 +2454,7 @@ function DisputeConversationModal({
 
               return (
                 <div className={className} key={message.message_id}>
-                  <b>{mine ? "Jūs" : senderLabel(message)}</b>
+                  <b>{senderLabel(message)}</b>
                   <p>{message.body}</p>
                   <time>
                     {new Date(message.created_at).toLocaleString("lt-LT", {
@@ -3101,7 +3102,7 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
               const mine = message.sender_id === user?.id;
               return (
                 <div className={`lt-chat-message ${mine ? "mine" : ""}`} key={message.id}>
-                  <b>{mine ? "Jūs" : message.sender_name || "Vartotojas"}</b>
+                  <b>{message.sender_name || (mine ? "Jūs" : "Vartotojas")}</b>
                   <p>{message.body}</p>
                   <time>
                     {new Date(message.created_at).toLocaleString("lt-LT", {
@@ -3298,12 +3299,7 @@ function CompanyTeamChatModal({
                 }
                 key={message.id}
               >
-                <b>
-                  {message.sender_label || "Komandos narys"}{" "}
-                  <span className="ctc-role">
-                    · {companyTeamRoleLabel(message.sender_role)}
-                  </span>
-                </b>
+                <b>{message.sender_label || "Komandos narys"}</b>
                 <p>{message.body}</p>
                 <time>
                   {new Date(message.created_at).toLocaleString("lt-LT", {
@@ -12743,7 +12739,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
         .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
-        .ed-profile-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+        .ed-profile-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px}
         .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
         .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
         .ed-profile-summary-card b{display:block;font-family:Manrope,Inter,sans-serif;font-size:16px;overflow-wrap:anywhere}
@@ -13133,6 +13129,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     : "Komanda · Business Pro"}
                 </button>
               </div>
+
+              {companyMemberRole === "owner" && (
+                <div className="ed-profile-summary-card">
+                  <span>Įdarbinti darbuotojai</span>
+                  <b>
+                    {companyLongTermOffers.filter(
+                      (offer) => offer.status === "active"
+                    ).length}
+                  </b>
+                  <button
+                    className="ed-link-btn"
+                    type="button"
+                    onClick={() => openLongTermEmployment("employees")}
+                  >
+                    Valdyti darbuotojus
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="ed-company-editor-grid">
@@ -13352,14 +13366,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       )}
                     </span>
                   )}
-                </button>
-
-                <button
-                  className="ed-secondary"
-                  type="button"
-                  onClick={() => openLongTermEmployment("employees")}
-                >
-                  Įdarbinti darbuotojai
                 </button>
               </>
             )}
@@ -18452,14 +18458,10 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
                 key={message.id}
               >
                 <b>
-                  {message.sender_role === "admin"
-                    ? "Administratorius"
-                    : message.sender_label || "Komandos narys"}
-                  {message.sender_role !== "admin" && (
-                    <span className="admin-team-chat-role">
-                      {` · ${companyTeamRoleLabel(message.sender_role)}`}
-                    </span>
-                  )}
+                  {message.sender_label ||
+                    (message.sender_role === "admin"
+                      ? "Administratorius"
+                      : "Komandos narys")}
                 </b>
                 <p>{message.body}</p>
                 <time>
