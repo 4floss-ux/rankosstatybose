@@ -5701,6 +5701,30 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         target: "profile",
       };
 
+  function openNearestConfirmedWorkday() {
+    if (!nextConfirmedWorkday?.job?.id) return;
+
+    const targetIndex = activeWorkerWorkdays.findIndex(
+      (item) => item?.job?.id === nextConfirmedWorkday.job.id
+    );
+    const targetPage =
+      targetIndex >= 0
+        ? Math.floor(targetIndex / DASHBOARD_PAGE_SIZE) + 1
+        : 1;
+
+    setWorkerActivePage(targetPage);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById(`worker-workday-${nextConfirmedWorkday.job.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+
+    openWorkdayDetails(nextConfirmedWorkday);
+  }
+
   function openWorkerDashboardTarget(target) {
     if (target === "profile") {
       setShowProfileEditor(true);
@@ -6023,7 +6047,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <button
                   className="wd-overview-open"
                   type="button"
-                  onClick={() => openWorkerDashboardTarget("workdays")}
+                  onClick={openNearestConfirmedWorkday}
                 >
                   Peržiūrėti
                 </button>
@@ -6802,7 +6826,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   if (!recentOrActive) return null;
 
                   return (
-                    <div className="wd-workday" key={item.id}>
+                    <div
+                      className="wd-workday"
+                      key={item.id}
+                      id={`worker-workday-${job.id}`}
+                    >
                       <div>
                         <div className="wd-workday-head">
                           <CompanyBadge
