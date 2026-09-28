@@ -4885,7 +4885,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="wd-kpi">
               <span>Probleminės darbo dienos</span>
               <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
-              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+              <small style={{ display: "block", marginTop: 5, color: "#8a98a6", whiteSpace: "nowrap", fontSize: 11 }}>
                 Neatvykimai {metrics.noShowCount} · ankstyvi išėjimai {workerStats.unexcusedEarlyLeaveCount}
               </small>
             </div>
