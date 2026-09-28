@@ -141,13 +141,15 @@ function StyledConfirmDialog({ dialog, onResolve }) {
         </div>
         <p style={{ margin: "16px 0 0", color: "#607180", lineHeight: 1.55 }}>{dialog.message}</p>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 22, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => onResolve(false)}
-            style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#102438", fontWeight: 800 }}
-          >
-            {dialog.cancelLabel || "Atšaukti"}
-          </button>
+          {!dialog.hideCancel && (
+            <button
+              type="button"
+              onClick={() => onResolve(false)}
+              style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#102438", fontWeight: 800 }}
+            >
+              {dialog.cancelLabel || "Atšaukti"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onResolve(true)}
@@ -9652,7 +9654,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setShowJobForm(false);
 
     } catch (err) {
-      setError(err?.message || "Nepavyko sukurti darbo pasiūlymo.");
+      const message = err?.message || "Nepavyko sukurti darbo pasiūlymo.";
+      const unclosedMatch = message.match(
+        /Pirmiausia uždarykite pasibaigusias darbo dienas \((\d+)\)/i
+      );
+
+      if (unclosedMatch) {
+        setError("");
+        setShowJobForm(false);
+        await askConfirm({
+          eyebrow: "NEUŽBAIGTI DARBAI",
+          title: "Pirmiausia užbaikite pasibaigusius darbus",
+          message: `Turite neuždarytų pasibaigusių darbo dienų (${unclosedMatch[1]}). Pateikite jų rezultatus, tada galėsite kurti naują darbo pasiūlymą.`,
+          confirmLabel: "Supratau",
+          hideCancel: true,
+        });
+      } else {
+        setError(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -9902,7 +9921,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  function openNewJobForm() {
+  async function openNewJobForm() {
     if (
       planSummary &&
       !planSummary.unlimited_jobs &&
@@ -9914,6 +9933,35 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           : "Basic plano 5 darbo pasiūlymų limitas šį mėnesį išnaudotas. Planus galite peržiūrėti paspaudę „Planai“."
       );
       return;
+    }
+
+    if (company?.id) {
+      const unclosedResult = await supabase.rpc(
+        "get_employer_unclosed_workdays",
+        { p_company_id: company.id }
+      );
+
+      if (unclosedResult.error) {
+        setError(
+          unclosedResult.error.message ||
+            "Nepavyko patikrinti neuždarytų darbo dienų."
+        );
+        return;
+      }
+
+      const unclosedCount = (unclosedResult.data || []).length;
+
+      if (unclosedCount > 0) {
+        setError("");
+        await askConfirm({
+          eyebrow: "NEUŽBAIGTI DARBAI",
+          title: "Pirmiausia užbaikite pasibaigusius darbus",
+          message: `Turite neuždarytų pasibaigusių darbo dienų (${unclosedCount}). Pateikite jų rezultatus, tada galėsite kurti naują darbo pasiūlymą.`,
+          confirmLabel: "Supratau",
+          hideCancel: true,
+        });
+        return;
+      }
     }
 
     setEditingJobId(null);
