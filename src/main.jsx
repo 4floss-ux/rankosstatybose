@@ -2752,6 +2752,280 @@ function GroupConversationModal({
 }
 
 
+
+function longTermWeekdayLabel(day) {
+  return ({
+    1: "Pirmadienis",
+    2: "Antradienis",
+    3: "Trečiadienis",
+    4: "Ketvirtadienis",
+    5: "Penktadienis",
+    6: "Šeštadienis",
+    7: "Sekmadienis",
+  })[Number(day)] || "Diena";
+}
+
+function longTermContractLabel(value) {
+  return value === "fixed_term" ? "Terminuota" : "Neterminuota";
+}
+
+function defaultLongTermSchedule() {
+  return [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+    weekday,
+    enabled: weekday <= 5,
+    startTime: "08:00",
+    endTime: "17:00",
+    noBreak: false,
+    breakStartTime: "12:00",
+    breakEndTime: "12:30",
+  }));
+}
+
+function longTermStatusLabel(value) {
+  return ({
+    offered: "Pasiūlymas pateiktas",
+    active: "Aktyvus įdarbinimas",
+    declined: "Pasiūlymas atmestas",
+    withdrawn: "Pasiūlymas atšauktas",
+    ended: "Įdarbinimas pasibaigęs",
+  })[value] || value || "Pasiūlymas";
+}
+
+function LongTermOfferDetails({ offer }) {
+  if (!offer) return null;
+
+  const schedule = Array.isArray(offer.schedule) ? offer.schedule : [];
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+          gap: 10,
+        }}
+      >
+        <div className="lt-detail-card">
+          <span>Darbo pozicija</span>
+          <b>{offer.position_title || "—"}</b>
+        </div>
+        <div className="lt-detail-card">
+          <span>Sutartis</span>
+          <b>{longTermContractLabel(offer.contract_type)}</b>
+        </div>
+        <div className="lt-detail-card">
+          <span>Preliminari pradžia</span>
+          <b>{offer.proposed_start_date || "—"}</b>
+        </div>
+        <div className="lt-detail-card">
+          <span>Pabaiga</span>
+          <b>
+            {offer.contract_type === "fixed_term"
+              ? offer.proposed_end_date || "—"
+              : "Neterminuota"}
+          </b>
+        </div>
+        <div className="lt-detail-card">
+          <span>Darbo vieta</span>
+          <b>{offer.workplace_city || "—"}</b>
+          {offer.workplace_address && (
+            <small>Atvykti adresu: {offer.workplace_address}</small>
+          )}
+        </div>
+        <div className="lt-detail-card">
+          <span>Siūlomas atlygis</span>
+          <b>
+            {offer.salary_amount
+              ? `${offer.salary_amount} € ${
+                  offer.salary_period === "monthly" ? "/ mėn." : "/ val."
+                }`
+              : "Nenurodytas"}
+          </b>
+          {offer.salary_note && <small>{offer.salary_note}</small>}
+        </div>
+      </div>
+
+      <div className="lt-detail-card">
+        <span>Įdarbinimo informacija</span>
+        <div style={{ marginTop: 5, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+          {offer.employment_details?.trim() ||
+            "Darbdavys papildomos informacijos nepateikė."}
+        </div>
+      </div>
+
+      <div className="lt-detail-card">
+        <span>Siūlomas darbo grafikas</span>
+        {offer.schedule_type === "variable" ? (
+          <div style={{ marginTop: 6, lineHeight: 1.5 }}>
+            Kintamas grafikas. Konkretų prieinamumą darbuotojas ir toliau valdo
+            savo workforce grafike.
+          </div>
+        ) : schedule.length ? (
+          <div className="lt-schedule-table">
+            {schedule.map((row) => (
+              <div className="lt-schedule-row" key={`${offer.id}-${row.weekday}`}>
+                <b>{longTermWeekdayLabel(row.weekday)}</b>
+                <span>
+                  {String(row.start_time || "").slice(0, 5)}–
+                  {String(row.end_time || "").slice(0, 5)}
+                </span>
+                <span>
+                  {row.break_start_time && row.break_end_time
+                    ? `Pietūs ${String(row.break_start_time).slice(0, 5)}–${String(
+                        row.break_end_time
+                      ).slice(0, 5)}`
+                    : "Pietų pertraukos nėra"}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ marginTop: 6 }}>Grafikas nenurodytas.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LongTermConversationModal({ open, onClose, placementId, title, user }) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (!open || !placementId) return;
+    scrollOnLoadRef.current = true;
+    setMessages([]);
+    loadMessages();
+    const timer = window.setInterval(loadMessages, 3000);
+    return () => window.clearInterval(timer);
+  }, [open, placementId]);
+
+  useEffect(() => {
+    if (!open || loading || !scrollOnLoadRef.current || !messagesRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, loading, messages]);
+
+  async function loadMessages() {
+    if (!placementId) return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("get_long_term_messages", {
+        p_placement_id: placementId,
+      });
+      if (result.error) throw result.error;
+      setMessages(result.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti pokalbio.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || sending || !placementId) return;
+    setSending(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("send_long_term_message", {
+        p_placement_id: placementId,
+        p_body: body,
+      });
+      if (result.error) throw result.error;
+      setTextValue("");
+      scrollOnLoadRef.current = true;
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="rs-modal-card">
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">ĮDARBINIMO PASIŪLYMO POKALBIS</div>
+            <h2>{title || "Aptarti pasiūlymą"}</h2>
+            <p style={{ margin: "6px 0 0", color: "#6c7a88", fontSize: 13 }}>
+              Čia galite aptarti pasiūlymo sąlygas prieš realų įsidarbinimo patvirtinimą.
+            </p>
+          </div>
+          <button className="rs-close" type="button" onClick={onClose}>
+            <CloseMark />
+          </button>
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages" ref={messagesRef}>
+          {loading && !messages.length ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => {
+              const mine = message.sender_id === user?.id;
+              return (
+                <div className={`rs-message ${mine ? "mine" : ""}`} key={message.id}>
+                  <b>{mine ? "Jūs" : message.sender_name || "Vartotojas"}</b>
+                  <p>{message.body}</p>
+                  <time>
+                    {new Date(message.created_at).toLocaleString("lt-LT", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </time>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rs-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
+          )}
+        </div>
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent?.isComposing) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) sendMessage(e);
+              }
+            }}
+            maxLength={2000}
+            placeholder="Parašykite žinutę apie pasiūlymą..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CompanyTeamChatModal({
   open,
   onClose,
@@ -3311,6 +3585,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [conversation, setConversation] = useState(null);
   const [groupConversation, setGroupConversation] = useState(null);
   const [disputeConversation, setDisputeConversation] = useState(null);
+  const [longTermOffers, setLongTermOffers] = useState([]);
+  const [longTermOfferTarget, setLongTermOfferTarget] = useState(null);
+  const [longTermConversation, setLongTermConversation] = useState(null);
+  const [longTermBusy, setLongTermBusy] = useState(false);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const workerProfileEditorRef = useRef(null);
@@ -3405,6 +3683,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadInvitations(),
         loadWorkerStats(),
         loadEmployerReviewOpportunities(),
+        loadLongTermOffers(),
       ]).catch(() => {
         // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
       });
@@ -3424,6 +3703,82 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     return () => window.clearInterval(timer);
   }, [user.id]);
+
+  async function loadLongTermOffers() {
+    const result = await supabase.rpc("get_worker_long_term_offers");
+    if (result.error) throw result.error;
+    const rows = result.data || [];
+    setLongTermOffers(rows);
+    setLongTermOfferTarget((current) =>
+      current ? rows.find((row) => row.id === current.id) || null : current
+    );
+    return rows;
+  }
+
+  async function workerConfirmLongTermOffer(offer) {
+    if (!offer?.id || longTermBusy) return;
+    setLongTermBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await supabase.rpc("worker_confirm_long_term_placement", {
+        p_placement_id: offer.id,
+      });
+      if (result.error) throw result.error;
+      await loadLongTermOffers();
+      setNotice(
+        result.data === "active"
+          ? "Įsidarbinimas patvirtintas abiejų pusių. Dabar pasirinkite, ar ieškosite papildomų darbų laisvu metu."
+          : "Jūsų patvirtinimas išsaugotas. Laukiama darbdavio patvirtinimo."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti įsidarbinimo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function workerDeclineLongTermOffer(offer) {
+    if (!offer?.id || longTermBusy) return;
+    setLongTermBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_decline_long_term_placement", {
+        p_placement_id: offer.id,
+      });
+      if (result.error) throw result.error;
+      setLongTermOfferTarget(null);
+      await loadLongTermOffers();
+      setNotice("Įdarbinimo pasiūlymas atmestas.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko atmesti pasiūlymo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function setLongTermSearchPreference(offer, value) {
+    if (!offer?.id || longTermBusy) return;
+    setLongTermBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_set_long_term_search_preference", {
+        p_placement_id: offer.id,
+        p_search_extra_jobs: value,
+      });
+      if (result.error) throw result.error;
+      await loadLongTermOffers();
+      setNotice(
+        value
+          ? "Papildomų workforce darbų paieška palikta įjungta laisvu metu."
+          : "Papildomų workforce darbų paieška išjungta."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti pasirinkimo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
 
   async function loadDashboard() {
     setLoading(true);
@@ -3573,6 +3928,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadInvitations(),
         loadWorkerStats(),
         loadEmployerReviewOpportunities(),
+        loadLongTermOffers(),
       ]);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
@@ -3591,11 +3947,34 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function hasCurrentScheduledWork() {
-    return workdays.some((item) =>
+    const hasShortTermWork = workdays.some((item) =>
       ["confirmed", "no_show"].includes(item.status) &&
       ["open", "filled", "in_progress"].includes(item.job?.status) &&
       jobCheckInWindowOpen(item.job) && !jobHasEnded(item.job)
     );
+
+    if (hasShortTermWork) return true;
+
+    const now = new Date();
+    const today = localDateISO(now);
+    const weekday = now.getDay() === 0 ? 7 : now.getDay();
+    const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+
+    return longTermOffers.some((offer) => {
+      if (offer.status !== "active" || offer.schedule_type !== "fixed") return false;
+      if (offer.proposed_start_date && today < offer.proposed_start_date) return false;
+      if (offer.proposed_end_date && today > offer.proposed_end_date) return false;
+
+      const schedule = Array.isArray(offer.schedule) ? offer.schedule : [];
+      const row = schedule.find((item) => Number(item.weekday) === weekday);
+      if (!row?.start_time || !row?.end_time) return false;
+
+      const start = String(row.start_time).slice(0, 5);
+      const end = String(row.end_time).slice(0, 5);
+      return nowTime >= start && nowTime < end;
+    });
   }
 
   async function enableUrgentAvailability() {
@@ -5641,6 +6020,103 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
 
+        <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h2 style={{ marginBottom: 6 }}>Įdarbinimo pasiūlymai</h2>
+              <p className="wd-card-sub" style={{ marginBottom: 0 }}>
+                Čia rodomi įmonių pasiūlymai ilgalaikiam darbui. Pasiūlymo aptarimas
+                nekeičia jūsų workforce grafiko, kol įsidarbinimo nepatvirtina abi pusės.
+              </p>
+            </div>
+            {longTermOffers.filter((offer) => offer.status === "offered").length > 0 && (
+              <span className="wd-workday-status orange" style={{ marginTop: 0 }}>
+                Nauji pasiūlymai · {longTermOffers.filter((offer) => offer.status === "offered").length}
+              </span>
+            )}
+          </div>
+
+          {longTermOffers.length ? (
+            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+              {longTermOffers.map((offer) => (
+                <div
+                  key={offer.id}
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 14,
+                    padding: 14,
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 14,
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                    <CompanyBadge
+                      name={offer.company_name}
+                      avatarPath={offer.company_avatar_path}
+                      size={46}
+                      fontSize={16}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <b style={{ display: "block", fontSize: 16 }}>
+                        {offer.company_name || "Darbdavys"}
+                      </b>
+                      <div style={{ marginTop: 3, color: "#425466", fontWeight: 700 }}>
+                        {offer.position_title}
+                      </div>
+                      <div style={{ marginTop: 3, color: "#6c7a88", fontSize: 12 }}>
+                        {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date}
+                      </div>
+                      <span
+                        className={`wd-workday-status ${
+                          offer.status === "active"
+                            ? "green"
+                            : offer.status === "offered"
+                            ? "orange"
+                            : "muted"
+                        }`}
+                        style={{ marginTop: 7 }}
+                      >
+                        {longTermStatusLabel(offer.status)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    onClick={() => setLongTermOfferTarget(offer)}
+                  >
+                    Atidaryti
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "18px 14px",
+                borderRadius: 12,
+                background: "#f7f9fb",
+                color: "#6c7a88",
+                textAlign: "center",
+              }}
+            >
+              Įdarbinimo pasiūlymų kol kas nėra.
+            </div>
+          )}
+        </section>
+
         <div className="wd-form">
           <section className="wd-card" id="worker-workdays">
             <h2>Mano darbai</h2>
@@ -7536,6 +8012,182 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
+      {longTermOfferTarget && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !longTermBusy) {
+              setLongTermOfferTarget(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card" style={{ width: "min(820px,100%)" }}>
+            <style>{`
+              .lt-detail-card{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#fff}
+              .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:4px}
+              .lt-detail-card>b{display:block;color:#102438}.lt-detail-card small{display:block;margin-top:4px;color:#6c7a88;line-height:1.4}
+              .lt-schedule-table{display:grid;gap:7px;margin-top:9px}.lt-schedule-row{display:grid;grid-template-columns:1.1fr .8fr 1.4fr;gap:10px;align-items:center;padding:9px 10px;border-radius:9px;background:#f7f9fb;font-size:12px}.lt-schedule-row span{color:#526374}
+              @media(max-width:620px){.lt-schedule-row{grid-template-columns:1fr}.lt-detail-card+ .lt-detail-card{min-width:0}}
+            `}</style>
+
+            <div className="rs-modal-head">
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <CompanyBadge
+                  name={longTermOfferTarget.company_name}
+                  avatarPath={longTermOfferTarget.company_avatar_path}
+                  size={50}
+                  fontSize={17}
+                />
+                <div>
+                  <div className="eyebrow">ĮDARBINIMO PASIŪLYMAS</div>
+                  <h2 style={{ marginBottom: 4 }}>{longTermOfferTarget.company_name}</h2>
+                  <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                    {longTermStatusLabel(longTermOfferTarget.status)}
+                  </div>
+                </div>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={longTermBusy}
+                onClick={() => setLongTermOfferTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <LongTermOfferDetails offer={longTermOfferTarget} />
+
+            {longTermOfferTarget.status === "offered" && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 13,
+                  borderRadius: 12,
+                  background: "#fff8f1",
+                  color: "#7a4a1d",
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                „Patvirtinti įsidarbinimą“ spauskite tik tada, kai su darbdaviu jau
+                realiai susitarėte dėl įdarbinimo / sutarties. Kol pasiūlymas tik
+                aptariamas, jūsų grafikas neblokuojamas.
+              </div>
+            )}
+
+            {longTermOfferTarget.status === "active" && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 14,
+                  border: "1px solid #cfe8dc",
+                  borderRadius: 12,
+                  background: "#f3faf6",
+                }}
+              >
+                <b>Ar norite toliau ieškoti papildomų workforce darbų?</b>
+                <p style={{ margin: "5px 0 11px", color: "#607180", fontSize: 13 }}>
+                  Galite toliau naudotis workforce laisvu metu. Pastovus aktyvaus
+                  įdarbinimo grafikas automatiškai saugomas nuo persidengiančių darbų.
+                </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    className={
+                      longTermOfferTarget.search_extra_jobs === true
+                        ? "wd-accept"
+                        : "wd-decline"
+                    }
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={() => setLongTermSearchPreference(longTermOfferTarget, true)}
+                  >
+                    Ieškau papildomų darbų laisvu metu
+                  </button>
+                  <button
+                    className={
+                      longTermOfferTarget.search_extra_jobs === false
+                        ? "wd-accept"
+                        : "wd-decline"
+                    }
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={() => setLongTermSearchPreference(longTermOfferTarget, false)}
+                  >
+                    Šiuo metu papildomų darbų neieškau
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 9,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              <button
+                className="wd-decline"
+                type="button"
+                disabled={longTermBusy}
+                onClick={() =>
+                  setLongTermConversation({
+                    placementId: longTermOfferTarget.id,
+                    title: `${longTermOfferTarget.company_name} · ${longTermOfferTarget.position_title}`,
+                  })
+                }
+              >
+                Aptarti pasiūlymą
+              </button>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {longTermOfferTarget.status === "offered" && (
+                  <>
+                    <button
+                      className="wd-danger"
+                      type="button"
+                      disabled={longTermBusy}
+                      onClick={() => workerDeclineLongTermOffer(longTermOfferTarget)}
+                    >
+                      Atmesti
+                    </button>
+                    <button
+                      className="wd-accept"
+                      type="button"
+                      disabled={longTermBusy || Boolean(longTermOfferTarget.worker_confirmed_at)}
+                      onClick={() => workerConfirmLongTermOffer(longTermOfferTarget)}
+                    >
+                      {longTermOfferTarget.worker_confirmed_at
+                        ? "Jūs patvirtinote"
+                        : "Patvirtinti įsidarbinimą"}
+                    </button>
+                  </>
+                )}
+                <button
+                  className="wd-decline"
+                  type="button"
+                  disabled={longTermBusy}
+                  onClick={() => setLongTermOfferTarget(null)}
+                >
+                  Uždaryti
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <LongTermConversationModal
+        open={Boolean(longTermConversation)}
+        onClose={() => setLongTermConversation(null)}
+        placementId={longTermConversation?.placementId}
+        title={longTermConversation?.title}
+        user={user}
+      />
+
       <ConversationModal
         open={Boolean(conversation)}
         onClose={() => setConversation(null)}
@@ -7896,6 +8548,28 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [conversation, setConversation] = useState(null);
   const [groupConversation, setGroupConversation] = useState(null);
   const [disputeConversation, setDisputeConversation] = useState(null);
+  const [showLongTermEmployment, setShowLongTermEmployment] = useState(false);
+  const [longTermCandidates, setLongTermCandidates] = useState([]);
+  const [companyLongTermOffers, setCompanyLongTermOffers] = useState([]);
+  const [longTermSelectedWorker, setLongTermSelectedWorker] = useState(null);
+  const [longTermConversation, setLongTermConversation] = useState(null);
+  const [longTermBusy, setLongTermBusy] = useState(false);
+  const [longTermOfferForm, setLongTermOfferForm] = useState({
+    positionTitle: "",
+    contractType: "indefinite",
+    proposedStartDate: employerTomorrowISO(),
+    proposedEndDate: "",
+    workplaceCity: "",
+    workplaceAddress: "",
+    salaryAmount: "",
+    salaryPeriod: "monthly",
+    salaryNote: "",
+    employmentDetails: "",
+    scheduleType: "fixed",
+  });
+  const [longTermSchedule, setLongTermSchedule] = useState(() =>
+    defaultLongTermSchedule()
+  );
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -8829,6 +9503,201 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       skillNames: Array.isArray(review.skill_names) ? review.skill_names : [],
       profileJobId: review.job_id || null,
     });
+  }
+
+  async function loadCompanyLongTermData(companyId = company?.id) {
+    if (!companyId) return { candidates: [], offers: [] };
+
+    const [candidatesResult, offersResult] = await Promise.all([
+      supabase.rpc("get_company_long_term_candidates", {
+        p_company_id: companyId,
+      }),
+      supabase.rpc("get_company_long_term_offers", {
+        p_company_id: companyId,
+      }),
+    ]);
+
+    if (candidatesResult.error) throw candidatesResult.error;
+    if (offersResult.error) throw offersResult.error;
+
+    const candidates = candidatesResult.data || [];
+    const offers = offersResult.data || [];
+    setLongTermCandidates(candidates);
+    setCompanyLongTermOffers(offers);
+    return { candidates, offers };
+  }
+
+  async function openLongTermEmployment() {
+    if (!company?.id) return;
+    setShowLongTermEmployment(true);
+    setLongTermSelectedWorker(null);
+    setLongTermBusy(true);
+    setError("");
+    try {
+      await loadCompanyLongTermData(company.id);
+      setLongTermOfferForm((current) => ({
+        ...current,
+        positionTitle: "",
+        contractType: "indefinite",
+        proposedStartDate: employerTomorrowISO(),
+        proposedEndDate: "",
+        workplaceCity: company.city || companyForm.city || "Vilnius",
+        workplaceAddress: "",
+        salaryAmount: "",
+        salaryPeriod: "monthly",
+        salaryNote: "",
+        employmentDetails: "",
+        scheduleType: "fixed",
+      }));
+      setLongTermSchedule(defaultLongTermSchedule());
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti įdarbinimo pasiūlymų.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  function chooseLongTermCandidate(worker) {
+    setLongTermSelectedWorker(worker);
+    setLongTermOfferForm((current) => ({
+      ...current,
+      positionTitle: "",
+      contractType: "indefinite",
+      proposedStartDate: employerTomorrowISO(),
+      proposedEndDate: "",
+      workplaceCity: company?.city || companyForm.city || "Vilnius",
+      workplaceAddress: "",
+      salaryAmount: "",
+      salaryPeriod: "monthly",
+      salaryNote: "",
+      employmentDetails: "",
+      scheduleType: "fixed",
+    }));
+    setLongTermSchedule(defaultLongTermSchedule());
+  }
+
+  function updateLongTermScheduleDay(weekday, key, value) {
+    setLongTermSchedule((current) =>
+      current.map((row) =>
+        row.weekday === weekday ? { ...row, [key]: value } : row
+      )
+    );
+  }
+
+  async function submitLongTermOffer() {
+    if (!company?.id || !longTermSelectedWorker?.worker_id || longTermBusy) return;
+
+    if (!longTermOfferForm.positionTitle.trim()) {
+      setError("Nurodykite darbo poziciją.");
+      return;
+    }
+    if (!longTermOfferForm.proposedStartDate) {
+      setError("Nurodykite preliminarią darbo pradžios datą.");
+      return;
+    }
+    if (
+      longTermOfferForm.contractType === "fixed_term" &&
+      !longTermOfferForm.proposedEndDate
+    ) {
+      setError("Terminuotai sutarčiai nurodykite pabaigos datą.");
+      return;
+    }
+    if (
+      longTermOfferForm.scheduleType === "fixed" &&
+      !longTermSchedule.some((row) => row.enabled)
+    ) {
+      setError("Pasirinkite bent vieną darbo dieną.");
+      return;
+    }
+
+    setLongTermBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const schedule = longTermSchedule.map((row) => ({
+        weekday: row.weekday,
+        enabled: Boolean(row.enabled),
+        start_time: row.startTime,
+        end_time: row.endTime,
+        break_start_time: row.noBreak ? null : row.breakStartTime,
+        break_end_time: row.noBreak ? null : row.breakEndTime,
+      }));
+
+      const result = await supabase.rpc("create_long_term_offer", {
+        p_company_id: company.id,
+        p_worker_id: longTermSelectedWorker.worker_id,
+        p_position_title: longTermOfferForm.positionTitle.trim(),
+        p_contract_type: longTermOfferForm.contractType,
+        p_proposed_start_date: longTermOfferForm.proposedStartDate,
+        p_proposed_end_date:
+          longTermOfferForm.contractType === "fixed_term"
+            ? longTermOfferForm.proposedEndDate || null
+            : null,
+        p_workplace_city: longTermOfferForm.workplaceCity.trim() || null,
+        p_workplace_address: longTermOfferForm.workplaceAddress.trim() || null,
+        p_salary_amount: longTermOfferForm.salaryAmount
+          ? Number(longTermOfferForm.salaryAmount)
+          : null,
+        p_salary_period: longTermOfferForm.salaryAmount
+          ? longTermOfferForm.salaryPeriod
+          : null,
+        p_salary_note: longTermOfferForm.salaryNote.trim() || null,
+        p_employment_details: longTermOfferForm.employmentDetails.trim() || null,
+        p_schedule_type: longTermOfferForm.scheduleType,
+        p_schedule:
+          longTermOfferForm.scheduleType === "fixed" ? schedule : [],
+      });
+
+      if (result.error) throw result.error;
+
+      setNotice(`Įdarbinimo pasiūlymas išsiųstas darbuotojui ${longTermSelectedWorker.worker_name}.`);
+      setLongTermSelectedWorker(null);
+      await loadCompanyLongTermData(company.id);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti įdarbinimo pasiūlymo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function employerConfirmLongTermOffer(offer) {
+    if (!offer?.id || longTermBusy) return;
+    setLongTermBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("employer_confirm_long_term_placement", {
+        p_placement_id: offer.id,
+      });
+      if (result.error) throw result.error;
+      await loadCompanyLongTermData(company.id);
+      setNotice(
+        result.data === "active"
+          ? "Įsidarbinimą patvirtino abi pusės. Ilgalaikis grafikas aktyvuotas."
+          : "Darbdavio patvirtinimas išsaugotas. Laukiama darbuotojo patvirtinimo."
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti įsidarbinimo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function withdrawLongTermOffer(offer) {
+    if (!offer?.id || longTermBusy) return;
+    setLongTermBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("employer_withdraw_long_term_placement", {
+        p_placement_id: offer.id,
+      });
+      if (result.error) throw result.error;
+      await loadCompanyLongTermData(company.id);
+      setNotice("Įdarbinimo pasiūlymas atšauktas.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko atšaukti pasiūlymo.");
+    } finally {
+      setLongTermBusy(false);
+    }
   }
 
   async function loadEmployerDashboard() {
@@ -11612,6 +12481,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   : "Skubiai! · Pro"}
               </button>
             </div>
+
+            <button
+              className="ed-secondary"
+              type="button"
+              onClick={openLongTermEmployment}
+            >
+              Įdarbinti darbuotoją
+            </button>
 
             <button
               className="ed-secondary"
@@ -14921,6 +15798,514 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
       )}
+
+      {showLongTermEmployment && (
+        <div
+          className="rs-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !longTermBusy) {
+              setShowLongTermEmployment(false);
+              setLongTermSelectedWorker(null);
+            }
+          }}
+        >
+          <div className="rs-modal-card" style={{ width: "min(980px,100%)" }}>
+            <style>{`
+              .lt-employment-list{display:grid;gap:9px}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:12px}.lt-employment-worker-main{display:flex;align-items:center;gap:11px;min-width:0}.lt-employment-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-weight:850;flex:0 0 44px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lt-wide{grid-column:1/-1}.lt-schedule-editor{display:grid;gap:8px;margin-top:8px}.lt-schedule-edit-row{display:grid;grid-template-columns:150px 1fr 1fr 1fr 1fr;gap:8px;align-items:end;padding:10px;border:1px solid #e5ebef;border-radius:11px}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f7f9fb;border-radius:11px;padding:11px 12px;color:#526374;font-size:12px;line-height:1.5;margin-bottom:14px}
+              @media(max-width:760px){.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-schedule-edit-row{grid-template-columns:1fr 1fr}.lt-schedule-day{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}}
+            `}</style>
+
+            <div className="rs-modal-head">
+              <div>
+                <div className="eyebrow">ĮDARBINTI DARBUOTOJĄ</div>
+                <h2>
+                  {longTermSelectedWorker
+                    ? `Pasiūlymas · ${longTermSelectedWorker.worker_name}`
+                    : "Darbuotojai, su kuriais jau dirbote"}
+                </h2>
+                <p style={{ margin: "6px 0 0", color: "#6c7a88", fontSize: 13 }}>
+                  Pasiūlymą galima siųsti tik darbuotojui, su kuriuo turite bent vieną
+                  tvarkingai užbaigtą darbo dieną.
+                </p>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                disabled={longTermBusy}
+                onClick={() => {
+                  setShowLongTermEmployment(false);
+                  setLongTermSelectedWorker(null);
+                }}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {longTermSelectedWorker ? (
+              <>
+                <div className="lt-modal-note">
+                  Darbuotojas pasiūlymą gaus atskiroje „Įdarbinimo pasiūlymų“ skiltyje.
+                  Kol abi pusės realiai nepatvirtina įsidarbinimo, šis pasiūlymas
+                  darbuotojo grafiko neblokuoja.
+                </div>
+
+                <div className="lt-form-grid">
+                  <label className="ed-label lt-wide">
+                    Darbo pozicija *
+                    <input
+                      className="ed-input"
+                      value={longTermOfferForm.positionTitle}
+                      onChange={(e) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          positionTitle: e.target.value,
+                        }))
+                      }
+                      placeholder="Pvz. Statybų darbų vadovas"
+                    />
+                  </label>
+
+                  <label className="ed-label">
+                    Sutarties tipas *
+                    <RoundedSelect
+                      className="ed-input"
+                      value={longTermOfferForm.contractType}
+                      options={[
+                        { value: "indefinite", label: "Neterminuota" },
+                        { value: "fixed_term", label: "Terminuota" },
+                      ]}
+                      onChange={(value) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          contractType: value,
+                          proposedEndDate:
+                            value === "indefinite" ? "" : current.proposedEndDate,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="ed-label">
+                    Preliminari darbo pradžia *
+                    <RoundedDateSelect
+                      className="ed-input wd-date-trigger"
+                      value={longTermOfferForm.proposedStartDate}
+                      allowClear={false}
+                      onChange={(value) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          proposedStartDate: value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  {longTermOfferForm.contractType === "fixed_term" && (
+                    <label className="ed-label">
+                      Sutarties pabaiga *
+                      <RoundedDateSelect
+                        className="ed-input wd-date-trigger"
+                        value={longTermOfferForm.proposedEndDate}
+                        allowClear={false}
+                        onChange={(value) =>
+                          setLongTermOfferForm((current) => ({
+                            ...current,
+                            proposedEndDate: value,
+                          }))
+                        }
+                      />
+                    </label>
+                  )}
+
+                  <label className="ed-label">
+                    Miestas
+                    <CityAutocomplete
+                      className="ed-input"
+                      value={longTermOfferForm.workplaceCity}
+                      onChange={(value) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          workplaceCity: value,
+                        }))
+                      }
+                      placeholder="Pvz. Vilnius"
+                    />
+                  </label>
+
+                  <label className="ed-label lt-wide">
+                    Atvykti adresu
+                    <input
+                      className="ed-input"
+                      value={longTermOfferForm.workplaceAddress}
+                      onChange={(e) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          workplaceAddress: e.target.value,
+                        }))
+                      }
+                      placeholder="Gatvė, numeris, objektas"
+                    />
+                  </label>
+
+                  <label className="ed-label">
+                    Siūlomas atlygis (€)
+                    <input
+                      className="ed-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={longTermOfferForm.salaryAmount}
+                      onChange={(e) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          salaryAmount: e.target.value,
+                        }))
+                      }
+                      placeholder="Pvz. 1800"
+                    />
+                  </label>
+
+                  <label className="ed-label">
+                    Atlygio periodas
+                    <RoundedSelect
+                      className="ed-input"
+                      value={longTermOfferForm.salaryPeriod}
+                      options={[
+                        { value: "monthly", label: "Per mėnesį" },
+                        { value: "hourly", label: "Per valandą" },
+                      ]}
+                      onChange={(value) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          salaryPeriod: value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="ed-label lt-wide">
+                    Atlygio / sąlygų pastaba
+                    <input
+                      className="ed-input"
+                      value={longTermOfferForm.salaryNote}
+                      onChange={(e) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          salaryNote: e.target.value,
+                        }))
+                      }
+                      placeholder="Pvz. atlygis į rankas, bandomasis laikotarpis ar priedai"
+                    />
+                  </label>
+
+                  <label className="ed-label lt-wide">
+                    Įdarbinimo informacija
+                    <textarea
+                      className="ed-textarea"
+                      value={longTermOfferForm.employmentDetails}
+                      onChange={(e) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          employmentDetails: e.target.value,
+                        }))
+                      }
+                      placeholder="Aprašykite pareigas, atsakomybes, sąlygas ir kitą darbuotojui svarbią informaciją."
+                    />
+                  </label>
+
+                  <label className="ed-label lt-wide">
+                    Grafiko tipas *
+                    <RoundedSelect
+                      className="ed-input"
+                      value={longTermOfferForm.scheduleType}
+                      options={[
+                        { value: "fixed", label: "Pastovus grafikas" },
+                        { value: "variable", label: "Kintamas grafikas" },
+                      ]}
+                      onChange={(value) =>
+                        setLongTermOfferForm((current) => ({
+                          ...current,
+                          scheduleType: value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                {longTermOfferForm.scheduleType === "fixed" ? (
+                  <div>
+                    <h3 className="lt-section-title">Siūlomos darbo dienos ir laikas</h3>
+                    <div className="lt-help">
+                      Pažymėkite darbo dienas, laiką ir pietų pertrauką. Tik aktyvus,
+                      abiejų pusių patvirtintas grafikas rezervuos darbuotojo laiką.
+                    </div>
+                    <div className="lt-schedule-editor">
+                      {longTermSchedule.map((row) => (
+                        <div className="lt-schedule-edit-row" key={row.weekday}>
+                          <label className="lt-schedule-day">
+                            <input
+                              type="checkbox"
+                              checked={row.enabled}
+                              onChange={(e) =>
+                                updateLongTermScheduleDay(
+                                  row.weekday,
+                                  "enabled",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                            {longTermWeekdayLabel(row.weekday)}
+                          </label>
+
+                          <label className="ed-label">
+                            Nuo
+                            <RoundedTimeSelect
+                              className="ed-input wd-time-trigger"
+                              value={row.startTime}
+                              disabled={!row.enabled}
+                              onChange={(value) =>
+                                updateLongTermScheduleDay(row.weekday, "startTime", value)
+                              }
+                            />
+                          </label>
+
+                          <label className="ed-label">
+                            Iki
+                            <RoundedTimeSelect
+                              className="ed-input wd-time-trigger"
+                              value={row.endTime}
+                              disabled={!row.enabled}
+                              onChange={(value) =>
+                                updateLongTermScheduleDay(row.weekday, "endTime", value)
+                              }
+                            />
+                          </label>
+
+                          <label className="ed-label">
+                            Pietūs nuo
+                            <RoundedTimeSelect
+                              className="ed-input wd-time-trigger"
+                              value={row.breakStartTime}
+                              disabled={!row.enabled || row.noBreak}
+                              onChange={(value) =>
+                                updateLongTermScheduleDay(
+                                  row.weekday,
+                                  "breakStartTime",
+                                  value
+                                )
+                              }
+                            />
+                          </label>
+
+                          <div>
+                            <label className="ed-label">
+                              Pietūs iki
+                              <RoundedTimeSelect
+                                className="ed-input wd-time-trigger"
+                                value={row.breakEndTime}
+                                disabled={!row.enabled || row.noBreak}
+                                onChange={(value) =>
+                                  updateLongTermScheduleDay(
+                                    row.weekday,
+                                    "breakEndTime",
+                                    value
+                                  )
+                                }
+                              />
+                            </label>
+                            <label
+                              style={{
+                                display: "flex",
+                                gap: 7,
+                                alignItems: "center",
+                                marginTop: 7,
+                                fontSize: 11,
+                                color: "#607180",
+                                fontWeight: 700,
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={row.noBreak}
+                                disabled={!row.enabled}
+                                onChange={(e) =>
+                                  updateLongTermScheduleDay(
+                                    row.weekday,
+                                    "noBreak",
+                                    e.target.checked
+                                  )
+                                }
+                              />
+                              Pietų pertraukos nėra
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="lt-modal-note" style={{ marginTop: 14, marginBottom: 0 }}>
+                    Kintamo grafiko atveju konkretus laikas nebus automatiškai rezervuojamas.
+                    Darbuotojas savo prieinamumą ir toliau valdys workforce grafike.
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginTop: 18,
+                  }}
+                >
+                  <button
+                    className="ed-secondary"
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={() => setLongTermSelectedWorker(null)}
+                  >
+                    ← Grįžti prie darbuotojų
+                  </button>
+                  <button
+                    className="ed-primary"
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={submitLongTermOffer}
+                  >
+                    {longTermBusy ? "Siunčiama..." : "Pateikti įdarbinimo pasiūlymą"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {longTermBusy && !longTermCandidates.length ? (
+                  <div className="ed-empty">Kraunami darbuotojai...</div>
+                ) : longTermCandidates.length ? (
+                  <div className="lt-employment-list">
+                    {longTermCandidates.map((worker) => {
+                      const unavailable = ["offered", "active"].includes(
+                        worker.current_offer_status
+                      );
+                      return (
+                        <div className="lt-employment-worker" key={worker.worker_id}>
+                          <div className="lt-employment-worker-main">
+                            <div className="lt-employment-avatar">
+                              {worker.avatar_path ? (
+                                <img
+                                  src={workerAvatarUrl(worker.avatar_path)}
+                                  alt={worker.worker_name || "Darbuotojas"}
+                                />
+                              ) : (
+                                workerInitials(worker.worker_name)
+                              )}
+                            </div>
+                            <div>
+                              <b>{worker.worker_name}</b>
+                              <small>
+                                {worker.city || "Miestas nenurodytas"} · kartu užbaigta darbo dienų: {worker.completed_days}
+                              </small>
+                              <small>
+                                Paskutinis darbas: {worker.last_job_title || "—"}
+                                {worker.last_work_date ? ` · ${worker.last_work_date}` : ""}
+                              </small>
+                            </div>
+                          </div>
+                          <button
+                            className="ed-primary"
+                            type="button"
+                            disabled={longTermBusy || unavailable}
+                            onClick={() => chooseLongTermCandidate(worker)}
+                          >
+                            {worker.current_offer_status === "active"
+                              ? "Jau įdarbintas"
+                              : worker.current_offer_status === "offered"
+                              ? "Pasiūlymas išsiųstas"
+                              : "Rinktis"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="ed-empty">
+                    Dar nėra darbuotojų, su kuriais būtų tvarkingai užbaigta bent viena darbo diena.
+                  </div>
+                )}
+
+                {companyLongTermOffers.length > 0 && (
+                  <>
+                    <h3 className="lt-section-title">Išsiųsti ir aktyvūs pasiūlymai</h3>
+                    <div className="lt-existing-offers">
+                      {companyLongTermOffers.map((offer) => (
+                        <div className="lt-existing-offer" key={offer.id}>
+                          <div>
+                            <b>{offer.worker_name} · {offer.position_title}</b>
+                            <div style={{ color: "#6c7a88", fontSize: 12, marginTop: 3 }}>
+                              {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date} · {longTermStatusLabel(offer.status)}
+                            </div>
+                            {offer.status === "offered" && (
+                              <div style={{ color: "#526374", fontSize: 12, marginTop: 5 }}>
+                                Darbuotojas: {offer.worker_confirmed_at ? "patvirtino" : "dar nepatvirtino"} · Darbdavys: {offer.employer_confirmed_at ? "patvirtino" : "dar nepatvirtino"}
+                              </div>
+                            )}
+                          </div>
+                          <div className="lt-existing-actions">
+                            {!["declined", "withdrawn", "ended"].includes(offer.status) && (
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                onClick={() =>
+                                  setLongTermConversation({
+                                    placementId: offer.id,
+                                    title: `${offer.worker_name} · ${offer.position_title}`,
+                                  })
+                                }
+                              >
+                                Aptarti
+                              </button>
+                            )}
+                            {offer.status === "offered" && (
+                              <>
+                                <button
+                                  className="ed-secondary"
+                                  type="button"
+                                  disabled={longTermBusy || Boolean(offer.employer_confirmed_at)}
+                                  onClick={() => employerConfirmLongTermOffer(offer)}
+                                >
+                                  {offer.employer_confirmed_at
+                                    ? "Jūs patvirtinote"
+                                    : "Patvirtinti įsidarbinimą"}
+                                </button>
+                                <button
+                                  className="ed-secondary"
+                                  type="button"
+                                  disabled={longTermBusy}
+                                  onClick={() => withdrawLongTermOffer(offer)}
+                                >
+                                  Atšaukti pasiūlymą
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <LongTermConversationModal
+        open={Boolean(longTermConversation)}
+        onClose={() => setLongTermConversation(null)}
+        placementId={longTermConversation?.placementId}
+        title={longTermConversation?.title}
+        user={user}
+      />
 
       <CompanyTeamChatModal
         open={showTeamChat}
