@@ -58,6 +58,98 @@ class SectionErrorBoundary extends React.Component {
   }
 }
 
+function StyledConfirmDialog({ dialog, onResolve }) {
+  if (!dialog) return null;
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onResolve(false);
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 4000,
+        display: "grid",
+        placeItems: "center",
+        padding: 20,
+        background: "rgba(16,36,56,.62)",
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="styled-confirm-title"
+        style={{
+          width: "min(520px,100%)",
+          background: "#fff",
+          borderRadius: 18,
+          padding: 22,
+          color: "#102438",
+          boxShadow: "0 26px 80px rgba(16,36,56,.25)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            {dialog.eyebrow && <div className="eyebrow" style={{ marginBottom: 7 }}>{dialog.eyebrow}</div>}
+            <h2 id="styled-confirm-title" style={{ margin: 0, fontSize: 22 }}>
+              {dialog.title || "Patvirtinkite veiksmą"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Uždaryti"
+            onClick={() => onResolve(false)}
+            style={{
+              border: 0, background: "#f1f4f6", borderRadius: 10, width: 40, height: 40,
+              display: "grid", placeItems: "center", color: "#102438", flex: "0 0 auto",
+            }}
+          >
+            <CloseMark />
+          </button>
+        </div>
+        <p style={{ margin: "16px 0 0", color: "#607180", lineHeight: 1.55 }}>{dialog.message}</p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 22, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => onResolve(false)}
+            style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#102438", fontWeight: 800 }}
+          >
+            {dialog.cancelLabel || "Atšaukti"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolve(true)}
+            style={{ minHeight: 42, padding: "9px 16px", border: 0, borderRadius: 10, background: dialog.danger ? "#b64d2a" : "#f08a28", color: "#fff", fontWeight: 850 }}
+          >
+            {dialog.confirmLabel || "Patvirtinti"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function useStyledConfirm() {
+  const [dialog, setDialog] = useState(null);
+  const resolverRef = useRef(null);
+
+  const askConfirm = (config) => new Promise((resolve) => {
+    resolverRef.current = resolve;
+    setDialog(config);
+  });
+
+  const resolveConfirm = (value) => {
+    const resolver = resolverRef.current;
+    resolverRef.current = null;
+    setDialog(null);
+    resolver?.(value);
+  };
+
+  return { dialog, askConfirm, resolveConfirm };
+}
+
 function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -6745,6 +6837,7 @@ function workerInitials(name) {
 }
 
 function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+  const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
   const preferredPlanKey = EMPLOYER_PLANS.some(
     (plan) => plan.key === user?.user_metadata?.preferred_plan
@@ -7372,9 +7465,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function removeTeamMember(member) {
     if (!company?.id || !member?.user_id) return;
 
-    const confirmed = window.confirm(
-      `Pašalinti ${member.display_name} iš įmonės komandos? Jo atsakingi darbai bus perduoti įmonės savininkui.`
-    );
+    const confirmed = await askConfirm({
+      eyebrow: "KOMANDOS NARYS",
+      title: "Pašalinti iš įmonės komandos?",
+      message: `${member.display_name} bus pašalintas iš komandos, o jo atsakingi darbai bus perduoti įmonės savininkui.`,
+      confirmLabel: "Pašalinti",
+      danger: true,
+    });
 
     if (!confirmed) return;
 
@@ -9306,9 +9403,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         return;
       }
 
-      const shouldDelete = window.confirm(
-        "Šis poreikis neturi patvirtintų darbuotojų. Ar tikrai norite jį ištrinti?"
-      );
+      const shouldDelete = await askConfirm({
+        eyebrow: "DARBO ŠALINIMAS",
+        title: "Ištrinti darbo pasiūlymą?",
+        message: "Šis poreikis neturi patvirtintų darbuotojų. Ištrynus jo atkurti nebebus galima.",
+        confirmLabel: "Ištrinti",
+        danger: true,
+      });
 
       if (!shouldDelete) return;
 
@@ -9927,13 +10028,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
         .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
         .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
-        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:92px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
         .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
         .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:100px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
         @media(max-width:620px){.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
@@ -10419,91 +10520,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   />
 </label>
 
-{!editingJobId && (
-  <div
-    className="ed-span-2"
-    style={{
-      border: "1px solid #dfe7ed",
-      borderRadius: 13,
-      padding: "12px 14px",
-      background: "#f7f9fb",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        flexWrap: "wrap",
-      }}
-    >
-      <div>
-        <b style={{ display: "block", color: "#102438", fontSize: 13 }}>
-          Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
-        </b>
-        <span style={{ display: "block", marginTop: 3, color: "#6c7a87", fontSize: 11 }}>
-          Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
-        </span>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <span
-          style={{
-            borderRadius: 999,
-            padding: "7px 10px",
-            background: "#fff",
-            border: "1px solid #dfe7ed",
-            color: "#102438",
-            fontSize: 11,
-            fontWeight: 900,
-          }}
-        >
-          {cityWorkerSignalLoading
-            ? "Skaičiuojama..."
-            : cityWorkerSignal
-            ? `${cityWorkerSignal.availableWorkers} tinkamų pagal dieną`
-            : "Pasiūla tikrinama"}
-        </span>
-
-        {planSummary?.plan_key === "business_pro" &&
-          cityWorkerSignal &&
-          cityWorkerSignal.urgentWorkersNow !== null &&
-          cityWorkerSignal.urgentWorkersNow !== undefined && (
-            <span
-              style={{
-                borderRadius: 999,
-                padding: "7px 10px",
-                background: "#fff1e5",
-                border: "1px solid #f3d2b1",
-                color: "#a7550d",
-                fontSize: 11,
-                fontWeight: 900,
-              }}
-            >
-              {cityWorkerSignal.urgentWorkersNow} „Laisvas dabar“
-            </span>
-          )}
-      </div>
-    </div>
-
-    {!cityWorkerSignalLoading &&
-      cityWorkerSignal &&
-      cityWorkerSignal.availableWorkers === 0 && (
-        <div
-          style={{
-            marginTop: 9,
-            color: "#8a5d32",
-            fontSize: 11,
-            lineHeight: 1.45,
-          }}
-        >
-          Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek
-          galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
-        </div>
-      )}
-  </div>
-)}
 
 <div className="ed-label ed-span-2">
   Darbo laikas
@@ -10584,6 +10600,92 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 placeholder="Aprašykite, ką reikės daryti, darbo sąlygas, ar suteikiami įrankiai, kokia apranga reikalinga ir kitą svarbią informaciją."
               />
             </label>
+
+            {!editingJobId && (
+              <div
+                className="ed-span-2"
+                style={{
+                  border: "1px solid #dfe7ed",
+                  borderRadius: 13,
+                  padding: "12px 14px",
+                  background: "#f7f9fb",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <b style={{ display: "block", color: "#102438", fontSize: 13 }}>
+                      Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
+                    </b>
+                    <span style={{ display: "block", marginTop: 3, color: "#6c7a87", fontSize: 11 }}>
+                      Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        borderRadius: 999,
+                        padding: "7px 10px",
+                        background: "#fff",
+                        border: "1px solid #dfe7ed",
+                        color: "#102438",
+                        fontSize: 11,
+                        fontWeight: 900,
+                      }}
+                    >
+                      {cityWorkerSignalLoading
+                        ? "Skaičiuojama..."
+                        : cityWorkerSignal
+                        ? `${cityWorkerSignal.availableWorkers} tinkamų pagal dieną`
+                        : "Pasiūla tikrinama"}
+                    </span>
+
+                    {planSummary?.plan_key === "business_pro" &&
+                      cityWorkerSignal &&
+                      cityWorkerSignal.urgentWorkersNow !== null &&
+                      cityWorkerSignal.urgentWorkersNow !== undefined && (
+                        <span
+                          style={{
+                            borderRadius: 999,
+                            padding: "7px 10px",
+                            background: "#fff1e5",
+                            border: "1px solid #f3d2b1",
+                            color: "#a7550d",
+                            fontSize: 11,
+                            fontWeight: 900,
+                          }}
+                        >
+                          {cityWorkerSignal.urgentWorkersNow} „Laisvas dabar“
+                        </span>
+                      )}
+                  </div>
+                </div>
+
+                {!cityWorkerSignalLoading &&
+                  cityWorkerSignal &&
+                  cityWorkerSignal.availableWorkers === 0 && (
+                    <div
+                      style={{
+                        marginTop: 9,
+                        color: "#8a5d32",
+                        fontSize: 11,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek
+                      galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
+                    </div>
+                  )}
+              </div>
+            )}
           </div>
 
           <div className="ed-actions">
@@ -11383,7 +11485,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       .join(" ")}
                     key={job.id}
                   >
-                    <b>{job.work_date}</b>
+                    <b className="ed-job-date">{job.work_date}</b>
                     <div>
                       <div
                         style={{
@@ -13148,6 +13250,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
       />
+      <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
   );
 }
@@ -14122,6 +14225,7 @@ function AdminDashboard({
   onOpenWorker,
   onOpenEmployer,
 }) {
+  const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -14294,7 +14398,14 @@ function AdminDashboard({
       ? "Patvirtinti sprendimą darbuotojo naudai? Jei darbdavio neigiamas pažymėjimas nepasitvirtino, darbdavio patikimumui bus pritaikyta sistemos numatyta bauda."
       : "Patvirtinti sprendimą darbdavio naudai? Darbuotojui bus pritaikytas galutinis darbo dienos rezultatas.";
 
-    if (!window.confirm(question)) return;
+    const confirmed = await askConfirm({
+      eyebrow: "GINČO SPRENDIMAS",
+      title: workerWon ? "Spręsti darbuotojo naudai?" : "Spręsti darbdavio naudai?",
+      message: question,
+      confirmLabel: "Patvirtinti sprendimą",
+      danger: !workerWon,
+    });
+    if (!confirmed) return;
 
     setResolvingId(dispute.attendance_id);
     setError("");
@@ -14514,13 +14625,14 @@ function AdminDashboard({
   }
 
   async function deleteRating(rating) {
-    if (
-      !window.confirm(
-        `Pašalinti ${rating.worker_name} įvertinimą ${rating.score}/10?`
-      )
-    ) {
-      return;
-    }
+    const confirmed = await askConfirm({
+      eyebrow: "ATSILIEPIMO ŠALINIMAS",
+      title: "Pašalinti darbuotojo įvertinimą?",
+      message: `${rating.worker_name} įvertinimas ${rating.score}/10 bus pašalintas, o darbuotojo vidurkis perskaičiuotas.`,
+      confirmLabel: "Pašalinti",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     setDeletingRatingId(rating.rating_id);
     setError("");
@@ -16353,6 +16465,7 @@ function AdminDashboard({
           </div>
         </div>
       )}
+      <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
   );
 }
