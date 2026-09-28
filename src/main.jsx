@@ -3926,6 +3926,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [showWorkerStats, setShowWorkerStats] = useState(false);
+  const [showWorkerReliabilityInfo, setShowWorkerReliabilityInfo] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
   const workerProfileEditorRef = useRef(null);
@@ -4038,6 +4039,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ratingCount: 0,
     noShowCount: 0,
     restrictedUntil: null,
+    reliabilityGoodJobsSincePenalty: 0,
+    reliabilityLastPenaltyAt: null,
   });
   const [workerStats, setWorkerStats] = useState({
     monthWorkedDays: 0,
@@ -4337,7 +4340,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active"
+            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at"
           )
           .eq("user_id", user.id)
           .single(),
@@ -4415,6 +4418,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         ratingCount: Number(worker?.rating_count || 0),
         noShowCount: Number(worker?.no_show_count || 0),
         restrictedUntil: worker?.restricted_until || null,
+        reliabilityGoodJobsSincePenalty: Number(
+          worker?.reliability_good_jobs_since_penalty || 0
+        ),
+        reliabilityLastPenaltyAt: worker?.reliability_last_penalty_at || null,
       });
 
       setSkills(skillsResult.data || []);
@@ -4703,7 +4710,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       supabase
         .from("worker_profiles")
         .select(
-          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until, completed_jobs, unexcused_early_leave_count"
+          "attendance_rate, rating_average, rating_count, no_show_count, restricted_until, completed_jobs, unexcused_early_leave_count, reliability_good_jobs_since_penalty, reliability_last_penalty_at"
         )
         .eq("user_id", user.id)
         .single(),
@@ -4743,6 +4750,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       ratingCount: Number(stats.rating_count ?? worker.rating_count ?? 0),
       noShowCount: Number(stats.no_show_count ?? worker.no_show_count ?? 0),
       restrictedUntil: worker.restricted_until || null,
+      reliabilityGoodJobsSincePenalty: Number(
+        worker.reliability_good_jobs_since_penalty || 0
+      ),
+      reliabilityLastPenaltyAt: worker.reliability_last_penalty_at || null,
     }));
   }
 
@@ -5809,7 +5820,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
-        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
@@ -6531,9 +6542,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Visa patvirtinta istorija
                 </small>
               </div>
-              <div className="wd-kpi">
-                <span>Atvykimo patikimumas</span>
-                <b>{Math.round(metrics.attendanceRate)}%</b>
+              <div className="wd-kpi wd-kpi-reliability">
+                <button
+                  className="wd-kpi-info-btn"
+                  type="button"
+                  onClick={() => setShowWorkerReliabilityInfo(true)}
+                  aria-label="Atidaryti darbuotojo patikimumo paaiškinimą"
+                >
+                  Atvykimo patikimumas
+                  <span className="wd-kpi-info-mark">i</span>
+                </button>
+                <b
+                  style={{ color: reliabilityScoreColor(metrics.attendanceRate) }}
+                >
+                  {formatReliabilityScore(metrics.attendanceRate)} / 100
+                </b>
               </div>
               <div className="wd-kpi">
                 <span>Darbdavių įvertinimas</span>
@@ -8950,6 +8973,107 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
+      {showWorkerReliabilityInfo && (
+        <div
+          className="reliability-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowWorkerReliabilityInfo(false);
+          }}
+        >
+          <style>{`
+            .reliability-modal-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:24px;background:rgba(16,36,56,.62);backdrop-filter:blur(2px);font-family:Inter,sans-serif}
+            .reliability-modal{width:min(620px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:26px;color:#102438}
+            .reliability-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px}.reliability-modal-eyebrow{color:#f08a28;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:7px}.reliability-modal h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.025em;color:#102438}.reliability-modal-close{width:38px;height:38px;flex:0 0 auto;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-family:Inter,sans-serif;font-size:22px;line-height:1;cursor:pointer}.reliability-score-box{display:flex;align-items:center;gap:16px;padding:15px;margin-bottom:20px;border:1px solid #e3e9ed;border-radius:14px;background:#f7f9fa}.reliability-score-copy strong{display:block;font-family:Manrope,Inter,sans-serif;font-size:18px;margin-bottom:4px}.reliability-score-copy span{color:#6c7a88;font-size:13px;line-height:1.45}.reliability-rules{display:grid;gap:10px}.reliability-rule{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f4}.reliability-rule:last-child{border-bottom:0}.reliability-rule-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#f1f4f6;font-weight:800;font-size:12px;color:#425466}.reliability-rule p{margin:0;color:#425466;font-size:14px;line-height:1.55}.reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}.reliability-modal-actions{display:flex;justify-content:flex-end;margin-top:20px}.reliability-modal-actions button{border:0;border-radius:10px;padding:11px 17px;background:#f08a28;color:#fff;font-family:Manrope,Inter,sans-serif;font-weight:800;cursor:pointer}@media(max-width:600px){.reliability-modal-overlay{padding:12px}.reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}.reliability-modal h2{font-size:23px}.reliability-score-box{align-items:flex-start}}
+          `}</style>
+
+          <div
+            className="reliability-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="worker-reliability-modal-title"
+          >
+            <div className="reliability-modal-head">
+              <div>
+                <div className="reliability-modal-eyebrow">PATIKIMUMO REITINGAS</div>
+                <h2 id="worker-reliability-modal-title">
+                  Kaip veikia darbuotojo patikimumas?
+                </h2>
+              </div>
+              <button
+                className="reliability-modal-close"
+                type="button"
+                aria-label="Uždaryti"
+                onClick={() => setShowWorkerReliabilityInfo(false)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="reliability-score-box">
+              <div className="reliability-score-copy">
+                <strong>
+                  Dabartinis patikimumas: {" "}
+                  <span style={{ color: reliabilityScoreColor(metrics.attendanceRate) }}>
+                    {formatReliabilityScore(metrics.attendanceRate)} / 100
+                  </span>
+                </strong>
+                <span>
+                  Darbdaviai šį rodiklį mato vertindami jūsų profilį prieš kviesdami į darbą.
+                </span>
+              </div>
+            </div>
+
+            <div className="reliability-rules">
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">100</div>
+                <p>Naujas darbuotojas pradeda nuo <b>100 patikimumo taškų</b>.</p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−10</div>
+                <p>Patvirtintas <b>neatvykimas</b> sumažina patikimumą 10 taškų ir taikomas 3 dienų darbo priėmimo apribojimas.</p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">−5</div>
+                <p>Patvirtintas <b>nepagrįstas ankstyvas išėjimas</b> sumažina patikimumą 5 taškais.</p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">+</div>
+                <p>
+                  Tvarkingai užbaigus visą darbo dieną patikimumas atsistato pagal dabartinį rezultatą: 0–49 – <b>+3</b>, 50–69 – <b>+2</b>, 70–89 – <b>+1</b>, 90–99 – <b>+0,5</b>.
+                </p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">½</div>
+                <p>Suderintas ankstyvas išėjimas laikomas tvarkingu rezultatu, tačiau suteikia <b>pusę įprasto atkūrimo</b>.</p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">30</div>
+                <p>
+                  Jei 30 dienų nėra naujo pažeidimo, rezultatas iki 80 / 100 gali augti po <b>+1 tašką kas 30 dienų</b>. Nuo 80 iki 100 reikia sėkmingai dirbti.
+                </p>
+              </div>
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">✓</div>
+                <p>
+                  Po paskutinio pažeidimo tvarkingai užbaigta darbo dienų: {" "}
+                  <b>{metrics.reliabilityGoodJobsSincePenalty}</b>.
+                </p>
+              </div>
+            </div>
+
+            <div className="reliability-note">
+              <b>Svarbu:</b> ginčijamas darbo dienos rezultatas patikimumo nemažina tol, kol ginčas neišspręstas. Darbdavių įvertinimas balais yra atskiras rodiklis ir į šį patikimumo skaičių neįtraukiamas.
+            </div>
+
+            <div className="reliability-modal-actions">
+              <button type="button" onClick={() => setShowWorkerReliabilityInfo(false)}>
+                Supratau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <LongTermConversationModal
         open={Boolean(longTermConversation)}
         onClose={() => setLongTermConversation(null)}
@@ -9153,6 +9277,11 @@ function reliabilityScoreColor(value) {
   return `hsl(${hue} 72% 34%)`;
 }
 
+function formatReliabilityScore(value) {
+  const score = Math.max(0, Math.min(100, Number(value ?? 0)));
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
 function workerAvatarUrl(path) {
   if (!path) return "";
   return (
@@ -9303,6 +9432,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     reliabilityRate: 100,
     cancelledConfirmedCount: 0,
     falseAttendanceClaimCount: 0,
+    reliabilityGoodJobsSincePenalty: 0,
+    reliabilityLastPenaltyAt: null,
   });
   const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
   const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
@@ -10996,7 +11127,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .eq("company_id", companyId),
       supabase
         .from("companies")
-        .select("reliability_rate, cancelled_confirmed_count, false_attendance_claim_count")
+        .select("reliability_rate, cancelled_confirmed_count, false_attendance_claim_count, reliability_good_jobs_since_penalty, reliability_last_penalty_at")
         .eq("id", companyId)
         .single(),
       supabase
@@ -11146,6 +11277,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       falseAttendanceClaimCount: Number(
         companyResult.data?.false_attendance_claim_count || 0
       ),
+      reliabilityGoodJobsSincePenalty: Number(
+        companyResult.data?.reliability_good_jobs_since_penalty || 0
+      ),
+      reliabilityLastPenaltyAt:
+        companyResult.data?.reliability_last_penalty_at || null,
     });
 
     setEmployerPenaltyByJob(
@@ -14121,7 +14257,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     color: reliabilityScoreColor(employerStats.reliabilityRate),
                   }}
                 >
-                  {Math.round(employerStats.reliabilityRate)} / 100
+                  {formatReliabilityScore(employerStats.reliabilityRate)} / 100
                 </b>
               </div>
             </div>
@@ -16952,6 +17088,33 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
                   darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
                   patikimumas sumažėja <b>20 taškų</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">+</div>
+                <p>
+                  Patikimumas atsistato per <b>tvarkingai užbaigtus darbus</b>.
+                  Kai rezultatas yra 0–49, už darbą pridedami 3 taškai; 50–69 –
+                  2; 70–89 – 1; 90–99 – 0,5 taško. Daugiau kaip 100 taškų
+                  sukaupti negalima.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">30</div>
+                <p>
+                  Jei 30 dienų nėra naujo pažeidimo, žemas patikimumas gali
+                  natūraliai paaugti po <b>1 tašką kas 30 dienų</b>, tačiau vien
+                  laiku galima atsistatyti tik iki <b>80 / 100</b>.
+                </p>
+              </div>
+
+              <div className="reliability-rule">
+                <div className="reliability-rule-icon">✓</div>
+                <p>
+                  Po paskutinio pažeidimo tvarkingai užbaigta darbų: {" "}
+                  <b>{employerStats.reliabilityGoodJobsSincePenalty}</b>.
                 </p>
               </div>
 
