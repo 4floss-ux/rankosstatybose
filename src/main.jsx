@@ -10603,11 +10603,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {!editingJobId && (
               <div
-                className="ed-span-2"
+                className="ed-span-4"
                 style={{
                   border: "1px solid #dfe7ed",
                   borderRadius: 13,
-                  padding: "12px 14px",
+                  padding: "9px 14px",
                   background: "#f7f9fb",
                 }}
               >
@@ -10620,20 +10620,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     flexWrap: "wrap",
                   }}
                 >
-                  <div>
-                    <b style={{ display: "block", color: "#102438", fontSize: 13 }}>
+                  <div style={{ minWidth: 240, flex: "1 1 520px" }}>
+                    <b style={{ color: "#102438", fontSize: 13 }}>
                       Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
                     </b>
-                    <span style={{ display: "block", marginTop: 3, color: "#6c7a87", fontSize: 11 }}>
+                    <span style={{ marginLeft: 8, color: "#6c7a87", fontSize: 11 }}>
                       Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
                     <span
                       style={{
                         borderRadius: 999,
-                        padding: "7px 10px",
+                        padding: "5px 9px",
                         background: "#fff",
                         border: "1px solid #dfe7ed",
                         color: "#102438",
@@ -10655,7 +10655,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span
                           style={{
                             borderRadius: 999,
-                            padding: "7px 10px",
+                            padding: "5px 9px",
                             background: "#fff1e5",
                             border: "1px solid #f3d2b1",
                             color: "#a7550d",
@@ -10674,14 +10674,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   cityWorkerSignal.availableWorkers === 0 && (
                     <div
                       style={{
-                        marginTop: 9,
+                        marginTop: 5,
                         color: "#8a5d32",
-                        fontSize: 11,
-                        lineHeight: 1.45,
+                        fontSize: 10.5,
+                        lineHeight: 1.35,
                       }}
                     >
-                      Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek
-                      galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
+                      Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
                     </div>
                   )}
               </div>
