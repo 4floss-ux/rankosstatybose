@@ -61,6 +61,78 @@ function CloseMark() {
   );
 }
 
+function ChatConductNotice() {
+  return (
+    <div
+      role="note"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 9,
+        padding: "9px 11px",
+        marginBottom: 12,
+        border: "1px solid #f2d3b8",
+        borderRadius: 12,
+        background: "#fff8f1",
+        color: "#8a531d",
+        fontSize: 12,
+        lineHeight: 1.45,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          flex: "0 0 22px",
+          background: "#f08a28",
+          color: "#fff",
+          fontWeight: 900,
+          fontSize: 13,
+        }}
+      >
+        !
+      </span>
+      <span>
+        <b>Keiktis griežtai draudžiama.</b> Bendraukime adekvačiai ir pagarbiai —
+        necenzūrinė, įžeidžianti ar grasinanti kalba pokalbiuose neleidžiama.
+      </span>
+    </div>
+  );
+}
+
+function ReviewConductNotice() {
+  return (
+    <div
+      role="note"
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 9,
+        padding: "10px 12px",
+        marginBottom: 16,
+        border: "1px solid #efb2a2",
+        borderRadius: 12,
+        background: "#fff1ed",
+        color: "#b4472a",
+        fontSize: 12,
+        lineHeight: 1.5,
+        fontWeight: 650,
+      }}
+    >
+      <span aria-hidden="true" style={{fontWeight:900,fontSize:15,lineHeight:1}}>!</span>
+      <span>
+        <b>Keiktis ir įžeidinėti griežtai draudžiama.</b> Atsiliepimą rašykite
+        dalykiškai ir apie realią darbo patirtį. Už necenzūrinę, grasinančią ar
+        žeminančią kalbą paskyra gali būti pašalinta be papildomo įspėjimo.
+      </span>
+    </div>
+  );
+}
+
 class SectionErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -2198,6 +2270,8 @@ function ConversationModal({
 
         {error && <div className="rs-error">{error}</div>}
 
+        <ChatConductNotice />
+
         <div className="rs-messages" ref={messagesRef}>
           {loading ? (
             <div className="lt-chat-empty">Kraunama...</div>
@@ -2437,6 +2511,8 @@ function DisputeConversationModal({
         </div>
 
         {error && <div className="rs-error">{error}</div>}
+
+        <ChatConductNotice />
 
         <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
@@ -2686,6 +2762,8 @@ function GroupConversationModal({
         </div>
 
         {error && <div className="rs-error">{error}</div>}
+
+        <ChatConductNotice />
 
         <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
@@ -3094,6 +3172,8 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
 
         {error && <div className="lt-chat-error">{error}</div>}
 
+        <ChatConductNotice />
+
         <div className="lt-chat-body" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="lt-chat-empty">Kraunama...</div>
@@ -3285,6 +3365,8 @@ function CompanyTeamChatModal({
         </div>
 
         {error && <div className="ctc-error">{error}</div>}
+
+        <ChatConductNotice />
 
         <div className="ctc-messages" ref={messagesRef}>
           {loading && !messages.length ? (
@@ -3927,9 +4009,32 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [showWorkerStats, setShowWorkerStats] = useState(false);
   const [showWorkerReliabilityInfo, setShowWorkerReliabilityInfo] = useState(false);
+  const [showWorkTimeLoginReminder, setShowWorkTimeLoginReminder] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
   const workerProfileEditorRef = useRef(null);
+
+  useEffect(() => {
+    if (loading || !user?.id) return undefined;
+
+    const loginKey = `worker-worktime-reminder:${user.id}:${
+      user.last_sign_in_at || "current"
+    }`;
+
+    try {
+      if (window.sessionStorage.getItem(loginKey) === "shown") {
+        return undefined;
+      }
+      window.sessionStorage.setItem(loginKey, "shown");
+    } catch {}
+
+    setShowWorkTimeLoginReminder(true);
+    const timer = window.setTimeout(() => {
+      setShowWorkTimeLoginReminder(false);
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [loading, user?.id, user?.last_sign_in_at]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -5763,6 +5868,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     openWorkdayDetails(nextConfirmedWorkday);
   }
 
+  function openWorkerWorkTimeEditor() {
+    setShowWorkTimeLoginReminder(false);
+    setShowProfileEditor(true);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById("worker-availability-editor")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
   function openWorkerDashboardTarget(target) {
     if (target === "profile") {
       setShowProfileEditor(true);
@@ -5815,6 +5933,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
+        .wd-worktime-login-reminder{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px;padding:12px 14px;border:1px solid #f0d0ba;border-radius:13px;background:#fff8f1;color:#8a531d;box-shadow:0 4px 14px rgba(16,36,56,.035);animation:wdReminderIn .18s ease-out}.wd-worktime-login-reminder-copy{display:grid;gap:2px;min-width:0}.wd-worktime-login-reminder-copy b{color:#9f5211;font-size:13px}.wd-worktime-login-reminder-copy span{font-size:12px;line-height:1.4}.wd-worktime-login-reminder button{flex:0 0 auto;border:1px solid #efc59e;background:#fff;color:#a85a17;border-radius:9px;padding:8px 11px;font:inherit;font-size:11px;font-weight:900;cursor:pointer}.wd-worktime-login-reminder button:hover{background:#fff3e7}@keyframes wdReminderIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
         .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.wd-stats-toggle:hover{color:#c96c13}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.wd-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
@@ -5823,7 +5942,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
-        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
@@ -6053,6 +6172,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               })}.
             </div>
           )}
+
+        {showWorkTimeLoginReminder && (
+          <div className="wd-worktime-login-reminder" role="status">
+            <div className="wd-worktime-login-reminder-copy">
+              <b>Būtinai atnaujinkite darbo laikus</b>
+              <span>
+                Patikrinkite, ar jūsų prieinamumas vis dar tikslus, kad darbdaviai
+                matytų realų laiką, kada galite dirbti.
+              </span>
+            </div>
+            <button type="button" onClick={openWorkerWorkTimeEditor}>
+              Atnaujinti
+            </button>
+          </div>
+        )}
 
         <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
 
@@ -6349,7 +6483,44 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </label>
             </div>
 
-            <div className="wd-profile-editor-section">
+            <div className="wd-profile-editor-section wd-recent-ratings-card">
+              <div className="eyebrow">PASKUTINIAI DARBDAVIŲ ĮVERTINIMAI</div>
+              <h3 style={{ marginTop: 6 }}>Naujausi įvertinimai apie jus</h3>
+              <p>
+                Rodomi iki 3 naujausių darbdavių įvertinimų. Juos taip pat mato
+                darbdaviai, peržiūrėdami jūsų profilį prieš siųsdami kvietimą.
+              </p>
+
+              {recentEmployerRatingsLoading ? (
+                <div style={{ color: "#6c7a88" }}>Kraunami įvertinimai...</div>
+              ) : recentEmployerRatings.length ? (
+                <div className="wd-recent-ratings-list">
+                  {recentEmployerRatings.map((review) => (
+                    <div className="wd-recent-rating" key={review.id}>
+                      <div className="wd-recent-rating-head">
+                        <b>{review.score} / 10</b>
+                        <span>{new Date(review.created_at).toLocaleDateString("lt-LT")}</span>
+                      </div>
+                      {review.comment?.trim() && <p>{review.comment}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="wd-empty-friendly" style={{ marginTop: 4 }}>
+                  <div className="wd-empty-friendly-icon">☆</div>
+                  <div>
+                    <b>Dar nėra darbdavių įvertinimų</b>
+                    Kai gausite įvertinimą po užbaigto darbo, naujausi bus rodomi čia.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="wd-profile-editor-section"
+              id="worker-availability-editor"
+              style={{ scrollMarginTop: 92 }}
+            >
               <h3>Kada galite dirbti?</h3>
               <p>
                 Pažymėkite artimiausias dienas, kuriomis realiai galite priimti
@@ -6582,37 +6753,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
         </section>
 
-        <section className="wd-card wd-recent-ratings-card">
-            <div className="eyebrow">PASKUTINIAI DARBDAVIŲ ĮVERTINIMAI</div>
-            <h2 style={{ marginTop: 6 }}>Naujausi įvertinimai apie jus</h2>
-            <p className="wd-card-sub">
-              Rodomi iki 3 naujausių darbdavių įvertinimų. Šiuos įvertinimus taip pat gali matyti darbdaviai, peržiūrėdami jūsų profilį.
-            </p>
-
-            {recentEmployerRatingsLoading ? (
-              <div style={{ color: "#6c7a88" }}>Kraunami įvertinimai...</div>
-            ) : recentEmployerRatings.length ? (
-              <div className="wd-recent-ratings-list">
-                {recentEmployerRatings.map((review) => (
-                  <div className="wd-recent-rating" key={review.id}>
-                    <div className="wd-recent-rating-head">
-                      <b>{review.score} / 10</b>
-                      <span>{new Date(review.created_at).toLocaleDateString("lt-LT")}</span>
-                    </div>
-                    {review.comment?.trim() && <p>{review.comment}</p>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="wd-empty-friendly" style={{ marginTop: 4 }}>
-                <div className="wd-empty-friendly-icon">☆</div>
-                <div>
-                  <b>Dar nėra darbdavių įvertinimų</b>
-                  Kai gausite įvertinimą po užbaigto darbo, naujausi bus rodomi čia.
-                </div>
-              </div>
-            )}
-          </section>
 
         {employerReviewOpportunities.length > 0 && (
           <section
@@ -7583,21 +7723,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       {workdayDetailsTarget && (
         <div
-          className="rs-modal-overlay"
+          className="wd-job-info-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               setWorkdayDetailsTarget(null);
             }
           }}
         >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
+          <div className="wd-job-info-modal">
+            <style>{`
+              .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
+              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
+              .wd-job-info-close{width:44px;height:44px;border:0;border-radius:12px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 44px}
+              .wd-job-info-scroll{overflow:auto;padding:18px 24px 22px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
+              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
+            `}</style>
+            <div className="wd-job-info-head">
               <div>
                 <div className="eyebrow">DARBO INFORMACIJA</div>
                 <h2>{workdayDetailsTarget.job?.title || "Darbas"}</h2>
               </div>
               <button
-                className="rs-close"
+                className="wd-job-info-close"
                 type="button"
                 onClick={() => setWorkdayDetailsTarget(null)}
               >
@@ -7605,17 +7753,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <div className="wd-job-info-scroll">
             <div
               style={{
                 display: "grid",
-                gap: 10,
+                gap: 12,
                 marginBottom: 18,
               }}
             >
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                   background: "#f8fafb",
                 }}
@@ -7647,7 +7796,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     border: "1px solid #e4ebf0",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     padding: 14,
                   }}
                 >
@@ -7697,7 +7846,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     border: "1px solid #e4ebf0",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     padding: 14,
                   }}
                 >
@@ -7716,7 +7865,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     border: "1px solid #e4ebf0",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     padding: 14,
                   }}
                 >
@@ -7737,7 +7886,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                 }}
               >
@@ -7754,7 +7903,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                 }}
               >
@@ -7772,7 +7921,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                 }}
               >
@@ -7790,7 +7939,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                 }}
               >
@@ -7830,7 +7979,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 style={{
                   border: "1px solid #e4ebf0",
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 14,
                 }}
               >
@@ -7854,7 +8003,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     border: "1px solid #f0d1b2",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     padding: 14,
                     background: "#fffaf5",
                   }}
@@ -7876,7 +8025,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         style={{
                           background: "#fff",
                           border: "1px solid #eadfd5",
-                          borderRadius: 10,
+                          borderRadius: 14,
                           padding: 11,
                         }}
                       >
@@ -8050,6 +8199,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 Uždaryti
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -8083,7 +8233,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               style={{
                 border: "1px solid #f0d1b2",
                 background: "#fffaf5",
-                borderRadius: 12,
+                borderRadius: 16,
                 padding: 14,
                 marginBottom: 16,
                 color: "#526374",
@@ -8192,11 +8342,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <ReviewConductNotice />
+
             <div
               style={{
                 background: "#fffaf5",
                 border: "1px solid #f0d1b2",
-                borderRadius: 12,
+                borderRadius: 16,
                 padding: 14,
                 marginBottom: 16,
                 lineHeight: 1.5,
@@ -8334,7 +8486,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div
               style={{
                 background: "#f6f8fa",
-                borderRadius: 12,
+                borderRadius: 16,
                 padding: 14,
                 marginBottom: 16,
               }}
@@ -8372,7 +8524,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     border: "1px solid #dbe4ea",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     padding: 14,
                     background: "#fff",
                   }}
@@ -15685,6 +15837,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <ReviewConductNotice />
+
             <div style={{ marginBottom: 16 }}>
               <div className="ed-rating-scores">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
@@ -18672,6 +18826,8 @@ function AdminJobChatModal({ job, user, onClose }) {
 
         {error && <div className="admin-chat-error">{error}</div>}
 
+        <ChatConductNotice />
+
         <div className="admin-chat-messages" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="admin-chat-empty">Kraunamas pokalbis...</div>
@@ -18893,6 +19049,8 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
         </div>
 
         {error && <div className="admin-team-chat-error">{error}</div>}
+
+        <ChatConductNotice />
 
         <div className="admin-team-chat-messages" ref={messagesRef}>
           {loading && !messages.length ? (
