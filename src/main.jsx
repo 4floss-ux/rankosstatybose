@@ -3051,6 +3051,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [skills, setSkills] = useState([]);
@@ -3070,6 +3071,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   useEffect(() => {
     if (!showProfileEditor) return;
+    setProfileSaved(false);
 
     const timer = window.setTimeout(() => {
       const node = workerProfileEditorRef.current;
@@ -3334,6 +3336,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function updateField(key, value) {
+    setProfileSaved(false);
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -3439,6 +3442,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       URL.revokeObjectURL(avatarPreview);
     }
 
+    setProfileSaved(false);
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
     setAvatarMarkedForRemoval(false);
@@ -3446,6 +3450,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function markAvatarForRemoval() {
+    setProfileSaved(false);
     if (avatarPreview?.startsWith("blob:")) {
       URL.revokeObjectURL(avatarPreview);
     }
@@ -3456,6 +3461,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function toggleSkill(skillId) {
+    setProfileSaved(false);
     setSelectedSkills((current) =>
       current.includes(skillId)
         ? current.filter((id) => id !== skillId)
@@ -3463,7 +3469,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  function confirmedJobOnDate(date) {
+    return confirmedJobs.find((job) => job?.work_date === date) || null;
+  }
+
   function updateAvailability(date, patch) {
+    if (confirmedJobOnDate(date)) return;
+    setProfileSaved(false);
     setAvailability((current) => ({
       ...current,
       [date]: { ...current[date], ...patch },
@@ -4170,12 +4182,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const availabilityRows = days.map((day) => {
         const state = availability[day.iso];
+        const occupiedByJob = confirmedJobOnDate(day.iso);
         return {
           worker_id: user.id,
           available_date: day.iso,
-          status: state.available ? "available" : "unavailable",
-          available_from: state.available ? state.from : null,
-          available_to: state.available ? state.to : null,
+          status: occupiedByJob || !state.available ? "unavailable" : "available",
+          available_from: occupiedByJob || !state.available ? null : state.from,
+          available_to: occupiedByJob || !state.available ? null : state.to,
         };
       });
 
@@ -4201,7 +4214,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setAvatarFile(null);
       setAvatarPreview("");
       setAvatarMarkedForRemoval(false);
-      setShowProfileEditor(false);
+      setProfileSaved(true);
       setNotice("Profilio informacija atnaujinta.");
     } catch (err) {
       setError(err?.message || "Nepavyko išsaugoti duomenų.");
@@ -4559,7 +4572,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
-        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}
+        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#eef2f5!important;color:#526374!important}.wd-day-occupied-note{grid-column:2/-1;color:#607180;font-size:11px;font-weight:700;margin-top:-4px}
         .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
         .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
@@ -4590,7 +4603,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
-          .wd-day-date{grid-column:1/-1}
+          .wd-day-date{grid-column:1/-1}.wd-day-occupied-note{grid-column:1/-1}
           .wd-availability-choice{grid-column:1/-1}
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
           .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}
@@ -5031,9 +5044,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="wd-days">
                 {days.map((day) => {
                   const state = availability[day.iso];
+                  const occupiedJob = confirmedJobOnDate(day.iso);
+                  const isOccupied = Boolean(occupiedJob);
 
                   return (
-                    <div className={`wd-day ${state.available ? "available" : ""}`} key={day.iso}>
+                    <div className={`wd-day ${isOccupied ? "occupied" : state.available ? "available" : ""}`} key={day.iso}>
                       <div className="wd-day-date">
                         <b>{day.weekday}</b>
                         <span>{day.label}</span>
@@ -5044,13 +5059,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <RoundedSelect
                           className="wd-status-select"
                           ariaLabel={`${day.label} prieinamumas`}
-                          value={state.available ? "available" : "unavailable"}
+                          disabled={isOccupied}
+                          value={isOccupied ? "occupied" : state.available ? "available" : "unavailable"}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
                               available: value === "available",
                             })
                           }
-                          options={[{ value: "unavailable", label: "Užimtas" }, { value: "available", label: "Laisvas" }]}
+                          options={
+                            isOccupied
+                              ? [{ value: "occupied", label: "Užimta – turite darbą" }]
+                              : [
+                                  { value: "unavailable", label: "Užimtas" },
+                                  { value: "available", label: "Laisvas" },
+                                ]
+                          }
                         />
                       </div>
 
@@ -5058,8 +5081,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span>Nuo</span>
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} nuo`}
-                          disabled={!state.available}
-                          value={state.from}
+                          disabled={isOccupied || !state.available}
+                          value={isOccupied ? occupiedJob?.start_time?.slice(0, 5) || state.from : state.from}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
                               from: value,
@@ -5073,8 +5096,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} iki`}
                           align="right"
-                          disabled={!state.available}
-                          value={state.to}
+                          disabled={isOccupied || !state.available}
+                          value={isOccupied ? occupiedJob?.end_time?.slice(0, 5) || state.to : state.to}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
                               to: value,
@@ -5082,6 +5105,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           }
                         />
                       </div>
+
+                      {isOccupied && (
+                        <div className="wd-day-occupied-note">
+                          {occupiedJob?.title || "Patvirtintas darbas"} · {occupiedJob?.start_time?.slice(0, 5) || ""}
+                          {occupiedJob?.end_time ? `–${occupiedJob.end_time.slice(0, 5)}` : ""}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -5104,7 +5134,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={saving}
                 onClick={saveEverything}
               >
-                {saving ? "Saugoma..." : "Išsaugoti"}
+                {saving ? "Saugoma..." : profileSaved ? "Išsaugota" : "Išsaugoti"}
               </button>
             </div>
           </section>
@@ -10207,12 +10237,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const visibleJobs =
     planSummary?.can_team_management &&
     (jobScope === "mine" || !canSeeAllCompanyJobs)
-      ? jobs.filter(
-          (job) =>
-            job.responsible_user_id === user.id ||
-            job.created_by === user.id
-        )
+      ? jobs.filter((job) => {
+          const responsibleUserId = job.responsible_user_id || null;
+          return responsibleUserId
+            ? responsibleUserId === user.id
+            : job.created_by === user.id;
+        })
       : jobs;
+
+  const activeVisibleJobs = visibleJobs.filter(
+    (job) => !["completed", "cancelled"].includes(job.status)
+  );
+
+  const employerJobHistory = visibleJobs.filter((job) =>
+    ["completed", "cancelled"].includes(job.status)
+  );
 
   const employerDashboardToday = localDateISO(new Date());
 
@@ -10296,16 +10335,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     };
   }
 
-  const dashboardActionJobs = visibleJobs.filter(
+  const dashboardActionJobs = activeVisibleJobs.filter(
     (job) => employerJobDashboardState(job).key === "action"
   ).length;
 
-  const dashboardMissingWorkers = visibleJobs.reduce(
+  const dashboardMissingWorkers = activeVisibleJobs.reduce(
     (sum, job) => sum + employerJobDashboardState(job).missing,
     0
   );
 
-  const dashboardTodayJobs = visibleJobs.filter(
+  const dashboardTodayJobs = activeVisibleJobs.filter(
     (job) =>
       job.work_date === employerDashboardToday &&
       !["cancelled", "completed"].includes(job.status)
@@ -10314,9 +10353,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const dashboardUnreadMessages = employerNotifications.filter(
     (item) =>
       item.event_type === "message" &&
-      visibleJobs.some(
-        (job) => job.id === item.job_id && job.status !== "completed"
-      )
+      activeVisibleJobs.some((job) => job.id === item.job_id)
   ).length;
 
   const activeTeamMembers = teamMembers.filter((member) => member.is_active);
@@ -12073,7 +12110,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </div>
 
-          {visibleJobs.length ? (
+          {activeVisibleJobs.length ? (
             <>
               <div className="ed-job-overview">
                 <div
@@ -12114,7 +12151,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div className="ed-jobs">
-              {visibleJobs.map((job) => {
+              {activeVisibleJobs.map((job) => {
                 const unreadNonMessageNews = unreadEmployerNotifications(job.id).filter(
                   (item) => item.event_type !== "message"
                 );
@@ -12276,12 +12313,110 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-jobs-empty">
               <div className="ed-jobs-empty-icon">+</div>
               <div>
-                <b>Kol kas darbų nėra</b>
+                <b>Aktyvių darbų nėra</b>
                 <span>
                   {planSummary?.can_team_management && jobScope === "mine"
-                    ? "Kai jums bus priskirtas darbas, jis atsiras čia."
-                    : "Sukūrus pirmą darbą, jis atsiras šiame sąraše."}
+                    ? "Kai jums bus priskirtas aktyvus darbas, jis atsiras čia."
+                    : "Aktyvūs įmonės darbai atsiras šiame sąraše."}
                 </span>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="ed-card">
+          <div>
+            <h2 style={{ marginBottom: 6 }}>Darbų istorija</h2>
+            <p className="ed-sub">
+              Čia saugomi užbaigti ir atšaukti
+              {planSummary?.can_team_management && jobScope === "all"
+                ? " įmonės"
+                : " jūsų"} darbai.
+            </p>
+          </div>
+
+          {employerJobHistory.length ? (
+            <div className="ed-jobs">
+              {employerJobHistory.map((job) => {
+                const jobDashboardState = employerJobDashboardState(job);
+
+                return (
+                  <div className="ed-job" key={`history-${job.id}`}>
+                    <b className="ed-job-date">{job.work_date}</b>
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <b>{job.title}</b>
+                      </div>
+                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                        {job.city} · {job.start_time?.slice(0, 5)}
+                        {job.pay_amount
+                          ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                          : ""}
+                      </div>
+                      {planSummary?.can_team_management && (
+                        <span className="ed-responsible">
+                          Atsakingas:{" "}
+                          {teamMemberName(
+                            job.responsible_user_id || job.created_by
+                          )}
+                        </span>
+                      )}
+                      {job.status === "cancelled" &&
+                        employerPenaltyByJob[job.id] && (
+                          <div
+                            style={{
+                              marginTop: 7,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#b64d2a",
+                            }}
+                          >
+                            Šis atšaukimas sumažino jūsų patikimumą{" "}
+                            {employerPenaltyByJob[job.id].change} taškų.
+                          </div>
+                        )}
+                    </div>
+
+                    <span className="ed-progress">
+                      {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
+                    </span>
+
+                    <div className="ed-job-state-cell">
+                      <span className={`ed-job-state ${jobDashboardState.tone}`}>
+                        {jobDashboardState.label}
+                      </span>
+                      {jobDashboardState.detail && (
+                        <span className="ed-job-state-detail">
+                          {jobDashboardState.detail}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="ed-job-actions">
+                      <button
+                        type="button"
+                        onClick={() => setJobInfoTarget(job)}
+                      >
+                        Darbo informacija
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="ed-jobs-empty">
+              <div className="ed-jobs-empty-icon">✓</div>
+              <div>
+                <b>Darbų istorija tuščia</b>
+                <span>Užbaigti ir atšaukti darbai bus saugomi čia.</span>
               </div>
             </div>
           )}
