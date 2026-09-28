@@ -2046,17 +2046,14 @@ function ConversationModal({
 
   useEffect(() => {
     if (!open || loading || loadedConversationRef.current !== invitationId) return;
-    if (scrollOnLoadRef.current && messagesRef.current) {
-      const frame = requestAnimationFrame(() => {
-        if (messagesRef.current) {
-          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-        }
-        scrollOnLoadRef.current = false;
-      });
-      if (document.visibilityState === "visible") onRead?.();
-      return () => cancelAnimationFrame(frame);
-    }
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
     if (document.visibilityState === "visible") onRead?.();
+    return () => cancelAnimationFrame(frame);
   }, [open, loading, messages, invitationId]);
 
   async function loadMessages() {
@@ -2320,7 +2317,7 @@ function DisputeConversationModal({
   }, [open, attendanceId]);
 
   useEffect(() => {
-    if (!open || loading || !scrollOnLoadRef.current || !messagesRef.current) return;
+    if (!open || loading || !messagesRef.current) return;
 
     const frame = requestAnimationFrame(() => {
       if (messagesRef.current) {
@@ -2532,17 +2529,14 @@ function GroupConversationModal({
 
   useEffect(() => {
     if (!open || loading || loadedConversationRef.current !== jobId) return;
-    if (scrollOnLoadRef.current && messagesRef.current) {
-      const frame = requestAnimationFrame(() => {
-        if (messagesRef.current) {
-          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-        }
-        scrollOnLoadRef.current = false;
-      });
-      if (document.visibilityState === "visible") onRead?.();
-      return () => cancelAnimationFrame(frame);
-    }
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
     if (document.visibilityState === "visible") onRead?.();
+    return () => cancelAnimationFrame(frame);
   }, [open, loading, messages, jobId]);
 
   async function loadMessages() {
@@ -3002,10 +2996,10 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
   }, [open, placementId]);
 
   useEffect(() => {
-    if (!open || loading || !scrollOnLoadRef.current || !messagesRef.current) return;
+    if (!open || loading || !messagesRef.current) return;
     const frame = requestAnimationFrame(() => {
       if (messagesRef.current) {
-        messagesRef.current.scrollTop = 0;
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
       }
       scrollOnLoadRef.current = false;
     });
@@ -3057,10 +3051,6 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
 
   if (!open) return null;
 
-  const orderedMessages = [...messages].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-
   return (
     <div
       className="rs-modal-overlay lt-chat-overlay"
@@ -3103,8 +3093,8 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
         <div className="lt-chat-body" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="lt-chat-empty">Kraunama...</div>
-          ) : orderedMessages.length ? (
-            orderedMessages.map((message) => {
+          ) : messages.length ? (
+            messages.map((message) => {
               const mine = message.sender_id === user?.id;
               return (
                 <div className={`lt-chat-message ${mine ? "mine" : ""}`} key={message.id}>
@@ -3175,8 +3165,7 @@ function CompanyTeamChatModal({
   }, [open, companyId]);
 
   useEffect(() => {
-    if (!open || loading || loadedCompanyRef.current !== companyId) return;
-    if (!scrollOnLoadRef.current || !messagesRef.current) return;
+    if (!open || loading || loadedCompanyRef.current !== companyId || !messagesRef.current) return;
 
     const frame = requestAnimationFrame(() => {
       if (messagesRef.current) {
@@ -5546,7 +5535,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
         .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
         .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
-        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-chat-btn{position:relative}.wd-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-chat-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}.wd-conflict{display:inline-flex;margin-top:10px;border-radius:999px;padding:6px 9px;background:#fff0ec;color:#b64d2a;font-size:11px;font-weight:900}
+        .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-chat-btn{position:relative}.wd-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-chat-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}.wd-conflict{display:inline-flex;margin-top:10px;border-radius:999px;padding:6px 9px;background:#fff0ec;color:#b64d2a;font-size:11px;font-weight:900}
         .wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
@@ -6603,12 +6592,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </span>
                         )}
 
-                        {unreadWorkerJobNotifications(job.id).length > 0 && (
-                          <span className="wd-workday-status orange">
-                            ● Nauja žinutė darbo pokalbyje
-                          </span>
-                        )}
-
                         {attendance.finalized_at && (
                           <span
                             className={`wd-workday-status ${
@@ -6759,7 +6742,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               (notification) => notification.event_type === "message"
                             ).length > 0 && (
                               <span className="wd-chat-count">
-                                Nauja{" "}
                                 {Math.min(
                                   9,
                                   unreadWorkerNotifications(item.invitation_id).filter(
@@ -6790,7 +6772,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               (item) => item.event_type === "message"
                             ).length > 0 && (
                               <span className="wd-chat-count">
-                                Nauja{" "}
                                 {Math.min(
                                   9,
                                   unreadWorkerJobNotifications(job.id).filter(
@@ -7201,7 +7182,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           Privati žinutė
                           {unreadPrivateMessages.length > 0 && (
                             <span className="wd-chat-count">
-                              Nauja {Math.min(9, unreadPrivateMessages.length)}
+                              {Math.min(9, unreadPrivateMessages.length)}
                             </span>
                           )}
                         </button>
@@ -7613,7 +7594,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               {!workerWorkdayChatIsClosed(workdayDetailsTarget) &&
                 workdayDetailsTarget.invitation_id && (
                   <button
-                    className="wd-decline"
+                    className={`wd-decline wd-workday-chat ${
+                      unreadWorkerNotifications(workdayDetailsTarget.invitation_id).filter(
+                        (notification) => notification.event_type === "message"
+                      ).length > 0
+                        ? "has-unread"
+                        : ""
+                    }`}
                     type="button"
                     onClick={() => {
                       const target = workdayDetailsTarget;
@@ -7629,7 +7616,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       (notification) => notification.event_type === "message"
                     ).length > 0 && (
                       <span className="wd-chat-count">
-                        Nauja{" "}
                         {Math.min(
                           9,
                           unreadWorkerNotifications(workdayDetailsTarget.invitation_id).filter(
@@ -7646,7 +7632,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   workdayDetailsTarget.status
                 ) && (
                   <button
-                    className="wd-decline"
+                    className={`wd-decline wd-workday-chat ${
+                      unreadWorkerJobNotifications(workdayDetailsTarget.job?.id).filter(
+                        (item) => item.event_type === "message"
+                      ).length > 0
+                        ? "has-unread"
+                        : ""
+                    }`}
                     type="button"
                     onClick={() => {
                       const job = workdayDetailsTarget.job;
@@ -7655,6 +7647,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }}
                   >
                     Darbo pokalbis
+                    {unreadWorkerJobNotifications(workdayDetailsTarget.job?.id).filter(
+                      (item) => item.event_type === "message"
+                    ).length > 0 && (
+                      <span className="wd-chat-count">
+                        {Math.min(
+                          9,
+                          unreadWorkerJobNotifications(workdayDetailsTarget.job?.id).filter(
+                            (item) => item.event_type === "message"
+                          ).length
+                        )}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -12517,7 +12521,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-chat-btn{position:relative}
         .ed-team-chat-btn.locked{border-style:dashed}
         .ed-chat-alert-btn{position:relative}
-        .ed-chat-alert{position:absolute;top:-9px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#d93025;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900;line-height:1;box-shadow:0 0 0 3px #fff}
+        .ed-chat-alert{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:none}
         .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
@@ -12725,7 +12729,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
         .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
         .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
-        .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}
+        .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
@@ -13106,26 +13110,32 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {companyMemberRole === "owner" && (
               <>
                 <button
-                  className={`ed-secondary ${
+                  className={`ed-secondary wd-workday-chat ${
                     Object.values(longTermUnreadByOffer).reduce(
                       (sum, value) => sum + Number(value || 0),
                       0
                     ) > 0
-                      ? "wd-workday-chat has-unread"
+                      ? "has-unread"
                       : ""
                   }`}
                   type="button"
                   onClick={() => openLongTermEmployment("hire")}
                 >
+                  Įdarbinti darbuotoją
                   {Object.values(longTermUnreadByOffer).reduce(
                     (sum, value) => sum + Number(value || 0),
                     0
-                  ) > 0
-                    ? `Įdarbinti darbuotoją · ${Object.values(longTermUnreadByOffer).reduce(
-                        (sum, value) => sum + Number(value || 0),
-                        0
-                      )} nauja`
-                    : "Įdarbinti darbuotoją"}
+                  ) > 0 && (
+                    <span className="wd-chat-count">
+                      {Math.min(
+                        9,
+                        Object.values(longTermUnreadByOffer).reduce(
+                          (sum, value) => sum + Number(value || 0),
+                          0
+                        )
+                      )}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -14564,7 +14574,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               : "Darbo pokalbis · Business"}
                             {unreadGroupMessages.length > 0 && (
                               <span className="ed-job-chat-new">
-                                Nauja {Math.min(9, unreadGroupMessages.length)}
+                                {Math.min(9, unreadGroupMessages.length)}
                               </span>
                             )}
                           </button>
@@ -17765,8 +17775,7 @@ function AdminJobChatModal({ job, user, onClose }) {
   }, [job?.job_id]);
 
   useEffect(() => {
-    if (!job?.job_id || loading || loadedJobRef.current !== job.job_id) return;
-    if (!scrollOnLoadRef.current || !messagesRef.current) return;
+    if (!job?.job_id || loading || loadedJobRef.current !== job.job_id || !messagesRef.current) return;
 
     const frame = requestAnimationFrame(() => {
       if (messagesRef.current) {
@@ -17995,7 +18004,6 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
       !chat?.company_id ||
       loading ||
       loadedCompanyRef.current !== chat.company_id ||
-      !scrollOnLoadRef.current ||
       !messagesRef.current
     ) {
       return;
