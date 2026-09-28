@@ -2769,6 +2769,10 @@ function longTermContractLabel(value) {
   return value === "fixed_term" ? "Terminuota" : "Neterminuota";
 }
 
+function longTermSalaryBasisLabel(value) {
+  return value === "gross" ? "ant popieriaus" : "į rankas";
+}
+
 function defaultLongTermSchedule() {
   return [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
     weekday,
@@ -2836,7 +2840,9 @@ function LongTermOfferDetails({ offer }) {
           <span>Siūlomas atlygis</span>
           <b>
             {offer.salary_amount
-              ? `${offer.salary_amount} € ${
+              ? `${offer.salary_amount} € ${longTermSalaryBasisLabel(
+                  offer.salary_basis
+                )} ${
                   offer.salary_period === "monthly" ? "/ mėn." : "/ val."
                 }`
               : "Nenurodytas"}
@@ -8563,6 +8569,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     workplaceAddress: "",
     salaryAmount: "",
     salaryPeriod: "monthly",
+    salaryBasis: "net",
     salaryNote: "",
     employmentDetails: "",
     scheduleType: "fixed",
@@ -9545,6 +9552,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         workplaceAddress: "",
         salaryAmount: "",
         salaryPeriod: "monthly",
+        salaryBasis: "net",
         salaryNote: "",
         employmentDetails: "",
         scheduleType: "fixed",
@@ -9569,6 +9577,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       workplaceAddress: "",
       salaryAmount: "",
       salaryPeriod: "monthly",
+      salaryBasis: "net",
       salaryNote: "",
       employmentDetails: "",
       scheduleType: "fixed",
@@ -9641,6 +9650,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_salary_period: longTermOfferForm.salaryAmount
           ? longTermOfferForm.salaryPeriod
           : null,
+        p_salary_basis: longTermOfferForm.salaryAmount
+          ? longTermOfferForm.salaryBasis
+          : "net",
         p_salary_note: longTermOfferForm.salaryNote.trim() || null,
         p_employment_details: longTermOfferForm.employmentDetails.trim() || null,
         p_schedule_type: longTermOfferForm.scheduleType,
@@ -15801,7 +15813,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       {showLongTermEmployment && (
         <div
-          className="rs-modal-overlay"
+          className="rs-modal-overlay lt-employment-overlay"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !longTermBusy) {
               setShowLongTermEmployment(false);
@@ -15809,10 +15821,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="rs-modal-card" style={{ width: "min(980px,100%)" }}>
+          <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-list{display:grid;gap:9px}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:12px}.lt-employment-worker-main{display:flex;align-items:center;gap:11px;min-width:0}.lt-employment-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-weight:850;flex:0 0 44px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.lt-wide{grid-column:1/-1}.lt-schedule-editor{display:grid;gap:8px;margin-top:8px}.lt-schedule-edit-row{display:grid;grid-template-columns:150px 1fr 1fr 1fr 1fr;gap:8px;align-items:end;padding:10px;border:1px solid #e5ebef;border-radius:11px}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f7f9fb;border-radius:11px;padding:11px 12px;color:#526374;font-size:12px;line-height:1.5;margin-bottom:14px}
-              @media(max-width:760px){.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-schedule-edit-row{grid-template-columns:1fr 1fr}.lt-schedule-day{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:24px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(920px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:760px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:8px;margin-top:8px}.lt-schedule-edit-row{display:grid;grid-template-columns:150px 1fr 1fr 1fr 1fr;gap:8px;align-items:end;padding:10px;border:1px solid #e5ebef;border-radius:11px}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}
+              @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr 1fr}.lt-schedule-day{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}.lt-employment-worker .ed-primary{width:100%}}
             `}</style>
 
             <div className="rs-modal-head">
@@ -15947,41 +15959,61 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     />
                   </label>
 
-                  <label className="ed-label">
-                    Siūlomas atlygis (€)
-                    <input
-                      className="ed-input"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={longTermOfferForm.salaryAmount}
-                      onChange={(e) =>
-                        setLongTermOfferForm((current) => ({
-                          ...current,
-                          salaryAmount: e.target.value,
-                        }))
-                      }
-                      placeholder="Pvz. 1800"
-                    />
-                  </label>
+                  <div className="lt-salary-row">
+                    <label className="ed-label">
+                      Siūlomas atlygis (€)
+                      <input
+                        className="ed-input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={longTermOfferForm.salaryAmount}
+                        onChange={(e) =>
+                          setLongTermOfferForm((current) => ({
+                            ...current,
+                            salaryAmount: e.target.value,
+                          }))
+                        }
+                        placeholder="Pvz. 1800"
+                      />
+                    </label>
 
-                  <label className="ed-label">
-                    Atlygio periodas
-                    <RoundedSelect
-                      className="ed-input"
-                      value={longTermOfferForm.salaryPeriod}
-                      options={[
-                        { value: "monthly", label: "Per mėnesį" },
-                        { value: "hourly", label: "Per valandą" },
-                      ]}
-                      onChange={(value) =>
-                        setLongTermOfferForm((current) => ({
-                          ...current,
-                          salaryPeriod: value,
-                        }))
-                      }
-                    />
-                  </label>
+                    <label className="ed-label">
+                      Atlygio periodas
+                      <RoundedSelect
+                        className="ed-input"
+                        value={longTermOfferForm.salaryPeriod}
+                        options={[
+                          { value: "monthly", label: "Per mėnesį" },
+                          { value: "hourly", label: "Per valandą" },
+                        ]}
+                        onChange={(value) =>
+                          setLongTermOfferForm((current) => ({
+                            ...current,
+                            salaryPeriod: value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="ed-label">
+                      Atlygis nurodytas
+                      <RoundedSelect
+                        className="ed-input"
+                        value={longTermOfferForm.salaryBasis}
+                        options={[
+                          { value: "net", label: "Į rankas (neto)" },
+                          { value: "gross", label: "Ant popieriaus (bruto)" },
+                        ]}
+                        onChange={(value) =>
+                          setLongTermOfferForm((current) => ({
+                            ...current,
+                            salaryBasis: value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
 
                   <label className="ed-label lt-wide">
                     Atlygio / sąlygų pastaba
@@ -15994,7 +16026,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           salaryNote: e.target.value,
                         }))
                       }
-                      placeholder="Pvz. atlygis į rankas, bandomasis laikotarpis ar priedai"
+                      placeholder="Pvz. bandomasis laikotarpis, priedai ar premijos"
                     />
                   </label>
 
