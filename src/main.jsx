@@ -9943,7 +9943,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-plan-card.pro .ed-plan-current{background:rgba(255,255,255,.12);color:#fff}
         .ed-plan-card .ed-primary,.ed-plan-card .ed-secondary{width:100%;min-height:43px}
         .ed-plan-card.pro .ed-secondary{border-color:#526779;background:#fff;color:#102438}
-        .ed-plan-footnote{margin-top:16px;color:#778694;font-size:12px;line-height:1.5}
+        .ed-plan-footnote{margin-top:16px;color:#778694;font-size:12px;line-height:1.5;text-align:center}
         .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
         .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
         .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
