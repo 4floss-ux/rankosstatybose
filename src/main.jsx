@@ -9925,20 +9925,35 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (publishResult.error) throw publishResult.error;
 
       const workerName = longTermSelectedWorker.worker_name;
+      const positionTitle = longTermOfferForm.positionTitle.trim();
       setLongTermContractFile(null);
       setLongTermSelectedWorker(null);
       await loadCompanyLongTermData(company.id);
       setNotice(
-        `Pasiūlymas pateiktas darbuotojui ${workerName}. Darbuotojui taip pat išsiųsta žinutė perskaityti, pasirašyti ir įkelti darbo sutartį.`
+        `Pasiūlymas pateiktas darbuotojui ${workerName}. Darbuotojui išsiųsta darbo sutartis ir žinutė ją perskaityti, pasirašyti bei įkelti atgal.`
       );
+
+      // Iškart po sėkmingo pateikimo atidarome pasiūlymo pokalbį.
+      // Taip darbdavys iš karto mato automatinę žinutę apie sutartį ir gali rašyti darbuotojui.
+      setShowLongTermEmployment(false);
+      setLongTermConversation({
+        placementId,
+        title: `${workerName} · ${positionTitle}`,
+      });
     } catch (err) {
+      // Jei pasiūlymo sukūrimas pavyko, bet sutarties įkėlimas / pateikimas nepavyko,
+      // išvalome neužbaigtą juodraštį, kad kitas bandymas būtų švarus.
       if (storagePath) {
-        await supabase.storage.from("employment-contracts").remove([storagePath]).catch(() => {});
+        try {
+          await supabase.storage.from("employment-contracts").remove([storagePath]);
+        } catch (_) {}
       }
       if (placementId) {
-        await supabase.rpc("discard_long_term_offer_draft", {
-          p_placement_id: placementId,
-        }).catch(() => {});
+        try {
+          await supabase.rpc("discard_long_term_offer_draft", {
+            p_placement_id: placementId,
+          });
+        } catch (_) {}
       }
       setError(err?.message || "Nepavyko išsiųsti įdarbinimo pasiūlymo.");
     } finally {
