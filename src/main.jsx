@@ -16270,6 +16270,31 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
 
+            {jobInfoTarget.status === "cancelled" && (
+              <div
+                style={{
+                  marginTop: 10,
+                  border: "1px solid #f2c7bd",
+                  background: "#fff5f2",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#b64d2a", fontSize: 12, fontWeight: 800 }}>
+                  ATŠAUKIMO PRIEŽASTIS
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    lineHeight: 1.55,
+                    whiteSpace: "pre-wrap",
+                    color: "#102438",
+                  }}
+                >
+                  {jobInfoTarget.cancellation_reason?.trim() || "Priežastis nenurodyta."}
+                </div>
+              </div>
+            )}
 
             <div
               style={{
