@@ -2987,6 +2987,10 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
       });
       if (result.error) throw result.error;
       setMessages(result.data || []);
+      const readResult = await supabase.rpc("mark_long_term_messages_read", {
+        p_placement_id: placementId,
+      });
+      if (readResult.error) throw readResult.error;
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti pokalbio.");
     } finally {
@@ -3663,6 +3667,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [groupConversation, setGroupConversation] = useState(null);
   const [disputeConversation, setDisputeConversation] = useState(null);
   const [longTermOffers, setLongTermOffers] = useState([]);
+  const [longTermUnreadByOffer, setLongTermUnreadByOffer] = useState({});
   const [longTermOfferTarget, setLongTermOfferTarget] = useState(null);
   const [longTermConversation, setLongTermConversation] = useState(null);
   const [longTermBusy, setLongTermBusy] = useState(false);
@@ -3783,10 +3788,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, [user.id]);
 
   async function loadLongTermOffers() {
-    const result = await supabase.rpc("get_worker_long_term_offers");
+    const [result, unreadResult] = await Promise.all([
+      supabase.rpc("get_worker_long_term_offers"),
+      supabase.rpc("get_worker_long_term_unread_counts"),
+    ]);
     if (result.error) throw result.error;
+    if (unreadResult.error) throw unreadResult.error;
     const rows = result.data || [];
+    const unreadMap = Object.fromEntries(
+      (unreadResult.data || []).map((row) => [
+        row.placement_id,
+        Number(row.unread_count || 0),
+      ])
+    );
     setLongTermOffers(rows);
+    setLongTermUnreadByOffer(unreadMap);
     setLongTermOfferTarget((current) =>
       current ? rows.find((row) => row.id === current.id) || null : current
     );
@@ -6231,6 +6247,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       >
                         {longTermStatusLabel(offer.status)}
                       </span>
+                      {Number(longTermUnreadByOffer[offer.id] || 0) > 0 && (
+                        <span
+                          className="wd-workday-status orange"
+                          style={{ marginTop: 7, marginLeft: 7 }}
+                        >
+                          ● Nauja žinutė · {Number(longTermUnreadByOffer[offer.id] || 0)}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -8380,17 +8404,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               <button
-                className="wd-decline"
+                className={`wd-decline ${
+                  Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0
+                    ? "wd-workday-chat has-unread"
+                    : ""
+                }`}
                 type="button"
                 disabled={longTermBusy}
-                onClick={() =>
+                onClick={() => {
+                  setLongTermUnreadByOffer((current) => ({
+                    ...current,
+                    [longTermOfferTarget.id]: 0,
+                  }));
                   setLongTermConversation({
                     placementId: longTermOfferTarget.id,
                     title: `${longTermOfferTarget.company_name} · ${longTermOfferTarget.position_title}`,
-                  })
-                }
+                  });
+                }}
               >
-                Aptarti pasiūlymą
+                {Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0
+                  ? `Aptarti pasiūlymą · ${Number(
+                      longTermUnreadByOffer[longTermOfferTarget.id] || 0
+                    )} nauja`
+                  : "Aptarti pasiūlymą"}
               </button>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -8792,7 +8828,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermModalMode, setLongTermModalMode] = useState("hire");
   const [longTermCandidates, setLongTermCandidates] = useState([]);
   const [companyLongTermOffers, setCompanyLongTermOffers] = useState([]);
+  const [longTermUnreadByOffer, setLongTermUnreadByOffer] = useState({});
   const [longTermSelectedWorker, setLongTermSelectedWorker] = useState(null);
+  const [longTermCommitmentSummary, setLongTermCommitmentSummary] = useState(null);
+  const [longTermCommitmentLoading, setLongTermCommitmentLoading] = useState(false);
   const [longTermConversation, setLongTermConversation] = useState(null);
   const [longTermBusy, setLongTermBusy] = useState(false);
   const [longTermContractFile, setLongTermContractFile] = useState(null);
@@ -9018,7 +9057,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             ? loadSavedWorkers(company.id, planSummary)
             : Promise.resolve(),
           loadCompanyTeamChatUnread(company.id, planSummary),
+          loadCompanyLongTermUnreadCounts(company.id),
         ]);
+
+        if (showLongTermEmployment) {
+          await loadCompanyLongTermData(company.id);
+        }
 
         if (currentJob?.id) {
           await loadCurrentJobWorkers(currentJob.id);
@@ -9082,7 +9126,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [company?.id, currentJob?.id, planSummary?.can_team_chat, companyMemberRole]);
+  }, [company?.id, currentJob?.id, planSummary?.can_team_chat, companyMemberRole, showLongTermEmployment]);
 
   async function loadEmployerNotifications() {
     const result = await supabase
@@ -9748,25 +9792,52 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     });
   }
 
+  async function loadCompanyLongTermUnreadCounts(companyId = company?.id) {
+    if (!companyId) return {};
+    const result = await supabase.rpc("get_company_long_term_unread_counts", {
+      p_company_id: companyId,
+    });
+    if (result.error) throw result.error;
+    const unreadMap = Object.fromEntries(
+      (result.data || []).map((row) => [
+        row.placement_id,
+        Number(row.unread_count || 0),
+      ])
+    );
+    setLongTermUnreadByOffer(unreadMap);
+    return unreadMap;
+  }
+
   async function loadCompanyLongTermData(companyId = company?.id) {
     if (!companyId) return { candidates: [], offers: [] };
 
-    const [candidatesResult, offersResult] = await Promise.all([
+    const [candidatesResult, offersResult, unreadResult] = await Promise.all([
       supabase.rpc("get_company_long_term_candidates", {
         p_company_id: companyId,
       }),
       supabase.rpc("get_company_long_term_offers", {
         p_company_id: companyId,
       }),
+      supabase.rpc("get_company_long_term_unread_counts", {
+        p_company_id: companyId,
+      }),
     ]);
 
     if (candidatesResult.error) throw candidatesResult.error;
     if (offersResult.error) throw offersResult.error;
+    if (unreadResult.error) throw unreadResult.error;
 
     const candidates = candidatesResult.data || [];
     const offers = offersResult.data || [];
+    const unreadMap = Object.fromEntries(
+      (unreadResult.data || []).map((row) => [
+        row.placement_id,
+        Number(row.unread_count || 0),
+      ])
+    );
     setLongTermCandidates(candidates);
     setCompanyLongTermOffers(offers);
+    setLongTermUnreadByOffer(unreadMap);
     return { candidates, offers };
   }
 
@@ -9775,6 +9846,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setLongTermModalMode(mode);
     setShowLongTermEmployment(true);
     setLongTermSelectedWorker(null);
+    setLongTermCommitmentSummary(null);
     setLongTermContractFile(null);
     setLongTermBusy(true);
     setError("");
@@ -9803,8 +9875,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  function chooseLongTermCandidate(worker) {
+  async function chooseLongTermCandidate(worker) {
     setLongTermSelectedWorker(worker);
+    setLongTermCommitmentSummary(null);
     setLongTermContractFile(null);
     setLongTermOfferForm((current) => ({
       ...current,
@@ -9822,6 +9895,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       scheduleType: "fixed",
     }));
     setLongTermSchedule(defaultLongTermSchedule());
+
+    if (!company?.id || !worker?.worker_id) return;
+    setLongTermCommitmentLoading(true);
+    try {
+      const result = await supabase.rpc(
+        "get_long_term_candidate_commitment_summary",
+        {
+          p_company_id: company.id,
+          p_worker_id: worker.worker_id,
+        }
+      );
+      if (result.error) throw result.error;
+      setLongTermCommitmentSummary(result.data?.[0] || null);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patikrinti darbuotojo suplanuotų darbų.");
+    } finally {
+      setLongTermCommitmentLoading(false);
+    }
   }
 
   function updateLongTermScheduleDay(weekday, key, value) {
@@ -10162,6 +10253,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadedPlan?.can_team_chat
           ? loadCompanyTeamChatUnread(companyId, loadedPlan)
           : Promise.resolve(),
+        loadCompanyLongTermUnreadCounts(companyId),
       ]);
 
       setForm((current) => ({
@@ -12837,11 +12929,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <button
-              className="ed-secondary"
+              className={`ed-secondary ${
+                Object.values(longTermUnreadByOffer).reduce(
+                  (sum, value) => sum + Number(value || 0),
+                  0
+                ) > 0
+                  ? "wd-workday-chat has-unread"
+                  : ""
+              }`}
               type="button"
               onClick={() => openLongTermEmployment("hire")}
             >
-              Įdarbinti darbuotoją
+              {Object.values(longTermUnreadByOffer).reduce(
+                (sum, value) => sum + Number(value || 0),
+                0
+              ) > 0
+                ? `Įdarbinti darbuotoją · ${Object.values(longTermUnreadByOffer).reduce(
+                    (sum, value) => sum + Number(value || 0),
+                    0
+                  )} nauja`
+                : "Įdarbinti darbuotoją"}
             </button>
 
             <button
@@ -16174,7 +16281,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fbfcfd}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) auto;gap:12px;align-items:center;border:1px solid #cfe7dc;border-radius:13px;padding:13px 14px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fbfcfd}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) auto;gap:12px;align-items:center;border:1px solid #cfe7dc;border-radius:13px;padding:13px 14px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
               @media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}}
               @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}.lt-employment-worker .ed-primary{width:100%}}
             `}</style>
@@ -16268,6 +16375,32 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       }
                     />
                   </label>
+
+                  {longTermCommitmentLoading && (
+                    <div className="lt-wide lt-commitment-note">
+                      Tikrinami darbuotojo jau suplanuoti workforce darbai...
+                    </div>
+                  )}
+
+                  {!longTermCommitmentLoading &&
+                    Number(longTermCommitmentSummary?.confirmed_job_count || 0) > 0 && (
+                      <div className="lt-wide lt-commitment-note warning">
+                        <b>Darbuotojas dar turi suplanuotų workforce darbų.</b>
+                        <span>
+                          Patvirtintų darbų: {Number(
+                            longTermCommitmentSummary.confirmed_job_count || 0
+                          )}. Paskutinis suplanuotas darbas – {
+                            longTermCommitmentSummary.last_confirmed_job_date
+                          }.
+                          {longTermOfferForm.proposedStartDate &&
+                          longTermCommitmentSummary.last_confirmed_job_date &&
+                          longTermOfferForm.proposedStartDate <=
+                            longTermCommitmentSummary.last_confirmed_job_date
+                            ? " Pasirinkta įdarbinimo pradžia yra iki šios datos arba tą pačią dieną. Aktyvinant įdarbinimą sistema dar patikrins konkretų grafikų persidengimą."
+                            : " Pasirinkta įdarbinimo pradžia yra po paskutinio suplanuoto darbo."}
+                        </span>
+                      </div>
+                    )}
 
                   {longTermOfferForm.contractType === "fixed_term" && (
                     <label className="ed-label">
@@ -16661,19 +16794,36 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   ? "✓ Darbuotojas įkėlė pasirašytą sutartį"
                                   : "Laukiama darbuotojo pasirašytos sutarties"}
                               </div>
+                              {Number(longTermUnreadByOffer[offer.id] || 0) > 0 && (
+                                <div style={{ color: "#b85f0e", fontSize: 12, marginTop: 5, fontWeight: 800 }}>
+                                  ● Nauja darbuotojo žinutė · {Number(
+                                    longTermUnreadByOffer[offer.id] || 0
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="lt-existing-actions">
                               <button
-                                className="ed-secondary"
+                                className={`ed-secondary ${
+                                  Number(longTermUnreadByOffer[offer.id] || 0) > 0
+                                    ? "wd-workday-chat has-unread"
+                                    : ""
+                                }`}
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
+                                  setLongTermUnreadByOffer((current) => ({
+                                    ...current,
+                                    [offer.id]: 0,
+                                  }));
                                   setLongTermConversation({
                                     placementId: offer.id,
                                     title: `${offer.worker_name} · ${offer.position_title}`,
-                                  })
-                                }
+                                  });
+                                }}
                               >
-                                Žinutės
+                                {Number(longTermUnreadByOffer[offer.id] || 0) > 0
+                                  ? `Žinutės · ${Number(longTermUnreadByOffer[offer.id] || 0)} nauja`
+                                  : "Žinutės"}
                               </button>
                               {offer.employer_contract_path && (
                                 <button
@@ -16733,6 +16883,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 {offer.position_title} · nuo {offer.proposed_start_date}
                                 {offer.proposed_end_date ? ` iki ${offer.proposed_end_date}` : " · neterminuota"}
                               </div>
+                              {Number(longTermUnreadByOffer[offer.id] || 0) > 0 && (
+                                <div style={{ color: "#b85f0e", fontSize: 12, marginTop: 4, fontWeight: 800 }}>
+                                  ● Nauja darbuotojo žinutė · {Number(
+                                    longTermUnreadByOffer[offer.id] || 0
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="lt-employed-meta">
                               {offer.schedule_type === "fixed"
@@ -16745,16 +16902,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </div>
                             <div className="lt-existing-actions">
                               <button
-                                className="ed-secondary"
+                                className={`ed-secondary ${
+                                  Number(longTermUnreadByOffer[offer.id] || 0) > 0
+                                    ? "wd-workday-chat has-unread"
+                                    : ""
+                                }`}
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
+                                  setLongTermUnreadByOffer((current) => ({
+                                    ...current,
+                                    [offer.id]: 0,
+                                  }));
                                   setLongTermConversation({
                                     placementId: offer.id,
                                     title: `${offer.worker_name} · ${offer.position_title}`,
-                                  })
-                                }
+                                  });
+                                }}
                               >
-                                Žinutės
+                                {Number(longTermUnreadByOffer[offer.id] || 0) > 0
+                                  ? `Žinutės · ${Number(longTermUnreadByOffer[offer.id] || 0)} nauja`
+                                  : "Žinutės"}
                               </button>
                               {offer.worker_signed_contract_path && (
                                 <button
