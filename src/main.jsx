@@ -5942,7 +5942,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:max-content;max-width:100%;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
-        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-card>.eyebrow{margin-bottom:14px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
@@ -6484,12 +6484,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="wd-profile-editor-section wd-recent-ratings-card">
-              <div className="eyebrow">PASKUTINIAI DARBDAVIŲ ĮVERTINIMAI</div>
-              <h3 style={{ marginTop: 6 }}>Naujausi įvertinimai apie jus</h3>
-              <p>
-                Rodomi iki 3 naujausių darbdavių įvertinimų. Juos taip pat mato
-                darbdaviai, peržiūrėdami jūsų profilį prieš siųsdami kvietimą.
-              </p>
+              <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
 
               {recentEmployerRatingsLoading ? (
                 <div style={{ color: "#6c7a88" }}>Kraunami įvertinimai...</div>
@@ -7404,8 +7399,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               />
               </>
             ) : (
-              <div style={{ color: "#6c7a88" }}>
-                Šiuo metu aktyvių ar laukiamų darbų nėra.
+              <div className="wd-empty-friendly">
+                <div className="wd-empty-friendly-icon">✓</div>
+                <div>
+                  <b>Aktyvių darbų nėra</b>
+                  Kai priimsite darbo kvietimą arba turėsite artėjantį darbą, jis bus rodomas čia.
+                </div>
               </div>
             )}
           </section>
