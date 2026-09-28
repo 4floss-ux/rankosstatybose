@@ -4037,6 +4037,27 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   const workerDashboardToday = localDateISO(new Date());
 
+  const workerWorkdayIsHistory = (item) => {
+    const attendance = item?.attendance || {};
+    return (
+      Boolean(attendance.finalized_at) ||
+      [
+        "completed",
+        "no_show",
+        "cancelled_by_employer",
+        "cancelled_by_worker",
+      ].includes(item?.status)
+    );
+  };
+
+  const activeWorkerWorkdays = workdays.filter(
+    (item) => !workerWorkdayIsHistory(item)
+  );
+  const workerWorkHistory = workdays.filter(workerWorkdayIsHistory);
+  const activeWorkerJobIds = new Set(
+    activeWorkerWorkdays.map((item) => item.job?.id).filter(Boolean)
+  );
+
   const workerTodayJobs = workdays.filter(
     (item) =>
       item.job?.work_date === workerDashboardToday &&
@@ -4044,7 +4065,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   );
 
   const workerUnreadMessages = workerNotifications.filter(
-    (item) => item.event_type === "message"
+    (item) =>
+      item.event_type === "message" &&
+      (!item.job_id || activeWorkerJobIds.has(item.job_id))
   );
 
   const workerOpenDisputes = workdays.filter(
@@ -5001,16 +5024,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <div className="wd-form">
           <section className="wd-card" id="worker-workdays">
-            <h2>Mano darbo dienos</h2>
+            <h2>Mano darbai</h2>
             <p className="wd-card-sub">
-              Pasibaigus darbo laikui darbo dieną turi uždaryti bent viena pusė.
-              Jei rezultatai nesutampa, reitingas nekeičiamas iki ginčo išsprendimo.
-              Žemiau visada rodome, koks yra jūsų kitas žingsnis.
+              Čia rodomi tik laukiami, vykstantys arba dar neuždaryti darbai.
+              Užbaigti darbai automatiškai perkeliami į „Darbų istoriją“.
             </p>
 
-            {workdays.length ? (
+            {activeWorkerWorkdays.length ? (
               <div className="wd-workdays">
-                {workdays.map((item) => {
+                {activeWorkerWorkdays.map((item) => {
                   const job = item.job;
                   const attendance = item.attendance || {};
                   const ended = jobHasEnded(job);
@@ -5447,7 +5469,102 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             ) : (
               <div style={{ color: "#6c7a88" }}>
-                Patvirtintų darbo dienų kol kas nėra.
+                Šiuo metu aktyvių ar laukiamų darbų nėra.
+              </div>
+            )}
+          </section>
+
+          <section className="wd-card" id="worker-job-history">
+            <h2>Darbų istorija</h2>
+            <p className="wd-card-sub">
+              Čia saugomi užbaigti ir atšaukti darbai. Užbaigus darbą privatus
+              susirašinėjimas ir darbo pokalbis uždaromi — lieka tik darbo informacija.
+            </p>
+
+            {workerWorkHistory.length ? (
+              <div className="wd-workdays">
+                {workerWorkHistory.map((item) => {
+                  const job = item.job;
+                  const attendance = item.attendance || {};
+                  if (!job) return null;
+
+                  const cancelled = [
+                    "cancelled_by_employer",
+                    "cancelled_by_worker",
+                  ].includes(item.status);
+
+                  return (
+                    <div className="wd-workday" key={`history-${item.id}`}>
+                      <div>
+                        <div className="wd-workday-title">
+                          <h3>{job.title}</h3>
+                          <span
+                            className={`wd-workday-phase ${
+                              cancelled ? "cancelled" : "done"
+                            }`}
+                          >
+                            {cancelled ? "Atšauktas" : "Užbaigtas"}
+                          </span>
+                        </div>
+
+                        <div className="wd-workday-meta">
+                          <div>
+                            <b>{item.companyName}</b>
+                            {job.pay_amount
+                              ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                              : ""}
+                            {" · "}
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time
+                              ? `–${job.end_time.slice(0, 5)}`
+                              : ""}
+                          </div>
+                        </div>
+
+                        {cancelled ? (
+                          <span className="wd-workday-status red">
+                            Darbas atšauktas
+                          </span>
+                        ) : attendance.finalized_at ? (
+                          <span
+                            className={`wd-workday-status ${
+                              attendance.final_outcome === "no_show" ||
+                              attendance.final_outcome ===
+                                "left_early_unexcused"
+                                ? "red"
+                                : "green"
+                            }`}
+                          >
+                            {attendanceOutcomeLabel(attendance)}
+                            {attendance.worked_minutes > 0
+                              ? ` · ${formatWorkedMinutes(
+                                  attendance.worked_minutes
+                                )}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span className="wd-workday-status green">
+                            Darbas užbaigtas
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="wd-workday-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(item)}
+                        >
+                          Darbo informacija
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Užbaigtų darbų istorijos kol kas nėra.
               </div>
             )}
           </section>
@@ -9888,7 +10005,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const dashboardUnreadMessages = employerNotifications.filter(
     (item) =>
       item.event_type === "message" &&
-      visibleJobs.some((job) => job.id === item.job_id)
+      visibleJobs.some(
+        (job) => job.id === item.job_id && job.status !== "completed"
+      )
   ).length;
 
   const activeTeamMembers = teamMembers.filter((member) => member.is_active);
@@ -10955,7 +11074,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </section>
 
 
-        {currentJob && (
+        {currentJob && currentJob.status !== "completed" && (
           <section
             className="ed-card"
             id="employer-open-job"
@@ -11733,33 +11852,50 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </div>
 
                     <div className="ed-job-actions">
-                      <button onClick={() => openExistingJob(job)}>Atidaryti</button>
-
-                      <button
-                        className={`ed-job-chat-btn ${
-                          unreadGroupMessages.length ? "has-unread" : ""
-                        }`}
-                        type="button"
-                        onClick={() => openEmployerGroupConversation(job)}
-                      >
-                        {planSummary?.can_job_chat ? "Darbo pokalbis" : "Darbo pokalbis · Business"}
-                        {unreadGroupMessages.length > 0 && (
-                          <span className="ed-job-chat-new">
-                            Nauja {Math.min(9, unreadGroupMessages.length)}
-                          </span>
-                        )}
-                      </button>
-
-                      {job.status !== "cancelled" && job.status !== "completed" && (
-                        <button onClick={() => startEditJob(job)}>Redaguoti</button>
-                      )}
-                      {job.status !== "cancelled" && job.status !== "completed" && (
+                      {job.status === "completed" ? (
                         <button
-                          className="ed-danger"
-                          onClick={() => requestRemoveOrCancelJob(job)}
+                          type="button"
+                          onClick={() => setJobInfoTarget(job)}
                         >
-                          {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
+                          Darbo informacija
                         </button>
+                      ) : (
+                        <>
+                          <button onClick={() => openExistingJob(job)}>
+                            Atidaryti
+                          </button>
+
+                          <button
+                            className={`ed-job-chat-btn ${
+                              unreadGroupMessages.length ? "has-unread" : ""
+                            }`}
+                            type="button"
+                            onClick={() => openEmployerGroupConversation(job)}
+                          >
+                            {planSummary?.can_job_chat
+                              ? "Darbo pokalbis"
+                              : "Darbo pokalbis · Business"}
+                            {unreadGroupMessages.length > 0 && (
+                              <span className="ed-job-chat-new">
+                                Nauja {Math.min(9, unreadGroupMessages.length)}
+                              </span>
+                            )}
+                          </button>
+
+                          {job.status !== "cancelled" && (
+                            <button onClick={() => startEditJob(job)}>
+                              Redaguoti
+                            </button>
+                          )}
+                          {job.status !== "cancelled" && (
+                            <button
+                              className="ed-danger"
+                              onClick={() => requestRemoveOrCancelJob(job)}
+                            >
+                              {job.confirmedCount > 0 ? "Atšaukti" : "Ištrinti"}
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
