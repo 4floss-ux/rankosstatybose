@@ -9935,6 +9935,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-urgent-btn:hover{background:#1d354d}
         .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
         .ed-urgent-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-attendance-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
+        .ed-attendance-modal{width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-attendance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+        .ed-attendance-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
+        .ed-attendance-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
+        .ed-attendance-close:disabled{opacity:.55;cursor:not-allowed}
+        .ed-attendance-person{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:14px;margin-bottom:16px}
+        .ed-attendance-person b{display:block;font-size:15px}
+        .ed-attendance-person span{display:block;color:#6c7a88;margin-top:4px;font-size:13px}
+        .ed-attendance-choice{display:grid;gap:10px}
+        .ed-attendance-choice>button{width:100%;min-height:48px}
         .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.ed-urgent-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
         .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
         .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
@@ -10157,7 +10168,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100vh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -11754,7 +11765,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       {attendanceTarget && attendanceMode && (
         <div
-          className="rs-modal-overlay"
+          className="ed-attendance-overlay"
+          role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !attendanceSaving) {
               setAttendanceTarget(null);
@@ -11764,8 +11776,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
+          <div
+            className="ed-attendance-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Darbo dienos uždarymas"
+          >
+            <div className="ed-attendance-head">
               <div>
                 <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
                 <h2>
@@ -11778,7 +11795,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <button
-                className="rs-close"
+                className="ed-attendance-close"
                 disabled={attendanceSaving}
                 onClick={() => {
                   setAttendanceTarget(null);
@@ -11791,22 +11808,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
-            <div
-              style={{
-                background: "#f6f8fa",
-                borderRadius: 12,
-                padding: 14,
-                marginBottom: 16,
-              }}
-            >
+            <div className="ed-attendance-person">
               <b>{attendanceTarget.name}</b>
-              <div style={{ color: "#6c7a88", marginTop: 4 }}>
+              <span>
                 {currentJob?.title} · {currentJob?.work_date}
-              </div>
+              </span>
             </div>
 
             {attendanceMode === "choose" && (
-              <div style={{ display: "grid", gap: 10 }}>
+              <div className="ed-attendance-choice">
                 <button
                   className="ed-primary"
                   disabled={attendanceSaving}
