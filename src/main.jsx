@@ -4451,11 +4451,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 : "Laisvas dabar"}
             </button>
 
-            {urgentAvailabilityIsActive() && (
+            {urgentAvailabilityIsActive() && !hasCurrentScheduledWork() && (
               <div className="wd-urgent-status">
-                {hasCurrentScheduledWork()
-                  ? "Šiuo metu skubioje paieškoje nerodomas: vyksta patvirtinto darbo laikas."
-                  : `${urgentAvailability.city} · matomas „Skubiai!“ paieškoje`}
+                {`${urgentAvailability.city} · matomas „Skubiai!“ paieškoje`}
               </div>
             )}
 
