@@ -1275,7 +1275,7 @@ function TeamInvitePage({
           padding: 28,
         }}
       >
-        <BrandLogo href="/" className="brand" height={36} style={{ marginBottom: 26 }} />
+        <BrandLogo href="/" className="brand" height={42} style={{ marginBottom: 26 }} />
 
         <div className="eyebrow">ĮMONĖS KOMANDOS KVIETIMAS</div>
 
@@ -1422,7 +1422,7 @@ function Header({ onLogin, onEmployerSignup, user, onLogout }) {
   return (
     <header className="header">
       <div className="container nav">
-        <BrandLogo className="brand" href="#" height={36} />
+        <BrandLogo className="brand" href="#" height={42} />
 
         <nav className="navlinks">
           <a href="#kaip">Kaip tai veikia</a>
@@ -4352,7 +4352,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <header className="wd-topbar">
         <div className="wd-topbar-inner">
-          <BrandLogo className="brand" href="#" height={36} />
+          <BrandLogo className="brand" href="#" height={42} />
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             {onAdminReturn && (
               <button
@@ -10034,7 +10034,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <header className="ed-topbar">
         <div className="ed-topbar-inner">
-          <BrandLogo className="brand" href="#" height={36} />
+          <BrandLogo className="brand" href="#" height={42} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {company && planSummary && (
@@ -15049,7 +15049,7 @@ function AdminDashboard({
 
       <header className="admin-topbar">
         <div className="admin-topbar-inner">
-          <BrandLogo className="brand" href="#" height={36} />
+          <BrandLogo className="brand" href="#" height={42} />
 
           <div className="admin-top-actions">
             <button
@@ -16658,7 +16658,7 @@ function PublicLandingPage({
       `}</style>
 
       <header className="home-header"><div className="home-wrap home-nav">
-        <BrandLogo className="home-brand" href="#pradzia" height={42} />
+        <BrandLogo className="home-brand" href="#pradzia" height={52} />
         <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
           <a href="#kaip">Kaip tai veikia</a>
           <a href="#nauda">Nauda</a>
@@ -16707,7 +16707,7 @@ function PublicLandingPage({
         </div></section>
         <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={() => onEmployerSignup("basic")}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
       </main>
-      <footer className="home-footer"><div className="home-wrap home-footer-inner"><BrandLogo className="home-brand" href="#pradzia" height={34} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} /><div className="home-legal-links"><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button></div><span>© 2026 workforce.lt</span></div></footer>
+      <footer className="home-footer"><div className="home-wrap home-footer-inner"><BrandLogo className="home-brand" href="#pradzia" height={38} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} /><div className="home-legal-links"><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button></div><span>© 2026 workforce.lt</span></div></footer>
       <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
       <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
