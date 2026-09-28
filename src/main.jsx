@@ -483,54 +483,87 @@ function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const frame = requestAnimationFrame(() => {
-      containerRef.current?.querySelectorAll(".wd-time-options").forEach((list) => {
-        const selected = list.querySelector(".selected");
-        if (selected) list.scrollTop = selected.offsetTop - list.offsetTop - list.clientHeight / 2;
-      });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
+  const hourOptions = Array.from({ length: 24 }, (_, index) =>
+    String(index).padStart(2, "0")
+  );
+  const minuteOptions = Array.from({ length: 12 }, (_, index) =>
+    String(index * 5).padStart(2, "0")
+  );
 
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
-      <button ref={triggerRef} type="button" className={className}
-        disabled={disabled} aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}>
-        <span style={!hasValue ? { color: "#8a98a6" } : undefined}>{hasValue ? `${hour}:${minute}` : placeholder}</span><span aria-hidden="true">◷</span>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={className}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span style={!hasValue ? { color: "#8a98a6" } : undefined}>
+          {hasValue ? `${hour}:${minute}` : placeholder}
+        </span>
+        <span aria-hidden="true">◷</span>
       </button>
+
       {open && !disabled && (
-        <div role="dialog" aria-label={ariaLabel} className="wd-time-popover"
-          style={align === "right" ? { right: 0 } : { left: 0 }}>
-          {[{ title: "Valandos", count: 24, selected: hour, set: (next) => onChange(`${next}:${minute}`) },
-            { title: "Minutės", count: 60, selected: minute, set: (next) => { onChange(`${hour}:${next}`); setOpen(false); triggerRef.current?.focus(); } }].map((column) => (
-            <div key={column.title} className="wd-time-column">
-              <b>{column.title}</b>
-              <div className="wd-time-options">
-                {Array.from({ length: column.count }, (_, index) => String(index).padStart(2, "0")).map((option) => {
-                  const candidate = column.title === "Valandos"
-                    ? `${option}:${minute}`
-                    : `${hour}:${option}`;
-                  const optionDisabled = !isAllowedTime(candidate);
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      className={option === column.selected ? "selected" : ""}
-                      aria-label={`${column.title}: ${option}`}
-                      aria-pressed={option === column.selected}
-                      disabled={optionDisabled}
-                      onClick={() => !optionDisabled && column.set(option)}
-                    >
-                      {option}
-                    </button>
-                  );
-                })}
-              </div>
+        <div
+          role="dialog"
+          aria-label={ariaLabel}
+          className="wd-time-popover wd-time-popover-compact"
+          style={align === "right" ? { right: 0 } : { left: 0 }}
+        >
+          <div className="wd-time-compact-section">
+            <b>Valandos</b>
+            <div className="wd-time-compact-grid hours">
+              {hourOptions.map((option) => {
+                const candidate = `${option}:${minute}`;
+                const optionDisabled = !isAllowedTime(candidate);
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={option === hour ? "selected" : ""}
+                    disabled={optionDisabled}
+                    onClick={() => {
+                      if (optionDisabled) return;
+                      onChange(`${option}:${minute}`);
+                    }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
             </div>
-          ))}
+          </div>
+
+          <div className="wd-time-compact-section">
+            <b>Minutės</b>
+            <div className="wd-time-compact-grid minutes">
+              {minuteOptions.map((option) => {
+                const candidate = `${hour}:${option}`;
+                const optionDisabled = !isAllowedTime(candidate);
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={option === minute ? "selected" : ""}
+                    disabled={optionDisabled}
+                    onClick={() => {
+                      if (optionDisabled) return;
+                      onChange(`${hour}:${option}`);
+                      setOpen(false);
+                      triggerRef.current?.focus();
+                    }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -555,6 +588,7 @@ const unifiedCloseStyles = `
     outline:2px solid #f08a28; outline-offset:2px;
   }
   .wd-time-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:44px;text-align:left!important;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px;scrollbar-width:thin}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover:not(:disabled),.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}.wd-time-options button:disabled{opacity:.3;cursor:not-allowed;background:#fff;color:#9aa6b2}
+  .wd-time-popover-compact{width:min(360px,calc(100vw - 40px));grid-template-columns:1fr;gap:10px;padding:10px;max-height:none;overflow:visible}.wd-time-compact-section>b{display:block;color:#607180;font-size:11px;margin-bottom:6px;padding-left:2px}.wd-time-compact-grid{display:grid;gap:4px}.wd-time-compact-grid.hours{grid-template-columns:repeat(6,minmax(0,1fr))}.wd-time-compact-grid.minutes{grid-template-columns:repeat(6,minmax(0,1fr))}.wd-time-compact-grid button{border:0;border-radius:7px;background:#fff;color:#102438;padding:7px 4px;font:inherit;font-size:12px;text-align:center;cursor:pointer}.wd-time-compact-grid button:hover:not(:disabled),.wd-time-compact-grid button.selected{background:#fff1e5;color:#9c5417;font-weight:800}.wd-time-compact-grid button:disabled{opacity:.28;cursor:not-allowed}
   .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
 
 `;
@@ -2773,6 +2807,27 @@ function longTermSalaryBasisLabel(value) {
   return value === "gross" ? "ant popieriaus" : "į rankas";
 }
 
+function safeStorageFileName(name) {
+  return String(name || "failas")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "failas";
+}
+
+async function openEmploymentContract(storagePath) {
+  if (!storagePath) return false;
+  const result = await supabase.storage
+    .from("employment-contracts")
+    .createSignedUrl(storagePath, 60 * 10);
+  if (result.error || !result.data?.signedUrl) {
+    throw result.error || new Error("Nepavyko atidaryti sutarties.");
+  }
+  window.open(result.data.signedUrl, "_blank", "noopener,noreferrer");
+  return true;
+}
+
 function defaultLongTermSchedule() {
   return [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
     weekday,
@@ -3595,6 +3650,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermOfferTarget, setLongTermOfferTarget] = useState(null);
   const [longTermConversation, setLongTermConversation] = useState(null);
   const [longTermBusy, setLongTermBusy] = useState(false);
+  const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const workerProfileEditorRef = useRef(null);
@@ -3741,6 +3797,70 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setError(err?.message || "Nepavyko patvirtinti įsidarbinimo.");
     } finally {
       setLongTermBusy(false);
+    }
+  }
+
+  async function workerSubmitSignedContract(offer) {
+    if (!offer?.id || !longTermSignedContractFile || longTermBusy) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(longTermSignedContractFile.type)) {
+      setError("Įkelkite PDF arba DOCX formato pasirašytą sutartį.");
+      return;
+    }
+    if (longTermSignedContractFile.size > 15 * 1024 * 1024) {
+      setError("Sutarties failas negali būti didesnis nei 15 MB.");
+      return;
+    }
+
+    setLongTermBusy(true);
+    setError("");
+    setNotice("");
+    let storagePath = "";
+    try {
+      storagePath = `${offer.id}/worker/${Date.now()}-${safeStorageFileName(
+        longTermSignedContractFile.name
+      )}`;
+
+      const uploadResult = await supabase.storage
+        .from("employment-contracts")
+        .upload(storagePath, longTermSignedContractFile, {
+          upsert: false,
+          contentType: longTermSignedContractFile.type,
+        });
+      if (uploadResult.error) throw uploadResult.error;
+
+      const result = await supabase.rpc("worker_submit_signed_long_term_contract", {
+        p_placement_id: offer.id,
+        p_contract_path: storagePath,
+        p_contract_name: longTermSignedContractFile.name,
+      });
+      if (result.error) throw result.error;
+
+      setLongTermSignedContractFile(null);
+      await loadLongTermOffers();
+      setNotice(
+        "Pasirašyta darbo sutartis išsiųsta darbdaviui. Laukiama galutinio darbdavio patvirtinimo."
+      );
+    } catch (err) {
+      if (storagePath) {
+        await supabase.storage.from("employment-contracts").remove([storagePath]).catch(() => {});
+      }
+      setError(err?.message || "Nepavyko išsiųsti pasirašytos sutarties.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function workerOpenLongTermContract(path) {
+    try {
+      setError("");
+      await openEmploymentContract(path);
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti sutarties.");
     }
   }
 
@@ -5289,7 +5409,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
         .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
-        .wd-time-trigger{display:flex;align-items:center;justify-content:space-between;min-height:44px;text-align:left;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8;color:#a0aab3;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:60;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.14)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
+        .wd-time-trigger{display:flex;align-items:center;justify-content:space-between;min-height:44px;text-align:left;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8;color:#a0aab3;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:60;width:min(360px,calc(100vw - 48px));display:grid;grid-template-columns:1fr;gap:10px;padding:10px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.14)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:none;overflow:visible;display:grid;gap:2px}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
         .wd-time-field{display:grid;gap:5px}.wd-time:disabled{background:#f4f6f8;color:#a0aab3}
         .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
         .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
@@ -6039,8 +6159,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div>
               <h2 style={{ marginBottom: 6 }}>Įdarbinimo pasiūlymai</h2>
               <p className="wd-card-sub" style={{ marginBottom: 0 }}>
-                Čia rodomi įmonių pasiūlymai ilgalaikiam darbui. Pasiūlymo aptarimas
-                nekeičia jūsų workforce grafiko, kol įsidarbinimo nepatvirtina abi pusės.
+                Čia rodomi įmonių ilgalaikio darbo pasiūlymai ir darbo sutartys.
+                Įdarbinimas aktyvuojamas tik tada, kai jūs įkeliate pasirašytą sutartį,
+                o darbdavys patvirtina, kad ją gavo.
               </p>
             </div>
             {longTermOffers.filter((offer) => offer.status === "offered").length > 0 && (
@@ -6100,7 +6221,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     className="wd-decline"
                     type="button"
-                    onClick={() => setLongTermOfferTarget(offer)}
+                    onClick={() => {
+                      setLongTermSignedContractFile(null);
+                      setLongTermOfferTarget(offer);
+                    }}
                   >
                     Atidaryti
                   </button>
@@ -8064,6 +8188,36 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <LongTermOfferDetails offer={longTermOfferTarget} />
 
+            <div className="lt-detail-card" style={{ marginTop: 12 }}>
+              <span>Darbo sutartis</span>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <b>{longTermOfferTarget.employer_contract_name || "Darbo sutartis"}</b>
+                  <small>Perskaitykite visą dokumentą prieš pasirašydami.</small>
+                </div>
+                {longTermOfferTarget.employer_contract_path && (
+                  <button
+                    className="wd-decline"
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={() =>
+                      workerOpenLongTermContract(longTermOfferTarget.employer_contract_path)
+                    }
+                  >
+                    Atidaryti sutartį
+                  </button>
+                )}
+              </div>
+            </div>
+
             {longTermOfferTarget.status === "offered" && (
               <div
                 style={{
@@ -8076,9 +8230,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   lineHeight: 1.5,
                 }}
               >
-                „Patvirtinti įsidarbinimą“ spauskite tik tada, kai su darbdaviu jau
-                realiai susitarėte dėl įdarbinimo / sutarties. Kol pasiūlymas tik
-                aptariamas, jūsų grafikas neblokuojamas.
+                Perskaitykite darbdavio įkeltą darbo sutartį. Jei visos sąlygos tinka,
+                pasirašykite dokumentą ir įkelkite pasirašytą sutartį žemiau. Kol
+                darbdavys jos nepatvirtino, jūsų ilgalaikis grafikas neaktyvuojamas.
               </div>
             )}
 
@@ -8126,6 +8280,80 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
+            {longTermOfferTarget.status === "offered" && (
+              <div
+                style={{
+                  marginTop: 14,
+                  border: "1px solid #dfe7ed",
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "#f8fafb",
+                }}
+              >
+                {longTermOfferTarget.worker_signed_contract_path ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <b style={{ color: "#167a54" }}>✓ Pasirašyta sutartis išsiųsta</b>
+                      <div style={{ marginTop: 4, color: "#607180", fontSize: 12 }}>
+                        Laukiama, kol darbdavys peržiūrės dokumentą ir galutinai patvirtins įdarbinimą.
+                      </div>
+                    </div>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      onClick={() =>
+                        workerOpenLongTermContract(longTermOfferTarget.worker_signed_contract_path)
+                      }
+                    >
+                      Peržiūrėti mano sutartį
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <b>Įkelti pasirašytą darbo sutartį</b>
+                    <p style={{ margin: "5px 0 10px", color: "#607180", fontSize: 12, lineHeight: 1.5 }}>
+                      Priimami PDF ir DOCX failai iki 15 MB. Įkėlus sutartį darbdavys gaus pranešimą,
+                      kad gali ją peržiūrėti ir patvirtinti jūsų įdarbinimą.
+                    </p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <label className="wd-decline" style={{ cursor: "pointer" }}>
+                        Pasirinkti failą
+                        <input
+                          type="file"
+                          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          style={{ display: "none" }}
+                          onChange={(e) =>
+                            setLongTermSignedContractFile(e.target.files?.[0] || null)
+                          }
+                        />
+                      </label>
+                      {longTermSignedContractFile && (
+                        <span style={{ color: "#526374", fontSize: 12 }}>
+                          {longTermSignedContractFile.name}
+                        </span>
+                      )}
+                      <button
+                        className="wd-accept"
+                        type="button"
+                        disabled={longTermBusy || !longTermSignedContractFile}
+                        onClick={() => workerSubmitSignedContract(longTermOfferTarget)}
+                      >
+                        {longTermBusy ? "Siunčiama..." : "Išsiųsti pasirašytą sutartį"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <div
               style={{
                 display: "flex",
@@ -8151,26 +8379,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {longTermOfferTarget.status === "offered" && (
-                  <>
-                    <button
-                      className="wd-danger"
-                      type="button"
-                      disabled={longTermBusy}
-                      onClick={() => workerDeclineLongTermOffer(longTermOfferTarget)}
-                    >
-                      Atmesti
-                    </button>
-                    <button
-                      className="wd-accept"
-                      type="button"
-                      disabled={longTermBusy || Boolean(longTermOfferTarget.worker_confirmed_at)}
-                      onClick={() => workerConfirmLongTermOffer(longTermOfferTarget)}
-                    >
-                      {longTermOfferTarget.worker_confirmed_at
-                        ? "Jūs patvirtinote"
-                        : "Patvirtinti įsidarbinimą"}
-                    </button>
-                  </>
+                  <button
+                    className="wd-danger"
+                    type="button"
+                    disabled={longTermBusy || Boolean(longTermOfferTarget.worker_signed_contract_path)}
+                    onClick={() => workerDeclineLongTermOffer(longTermOfferTarget)}
+                  >
+                    {longTermOfferTarget.worker_signed_contract_path
+                      ? "Sutartis jau išsiųsta"
+                      : "Atmesti pasiūlymą"}
+                  </button>
                 )}
                 <button
                   className="wd-decline"
@@ -8555,11 +8773,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [groupConversation, setGroupConversation] = useState(null);
   const [disputeConversation, setDisputeConversation] = useState(null);
   const [showLongTermEmployment, setShowLongTermEmployment] = useState(false);
+  const [longTermModalMode, setLongTermModalMode] = useState("hire");
   const [longTermCandidates, setLongTermCandidates] = useState([]);
   const [companyLongTermOffers, setCompanyLongTermOffers] = useState([]);
   const [longTermSelectedWorker, setLongTermSelectedWorker] = useState(null);
   const [longTermConversation, setLongTermConversation] = useState(null);
   const [longTermBusy, setLongTermBusy] = useState(false);
+  const [longTermContractFile, setLongTermContractFile] = useState(null);
   const [longTermOfferForm, setLongTermOfferForm] = useState({
     positionTitle: "",
     contractType: "indefinite",
@@ -9534,10 +9754,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return { candidates, offers };
   }
 
-  async function openLongTermEmployment() {
+  async function openLongTermEmployment(mode = "hire") {
     if (!company?.id) return;
+    setLongTermModalMode(mode);
     setShowLongTermEmployment(true);
     setLongTermSelectedWorker(null);
+    setLongTermContractFile(null);
     setLongTermBusy(true);
     setError("");
     try {
@@ -9567,6 +9789,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function chooseLongTermCandidate(worker) {
     setLongTermSelectedWorker(worker);
+    setLongTermContractFile(null);
     setLongTermOfferForm((current) => ({
       ...current,
       positionTitle: "",
@@ -9618,10 +9841,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setError("Pasirinkite bent vieną darbo dieną.");
       return;
     }
+    if (!longTermContractFile) {
+      setError("Įkelkite darbo sutartį, kurią darbuotojas turės perskaityti ir pasirašyti.");
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(longTermContractFile.type)) {
+      setError("Darbo sutartis turi būti PDF arba DOCX formato.");
+      return;
+    }
+    if (longTermContractFile.size > 15 * 1024 * 1024) {
+      setError("Darbo sutarties failas negali būti didesnis nei 15 MB.");
+      return;
+    }
 
     setLongTermBusy(true);
     setError("");
     setNotice("");
+    let placementId = null;
+    let storagePath = "";
+
     try {
       const schedule = longTermSchedule.map((row) => ({
         weekday: row.weekday,
@@ -9659,13 +9902,44 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_schedule:
           longTermOfferForm.scheduleType === "fixed" ? schedule : [],
       });
-
       if (result.error) throw result.error;
 
-      setNotice(`Įdarbinimo pasiūlymas išsiųstas darbuotojui ${longTermSelectedWorker.worker_name}.`);
+      placementId = result.data;
+      storagePath = `${placementId}/employer/${Date.now()}-${safeStorageFileName(
+        longTermContractFile.name
+      )}`;
+
+      const uploadResult = await supabase.storage
+        .from("employment-contracts")
+        .upload(storagePath, longTermContractFile, {
+          upsert: false,
+          contentType: longTermContractFile.type,
+        });
+      if (uploadResult.error) throw uploadResult.error;
+
+      const publishResult = await supabase.rpc("publish_long_term_offer", {
+        p_placement_id: placementId,
+        p_contract_path: storagePath,
+        p_contract_name: longTermContractFile.name,
+      });
+      if (publishResult.error) throw publishResult.error;
+
+      const workerName = longTermSelectedWorker.worker_name;
+      setLongTermContractFile(null);
       setLongTermSelectedWorker(null);
       await loadCompanyLongTermData(company.id);
+      setNotice(
+        `Pasiūlymas pateiktas darbuotojui ${workerName}. Darbuotojui taip pat išsiųsta žinutė perskaityti, pasirašyti ir įkelti darbo sutartį.`
+      );
     } catch (err) {
+      if (storagePath) {
+        await supabase.storage.from("employment-contracts").remove([storagePath]).catch(() => {});
+      }
+      if (placementId) {
+        await supabase.rpc("discard_long_term_offer_draft", {
+          p_placement_id: placementId,
+        }).catch(() => {});
+      }
       setError(err?.message || "Nepavyko išsiųsti įdarbinimo pasiūlymo.");
     } finally {
       setLongTermBusy(false);
@@ -9684,11 +9958,48 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       await loadCompanyLongTermData(company.id);
       setNotice(
         result.data === "active"
-          ? "Įsidarbinimą patvirtino abi pusės. Ilgalaikis grafikas aktyvuotas."
-          : "Darbdavio patvirtinimas išsaugotas. Laukiama darbuotojo patvirtinimo."
+          ? "Pasirašyta sutartis priimta. Darbuotojo įdarbinimas aktyvuotas ir grafikas pradėjo galioti."
+          : "Patvirtinimas išsaugotas."
       );
     } catch (err) {
       setError(err?.message || "Nepavyko patvirtinti įsidarbinimo.");
+    } finally {
+      setLongTermBusy(false);
+    }
+  }
+
+  async function employerOpenLongTermContract(path) {
+    try {
+      setError("");
+      await openEmploymentContract(path);
+    } catch (err) {
+      setError(err?.message || "Nepavyko atidaryti sutarties.");
+    }
+  }
+
+  async function endLongTermEmployment(offer) {
+    if (!offer?.id || longTermBusy) return;
+    const confirmed = await askConfirm({
+      title: "Užbaigti įdarbinimą?",
+      message: `Ar tikrai norite pažymėti ${offer.worker_name || "darbuotojo"} įdarbinimą kaip pasibaigusį?`,
+      confirmLabel: "Užbaigti",
+      cancelLabel: "Atšaukti",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+
+    setLongTermBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("end_long_term_placement", {
+        p_placement_id: offer.id,
+        p_note: null,
+      });
+      if (result.error) throw result.error;
+      await loadCompanyLongTermData(company.id);
+      setNotice("Įdarbinimas pažymėtas kaip pasibaigęs.");
+    } catch (err) {
+      setError(err?.message || "Nepavyko užbaigti įdarbinimo.");
     } finally {
       setLongTermBusy(false);
     }
@@ -12497,9 +12808,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <button
               className="ed-secondary"
               type="button"
-              onClick={openLongTermEmployment}
+              onClick={() => openLongTermEmployment("hire")}
             >
               Įdarbinti darbuotoją
+            </button>
+
+            <button
+              className="ed-secondary"
+              type="button"
+              onClick={() => openLongTermEmployment("employees")}
+            >
+              Įdarbinti darbuotojai
             </button>
 
             <button
@@ -15818,13 +16137,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             if (e.target === e.currentTarget && !longTermBusy) {
               setShowLongTermEmployment(false);
               setLongTermSelectedWorker(null);
+              setLongTermContractFile(null);
             }
           }}
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:24px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(920px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:760px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:8px;margin-top:8px}.lt-schedule-edit-row{display:grid;grid-template-columns:150px 1fr 1fr 1fr 1fr;gap:8px;align-items:end;padding:10px;border:1px solid #e5ebef;border-radius:11px}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}
-              @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr 1fr}.lt-schedule-day{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}.lt-employment-worker .ed-primary{width:100%}}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fbfcfd}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.lt-existing-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) auto;gap:12px;align-items:center;border:1px solid #cfe7dc;border-radius:13px;padding:13px 14px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}
+              @media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}}
+              @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{justify-content:flex-start}.lt-employment-worker .ed-primary{width:100%}}
             `}</style>
 
             <div className="rs-modal-head">
@@ -15833,11 +16154,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <h2>
                   {longTermSelectedWorker
                     ? `Pasiūlymas · ${longTermSelectedWorker.worker_name}`
+                    : longTermModalMode === "employees"
+                    ? "Įdarbinti darbuotojai"
                     : "Darbuotojai, su kuriais jau dirbote"}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#6c7a88", fontSize: 13 }}>
-                  Pasiūlymą galima siųsti tik darbuotojui, su kuriuo turite bent vieną
-                  tvarkingai užbaigtą darbo dieną.
+                  {longTermModalMode === "employees"
+                    ? "Čia galite valdyti aktyvius ilgalaikius darbuotojus, peržiūrėti sutartis ir rašyti žinutes."
+                    : "Pasiūlymą galima siųsti tik darbuotojui, su kuriuo turite bent vieną tvarkingai užbaigtą darbo dieną."}
                 </p>
               </div>
               <button
@@ -15847,6 +16171,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 onClick={() => {
                   setShowLongTermEmployment(false);
                   setLongTermSelectedWorker(null);
+                  setLongTermContractFile(null);
                 }}
               >
                 <CloseMark />
@@ -15856,9 +16181,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {longTermSelectedWorker ? (
               <>
                 <div className="lt-modal-note">
-                  Darbuotojas pasiūlymą gaus atskiroje „Įdarbinimo pasiūlymų“ skiltyje.
-                  Kol abi pusės realiai nepatvirtina įsidarbinimo, šis pasiūlymas
-                  darbuotojo grafiko neblokuoja.
+                  Darbuotojas pasiūlymą ir jūsų įkeltą darbo sutartį gaus atskiroje
+                  „Įdarbinimo pasiūlymų“ skiltyje. Darbuotojas sutartį perskaitys,
+                  pasirašys ir įkels atgal. Įdarbinimas aktyvuosis tik jums patvirtinus,
+                  kad pasirašytą sutartį gavote.
                 </div>
 
                 <div className="lt-form-grid">
@@ -16064,6 +16390,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </label>
                 </div>
 
+                <div className="lt-contract-upload" style={{ marginTop: 14 }}>
+                  <strong>Darbo sutartis *</strong>
+                  <p>
+                    Įkelkite galutinę sutartį, kurią darbuotojas turi perskaityti ir
+                    pasirašyti. Priimami PDF ir DOCX failai iki 15 MB.
+                  </p>
+                  <div className="lt-file-row">
+                    <label className="ed-secondary" style={{ cursor: "pointer" }}>
+                      Pasirinkti sutartį
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        style={{ display: "none" }}
+                        onChange={(e) => setLongTermContractFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                    <span className="lt-file-name">
+                      {longTermContractFile
+                        ? longTermContractFile.name
+                        : "Sutarties failas dar nepasirinktas"}
+                    </span>
+                  </div>
+                </div>
+
                 {longTermOfferForm.scheduleType === "fixed" ? (
                   <div>
                     <h3 className="lt-section-title">Siūlomos darbo dienos ir laikas</h3>
@@ -16113,29 +16463,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             />
                           </label>
 
-                          <label className="ed-label">
-                            Pietūs nuo
-                            <RoundedTimeSelect
-                              className="ed-input wd-time-trigger"
-                              value={row.breakStartTime}
-                              disabled={!row.enabled || row.noBreak}
-                              onChange={(value) =>
-                                updateLongTermScheduleDay(
-                                  row.weekday,
-                                  "breakStartTime",
-                                  value
-                                )
-                              }
-                            />
-                          </label>
+                          <div className="lt-break-group">
+                            <label className="ed-label">
+                              Pietūs nuo
+                              <RoundedTimeSelect
+                                className="ed-input wd-time-trigger"
+                                value={row.breakStartTime}
+                                disabled={!row.enabled || row.noBreak}
+                                onChange={(value) =>
+                                  updateLongTermScheduleDay(
+                                    row.weekday,
+                                    "breakStartTime",
+                                    value
+                                  )
+                                }
+                              />
+                            </label>
 
-                          <div>
                             <label className="ed-label">
                               Pietūs iki
                               <RoundedTimeSelect
                                 className="ed-input wd-time-trigger"
                                 value={row.breakEndTime}
                                 disabled={!row.enabled || row.noBreak}
+                                align="right"
                                 onChange={(value) =>
                                   updateLongTermScheduleDay(
                                     row.weekday,
@@ -16145,17 +16496,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 }
                               />
                             </label>
-                            <label
-                              style={{
-                                display: "flex",
-                                gap: 7,
-                                alignItems: "center",
-                                marginTop: 7,
-                                fontSize: 11,
-                                color: "#607180",
-                                fontWeight: 700,
-                              }}
-                            >
+
+                            <label className="lt-no-break">
                               <input
                                 type="checkbox"
                                 checked={row.noBreak}
@@ -16195,14 +16537,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     className="ed-secondary"
                     type="button"
                     disabled={longTermBusy}
-                    onClick={() => setLongTermSelectedWorker(null)}
+                    onClick={() => {
+                      setLongTermSelectedWorker(null);
+                      setLongTermContractFile(null);
+                    }}
                   >
                     ← Grįžti prie darbuotojų
                   </button>
                   <button
                     className="ed-primary"
                     type="button"
-                    disabled={longTermBusy}
+                    disabled={longTermBusy || !longTermContractFile}
                     onClick={submitLongTermOffer}
                   >
                     {longTermBusy ? "Siunčiama..." : "Pateikti įdarbinimo pasiūlymą"}
@@ -16211,6 +16556,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </>
             ) : (
               <>
+                {longTermModalMode !== "employees" && (
+                  <>
                 {longTermBusy && !longTermCandidates.length ? (
                   <div className="ed-empty">Kraunami darbuotojai...</div>
                 ) : longTermCandidates.length ? (
@@ -16265,25 +16612,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 )}
 
-                {companyLongTermOffers.length > 0 && (
+                {companyLongTermOffers.some((offer) => offer.status === "offered") && (
                   <>
-                    <h3 className="lt-section-title">Išsiųsti ir aktyvūs pasiūlymai</h3>
+                    <h3 className="lt-section-title">Pateikti įdarbinimo pasiūlymai</h3>
                     <div className="lt-existing-offers">
-                      {companyLongTermOffers.map((offer) => (
-                        <div className="lt-existing-offer" key={offer.id}>
-                          <div>
-                            <b>{offer.worker_name} · {offer.position_title}</b>
-                            <div style={{ color: "#6c7a88", fontSize: 12, marginTop: 3 }}>
-                              {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date} · {longTermStatusLabel(offer.status)}
-                            </div>
-                            {offer.status === "offered" && (
-                              <div style={{ color: "#526374", fontSize: 12, marginTop: 5 }}>
-                                Darbuotojas: {offer.worker_confirmed_at ? "patvirtino" : "dar nepatvirtino"} · Darbdavys: {offer.employer_confirmed_at ? "patvirtino" : "dar nepatvirtino"}
+                      {companyLongTermOffers
+                        .filter((offer) => offer.status === "offered")
+                        .map((offer) => (
+                          <div className="lt-existing-offer" key={offer.id}>
+                            <div>
+                              <b>{offer.worker_name} · {offer.position_title}</b>
+                              <div style={{ color: "#6c7a88", fontSize: 12, marginTop: 3 }}>
+                                {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date} · Pasiūlymas pateiktas
                               </div>
-                            )}
-                          </div>
-                          <div className="lt-existing-actions">
-                            {!["declined", "withdrawn", "ended"].includes(offer.status) && (
+                              <div style={{ color: offer.worker_signed_contract_path ? "#167a54" : "#526374", fontSize: 12, marginTop: 5, fontWeight: 700 }}>
+                                {offer.worker_signed_contract_path
+                                  ? "✓ Darbuotojas įkėlė pasirašytą sutartį"
+                                  : "Laukiama darbuotojo pasirašytos sutarties"}
+                              </div>
+                            </div>
+                            <div className="lt-existing-actions">
                               <button
                                 className="ed-secondary"
                                 type="button"
@@ -16294,37 +16642,120 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   })
                                 }
                               >
-                                Aptarti
+                                Žinutės
                               </button>
-                            )}
-                            {offer.status === "offered" && (
-                              <>
+                              {offer.employer_contract_path && (
                                 <button
                                   className="ed-secondary"
                                   type="button"
-                                  disabled={longTermBusy || Boolean(offer.employer_confirmed_at)}
-                                  onClick={() => employerConfirmLongTermOffer(offer)}
+                                  onClick={() => employerOpenLongTermContract(offer.employer_contract_path)}
                                 >
-                                  {offer.employer_confirmed_at
-                                    ? "Jūs patvirtinote"
-                                    : "Patvirtinti įsidarbinimą"}
+                                  Siųsta sutartis
                                 </button>
+                              )}
+                              {offer.worker_signed_contract_path && (
                                 <button
                                   className="ed-secondary"
                                   type="button"
-                                  disabled={longTermBusy}
-                                  onClick={() => withdrawLongTermOffer(offer)}
+                                  onClick={() => employerOpenLongTermContract(offer.worker_signed_contract_path)}
                                 >
-                                  Atšaukti pasiūlymą
+                                  Pasirašyta sutartis
                                 </button>
-                              </>
-                            )}
+                              )}
+                              <button
+                                className="ed-primary"
+                                type="button"
+                                disabled={longTermBusy || !offer.worker_signed_contract_path}
+                                onClick={() => employerConfirmLongTermOffer(offer)}
+                              >
+                                Gavau sutartį – priimu darbuotoją
+                              </button>
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                disabled={longTermBusy || Boolean(offer.worker_signed_contract_path)}
+                                onClick={() => withdrawLongTermOffer(offer)}
+                              >
+                                Atšaukti pasiūlymą
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </>
                 )}
+
+                  </>
+                )}
+
+                {longTermModalMode === "employees" && companyLongTermOffers.some((offer) => offer.status === "active") && (
+                  <>
+                    <h3 className="lt-section-title">Įdarbinti darbuotojai</h3>
+                    <div className="lt-employed-table">
+                      {companyLongTermOffers
+                        .filter((offer) => offer.status === "active")
+                        .map((offer) => (
+                          <div className="lt-employed-row" key={`active-${offer.id}`}>
+                            <div>
+                              <b>{offer.worker_name}</b>
+                              <div className="lt-employed-meta">
+                                {offer.position_title} · nuo {offer.proposed_start_date}
+                                {offer.proposed_end_date ? ` iki ${offer.proposed_end_date}` : " · neterminuota"}
+                              </div>
+                            </div>
+                            <div className="lt-employed-meta">
+                              {offer.schedule_type === "fixed"
+                                ? "Pastovus grafikas"
+                                : "Kintamas grafikas"}
+                              <br />
+                              {offer.search_extra_jobs === false
+                                ? "Papildomų darbų neieško"
+                                : "Gali ieškoti papildomų darbų laisvu metu"}
+                            </div>
+                            <div className="lt-existing-actions">
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                onClick={() =>
+                                  setLongTermConversation({
+                                    placementId: offer.id,
+                                    title: `${offer.worker_name} · ${offer.position_title}`,
+                                  })
+                                }
+                              >
+                                Žinutės
+                              </button>
+                              {offer.worker_signed_contract_path && (
+                                <button
+                                  className="ed-secondary"
+                                  type="button"
+                                  onClick={() => employerOpenLongTermContract(offer.worker_signed_contract_path)}
+                                >
+                                  Sutartis
+                                </button>
+                              )}
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                disabled={longTermBusy}
+                                onClick={() => endLongTermEmployment(offer)}
+                              >
+                                Užbaigti įdarbinimą
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </>
+                )}
+
+                {longTermModalMode === "employees" &&
+                  !longTermBusy &&
+                  !companyLongTermOffers.some((offer) => offer.status === "active") && (
+                    <div className="ed-empty">
+                      Aktyviai įdarbintų darbuotojų kol kas nėra.
+                    </div>
+                  )}
               </>
             )}
           </div>
