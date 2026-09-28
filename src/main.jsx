@@ -4576,7 +4576,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#f8fafb}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -10780,7 +10780,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
-        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
+        @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-current-job-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-current-job-field:nth-child(4n){border-right:1px solid #edf1f4}.ed-current-job-field:nth-child(2n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-last-child(-n+2){border-bottom:0}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
         @media(max-width:620px){.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100vh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
@@ -11621,6 +11621,84 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             id="employer-open-job"
             style={{ scrollMarginTop: 96 }}
           >
+            <div className="ed-current-job-overview">
+              <div className="ed-current-job-overview-head">
+                <div>
+                  <div className="eyebrow">DARBO INFORMACIJA</div>
+                  <h2>{currentJob.title || "Darbas"}</h2>
+                  <p>Visa svarbiausia šio darbo informacija vienoje vietoje.</p>
+                </div>
+                <span
+                  className={`ed-current-job-status ${
+                    currentJob.status === "cancelled"
+                      ? "cancelled"
+                      : currentJob.status === "open"
+                      ? "open"
+                      : ""
+                  }`}
+                >
+                  {currentJob.status === "cancelled"
+                    ? "Atšauktas"
+                    : currentJob.status === "filled"
+                    ? "Komanda suformuota"
+                    : "Aktyvus"}
+                </span>
+              </div>
+
+              <div className="ed-current-job-grid">
+                {[
+                  ["Miestas", currentJob.city || "—"],
+                  ["Adresas", currentJob.address_text || "—"],
+                  ["Data", currentJob.work_date || "—"],
+                  [
+                    "Darbo laikas",
+                    `${currentJob.start_time?.slice(0, 5) || "—"}${
+                      currentJob.end_time
+                        ? `–${currentJob.end_time.slice(0, 5)}`
+                        : ""
+                    }`,
+                  ],
+                  [
+                    "Pietų pertrauka",
+                    currentJob.break_start_time && currentJob.break_end_time
+                      ? `${currentJob.break_start_time.slice(0, 5)}–${currentJob.break_end_time.slice(0, 5)}`
+                      : "Nėra",
+                  ],
+                  [
+                    "Atlygis",
+                    currentJob.pay_amount
+                      ? formatNetPay(currentJob.pay_amount, currentJob.pay_unit)
+                      : "—",
+                  ],
+                  [
+                    "Darbuotojai",
+                    `${Number(currentJob.confirmedCount || 0)}/${Number(
+                      currentJob.workers_needed || 0
+                    )} patvirtinti`,
+                  ],
+                  [
+                    "Atvykimas",
+                    currentJob.transport_mode === "employer_pickup"
+                      ? "Darbdavys paima darbuotoją"
+                      : "Darbuotojas atvyksta pats",
+                  ],
+                ].map(([label, value]) => (
+                  <div className="ed-current-job-field" key={label}>
+                    <span>{label}</span>
+                    <b>{value}</b>
+                  </div>
+                ))}
+              </div>
+
+              <div className="ed-current-job-description">
+                <span>Darbo aprašymas</span>
+                <div>
+                  {currentJob.description?.trim() ||
+                    "Darbo aprašymas nepateiktas."}
+                </div>
+              </div>
+            </div>
+
             {unreadEmployerNotifications(currentJob.id).some((item) => item.event_type !== "message") && (() => {
               const currentNews = unreadEmployerNotifications(currentJob.id)
                 .filter((item) => item.event_type !== "message");
@@ -11659,10 +11737,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {jobWorkers.length > 0 && (
               <div className="ed-attendance-panel">
-                <h2>Patvirtinti darbuotojai ir darbo diena</h2>
+                <h2>Prisijungę darbuotojai</h2>
                 <p className="ed-attendance-help">
-                  Atvykimas → darbo dienos uždarymas → įvertinimas → favoritas.
-                  Kiekvienam darbuotojui rodome, ko šiuo metu reikia iš jūsų.
+                  Čia matote visus prie šio darbo prisijungusius darbuotojus ir
+                  jų darbo dienos veiksmus.
                 </p>
 
                 <div className="ed-attendance-list">
@@ -11862,14 +11940,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         )}
 
                         <div className="ed-attendance-actions">
-                          <button
-                            className="ed-secondary"
-                            type="button"
-                            onClick={() => setJobInfoTarget(currentJob)}
-                          >
-                            Darbo informacija
-                          </button>
-
                           <button
                             className="ed-secondary"
                             onClick={() => openWorkerProfile(worker)}
