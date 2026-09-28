@@ -19141,6 +19141,7 @@ function AdminDashboard({
   const [adminDisputeConversation, setAdminDisputeConversation] = useState(null);
   const [editorForm, setEditorForm] = useState({});
   const [editorSaving, setEditorSaving] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
 
   const tabs = [
     ["overview", "Suvestinė"],
@@ -19174,6 +19175,10 @@ function AdminDashboard({
 
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    setAdminPage(1);
+  }, [activeTab]);
 
   async function createSafeFileUrl(bucketId, storagePath) {
     if (!bucketId || !storagePath) return null;
@@ -19776,6 +19781,48 @@ function AdminDashboard({
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  const ADMIN_PAGE_SIZE = 10;
+
+  function adminPageSlice(items) {
+    const source = Array.isArray(items) ? items : [];
+    const pageCount = Math.max(1, Math.ceil(source.length / ADMIN_PAGE_SIZE));
+    const page = Math.min(Math.max(1, adminPage), pageCount);
+    const start = (page - 1) * ADMIN_PAGE_SIZE;
+    return source.slice(start, start + ADMIN_PAGE_SIZE);
+  }
+
+  function renderAdminPagination(totalItems) {
+    const total = Number(totalItems || 0);
+    const pageCount = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+    if (pageCount <= 1) return null;
+
+    const page = Math.min(Math.max(1, adminPage), pageCount);
+
+    return (
+      <div className="admin-pagination">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => setAdminPage((current) => Math.max(1, current - 1))}
+        >
+          Ankstesnis
+        </button>
+        <span>
+          {page} / {pageCount}
+        </span>
+        <button
+          type="button"
+          disabled={page >= pageCount}
+          onClick={() =>
+            setAdminPage((current) => Math.min(pageCount, current + 1))
+          }
+        >
+          Sekantis puslapis
+        </button>
+      </div>
+    );
+  }
+
   function adminEmploymentStatusLabel(value) {
     return ({
       offered: "Laukiama darbuotojo",
@@ -19853,6 +19900,7 @@ function AdminDashboard({
         .admin-section h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
         .admin-muted{color:#6c7a88;font-size:13px;line-height:1.5}
         .admin-list{display:grid;gap:10px}
+        .admin-pagination{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #edf1f4}.admin-pagination button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.admin-pagination button:disabled{opacity:.42;cursor:not-allowed}.admin-pagination span{min-width:58px;text-align:center;color:#6c7a88;font-size:12px;font-weight:800}
         .admin-row{width:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(240px,1.35fr) repeat(3,minmax(130px,.72fr)) minmax(110px,auto);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:12px;padding:13px 15px}
         .admin-row-title b{display:block;font-size:14px}.admin-row-title span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
         .admin-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}.admin-cell b{font-size:13px}
@@ -20043,7 +20091,8 @@ function AdminDashboard({
             </div>
 
             {disputes.length ? (
-              disputes.map((dispute) => {
+              <>
+                {adminPageSlice(disputes).map((dispute) => {
                 const busy = resolvingId === dispute.attendance_id;
                 return (
                   <div className="admin-dispute" key={dispute.attendance_id}>
@@ -20168,7 +20217,9 @@ function AdminDashboard({
                     </div>
                   </div>
                 );
-              })
+              })}
+                {renderAdminPagination(disputes.length)}
+              </>
             ) : (
               <div className="admin-empty">
                 Šiuo metu neišspręstų ginčų nėra.
@@ -20192,7 +20243,7 @@ function AdminDashboard({
 
             {workers.length ? (
               <div className="admin-list">
-                {workers.map((worker) => {
+                {adminPageSlice(workers).map((worker) => {
                   const suspended = isCurrentlySuspended(worker);
                   const workerModeRestricted = isWorkerModeRestricted(worker);
                   const isSelf = worker.user_id === user?.id;
@@ -20317,6 +20368,7 @@ function AdminDashboard({
                     </div>
                   );
                 })}
+                {renderAdminPagination(workers.length)}
               </div>
             ) : (
               <div className="admin-empty">Darbuotojų dar nėra.</div>
@@ -20339,7 +20391,7 @@ function AdminDashboard({
 
             {employers.length ? (
               <div className="admin-list">
-                {employers.map((employer) => {
+                {adminPageSlice(employers).map((employer) => {
                   const suspended = isCurrentlySuspended(employer);
                   const isSelf = employer.owner_id === user?.id;
 
@@ -20452,6 +20504,7 @@ function AdminDashboard({
                     </div>
                   );
                 })}
+                {renderAdminPagination(employers.length)}
               </div>
             ) : (
               <div className="admin-empty">Darbdavių dar nėra.</div>
@@ -20474,7 +20527,7 @@ function AdminDashboard({
 
             {jobs.length ? (
               <div className="admin-list">
-                {jobs.map((job) => (
+                {adminPageSlice(jobs).map((job) => (
                   <div className="admin-row" key={job.job_id}>
                     <div className="admin-row-title">
                       <b>{job.title}</b>
@@ -20525,6 +20578,7 @@ function AdminDashboard({
                     </div>
                   </div>
                 ))}
+                {renderAdminPagination(jobs.length)}
               </div>
             ) : (
               <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
@@ -20567,7 +20621,7 @@ function AdminDashboard({
 
             {longTermPlacements.length ? (
               <div className="admin-employment-list">
-                {longTermPlacements.map((placement) => (
+                {adminPageSlice(longTermPlacements).map((placement) => (
                   <div className="admin-employment-row" key={placement.placement_id}>
                     <div className="admin-employment-person">
                       <b>{placement.position_title || "Darbo pozicija"}</b>
@@ -20607,6 +20661,7 @@ function AdminDashboard({
                     </div>
                   </div>
                 ))}
+                {renderAdminPagination(longTermPlacements.length)}
               </div>
             ) : (
               <div className="admin-employment-empty">
@@ -20632,7 +20687,7 @@ function AdminDashboard({
 
             {teamChats.length ? (
               <div className="admin-list">
-                {teamChats.map((chat) => (
+                {adminPageSlice(teamChats).map((chat) => (
                   <div className="admin-row" key={chat.company_id}>
                     <div className="admin-row-title">
                       <b>{chat.company_name || "Įmonė"}</b>
@@ -20681,6 +20736,7 @@ function AdminDashboard({
                     </div>
                   </div>
                 ))}
+                {renderAdminPagination(teamChats.length)}
               </div>
             ) : (
               <div className="admin-empty">
@@ -20705,7 +20761,7 @@ function AdminDashboard({
 
             {ratings.length ? (
               <div className="admin-list">
-                {ratings.map((rating) => (
+                {adminPageSlice(ratings).map((rating) => (
                   <div className="admin-row" key={rating.rating_id}>
                     <div className="admin-row-title">
                       <b>
@@ -20743,6 +20799,7 @@ function AdminDashboard({
                     </button>
                   </div>
                 ))}
+                {renderAdminPagination(ratings.length)}
               </div>
             ) : (
               <div className="admin-empty">Atsiliepimų dar nėra.</div>
@@ -20766,7 +20823,7 @@ function AdminDashboard({
 
             {files.length ? (
               <div className="admin-list">
-                {files.map((file) => (
+                {adminPageSlice(files).map((file) => (
                   <div className="admin-row" key={file.object_id}>
                     <div className="admin-row-title">
                       <b>{file.file_name || file.storage_path}</b>
@@ -20801,6 +20858,7 @@ function AdminDashboard({
                     )}
                   </div>
                 ))}
+                {renderAdminPagination(files.length)}
               </div>
             ) : (
               <div className="admin-empty">Įkeltų failų šiuo metu nėra.</div>
@@ -20822,7 +20880,7 @@ function AdminDashboard({
 
             {auditLog.length ? (
               <div className="admin-list">
-                {auditLog.map((item) => (
+                {adminPageSlice(auditLog).map((item) => (
                   <div className="admin-row" key={item.audit_id}>
                     <div className="admin-row-title">
                       <b>
@@ -20869,6 +20927,7 @@ function AdminDashboard({
                     <span className="admin-pill gray">Auditas</span>
                   </div>
                 ))}
+                {renderAdminPagination(auditLog.length)}
               </div>
             ) : (
               <div className="admin-empty">Administratoriaus veiksmų dar nėra.</div>
