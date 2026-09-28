@@ -9012,6 +9012,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobScope, setJobScope] = useState("mine");
   const [employerActivePage, setEmployerActivePage] = useState(1);
   const [employerHistoryPage, setEmployerHistoryPage] = useState(1);
+  const [showEmployerStats, setShowEmployerStats] = useState(false);
   const [teamInviteForm, setTeamInviteForm] = useState({
     displayName: "",
     email: "",
@@ -12763,7 +12764,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
         .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
-        .ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+        .ed-stats-section{margin-bottom:20px}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
         .ed-kpi span{display:block;font-size:12px;color:#6c7a88;line-height:1.35;min-height:34px}
         .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:12px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
@@ -13760,16 +13761,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </section>
         )}
 
-        <section>
-          <div style={{ marginBottom: 10 }}>
-            <div className="eyebrow">
+        <section className="ed-stats-section">
+          <div className="ed-stats-head">
+            <button
+              className={`ed-stats-toggle ${showEmployerStats ? "open" : ""}`}
+              type="button"
+              aria-expanded={showEmployerStats}
+              aria-label={showEmployerStats ? "Slėpti statistiką" : "Rodyti statistiką"}
+              onClick={() => setShowEmployerStats((current) => !current)}
+            >
               {planSummary?.can_team_management &&
               companyMemberRole === "recruiter"
                 ? "MANO DARBŲ STATISTIKA"
                 : "ĮMONĖS STATISTIKA"}
-            </div>
+            </button>
           </div>
 
+          {showEmployerStats && (
+            <>
           <div className="ed-kpis">
             <div className="ed-kpi">
               <span>Sukurta darbo pasiūlymų</span>
@@ -13849,6 +13858,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 Peržiūrėti planus
               </button>
             </div>
+          )}
+            </>
           )}
         </section>
 
