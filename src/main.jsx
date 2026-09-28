@@ -5522,7 +5522,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
-        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
@@ -7192,8 +7192,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 })}
               </div>
             ) : (
-              <div style={{ color: "#6c7a88" }}>
-                Šiuo metu naujų darbo kvietimų nėra.
+              <div className="wd-empty-friendly">
+                <div className="wd-empty-friendly-icon">✓</div>
+                <div>
+                  <b>Naujų darbo kvietimų nėra</b>
+                  Kai darbdavys atsiųs jums tinkamą pasiūlymą, jis atsiras čia.
+                </div>
               </div>
             )}
           </section>
