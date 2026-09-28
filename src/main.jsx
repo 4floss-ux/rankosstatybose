@@ -2168,21 +2168,22 @@ function ConversationModal({
     }}>
       <div className="rs-modal-card">
         <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
-          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-          .rs-messages{display:grid;gap:10px;max-height:360px;overflow:auto;padding:4px 2px 12px}
-          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
-          .rs-message.mine{margin-left:auto;background:#fff3e7}
-          .rs-message b{display:block;font-size:12px;margin-bottom:4px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
-          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
-          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
-          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
-          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
-          .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
-          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
-          .rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+          .rs-modal-card{width:min(720px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+          .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
+          .rs-messages{display:grid;align-content:start;gap:10px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px;min-height:220px;max-height:420px}
+          .rs-message{max-width:min(84%,560px);border:1px solid #dfe7ec;border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;box-shadow:0 2px 8px rgba(16,36,56,.04)}
+          .rs-message.mine{margin-left:auto;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}
+          .rs-message.admin{background:#f3f8fb;border-color:#cfe0ec}.rs-message b{display:block;font-size:12px;margin-bottom:5px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}
+          .rs-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
+          .rs-msg-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}
+          .rs-msg-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+          .rs-msg-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
+          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{min-height:44px}.rs-message{max-width:92%}}
         `}</style>
 
         <div className="rs-modal-head">
@@ -2250,7 +2251,7 @@ function ConversationModal({
           </div>
         )}
 
-        <form className="lt-chat-form" onSubmit={sendMessage}>
+        <form className="rs-msg-form" onSubmit={sendMessage}>
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
@@ -2399,23 +2400,22 @@ function DisputeConversationModal({
     >
       <div className="rs-modal-card">
         <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .rs-modal-card{width:min(680px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
-          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;color:#6c7a88;font-size:12px}
-          .dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 8px}
-          .rs-messages{display:grid;gap:10px;max-height:390px;overflow:auto;padding:4px 2px 12px}
-          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
-          .rs-message.mine{margin-left:auto;background:#fff3e7}
-          .rs-message.admin{border:1px solid #cfe0ec;background:#f3f8fb}
-          .rs-message b{display:block;font-size:12px;margin-bottom:4px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
-          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
-          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
-          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
-          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
-          .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+          .rs-modal-card{width:min(720px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+          .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
+          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
+          .rs-messages{display:grid;align-content:start;gap:10px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px;min-height:220px;max-height:420px}
+          .rs-message{max-width:min(84%,560px);border:1px solid #dfe7ec;border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;box-shadow:0 2px 8px rgba(16,36,56,.04)}
+          .rs-message.mine{margin-left:auto;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}.rs-message.admin{background:#f3f8fb;border-color:#cfe0ec}
+          .rs-message b{display:block;font-size:12px;margin-bottom:5px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}.rs-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
+          .rs-msg-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}
+          .rs-msg-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+          .rs-msg-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{min-height:44px}.rs-message{max-width:92%}}
         `}</style>
 
         <div className="rs-modal-head">
@@ -3240,26 +3240,23 @@ function CompanyTeamChatModal({
     >
       <div className="ctc-modal">
         <style>{`
-          .ctc-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-          .ctc-modal{width:min(700px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
-          .ctc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
-          .ctc-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:24px}
-          .ctc-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.45}
-          .ctc-close{width:38px;height:38px;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-size:21px;cursor:pointer;flex:0 0 auto}
-          .ctc-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:10px}
-          .ctc-messages{display:grid;align-content:start;justify-items:start;gap:10px;min-height:260px;max-height:430px;overflow:auto;padding:8px 2px 14px}
-          .ctc-empty{justify-self:stretch;text-align:center;color:#7a8996;padding:52px 14px;font-size:13px}
-          .ctc-message{width:fit-content;max-width:min(72%,520px);padding:9px 12px;border-radius:13px;background:#f2f5f7}
-          .ctc-message.mine{justify-self:end;margin-left:0;background:#fff3e7}
-          .ctc-message b{display:block;font-size:12px;margin-bottom:3px}
-          .ctc-role{font-weight:600;color:#7a8996}
-          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}
-          .ctc-message time{display:block;margin-top:5px;color:#8a98a6;font-size:10px}
-          .ctc-form{display:grid;grid-template-columns:1fr auto;align-items:end;gap:8px;border-top:1px solid #e4ebf0;padding-top:14px}
-          .ctc-form textarea{min-height:48px;max-height:110px;resize:vertical;border:1px solid #dbe4ea;border-radius:11px;padding:11px 12px;font:inherit;line-height:1.4}
-          .ctc-form button{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}
-          .ctc-form button:disabled{opacity:.55;cursor:not-allowed}
-          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{max-height:calc(100vh - 20px);padding:17px}.ctc-head h2{font-size:21px}.ctc-message{max-width:88%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
+          .ctc-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+          .ctc-modal{width:min(720px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
+          .ctc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+          .ctc-head h2{margin:6px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
+          .ctc-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
+          .ctc-close{width:42px;height:42px;border:0;border-radius:12px;background:#f2f5f7;color:#102438;font-size:21px;cursor:pointer;display:grid;place-items:center;flex:0 0 auto}
+          .ctc-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:12px}
+          .ctc-messages{display:grid;align-content:start;justify-items:start;gap:10px;min-height:220px;max-height:420px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
+          .ctc-empty{justify-self:stretch;text-align:center;color:#7a8996;padding:42px 14px;font-size:13px}
+          .ctc-message{width:fit-content;max-width:min(84%,560px);padding:11px 13px;border-radius:14px 14px 14px 5px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(16,36,56,.04)}
+          .ctc-message.mine{justify-self:end;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}
+          .ctc-message b{display:block;font-size:12px;margin-bottom:5px}.ctc-role{font-weight:600;color:#7a8996}
+          .ctc-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}.ctc-message time{display:block;margin-top:7px;color:#8a98a6;font-size:10px}
+          .ctc-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:10px;border-top:1px solid #e4ebf0;padding-top:14px;margin-top:14px}
+          .ctc-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;line-height:1.4;outline:none}.ctc-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+          .ctc-form button{min-height:54px;border:0;border-radius:11px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}.ctc-form button:disabled{opacity:.55;cursor:not-allowed}
+          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.ctc-head h2{font-size:21px}.ctc-message{max-width:92%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
         `}</style>
 
         <div className="ctc-head">
@@ -17834,27 +17831,20 @@ function AdminJobChatModal({ job, user, onClose }) {
       }}
     >
       <style>{`
-        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
-        .admin-chat-card{width:min(700px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:flex;flex-direction:column}
-        .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:13px}
-        .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
-        .admin-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
-        .admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
-        .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}
-        .admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:180px;max-height:390px;overflow-y:auto;padding:3px 3px 13px}
-        .admin-chat-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
-        .admin-chat-message.mine{margin-left:auto;background:#fff3e7}
-        .admin-chat-message.admin-other{background:#eef3f8}
-        .admin-chat-message b{display:block;font-size:12px;margin-bottom:4px}
-        .admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
-        .admin-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
-        .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}
-        .admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
-        .admin-chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
-        .admin-chat-form textarea{min-height:52px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit;color:#102438}
-        .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
-        .admin-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:94%}}
+        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .admin-chat-card{width:min(720px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
+        .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+        .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
+        .admin-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+        .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}.admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow-y:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
+        .admin-chat-message{max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(16,36,56,.04)}
+        .admin-chat-message.mine{margin-left:auto;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}.admin-chat-message.admin-other{background:#eef3f8;border-color:#d7e4ef}
+        .admin-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}.admin-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
+        .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}.admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
+        .admin-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
+        .admin-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-chat-form button:disabled{opacity:.55;cursor:wait}
+        @media(max-width:560px){.admin-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:92%}}
       `}</style>
 
       <div className="admin-chat-card">
@@ -18067,26 +18057,20 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
       }}
     >
       <style>{`
-        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
-        .admin-team-chat-card{width:min(760px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:flex;flex-direction:column}
+        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
         .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
-        .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
-        .admin-team-chat-meta{margin-top:5px;color:#6c7a88;font-size:12px}
-        .admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
-        .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px 11px;margin-bottom:10px;font-size:13px}
-        .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:260px;max-height:520px;overflow:auto;padding:4px 2px 8px}
-        .admin-team-chat-message{width:fit-content;max-width:min(78%,560px);border-radius:12px;padding:10px 12px;background:#f2f5f7}
-        .admin-team-chat-message.mine{justify-self:end;background:#fff3e7}
-        .admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
-        .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:4px}
-        .admin-team-chat-role{font-weight:600;color:#7a8996}
-        .admin-team-chat-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
-        .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}
-        .admin-team-chat-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
-        .admin-team-chat-form textarea{min-height:52px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit;color:#102438}
-        .admin-team-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
-        .admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-team-chat-message{max-width:94%}.admin-team-chat-card{padding:17px}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
+        .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
+        .admin-team-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
+        .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
+        .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
+        .admin-team-chat-message{width:fit-content;max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(16,36,56,.04)}
+        .admin-team-chat-message.mine{justify-self:end;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}.admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-team-chat-role{font-weight:600;color:#7a8996}.admin-team-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
+        .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}.admin-team-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
+        .admin-team-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-team-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-team-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
+        @media(max-width:560px){.admin-team-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.admin-team-chat-message{max-width:92%}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
       `}</style>
 
       <div className="admin-team-chat-card">
