@@ -4639,7 +4639,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         type="button"
                         onClick={markAvatarForRemoval}
                       >
-                        Ištrinti nuotrauką
+                        Ištrinti logotipą
                       </button>
                     )}
                   </div>
@@ -7955,7 +7955,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("Įmonės logotipas negali būti didesnė nei 5 MB.");
+      setError("Įmonės logotipas negali būti didesnis nei 5 MB.");
       return;
     }
 
@@ -10154,7 +10154,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {companyMemberRole === "owner" && (
                   <div className="ed-company-avatar-actions">
                     <label className="ed-company-avatar-upload">
-                      {currentCompanyAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
+                      {currentCompanyAvatarUrl ? "Keisti logotipą" : "Įkelti logotipą"}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -10169,7 +10169,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         type="button"
                         onClick={markCompanyAvatarForRemoval}
                       >
-                        Ištrinti nuotrauką
+                        Ištrinti logotipą
                       </button>
                     )}
                   </div>
