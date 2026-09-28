@@ -10467,7 +10467,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </span>
 
         {planSummary?.plan_key === "business_pro" &&
-          cityWorkerSignal?.urgentWorkersNow !== null && (
+          cityWorkerSignal &&
+          cityWorkerSignal.urgentWorkersNow !== null &&
+          cityWorkerSignal.urgentWorkersNow !== undefined && (
             <span
               style={{
                 borderRadius: 999,
