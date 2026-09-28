@@ -953,10 +953,6 @@ function CityAutocomplete({
 function PlatformTermsDialog({ open, onClose }) {
   if (!open) return null;
 
-  const orderedMessages = [...messages].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-
   return (
     <div
       role="presentation"
@@ -2445,8 +2441,8 @@ function DisputeConversationModal({
         <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="rs-empty">Kraunama...</div>
-          ) : orderedMessages.length ? (
-            orderedMessages.map((message) => {
+          ) : messages.length ? (
+            messages.map((message) => {
               const mine = message.sender_id === user?.id;
               const className = [
                 "rs-message",
@@ -2854,37 +2850,38 @@ function longTermStatusLabel(value) {
   })[value] || value || "Pasiūlymas";
 }
 
-function longTermEmployerUpdateLabel(offer, unreadCount = 0) {
+function longTermEmployerUpdateLabel(offer) {
   if (!offer) return "Pasiūlymas pateiktas";
   if (offer.status === "active") return "Darbuotojas priimtas";
   if (offer.worker_signed_contract_path) return "Darbuotojas atsiuntė pasirašytą sutartį";
-  if (Number(unreadCount || 0) > 0) return "Darbuotojas atsiuntė naują žinutę";
+  if (offer.worker_contract_viewed_at) return "Darbuotojas peržiūrėjo sutartį";
+  if (offer.worker_viewed_at) return "Darbuotojas peržiūrėjo pasiūlymą";
   return "Pasiūlymas pateiktas";
 }
 
-function longTermEmployerUpdateTone(offer, unreadCount = 0) {
+function longTermEmployerUpdateTone(offer) {
   if (!offer) return "muted";
   if (offer.status === "active" || offer.worker_signed_contract_path) return "success";
-  if (Number(unreadCount || 0) > 0) return "attention";
+  if (offer.worker_contract_viewed_at) return "attention";
   return "muted";
 }
 
-function longTermWorkerUpdateLabel(offer, progress = {}) {
+function longTermWorkerUpdateLabel(offer) {
   if (!offer) return "Darbdavys atsiuntė pasiūlymą";
   if (offer.status === "active") return "Darbdavys patvirtino įdarbinimą";
   if (offer.worker_signed_contract_path) {
     return "Pasirašyta sutartis įkelta · laukiamas sprendimas";
   }
-  if (progress.contractOpened) return "Sutartis peržiūrėta";
-  if (progress.offerOpened) return "Pasiūlymas peržiūrėtas";
+  if (offer.worker_contract_viewed_at) return "Sutartis peržiūrėta";
+  if (offer.worker_viewed_at) return "Pasiūlymas peržiūrėtas";
   return "Darbdavys atsiuntė pasiūlymą";
 }
 
-function longTermWorkerUpdateTone(offer, progress = {}) {
+function longTermWorkerUpdateTone(offer) {
   if (!offer) return "orange";
-  if (offer.status === "active") return "green";
-  if (offer.worker_signed_contract_path || progress.contractOpened) return "green";
-  if (progress.offerOpened) return "muted";
+  if (offer.status === "active" || offer.worker_signed_contract_path) return "green";
+  if (offer.worker_contract_viewed_at) return "green";
+  if (offer.worker_viewed_at) return "muted";
   return "orange";
 }
 
@@ -3060,6 +3057,10 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
 
   if (!open) return null;
 
+  const orderedMessages = [...messages].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   return (
     <div
       className="rs-modal-overlay lt-chat-overlay"
@@ -3102,8 +3103,8 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
         <div className="lt-chat-body" ref={messagesRef}>
           {loading && !messages.length ? (
             <div className="lt-chat-empty">Kraunama...</div>
-          ) : messages.length ? (
-            messages.map((message) => {
+          ) : orderedMessages.length ? (
+            orderedMessages.map((message) => {
               const mine = message.sender_id === user?.id;
               return (
                 <div className={`lt-chat-message ${mine ? "mine" : ""}`} key={message.id}>
@@ -3972,12 +3973,70 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function workerMarkLongTermOfferViewed(offer) {
+    if (!offer?.id) return offer;
+
+    const nowIso = new Date().toISOString();
+    const optimistic = {
+      ...offer,
+      worker_viewed_at: offer.worker_viewed_at || nowIso,
+    };
+
+    setLongTermOffers((current) =>
+      current.map((item) => (item.id === offer.id ? optimistic : item))
+    );
+    setLongTermOfferTarget((current) =>
+      current?.id === offer.id ? { ...current, ...optimistic } : current
+    );
+
+    try {
+      const result = await supabase.rpc("worker_mark_long_term_offer_viewed", {
+        p_placement_id: offer.id,
+      });
+      if (result.error) throw result.error;
+    } catch (err) {
+      setError(err?.message || "Nepavyko pažymėti pasiūlymo peržiūrėtu.");
+    }
+
+    return optimistic;
+  }
+
   async function workerOpenLongTermContract(path, offerId = null) {
     try {
       setError("");
+
       if (offerId) {
-        markLongTermOfferProgress(offerId, { contractOpened: true, offerOpened: true });
+        const nowIso = new Date().toISOString();
+        setLongTermOffers((current) =>
+          current.map((item) =>
+            item.id === offerId
+              ? {
+                  ...item,
+                  worker_viewed_at: item.worker_viewed_at || nowIso,
+                  worker_contract_viewed_at:
+                    item.worker_contract_viewed_at || nowIso,
+                }
+              : item
+          )
+        );
+        setLongTermOfferTarget((current) =>
+          current?.id === offerId
+            ? {
+                ...current,
+                worker_viewed_at: current.worker_viewed_at || nowIso,
+                worker_contract_viewed_at:
+                  current.worker_contract_viewed_at || nowIso,
+              }
+            : current
+        );
+
+        const markResult = await supabase.rpc(
+          "worker_mark_long_term_contract_viewed",
+          { p_placement_id: offerId }
+        );
+        if (markResult.error) throw markResult.error;
       }
+
       await openEmploymentContract(path);
     } catch (err) {
       setError(err?.message || "Nepavyko atidaryti sutarties.");
@@ -5513,7 +5572,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-head{display:flex;align-items:center;gap:14px;min-width:0}.wd-workday-head-main{min-width:0;flex:1}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-company-meta-line{min-width:0}.wd-company-badge{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;border:1px solid #dbe4ea;background:#fff;color:#102438;font-weight:800;box-shadow:0 1px 2px rgba(16,36,56,.04);flex:0 0 auto}.wd-workday-head .wd-company-badge{align-self:center}.wd-company-badge img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:12%;background:#fff}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-long-term-offer-card{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.56fr) minmax(260px,.72fr);gap:14px;align-items:center}.wd-long-term-offer-info{min-width:0}.wd-long-term-offer-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));align-items:center;justify-content:flex-end;gap:8px;min-width:0;max-width:340px;justify-self:end}.wd-long-term-offer-actions>button{width:100%;min-width:0;min-height:38px;padding:8px 13px;font-size:13px;line-height:1.2;border-radius:10px;position:relative}.wd-long-term-offer-status{display:grid;justify-items:center;align-content:center;gap:6px;align-self:stretch;padding:10px 14px;text-align:center;border-left:1px solid #eef2f4;border-right:1px solid #eef2f4}.wd-long-term-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.wd-long-term-status-main{font-size:14px;line-height:1.35;font-weight:850;color:#667788}.wd-long-term-status-main.orange{color:#b85f0e}.wd-long-term-status-main.green{color:#167a54}.wd-long-term-status-main.muted{color:#667788}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-workday-chat{position:relative}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-head{display:flex;align-items:center;gap:14px;min-width:0}.wd-workday-head-main{min-width:0;flex:1}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-company-meta-line{min-width:0}.wd-company-badge{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;border:1px solid #dbe4ea;background:#fff;color:#102438;font-weight:800;box-shadow:0 1px 2px rgba(16,36,56,.04);flex:0 0 auto}.wd-workday-head .wd-company-badge{align-self:center}.wd-company-badge img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:12%;background:#fff}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-long-term-offer-card{border:1px solid #e4ebf0;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.58fr) minmax(260px,.72fr);gap:18px;align-items:center;background:#fff;overflow:hidden}.wd-long-term-offer-info{min-width:0}.wd-long-term-offer-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));align-items:center;gap:8px;min-width:0;max-width:340px;justify-self:end}.wd-long-term-offer-actions>button{width:100%;min-width:0;min-height:38px;padding:8px 13px;font-size:13px;line-height:1.2;border-radius:10px;position:relative}.wd-long-term-offer-status{display:grid;align-content:center;justify-items:center;gap:5px;min-width:190px;padding:6px 10px;text-align:center}.wd-long-term-status-label{display:block;font-size:11px;letter-spacing:.08em;font-weight:850;color:#7b8a97}.wd-long-term-status-main{display:block;font-size:13px;line-height:1.35;font-weight:850;color:#667788;max-width:240px}.wd-long-term-status-main.orange{color:#b85f0e}.wd-long-term-status-main.green{color:#167a54}.wd-long-term-status-main.muted{color:#667788}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-workday-chat{position:relative}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -5559,7 +5618,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-day-date{grid-column:1/-1}.wd-day-occupied-note{grid-column:1/-1}
           .wd-availability-choice{grid-column:1/-1}
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
-          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}.wd-long-term-offer-card{grid-template-columns:1fr}.wd-long-term-offer-status{justify-items:start;text-align:left;border-left:0;border-right:0;border-top:1px solid #eef2f4;border-bottom:1px solid #eef2f4}.wd-long-term-offer-actions{width:100%;max-width:none;grid-template-columns:1fr}
+          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}.wd-long-term-offer-card{grid-template-columns:1fr}.wd-long-term-offer-status{justify-items:start;text-align:left;min-width:0;padding:4px 0}.wd-long-term-offer-actions{width:100%;max-width:none;grid-template-columns:1fr}
           .wd-heading-actions{justify-items:start}
           .wd-availability-alert{align-items:stretch;flex-direction:column}
           .wd-availability-alert-actions{justify-content:flex-start}
@@ -6322,14 +6381,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <div className="wd-long-term-status-label">BŪSENA</div>
                     <div
                       className={`wd-long-term-status-main ${longTermWorkerUpdateTone(
-                        offer,
-                        longTermOfferProgressById?.[offer.id] || {}
+                        offer
                       )}`}
                     >
-                      {longTermWorkerUpdateLabel(
-                        offer,
-                        longTermOfferProgressById?.[offer.id] || {}
-                      )}
+                      {longTermWorkerUpdateLabel(offer)}
                     </div>
                   </div>
 
@@ -6337,10 +6392,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <button
                       className="wd-decline"
                       type="button"
-                      onClick={() => {
-                        markLongTermOfferProgress(offer.id, { offerOpened: true });
+                      onClick={async () => {
                         setLongTermSignedContractFile(null);
-                        setLongTermOfferTarget(offer);
+                        const viewedOffer = await workerMarkLongTermOfferViewed(offer);
+                        setLongTermOfferTarget(viewedOffer || offer);
                       }}
                     >
                       Atidaryti
@@ -8297,10 +8352,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card" style={{ width: "min(820px,100%)" }}>
             <style>{`
-              .lt-detail-card{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#fff}
+              .lt-detail-card{border:1px solid #e4ebf0;border-radius:14px;padding:14px;background:#fff;overflow:hidden}
               .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:4px}
               .lt-detail-card>b{display:block;color:#102438}.lt-detail-card small{display:block;margin-top:4px;color:#6c7a88;line-height:1.4}
-              .lt-schedule-table{display:grid;gap:7px;margin-top:9px}.lt-schedule-row{display:grid;grid-template-columns:1.1fr .8fr 1.4fr;gap:10px;align-items:center;padding:9px 10px;border-radius:9px;background:#f7f9fb;font-size:12px}.lt-schedule-row span{color:#526374}
+              .lt-schedule-table{display:grid;gap:8px;margin-top:10px}.lt-schedule-row{display:grid;grid-template-columns:1.1fr .8fr 1.4fr;gap:10px;align-items:center;padding:10px 12px;border:1px solid #e4ebf0;border-radius:12px;background:#f9fbfc;font-size:12px}.lt-schedule-row span{color:#526374}
               @media(max-width:620px){.lt-schedule-row{grid-template-columns:1fr}.lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
@@ -8501,39 +8556,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "flex-end",
                 gap: 9,
                 flexWrap: "wrap",
                 marginTop: 18,
               }}
             >
-              <button
-                className={`wd-decline ${
-                  Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0
-                    ? "wd-workday-chat has-unread"
-                    : ""
-                }`}
-                type="button"
-                disabled={longTermBusy}
-                onClick={() => {
-                  setLongTermUnreadByOffer((current) => ({
-                    ...current,
-                    [longTermOfferTarget.id]: 0,
-                  }));
-                  setLongTermConversation({
-                    placementId: longTermOfferTarget.id,
-                    title: `${longTermOfferTarget.company_name} · ${longTermOfferTarget.position_title}`,
-                  });
-                }}
-              >
-                Aptarti pasiūlymą
-                {Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0 && (
-                  <span className="wd-chat-count">
-                    {Math.min(9, Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0))}
-                  </span>
-                )}
-              </button>
-
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {longTermOfferTarget.status === "offered" && (
                   <button
@@ -16951,23 +16979,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               <div className="lt-existing-status-label">ATNAUJINIMAS</div>
                               <div
                                 className={`lt-existing-status-main ${
-                                  longTermEmployerUpdateTone(
-                                    offer,
-                                    Number(longTermUnreadByOffer[offer.id] || 0)
-                                  ) === "muted"
+                                  longTermEmployerUpdateTone(offer) === "muted"
                                     ? "waiting"
-                                    : longTermEmployerUpdateTone(
-                                        offer,
-                                        Number(longTermUnreadByOffer[offer.id] || 0)
-                                      ) === "attention"
+                                    : longTermEmployerUpdateTone(offer) === "attention"
                                     ? "attention"
                                     : ""
                                 }`}
                               >
-                                {longTermEmployerUpdateLabel(
-                                  offer,
-                                  Number(longTermUnreadByOffer[offer.id] || 0)
-                                )}
+                                {longTermEmployerUpdateLabel(offer)}
                               </div>
                             </div>
 
