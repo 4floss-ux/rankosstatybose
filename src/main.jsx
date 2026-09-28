@@ -4031,7 +4031,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setShowWorkTimeLoginReminder(true);
     const timer = window.setTimeout(() => {
       setShowWorkTimeLoginReminder(false);
-    }, 10000);
+    }, 30000);
 
     return () => window.clearTimeout(timer);
   }, [loading, user?.id, user?.last_sign_in_at]);
@@ -7494,14 +7494,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                         </div>
 
-                        {cancelled ? (
-                          <div className="wd-note err" style={{ marginTop: 10 }}>
-                            <b>Darbas atšauktas.</b>
-                            <div style={{ marginTop: 4 }}>
-                              Priežastis: {item.cancellation_reason || job.cancellation_reason || "Priežastis nenurodyta."}
-                            </div>
-                          </div>
-                        ) : !attendance.finalized_at ? (
+                        {!cancelled && !attendance.finalized_at ? (
                           <span className="wd-workday-status green">
                             Darbas užbaigtas
                           </span>
@@ -8003,6 +7996,38 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
+              {(workdayDetailsTarget.job?.status === "cancelled" ||
+                workdayDetailsTarget.status === "cancelled_by_employer") && (
+                <div
+                  style={{
+                    border: "1px solid #f2c7bd",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: "#fff5f2",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#b64d2a",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    ATŠAUKIMO PRIEŽASTIS
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      lineHeight: 1.55,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {workdayDetailsTarget.cancellation_reason?.trim() ||
+                      workdayDetailsTarget.job?.cancellation_reason?.trim() ||
+                      "Priežastis nenurodyta."}
+                  </div>
+                </div>
+              )}
 
               {workdayDetailsTarget.companyReviews?.length > 0 && (
                 <div
@@ -11567,80 +11592,32 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setJobInfoWorkersLoading(true);
 
     try {
-      const bookingsResult = await supabase
-        .from("bookings")
-        .select("id, worker_id, status, confirmed_at")
-        .eq("job_id", job.id)
-        .order("confirmed_at", { ascending: true });
+      const workersResult = await supabase.rpc("get_job_information_workers", {
+        p_job_id: job.id,
+      });
 
-      if (bookingsResult.error) throw bookingsResult.error;
-
-      const bookingRows = (bookingsResult.data || []).filter(
-        (row) => !["cancelled_by_worker", "cancelled_by_employer"].includes(row.status)
-      );
-      const workerIds = [...new Set(bookingRows.map((row) => row.worker_id).filter(Boolean))];
-      const bookingIds = bookingRows.map((row) => row.id).filter(Boolean);
-
-      if (!workerIds.length) {
-        setJobInfoWorkers([]);
-        return;
-      }
-
-      const [profilesResult, workerProfilesResult, attendanceResult] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, display_name, city")
-          .in("id", workerIds),
-        supabase.rpc("get_employer_worker_profiles", {
-          p_job_id: job.id,
-          p_worker_ids: workerIds,
-        }),
-        bookingIds.length
-          ? supabase
-              .from("attendance")
-              .select("booking_id, final_outcome, employer_outcome, worked_minutes, finalized_at")
-              .in("booking_id", bookingIds)
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-
-      const failed = [profilesResult, workerProfilesResult, attendanceResult].find(
-        (result) => result?.error
-      );
-      if (failed?.error) throw failed.error;
-
-      const profileMap = new Map(
-        (profilesResult.data || []).map((row) => [row.id, row])
-      );
-      const workerProfileMap = new Map(
-        (workerProfilesResult.data || []).map((row) => [row.user_id, row])
-      );
-      const attendanceMap = new Map(
-        (attendanceResult.data || []).map((row) => [row.booking_id, row])
-      );
+      if (workersResult.error) throw workersResult.error;
 
       setJobInfoWorkers(
-        bookingRows
-          .map((booking) => {
-            const profile = profileMap.get(booking.worker_id);
-            const workerProfile = workerProfileMap.get(booking.worker_id);
-            if (!profile) return null;
-
-            const attendance = attendanceMap.get(booking.id) || null;
-            return {
-              id: booking.worker_id,
-              bookingId: booking.id,
-              name: shortWorkerName(profile.display_name),
-              initials: workerInitials(profile.display_name),
-              city: profile.city || "",
-              avatarUrl: workerAvatarUrl(workerProfile?.avatar_path),
-              bookingStatus: booking.status,
-              attendance,
-            };
-          })
-          .filter(Boolean)
+        (workersResult.data || []).map((row) => ({
+          id: row.worker_id,
+          bookingId: row.booking_id,
+          name: shortWorkerName(row.worker_name),
+          initials: workerInitials(row.worker_name),
+          city: row.worker_city || "",
+          avatarUrl: workerAvatarUrl(row.avatar_path),
+          bookingStatus: row.booking_status,
+          cancellationReason: row.cancellation_reason || "",
+          attendance: {
+            final_outcome: row.attendance_final_outcome || null,
+            employer_outcome: row.attendance_employer_outcome || null,
+            worked_minutes: Number(row.attendance_worked_minutes || 0),
+            finalized_at: row.attendance_finalized_at || null,
+          },
+        }))
       );
     } catch (err) {
-      setError(err?.message || "Nepavyko įkelti dirbusių darbuotojų.");
+      setError(err?.message || "Nepavyko įkelti darbo komandos.");
       setJobInfoWorkers([]);
     } finally {
       setJobInfoWorkersLoading(false);
@@ -13101,7 +13078,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         detail:
           penaltyPoints > 0
             ? `Patikimumas sumažėjo ${penaltyPoints} taškų`
-            : "Darbas atšauktas",
+            : "",
         missing,
       };
     }
@@ -13258,6 +13235,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-worker-source button.locked{color:#9a6a3d}
         .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
         .ed-saved-modal{width:min(850px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-job-info-modal{border-radius:22px!important;overflow:hidden!important;background:#fff;isolation:isolate}
+        .ed-job-info-scroll{border-radius:inherit;scrollbar-width:thin;scrollbar-color:#98a5ae transparent;scrollbar-gutter:stable}.ed-job-info-scroll::-webkit-scrollbar{width:8px}.ed-job-info-scroll::-webkit-scrollbar-track{background:transparent}.ed-job-info-scroll::-webkit-scrollbar-thumb{background:#98a5ae;border-radius:999px;border:2px solid #fff}
         .ed-saved-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
         .ed-saved-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-saved-head p{margin:0;color:#6c7a88;line-height:1.5}
         .ed-saved-list{display:grid;gap:10px}
@@ -16195,7 +16174,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="ed-saved-modal" style={{ width: "min(760px, 100%)" }}>
+          <div
+            className="ed-saved-modal ed-job-info-modal"
+            style={{
+              width: "min(760px, 100%)",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "hidden",
+              padding: 0,
+              borderRadius: 22,
+            }}
+          >
+            <div
+              className="ed-job-info-scroll"
+              style={{
+                maxHeight: "calc(100vh - 40px)",
+                overflowY: "auto",
+                padding: 24,
+                boxSizing: "border-box",
+                borderRadius: "inherit",
+                background: "#fff",
+              }}
+            >
             <div className="ed-saved-head">
               <div>
                 <div className="eyebrow">DARBO INFORMACIJA</div>
@@ -16307,7 +16306,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <div>
                   <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbo komanda</div>
-                  <b style={{ display: "block", marginTop: 4 }}>Dirbę darbuotojai</b>
+                  <b style={{ display: "block", marginTop: 4 }}>
+                    {jobInfoTarget.status === "cancelled"
+                      ? "Patvirtinti darbuotojai prieš atšaukimą"
+                      : "Dirbę darbuotojai"}
+                  </b>
                 </div>
                 {!jobInfoWorkersLoading && jobInfoWorkers.length > 0 && (
                   <span className="ed-attendance-badge green" style={{ marginTop: 0 }}>
@@ -16369,15 +16372,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             {worker.city || "Miestas nenurodytas"}
                           </span>
                         </div>
-                        <span className={`ed-attendance-badge ${
-                          worker.attendance?.final_outcome === "no_show" ||
-                          worker.attendance?.final_outcome === "left_early_unexcused"
-                            ? "red"
-                            : worker.attendance?.finalized_at
-                            ? "green"
-                            : "muted"
-                        }`} style={{ marginTop: 0, textAlign: "center" }}>
-                          {outcome}{worked > 0 ? ` · ${formatWorkedMinutes(worked)}` : ""}
+                        <span
+                          className={`ed-attendance-badge ${
+                            jobInfoTarget.status === "cancelled"
+                              ? "red"
+                              : worker.attendance?.final_outcome === "no_show" ||
+                                worker.attendance?.final_outcome === "left_early_unexcused"
+                              ? "red"
+                              : worker.attendance?.finalized_at
+                              ? "green"
+                              : "muted"
+                          }`}
+                          style={{ marginTop: 0, textAlign: "center" }}
+                        >
+                          {jobInfoTarget.status === "cancelled"
+                            ? "Buvo patvirtintas · darbas atšauktas"
+                            : `${outcome}${
+                                worked > 0 ? ` · ${formatWorkedMinutes(worked)}` : ""
+                              }`}
                         </span>
                       </div>
                     );
@@ -16385,9 +16397,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               ) : (
                 <div style={{ marginTop: 12, color: "#6c7a88", fontSize: 12 }}>
-                  Šiam darbui dirbusių darbuotojų nėra.
+                  {jobInfoTarget.status === "cancelled"
+                    ? "Iki atšaukimo šiame darbe nebuvo patvirtintų darbuotojų."
+                    : "Šiam darbui dirbusių darbuotojų nėra."}
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>
