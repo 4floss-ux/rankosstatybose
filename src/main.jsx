@@ -5938,8 +5938,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.wd-stats-toggle:hover{color:#c96c13}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.wd-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
-        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
+        .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:max-content;max-width:100%;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
@@ -6720,7 +6720,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   onClick={() => setShowWorkerReliabilityInfo(true)}
                   aria-label="Atidaryti darbuotojo patikimumo paaiškinimą"
                 >
-                  Atvykimo patikimumas
+                  <span className="wd-kpi-info-label">Atvykimo patikimumas</span>
                   <span className="wd-kpi-info-mark">i</span>
                 </button>
                 <b
@@ -7078,9 +7078,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </div>
 
                         {item.status === "cancelled_by_employer" && (
-                          <span className="wd-workday-status red">
-                            Darbdavys atšaukė darbą
-                          </span>
+                          <div className="wd-note err" style={{ marginTop: 10 }}>
+                            <b>Darbdavys atšaukė darbą.</b>
+                            <div style={{ marginTop: 4 }}>
+                              Priežastis: {item.cancellation_reason || job.cancellation_reason || "Priežastis nenurodyta."}
+                            </div>
+                          </div>
                         )}
 
                         {attendance.finalized_at && (
@@ -7493,9 +7496,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </div>
 
                         {cancelled ? (
-                          <span className="wd-workday-status red">
-                            Darbas atšauktas
-                          </span>
+                          <div className="wd-note err" style={{ marginTop: 10 }}>
+                            <b>Darbas atšauktas.</b>
+                            <div style={{ marginTop: 4 }}>
+                              Priežastis: {item.cancellation_reason || job.cancellation_reason || "Priežastis nenurodyta."}
+                            </div>
+                          </div>
                         ) : !attendance.finalized_at ? (
                           <span className="wd-workday-status green">
                             Darbas užbaigtas
@@ -12832,59 +12838,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setNotice("");
 
     try {
-      const now = new Date().toISOString();
+      const cancelResult = await supabase.rpc("cancel_job_by_employer", {
+        p_job_id: cancelJobTarget.id,
+        p_reason: reason,
+      });
 
-      const countResult = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("job_id", cancelJobTarget.id)
-        .eq("status", "confirmed");
+      if (cancelResult.error) throw cancelResult.error;
 
-      if (countResult.error) throw countResult.error;
+      const cancelled = cancelResult.data?.[0] || null;
+      const confirmedCount = Number(
+        cancelled?.confirmed_workers ?? cancelJobTarget.confirmedCount ?? 0
+      );
+      const reliabilityChange = Number(cancelled?.reliability_change ?? -10);
+      const newReliability = Number(cancelled?.new_reliability ?? 100);
+      const cancelledAt = cancelled?.cancelled_at || new Date().toISOString();
+      const savedReason = cancelled?.cancellation_reason || reason;
 
-      const confirmedCount = Number(countResult.count || 0);
-
-      if (confirmedCount === 0) {
-        throw new Error(
-          "Patvirtintų darbuotojų nebeliko. Atnaujinkite poreikį ir bandykite dar kartą."
-        );
-      }
-
-      const jobResult = await supabase
-        .from("jobs")
-        .update({
-          status: "cancelled",
-          cancellation_reason: reason,
-          cancelled_at: now,
-        })
-        .eq("id", cancelJobTarget.id);
-
-      if (jobResult.error) throw jobResult.error;
-
-      const bookingsResult = await supabase
-        .from("bookings")
-        .update({
-          status: "cancelled_by_employer",
-          cancelled_at: now,
-          cancellation_reason: reason,
-        })
-        .eq("job_id", cancelJobTarget.id)
-        .eq("status", "confirmed");
-
-      if (bookingsResult.error) throw bookingsResult.error;
-
-      const invitationsResult = await supabase
-        .from("job_invitations")
-        .update({
-          status: "cancelled",
-          responded_at: now,
-        })
-        .eq("job_id", cancelJobTarget.id)
-        .in("status", ["pending", "accepted"]);
-
-      if (invitationsResult.error) throw invitationsResult.error;
-
-      setNotice("Poreikis atšauktas. Darbuotojai matys jūsų nurodytą priežastį.");
+      setNotice(
+        `Darbas atšauktas. ${confirmedCount === 1 ? "Darbuotojas matys" : "Darbuotojai matys"} atšaukimo priežastį. Patikimumas ${reliabilityChange < 0 ? `sumažėjo ${Math.abs(reliabilityChange)} taškų` : "nepasikeitė"} · dabar ${formatReliabilityScore(newReliability)} / 100.`
+      );
 
       if (currentJob?.id === cancelJobTarget.id) {
         setCurrentJob((existing) =>
@@ -12892,8 +12864,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             ? {
                 ...existing,
                 status: "cancelled",
-                cancellation_reason: reason,
-                cancelled_at: now,
+                cancellation_reason: savedReason,
+                cancelled_at: cancelledAt,
                 confirmedCount: 0,
               }
             : existing
@@ -12908,8 +12880,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setCancelJobTarget(null);
       setCancelReason("");
-      await reloadJobs(company.id);
-      await loadEmployerNotifications();
+
+      await Promise.all([
+        reloadJobs(company.id),
+        loadEmployerStats(company.id, companyMemberRole),
+        loadEmployerNotifications(),
+      ]);
     } catch (err) {
       setError(err?.message || "Nepavyko atšaukti poreikio.");
     } finally {
@@ -17312,7 +17288,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card">
             <style>{`
-              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2100;display:grid;place-items:center;padding:20px}
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:12000;display:grid;place-items:center;padding:20px}
               .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
               .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
               .rs-modal-head h2{margin:0;font-size:22px}
