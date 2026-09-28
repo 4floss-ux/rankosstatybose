@@ -7950,12 +7950,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      setError("Įmonės profilio nuotrauka turi būti JPG, PNG arba WEBP formato.");
+      setError("Įmonės logotipas turi būti JPG, PNG arba WEBP formato.");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("Įmonės profilio nuotrauka negali būti didesnė nei 5 MB.");
+      setError("Įmonės logotipas negali būti didesnė nei 5 MB.");
       return;
     }
 
@@ -10136,7 +10136,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {currentCompanyAvatarUrl ? (
                   <img
                     src={currentCompanyAvatarUrl}
-                    alt={companyForm.name || "Įmonės profilio nuotrauka"}
+                    alt={companyForm.name || "Įmonės logotipas"}
                   />
                 ) : (
                   String(companyForm.name || "Į")
@@ -10149,7 +10149,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
               <div className="ed-company-avatar-copy">
-                <b>Įmonės profilio nuotrauka</b>
+                <b>Įmonės logotipas</b>
                 <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
                 {companyMemberRole === "owner" && (
                   <div className="ed-company-avatar-actions">
@@ -15010,7 +15010,7 @@ function AdminDashboard({
         .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
         .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
-        .admin-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+        .admin-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
         .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
         .admin-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
