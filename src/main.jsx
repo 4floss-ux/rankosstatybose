@@ -2200,7 +2200,7 @@ function ConversationModal({
 
         <div className="rs-messages" ref={messagesRef}>
           {loading ? (
-            <div className="rs-empty">Kraunama...</div>
+            <div className="lt-chat-empty">Kraunama...</div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -2253,7 +2253,7 @@ function ConversationModal({
           </div>
         )}
 
-        <form className="rs-msg-form" onSubmit={sendMessage}>
+        <form className="lt-chat-form" onSubmit={sendMessage}>
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
@@ -2466,7 +2466,7 @@ function DisputeConversationModal({
               );
             })
           ) : (
-            <div className="rs-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
+            <div className="lt-chat-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
           )}
         </div>
 
@@ -3020,13 +3020,29 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
 
   return (
     <div
-      className="rs-modal-overlay"
+      className="rs-modal-overlay lt-chat-overlay"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="rs-modal-card">
-        <div className="rs-modal-head">
+      <style>{`
+        .lt-chat-overlay{position:fixed;inset:0;z-index:2800;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.62);backdrop-filter:blur(2px)}
+        .lt-chat-card{width:min(720px,calc(100vw - 40px));max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);color:#102438}
+        .lt-chat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 22px 18px;border-bottom:1px solid #e8eef2}
+        .lt-chat-head h2{margin:5px 0 0;font-size:24px;line-height:1.2}.lt-chat-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
+        .lt-chat-close{border:0;background:#f2f5f7;color:#102438;border-radius:12px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer;flex:0 0 42px}
+        .lt-chat-body{overflow:auto;padding:18px 20px;display:grid;gap:10px;align-content:start;background:#f8fafb}
+        .lt-chat-empty{padding:18px;border:1px dashed #d7e0e7;border-radius:12px;background:#fff;color:#71808d;text-align:center;font-size:13px}
+        .lt-chat-message{width:min(86%,560px);padding:11px 13px;border:1px solid #dfe7ec;border-radius:14px 14px 14px 5px;background:#fff;box-shadow:0 2px 8px rgba(16,36,56,.035)}
+        .lt-chat-message.mine{justify-self:end;border-color:#f3d4b7;background:#fff6ee;border-radius:14px 14px 5px 14px}.lt-chat-message b{display:block;font-size:12px;margin-bottom:5px}.lt-chat-message p{margin:0;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}.lt-chat-message time{display:block;margin-top:7px;color:#84919c;font-size:10px}
+        .lt-chat-error{margin:12px 20px 0;background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px}
+        .lt-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 16px 16px;border-top:1px solid #e8eef2;background:#fff}
+        .lt-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.lt-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .lt-chat-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}.lt-chat-form button:disabled{opacity:.45;cursor:not-allowed}
+        @media(max-width:620px){.lt-chat-overlay{padding:10px}.lt-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px}.lt-chat-head{padding:17px}.lt-chat-form{grid-template-columns:1fr}.lt-chat-form button{min-height:44px}.lt-chat-message{width:92%}}
+      `}</style>
+      <div className="lt-chat-card">
+        <div className="lt-chat-head">
           <div>
             <div className="eyebrow">ĮDARBINIMO PASIŪLYMO POKALBIS</div>
             <h2>{title || "Aptarti pasiūlymą"}</h2>
@@ -3034,21 +3050,21 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
               Čia galite aptarti pasiūlymo sąlygas prieš realų įsidarbinimo patvirtinimą.
             </p>
           </div>
-          <button className="rs-close" type="button" onClick={onClose}>
+          <button className="lt-chat-close" type="button" onClick={onClose} aria-label="Uždaryti pokalbį">
             <CloseMark />
           </button>
         </div>
 
-        {error && <div className="rs-error">{error}</div>}
+        {error && <div className="lt-chat-error">{error}</div>}
 
-        <div className="rs-messages" ref={messagesRef}>
+        <div className="lt-chat-body" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="rs-empty">Kraunama...</div>
+            <div className="lt-chat-empty">Kraunama...</div>
           ) : messages.length ? (
             messages.map((message) => {
               const mine = message.sender_id === user?.id;
               return (
-                <div className={`rs-message ${mine ? "mine" : ""}`} key={message.id}>
+                <div className={`lt-chat-message ${mine ? "mine" : ""}`} key={message.id}>
                   <b>{mine ? "Jūs" : message.sender_name || "Vartotojas"}</b>
                   <p>{message.body}</p>
                   <time>
@@ -3061,11 +3077,11 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
               );
             })
           ) : (
-            <div className="rs-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
+            <div className="lt-chat-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
           )}
         </div>
 
-        <form className="rs-msg-form" onSubmit={sendMessage}>
+        <form className="lt-chat-form" onSubmit={sendMessage}>
           <textarea
             value={textValue}
             onChange={(e) => setTextValue(e.target.value)}
