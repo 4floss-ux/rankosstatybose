@@ -2878,6 +2878,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [groupConversation, setGroupConversation] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const workerProfileEditorRef = useRef(null);
+
+  useEffect(() => {
+    if (!showProfileEditor) return;
+
+    const timer = window.setTimeout(() => {
+      const node = workerProfileEditorRef.current;
+      if (!node) return;
+
+      const top =
+        node.getBoundingClientRect().top + window.scrollY - 88;
+
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: "smooth",
+      });
+    }, 60);
+
+    return () => window.clearTimeout(timer);
+  }, [showProfileEditor]);
   const [needsAvailabilityConfirm, setNeedsAvailabilityConfirm] = useState(false);
   const [confirmingAvailability, setConfirmingAvailability] = useState(false);
   const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
@@ -4579,7 +4599,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
 
         {showProfileEditor && (
-          <section className="wd-profile-editor">
+          <section
+            ref={workerProfileEditorRef}
+            id="worker-profile-editor"
+            className="wd-profile-editor"
+            style={{ scrollMarginTop: 88 }}
+          >
             <div className="wd-profile-editor-head">
               <div>
                 <div className="eyebrow">MANO INFORMACIJA</div>
@@ -6913,6 +6938,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [company, setCompany] = useState(null);
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const companyEditorRef = useRef(null);
+
+  useEffect(() => {
+    if (!showCompanyEditor) return;
+
+    const timer = window.setTimeout(() => {
+      const node = companyEditorRef.current;
+      if (!node) return;
+
+      const top =
+        node.getBoundingClientRect().top + window.scrollY - 88;
+
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: "smooth",
+      });
+    }, 60);
+
+    return () => window.clearTimeout(timer);
+  }, [showCompanyEditor]);
   const [companySaving, setCompanySaving] = useState(false);
   const [companyAvatarFile, setCompanyAvatarFile] = useState(null);
   const [companyAvatarPreview, setCompanyAvatarPreview] = useState("");
@@ -10190,7 +10235,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
         {showCompanyEditor && (
-          <section className="ed-company-editor">
+          <section
+            ref={companyEditorRef}
+            id="employer-profile-editor"
+            className="ed-company-editor"
+            style={{ scrollMarginTop: 88 }}
+          >
             <div className="ed-company-editor-head">
               <div>
                 <div className="eyebrow">ĮMONĖS PROFILIS</div>
