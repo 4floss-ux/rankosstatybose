@@ -7427,6 +7427,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
                 {confirmInvitation.companyName} · {confirmInvitation.job?.city}
                 <br />
+                Darbo adresas: <b>{confirmInvitation.job?.address_text || "Adresas nenurodytas"}</b>
+                <br />
                 Darbdavio patikimumas:{" "}
                 <b
                   style={{
