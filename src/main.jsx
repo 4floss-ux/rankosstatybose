@@ -39,7 +39,15 @@ function BrandImage({ height = 38, alt = BRAND_NAME, style }) {
 
 function BrandLogo({ href = "#", className = "brand", height = 38, style, imgStyle, alt = BRAND_NAME }) {
   return (
-    <a className={className} href={href} style={{ display: "inline-flex", alignItems: "center", ...style }}>
+    <a
+      className={className}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        window.location.reload();
+      }}
+      style={{ display: "inline-flex", alignItems: "center", ...style }}
+    >
       <BrandImage height={height} alt={alt} style={imgStyle} />
     </a>
   );
