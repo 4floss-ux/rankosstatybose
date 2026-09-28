@@ -1914,6 +1914,15 @@ function notificationPresentation(events = []) {
   if (types.includes("invitation_accepted")) {
     return { tone: "green", label: "✓ Darbuotojas priėmė" };
   }
+  if (types.includes("attendance_resolved_in_favor")) {
+    return { tone: "green", label: "✓ Ginčas išspręstas jūsų naudai" };
+  }
+  if (types.includes("attendance_resolved_against")) {
+    return { tone: "red", label: "Ginčas išspręstas ne jūsų naudai" };
+  }
+  if (types.includes("attendance_resolved")) {
+    return { tone: "green", label: "✓ Ginčas išspręstas" };
+  }
   if (types.includes("attendance_disputed")) {
     return { tone: "red", label: "⚑ Darbo dienos ginčas" };
   }
@@ -1931,9 +1940,6 @@ function notificationPresentation(events = []) {
   }
   if (types.includes("attendance_finalized")) {
     return { tone: "green", label: "✓ Darbo diena uždaryta" };
-  }
-  if (types.includes("attendance_resolved")) {
-    return { tone: "green", label: "✓ Ginčas išspręstas" };
   }
   if (types.includes("invitation_expired")) {
     return { tone: "muted", label: "Kvietimas nebegalioja" };
@@ -3067,6 +3073,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [commitmentChecked, setCommitmentChecked] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [groupConversation, setGroupConversation] = useState(null);
+  const [disputeConversation, setDisputeConversation] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const workerProfileEditorRef = useRef(null);
@@ -5701,24 +5708,44 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         )}
 
                         {disputed && attendance.id && (
-                          <button
-                            className="wd-decline"
-                            disabled={attendanceBusy}
-                            onClick={() => {
-                              setWorkerAttendanceTarget(item);
-                              setWorkerAttendanceMode("dispute");
-                              setWorkerAttendanceNote(
-                                attendance.worker_response_note?.startsWith(
-                                  "Automatinis ginčas:"
-                                )
-                                  ? ""
-                                  : attendance.worker_response_note || ""
-                              );
-                              setWorkerEvidenceFile(null);
-                            }}
-                          >
-                            Papildyti ginčą
-                          </button>
+                          <>
+                            <button
+                              className="wd-decline"
+                              disabled={attendanceBusy}
+                              onClick={() => {
+                                setWorkerAttendanceTarget(item);
+                                setWorkerAttendanceMode("dispute");
+                                setWorkerAttendanceNote(
+                                  attendance.worker_response_note?.startsWith(
+                                    "Automatinis ginčas:"
+                                  )
+                                    ? ""
+                                    : attendance.worker_response_note || ""
+                                );
+                                setWorkerEvidenceFile(null);
+                              }}
+                            >
+                              Papildyti ginčą
+                            </button>
+
+                            {attendance.employer_note?.trim() &&
+                              attendance.worker_response_note?.trim() && (
+                                <button
+                                  className="wd-decline"
+                                  type="button"
+                                  onClick={() =>
+                                    setDisputeConversation({
+                                      attendanceId: attendance.id,
+                                      title: `${job.title} · Ginčo aptarimas`,
+                                      workerName: form.displayName || "Darbuotojas",
+                                      companyName: item.companyName || "Darbdavys",
+                                    })
+                                  }
+                                >
+                                  Ginčo pokalbis
+                                </button>
+                              )}
+                          </>
                         )}
 
                         {needsClose &&
@@ -7173,6 +7200,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
         senderMode={onAdminReturn ? "worker" : null}
       />
+
+      <DisputeConversationModal
+        open={Boolean(disputeConversation)}
+        onClose={() => setDisputeConversation(null)}
+        attendanceId={disputeConversation?.attendanceId}
+        title={disputeConversation?.title}
+        workerName={disputeConversation?.workerName}
+        companyName={disputeConversation?.companyName}
+        user={user}
+      />
     </div>
   );
 }
@@ -7497,6 +7534,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [ratingSaving, setRatingSaving] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [groupConversation, setGroupConversation] = useState(null);
+  const [disputeConversation, setDisputeConversation] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
   const [editingConfirmedCount, setEditingConfirmedCount] = useState(0);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -11839,6 +11877,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             Profilis
                           </button>
 
+                          {disputed &&
+                            attendance.id &&
+                            attendance.employer_note?.trim() &&
+                            attendance.worker_response_note?.trim() && (
+                              <button
+                                className="ed-secondary"
+                                type="button"
+                                onClick={() =>
+                                  setDisputeConversation({
+                                    attendanceId: attendance.id,
+                                    title: `${currentJob.title} · Ginčo aptarimas`,
+                                    workerName: worker.name || "Darbuotojas",
+                                    companyName: company?.name || "Darbdavys",
+                                  })
+                                }
+                              >
+                                Ginčo pokalbis
+                              </button>
+                            )}
+
                           {worker.invitationId && (
                             <button
                               className="ed-secondary ed-chat-alert-btn"
@@ -14262,6 +14320,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
       />
+
+      <DisputeConversationModal
+        open={Boolean(disputeConversation)}
+        onClose={() => setDisputeConversation(null)}
+        attendanceId={disputeConversation?.attendanceId}
+        title={disputeConversation?.title}
+        workerName={disputeConversation?.workerName}
+        companyName={disputeConversation?.companyName}
+        user={user}
+      />
+
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
   );
@@ -15262,6 +15331,7 @@ function AdminDashboard({
   const [editor, setEditor] = useState(null);
   const [adminConversation, setAdminConversation] = useState(null);
   const [adminTeamConversation, setAdminTeamConversation] = useState(null);
+  const [adminDisputeConversation, setAdminDisputeConversation] = useState(null);
   const [editorForm, setEditorForm] = useState({});
   const [editorSaving, setEditorSaving] = useState(false);
 
@@ -16220,6 +16290,25 @@ function AdminDashboard({
                     )}
 
                     <div className="admin-actions">
+                      {dispute.employer_note?.trim() &&
+                        dispute.worker_response_note?.trim() && (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              setAdminDisputeConversation({
+                                attendanceId: dispute.attendance_id,
+                                title: `${dispute.job_title} · Ginčo aptarimas`,
+                                workerName: dispute.worker_name,
+                                companyName: dispute.company_name,
+                              })
+                            }
+                          >
+                            Žinutės
+                          </button>
+                        )}
+
                       <button
                         className="admin-small-btn danger"
                         disabled={busy}
@@ -16865,6 +16954,16 @@ function AdminDashboard({
         chat={adminTeamConversation}
         user={user}
         onClose={() => setAdminTeamConversation(null)}
+      />
+
+      <DisputeConversationModal
+        open={Boolean(adminDisputeConversation)}
+        onClose={() => setAdminDisputeConversation(null)}
+        attendanceId={adminDisputeConversation?.attendanceId}
+        title={adminDisputeConversation?.title}
+        workerName={adminDisputeConversation?.workerName}
+        companyName={adminDisputeConversation?.companyName}
+        user={user}
       />
 
       {editor && (
