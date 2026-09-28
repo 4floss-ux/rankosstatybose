@@ -5255,6 +5255,40 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           Atidaryti
                         </button>
 
+                        {item.invitation_id && (
+                          <button
+                            className={`wd-decline wd-workday-chat ${
+                              unreadWorkerNotifications(item.invitation_id).some(
+                                (notification) => notification.event_type === "message"
+                              )
+                                ? "has-unread"
+                                : ""
+                            }`}
+                            type="button"
+                            onClick={() =>
+                              setConversation({
+                                invitationId: item.invitation_id,
+                                title: `${item.companyName} · ${job.title}`,
+                              })
+                            }
+                          >
+                            Privati žinutė
+                            {unreadWorkerNotifications(item.invitation_id).filter(
+                              (notification) => notification.event_type === "message"
+                            ).length > 0 && (
+                              <span className="wd-chat-count">
+                                Nauja{" "}
+                                {Math.min(
+                                  9,
+                                  unreadWorkerNotifications(item.invitation_id).filter(
+                                    (notification) => notification.event_type === "message"
+                                  ).length
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        )}
+
                         {["confirmed", "completed", "no_show"].includes(
                           item.status
                         ) && (
@@ -5550,7 +5584,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             });
                           }}
                         >
-                          Žinutės
+                          Privati žinutė
                           {unreadPrivateMessages.length > 0 && (
                             <span className="wd-chat-count">
                               Nauja {Math.min(9, unreadPrivateMessages.length)}
@@ -5937,6 +5971,36 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       : "Priimti darbą"}
                   </button>
                 </>
+              )}
+
+              {workdayDetailsTarget.invitation_id && (
+                <button
+                  className="wd-decline"
+                  type="button"
+                  onClick={() => {
+                    const target = workdayDetailsTarget;
+                    setWorkdayDetailsTarget(null);
+                    setConversation({
+                      invitationId: target.invitation_id,
+                      title: `${target.companyName} · ${target.job?.title || "Darbas"}`,
+                    });
+                  }}
+                >
+                  Privati žinutė
+                  {unreadWorkerNotifications(workdayDetailsTarget.invitation_id).filter(
+                    (notification) => notification.event_type === "message"
+                  ).length > 0 && (
+                    <span className="wd-chat-count">
+                      Nauja{" "}
+                      {Math.min(
+                        9,
+                        unreadWorkerNotifications(workdayDetailsTarget.invitation_id).filter(
+                          (notification) => notification.event_type === "message"
+                        ).length
+                      )}
+                    </span>
+                  )}
+                </button>
               )}
 
               {["confirmed", "completed", "no_show"].includes(
