@@ -5584,9 +5584,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               : "ok",
                           title: "Darbo diena uždaryta",
                           text:
-                            attendance.dispute_status === "resolved_worker" ||
-                            attendance.dispute_status === "resolved_employer"
-                              ? "Ginčas išspręstas ir galutinis rezultatas užfiksuotas."
+                            attendance.dispute_status === "resolved_worker"
+                              ? "Ginčas išspręstas jūsų naudai. Galutinis rezultatas užfiksuotas."
+                              : attendance.dispute_status === "resolved_employer"
+                              ? "Ginčas išspręstas ne jūsų naudai. Galutinis rezultatas užfiksuotas."
                               : "Galutinis darbo dienos rezultatas jau užfiksuotas.",
                         }
                       : disputed
@@ -6046,6 +6047,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                         attendance.worked_minutes
                                       )}`
                                     : ""}
+                                </span>
+                              )}
+                              {attendance.dispute_status === "resolved_worker" && (
+                                <span className="wd-workday-status green">
+                                  ✓ Ginčas išspręstas jūsų naudai
+                                </span>
+                              )}
+                              {attendance.dispute_status === "resolved_employer" && (
+                                <span className="wd-workday-status red">
+                                  Ginčas išspręstas ne jūsų naudai
                                 </span>
                               )}
                             </div>
@@ -8619,7 +8630,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return [];
     }
 
-    const result = await supabase.rpc("get_company_worker_reviews", {
+    const result = await supabase.rpc("get_company_worker_reviews_for_company", {
       p_company_id: companyId,
     });
 
@@ -8628,6 +8639,37 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const rows = result.data || [];
     setCompanyWorkerReviews(rows);
     return rows;
+  }
+
+  async function openReviewWorkerProfile(review) {
+    if (!review?.worker_id) return;
+
+    await openWorkerProfile({
+      id: review.worker_id,
+      name: shortWorkerName(review.worker_name || "Darbuotojas"),
+      initials: workerInitials(review.worker_name || "Darbuotojas"),
+      avatarUrl: workerAvatarUrl(review.avatar_path),
+      city: review.city || "",
+      yearsExperience: Number(review.years_experience || 0),
+      hasDrivingLicenseB: Boolean(review.has_driving_license_b),
+      attendanceRate:
+        review.attendance_rate === null || review.attendance_rate === undefined
+          ? null
+          : Number(review.attendance_rate),
+      completedJobs: Number(review.completed_jobs || 0),
+      ratingAverage:
+        review.rating_average === null || review.rating_average === undefined
+          ? null
+          : Number(review.rating_average),
+      ratingCount: Number(review.rating_count || 0),
+      noShowCount: Number(review.no_show_count || 0),
+      unexcusedEarlyLeaveCount: Number(
+        review.unexcused_early_leave_count || 0
+      ),
+      shortBio: review.short_bio || "",
+      skillNames: Array.isArray(review.skill_names) ? review.skill_names : [],
+      profileJobId: review.job_id || null,
+    });
   }
 
   async function loadEmployerDashboard() {
@@ -9114,24 +9156,64 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function addConfirmedCounts(jobRows) {
     const rows = jobRows || [];
     const ids = rows.map((job) => job.id);
-    if (!ids.length) return rows.map((job) => ({ ...job, confirmedCount: 0 }));
+    if (!ids.length) {
+      return rows.map((job) => ({
+        ...job,
+        confirmedCount: 0,
+        employerWonDisputes: 0,
+        workerWonDisputes: 0,
+      }));
+    }
 
-    const result = await supabase
+    const bookingsResult = await supabase
       .from("bookings")
-      .select("job_id, status")
-      .in("job_id", ids)
-      .eq("status", "confirmed");
+      .select("id, job_id, status")
+      .in("job_id", ids);
 
-    if (result.error) throw result.error;
+    if (bookingsResult.error) throw bookingsResult.error;
 
+    const bookingRows = bookingsResult.data || [];
     const counts = {};
-    for (const booking of result.data || []) {
-      counts[booking.job_id] = (counts[booking.job_id] || 0) + 1;
+    const jobIdByBookingId = new Map();
+
+    for (const booking of bookingRows) {
+      jobIdByBookingId.set(booking.id, booking.job_id);
+      if (booking.status === "confirmed") {
+        counts[booking.job_id] = (counts[booking.job_id] || 0) + 1;
+      }
+    }
+
+    const disputeCounts = {};
+    const bookingIds = bookingRows.map((booking) => booking.id);
+
+    if (bookingIds.length) {
+      const attendanceResult = await supabase
+        .from("attendance")
+        .select("booking_id, dispute_status")
+        .in("booking_id", bookingIds)
+        .in("dispute_status", ["resolved_worker", "resolved_employer"]);
+
+      if (attendanceResult.error) throw attendanceResult.error;
+
+      for (const attendance of attendanceResult.data || []) {
+        const jobId = jobIdByBookingId.get(attendance.booking_id);
+        if (!jobId) continue;
+        if (!disputeCounts[jobId]) {
+          disputeCounts[jobId] = { employer: 0, worker: 0 };
+        }
+        if (attendance.dispute_status === "resolved_employer") {
+          disputeCounts[jobId].employer += 1;
+        } else if (attendance.dispute_status === "resolved_worker") {
+          disputeCounts[jobId].worker += 1;
+        }
+      }
     }
 
     return rows.map((job) => ({
       ...job,
       confirmedCount: counts[job.id] || 0,
+      employerWonDisputes: disputeCounts[job.id]?.employer || 0,
+      workerWonDisputes: disputeCounts[job.id]?.worker || 0,
     }));
   }
 
@@ -10805,9 +10887,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-reviews-head h3{margin:0;font-size:17px}.ed-company-reviews-head span{color:#6c7a88;font-size:12px}
         .ed-company-review-list{display:grid;gap:9px}
         .ed-company-review{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:12px}
-        .ed-company-review-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:5px}
+        .ed-company-review-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
         .ed-company-review-top b{font-size:13px}.ed-company-review-top span{font-size:11px;color:#7a8996}
-        .ed-company-review-meta{font-size:11px;color:#7a8996;margin-bottom:6px}
+        .ed-review-worker{display:flex;align-items:center;gap:10px;min-width:0}.ed-review-worker-avatar{width:42px;height:42px;border-radius:50%;overflow:hidden;border:1px solid #dbe4ea;background:#eef3f6;color:#102438;display:grid;place-items:center;font-weight:800;flex:0 0 42px}.ed-review-worker-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-review-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ed-review-actions .ed-secondary{padding:7px 10px;min-height:34px;font-size:12px}
+        .ed-company-review-meta{font-size:11px;color:#7a8996;margin-top:3px}
         .ed-company-review p{margin:0;line-height:1.5;color:#405264;font-size:13px;white-space:pre-wrap}
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
@@ -11266,16 +11349,40 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   {companyWorkerReviews.map((review) => (
                     <div className="ed-company-review" key={review.id}>
                       <div className="ed-company-review-top">
-                        <b>
-                          {review.worker_name || "Darbuotojas"} · {review.score} / 10
-                        </b>
-                        <span>
-                          {new Date(review.created_at).toLocaleDateString("lt-LT")}
-                        </span>
-                      </div>
-                      <div className="ed-company-review-meta">
-                        {review.job_title}
-                        {review.work_date ? ` · ${review.work_date}` : ""}
+                        <div className="ed-review-worker">
+                          <div className="ed-review-worker-avatar">
+                            {review.avatar_path ? (
+                              <img
+                                src={workerAvatarUrl(review.avatar_path)}
+                                alt={review.worker_name || "Darbuotojas"}
+                              />
+                            ) : (
+                              workerInitials(review.worker_name || "Darbuotojas")
+                            )}
+                          </div>
+                          <div>
+                            <b>
+                              {review.worker_name || "Darbuotojas"} · {review.score} / 10
+                            </b>
+                            <div className="ed-company-review-meta">
+                              {review.job_title}
+                              {review.work_date ? ` · ${review.work_date}` : ""}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="ed-review-actions">
+                          <span>
+                            {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                          </span>
+                          <button
+                            type="button"
+                            className="ed-secondary"
+                            onClick={() => openReviewWorkerProfile(review)}
+                          >
+                            Profilis
+                          </button>
+                        </div>
                       </div>
                       <p>{review.comment}</p>
                     </div>
@@ -11987,7 +12094,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             text: "Papildomų veiksmų šiai darbo dienai nereikia.",
                           }
                         : attendance.finalized_at
-                        ? attendance.final_outcome === "no_show"
+                        ? attendance.dispute_status === "resolved_employer"
+                          ? {
+                              tone: "ok",
+                              title: "Ginčas išspręstas jūsų naudai",
+                              text:
+                                attendance.resolution_note ||
+                                "Administratorius patvirtino darbdavio pateiktą darbo dienos rezultatą.",
+                            }
+                          : attendance.dispute_status === "resolved_worker"
+                          ? {
+                              tone: "danger",
+                              title: "Ginčas išspręstas ne jūsų naudai",
+                              text:
+                                attendance.resolution_note ||
+                                "Administratorius ginčą išsprendė darbuotojo naudai.",
+                            }
+                          : attendance.final_outcome === "no_show"
                           ? {
                               tone: "ok",
                               title: "Darbo diena uždaryta",
@@ -12107,6 +12230,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               {disputed && (
                                 <span className="ed-attendance-badge red">
                                   Ginčas · reitingas nekeičiamas
+                                </span>
+                              )}
+
+                              {attendance.dispute_status === "resolved_employer" && (
+                                <span className="ed-attendance-badge green">
+                                  ✓ Ginčas išspręstas jūsų naudai
+                                </span>
+                              )}
+
+                              {attendance.dispute_status === "resolved_worker" && (
+                                <span className="ed-attendance-badge red">
+                                  Ginčas išspręstas ne jūsų naudai
                                 </span>
                               )}
 
@@ -12648,6 +12783,34 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           )}
                         </span>
                       )}
+                      {(Number(job.employerWonDisputes || 0) > 0 ||
+                        Number(job.workerWonDisputes || 0) > 0) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                            marginTop: 7,
+                          }}
+                        >
+                          {Number(job.employerWonDisputes || 0) > 0 && (
+                            <span className="ed-attendance-badge green">
+                              ✓ Ginčas išspręstas jūsų naudai
+                              {Number(job.employerWonDisputes || 0) > 1
+                                ? ` · ${job.employerWonDisputes}`
+                                : ""}
+                            </span>
+                          )}
+                          {Number(job.workerWonDisputes || 0) > 0 && (
+                            <span className="ed-attendance-badge red">
+                              Ginčas išspręstas ne jūsų naudai
+                              {Number(job.workerWonDisputes || 0) > 1
+                                ? ` · ${job.workerWonDisputes}`
+                                : ""}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {jobHasEnded(job) &&
                         Number(job.confirmedCount || 0) > 0 &&
                         !["cancelled", "completed"].includes(job.status) && (
@@ -12809,6 +12972,34 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             job.responsible_user_id || job.created_by
                           )}
                         </span>
+                      )}
+                      {(Number(job.employerWonDisputes || 0) > 0 ||
+                        Number(job.workerWonDisputes || 0) > 0) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                            marginTop: 7,
+                          }}
+                        >
+                          {Number(job.employerWonDisputes || 0) > 0 && (
+                            <span className="ed-attendance-badge green">
+                              ✓ Ginčas išspręstas jūsų naudai
+                              {Number(job.employerWonDisputes || 0) > 1
+                                ? ` · ${job.employerWonDisputes}`
+                                : ""}
+                            </span>
+                          )}
+                          {Number(job.workerWonDisputes || 0) > 0 && (
+                            <span className="ed-attendance-badge red">
+                              Ginčas išspręstas ne jūsų naudai
+                              {Number(job.workerWonDisputes || 0) > 1
+                                ? ` · ${job.workerWonDisputes}`
+                                : ""}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {job.status === "cancelled" &&
                         employerPenaltyByJob[job.id] && (
@@ -14584,7 +14775,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <WorkerProfileModal
         worker={selectedWorker}
-        jobId={currentJob?.id || null}
+        jobId={selectedWorker?.profileJobId || currentJob?.id || null}
         canViewWorkerMetrics={canViewWorkerMetrics}
         onClose={() => setSelectedWorker(null)}
       />
