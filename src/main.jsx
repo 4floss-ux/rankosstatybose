@@ -3733,6 +3733,163 @@ function DashboardPagination({ page, totalItems, onPageChange }) {
   );
 }
 
+async function deleteAccountThroughServer({ targetUserId = null, reason = "" } = {}) {
+  const body = { confirmation: "ISTRINTI" };
+  if (targetUserId) body.targetUserId = targetUserId;
+  if (reason) body.reason = reason;
+
+  const result = await supabase.functions.invoke("delete-account", { body });
+
+  if (result.error) {
+    throw new Error(
+      await edgeFunctionErrorMessage(
+        result.error,
+        result.data?.error || "Nepavyko ištrinti paskyros."
+      )
+    );
+  }
+
+  if (result.data?.error) {
+    throw new Error(result.data.error);
+  }
+
+  return result.data || { ok: true };
+}
+
+function DeleteAccountModal({ open, onClose, accountKind = "paskyra" }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setConfirmText("");
+    setBusy(false);
+    setError("");
+  }, [open]);
+
+  if (!open) return null;
+
+  async function confirmDeletion() {
+    if (confirmText.trim().toUpperCase() !== "ISTRINTI" || busy) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      await deleteAccountThroughServer();
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+      window.location.reload();
+    } catch (err) {
+      setError(err?.message || "Nepavyko ištrinti paskyros.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="account-delete-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy) onClose?.();
+      }}
+    >
+      <style>{`
+        .account-delete-overlay{position:fixed;inset:0;z-index:12000;background:rgba(16,36,56,.66);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .account-delete-modal{width:min(560px,100%);background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(16,36,56,.34);padding:22px;color:#102438}
+        .account-delete-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.account-delete-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}.account-delete-close{width:40px;height:40px;border:0;border-radius:11px;background:#f1f4f6;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
+        .account-delete-warning{margin-top:16px;padding:14px;border:1px solid #efc7bb;border-radius:14px;background:#fff5f2;color:#8f4029;font-size:13px;line-height:1.55}.account-delete-warning b{display:block;color:#9f4529;margin-bottom:5px}
+        .account-delete-list{margin:9px 0 0;padding-left:18px}.account-delete-list li+li{margin-top:5px}
+        .account-delete-label{display:grid;gap:7px;margin-top:16px;font-size:12px;font-weight:800;color:#526374}.account-delete-input{width:100%;border:1px solid #d7e0e7;border-radius:11px;padding:11px 12px;font:inherit;color:#102438;outline:none}.account-delete-input:focus{border-color:#c65b37;box-shadow:0 0 0 3px rgba(198,91,55,.11)}
+        .account-delete-error{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff0ec;color:#b64d2a;font-size:12px}.account-delete-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.account-delete-cancel,.account-delete-confirm{border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}.account-delete-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438}.account-delete-confirm{border:1px solid #d46c4d;background:#c65b37;color:#fff}.account-delete-confirm:disabled,.account-delete-cancel:disabled,.account-delete-close:disabled{opacity:.55;cursor:not-allowed}
+        .account-delete-zone{margin-top:20px;padding:15px 16px;border:1px solid #efc7bb;border-radius:13px;background:#fffafa;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.account-delete-zone b{display:block;color:#102438;font-size:13px;margin-bottom:3px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.45;max-width:680px}.account-delete-open{border:1px solid #e1a18e;background:#fff;color:#b64d2a;border-radius:10px;padding:9px 12px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;white-space:nowrap}
+        @media(max-width:560px){.account-delete-overlay{padding:10px}.account-delete-modal{padding:18px;border-radius:16px}.account-delete-actions{display:grid;grid-template-columns:1fr}.account-delete-actions button{width:100%}.account-delete-zone{align-items:stretch}.account-delete-open{width:100%}}
+      `}</style>
+
+      <div className="account-delete-modal">
+        <div className="account-delete-head">
+          <div>
+            <div className="eyebrow">PASKYROS IŠTRYNIMAS</div>
+            <h2>Ištrinti paskyrą?</h2>
+          </div>
+          <button
+            className="account-delete-close"
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        <div className="account-delete-warning">
+          <b>Šio veiksmo atkurti nebus galima.</b>
+          Bus pašalinta jūsų {accountKind}, su ja sukurti duomenys ir įkelti failai.
+          <ul className="account-delete-list">
+            <li>Jei turite mokamą prenumeratą, ji bus nedelsiant nutraukta prieš paskyros ištrynimą.</li>
+            <li>Po ištrynimo daugiau automatinių prenumeratos nuskaitymų nebus.</li>
+            <li>Jau kitiems vartotojams suteikti įvertinimai ir jų patikimumo rodikliai nuo paskyros ištrynimo nesumažės.</li>
+            <li>Bendri svetainės istoriniai skaičiai, pvz. kiek darbų buvo sukurta, išliks.</li>
+            <li>Vėliau galėsite susikurti naują paskyrą tuo pačiu el. paštu.</li>
+          </ul>
+        </div>
+
+        <label className="account-delete-label">
+          Patvirtinimui įrašykite ISTRINTI
+          <input
+            className="account-delete-input"
+            value={confirmText}
+            disabled={busy}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="ISTRINTI"
+            autoComplete="off"
+          />
+        </label>
+
+        {error && <div className="account-delete-error">{error}</div>}
+
+        <div className="account-delete-actions">
+          <button
+            className="account-delete-cancel"
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+          >
+            Atšaukti
+          </button>
+          <button
+            className="account-delete-confirm"
+            type="button"
+            disabled={busy || confirmText.trim().toUpperCase() !== "ISTRINTI"}
+            onClick={confirmDeletion}
+          >
+            {busy ? "Trinama..." : "Taip, negrįžtamai ištrinti"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountDeleteZone({ onDelete, description }) {
+  return (
+    <div className="account-delete-zone">
+      <div>
+        <b>Paskyros ištrynimas</b>
+        <span>
+          {description ||
+            "Ištrynus paskyrą jos atkurti nebus galima. Prieš trynimą bus sustabdyta aktyvi prenumerata."}
+        </span>
+      </div>
+      <button className="account-delete-open" type="button" onClick={onDelete}>
+        Ištrinti paskyrą
+      </button>
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -3761,6 +3918,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [showWorkerStats, setShowWorkerStats] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
@@ -6250,6 +6408,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {saving ? "Saugoma..." : profileSaved ? "Išsaugota" : "Išsaugoti"}
               </button>
             </div>
+
+            <AccountDeleteZone
+              onDelete={() => setDeleteAccountOpen(true)}
+              description="Ištrynus darbuotojo paskyrą bus pašalintas jūsų profilis, sukurti duomenys ir įkelti failai. Šio veiksmo atkurti nebus galima."
+            />
           </section>
         )}
 
@@ -8725,6 +8888,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         companyName={disputeConversation?.companyName}
         user={user}
       />
+
+      <DeleteAccountModal
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+        accountKind="darbuotojo paskyra"
+      />
     </div>
   );
 }
@@ -8951,6 +9120,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [company, setCompany] = useState(null);
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const companyEditorRef = useRef(null);
 
   useEffect(() => {
@@ -13258,13 +13428,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           <span>
                             {new Date(review.created_at).toLocaleDateString("lt-LT")}
                           </span>
-                          <button
-                            type="button"
-                            className="ed-secondary"
-                            onClick={() => openReviewWorkerProfile(review)}
-                          >
-                            Profilis
-                          </button>
+                          {review.worker_id && (
+                            <button
+                              type="button"
+                              className="ed-secondary"
+                              onClick={() => openReviewWorkerProfile(review)}
+                            >
+                              Profilis
+                            </button>
+                          )}
                         </div>
                       </div>
                       <p>{review.comment}</p>
@@ -13303,6 +13475,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 Įmonės duomenis gali keisti tik paskyros Savininkas.
               </div>
             )}
+
+            <AccountDeleteZone
+              onDelete={() => setDeleteAccountOpen(true)}
+              description={
+                companyMemberRole === "owner"
+                  ? "Ištrynus savininko paskyrą bus pašalinta ir jos valdoma įmonės paskyra, jūsų sukurti darbai bei failai. Aktyvi prenumerata bus nutraukta prieš trynimą."
+                  : "Ištrynus paskyrą bus pašalinta jūsų asmeninė prieiga, jūsų sukurti darbai ir įkelti failai. Įmonės savininko paskyra išliks."
+              }
+            />
           </section>
         )}
 
@@ -17555,6 +17736,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
       />
 
+      <DeleteAccountModal
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+        accountKind={companyMemberRole === "owner" ? "savininko ir įmonės paskyra" : "darbdavio paskyra"}
+      />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
   );
@@ -18513,6 +18699,7 @@ function AdminDashboard({
 }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [activeTab, setActiveTab] = useState("overview");
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({});
@@ -19104,40 +19291,14 @@ function AdminDashboard({
       }
 
       if (actionDialog.type === "deleteAccount") {
-        const targetJobIds = new Set();
-
-        if (actionDialog.role === "employer" && actionDialog.companyId) {
-          for (const job of jobs) {
-            if (job.company_id === actionDialog.companyId) {
-              targetJobIds.add(job.job_id);
-            }
-          }
-        }
-
-        const relatedFiles = files.filter(
-          (file) =>
-            file.owner_user_id === actionDialog.userId ||
-            (file.job_id && targetJobIds.has(file.job_id))
-        );
-
-        const result = await supabase.rpc("admin_delete_user_account", {
-          p_user_id: actionDialog.userId,
-          p_reason: actionReason.trim(),
+        await deleteAccountThroughServer({
+          targetUserId: actionDialog.userId,
+          reason: actionReason.trim(),
         });
-
-        if (result.error) throw result.error;
-
-        let cleanupWarning = "";
-        try {
-          await removeStorageRows(relatedFiles);
-        } catch {
-          cleanupWarning =
-            " Paskyra pašalinta, bet dalies failų automatiškai išvalyti nepavyko.";
-        }
 
         setEditor(null);
         setNotice(
-          `${actionDialog.name} paskyra visiškai pašalinta.${cleanupWarning}`
+          `${actionDialog.name} paskyra visiškai pašalinta. Aktyvi prenumerata, jei buvo, nutraukta prieš trynimą.`
         );
       }
 
@@ -19332,6 +19493,14 @@ function AdminDashboard({
               onClick={() => loadAdminData(true)}
             >
               {refreshing ? "Atnaujinama..." : "Atnaujinti"}
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
+              onClick={() => setDeleteAccountOpen(true)}
+            >
+              Ištrinti paskyrą
             </button>
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
@@ -20915,6 +21084,11 @@ function AdminDashboard({
           </div>
         </div>
       )}
+      <DeleteAccountModal
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+        accountKind="administratoriaus paskyra"
+      />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
   );
