@@ -6304,19 +6304,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </span>
                           <span>
                             Patikimumas:{" "}
-                            {Math.round(invitation.companyReliability)} / 100
-                          </span>
-                          {invitation.companyDisputeReviewCount > 0 && (
-                            <span
+                            <b
                               style={{
-                                color: "#b85f0e",
-                                fontWeight: 800,
+                                color: reliabilityScoreColor(
+                                  invitation.companyReliability
+                                ),
                               }}
                             >
-                              Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
-                              {invitation.companyDisputeReviewCount}
-                            </span>
-                          )}
+                              {Math.round(invitation.companyReliability)} / 100
+                            </b>
+                          </span>
                         </div>
 
                         {hasConflict && (
@@ -6491,7 +6488,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <div style={{ color: "#6c7a88", fontSize: 12 }}>
                     Darbdavio patikimumas
                   </div>
-                  <b style={{ display: "block", marginTop: 4 }}>
+                  <b
+                    style={{
+                      display: "block",
+                      marginTop: 4,
+                      color: reliabilityScoreColor(
+                        workdayDetailsTarget.companyReliability
+                      ),
+                    }}
+                  >
                     {Math.round(
                       Number(workdayDetailsTarget.companyReliability || 0)
                     )}{" "}
@@ -7423,19 +7428,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {confirmInvitation.companyName} · {confirmInvitation.job?.city}
                 <br />
                 Darbdavio patikimumas:{" "}
-                <b>{Math.round(confirmInvitation.companyReliability)}%</b>
+                <b
+                  style={{
+                    color: reliabilityScoreColor(
+                      confirmInvitation.companyReliability
+                    ),
+                  }}
+                >
+                  {Math.round(confirmInvitation.companyReliability)} / 100
+                </b>
                 {confirmInvitation.companyCancelledConfirmed > 0
                   ? ` · atšauktų patvirtintų darbų: ${confirmInvitation.companyCancelledConfirmed}`
                   : ""}
-                {confirmInvitation.companyDisputeReviewCount > 0 && (
-                  <>
-                    <br />
-                    <span style={{ color: "#b85f0e", fontWeight: 800 }}>
-                      Atsiliepimų po darbuotojų laimėtų ginčų:{" "}
-                      {confirmInvitation.companyDisputeReviewCount}
-                    </span>
-                  </>
-                )}
                 <br />
                 {confirmInvitation.job?.work_date} ·{" "}
                 {confirmInvitation.job?.start_time?.slice(0, 5)}
@@ -7711,6 +7715,12 @@ function shortWorkerName(name) {
   if (!parts.length) return "Darbuotojas";
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function reliabilityScoreColor(value) {
+  const score = Math.max(0, Math.min(100, Number(value ?? 0)));
+  const hue = 140 * Math.pow(score / 100, 1.8);
+  return `hsl(${hue} 72% 34%)`;
 }
 
 function workerAvatarUrl(path) {
@@ -11522,7 +11532,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               ) : (
                 <div className="ed-profile-readonly-note">
-                  Atsiliepimų po darbuotojų laimėtų ginčų dar nėra.
+                  Darbuotojų atsiliepimų apie įmonę dar nėra.
                 </div>
               )}
             </div>
@@ -12043,7 +12053,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </button>
                 </div>
 
-                <b className="ed-reliability-label">
+                <b
+                  className="ed-reliability-label"
+                  style={{
+                    color: reliabilityScoreColor(employerStats.reliabilityRate),
+                  }}
+                >
                   {Math.round(employerStats.reliabilityRate)} / 100
                 </b>
               </div>
@@ -14004,7 +14019,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           : ""}
                       </b>
                       <span style={{ marginTop: 7 }}>
-                        Patikimumas {Math.round(worker.attendanceRate)}%
+                        Patikimumas{" "}
+                        <b
+                          style={{
+                            color: reliabilityScoreColor(worker.attendanceRate),
+                          }}
+                        >
+                          {Math.round(worker.attendanceRate)}%
+                        </b>
                         {worker.ratingAverage !== null
                           ? ` · ${worker.ratingAverage.toFixed(1)}/10`
                           : ""}
@@ -14715,7 +14737,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="reliability-score-copy">
                 <strong>
                   Dabartinis patikimumas:{" "}
-                  {Math.round(employerStats.reliabilityRate)} / 100
+                  <span
+                    style={{
+                      color: reliabilityScoreColor(employerStats.reliabilityRate),
+                    }}
+                  >
+                    {Math.round(employerStats.reliabilityRate)} / 100
+                  </span>
                 </strong>
                 <span>
                   Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
@@ -16984,7 +17012,15 @@ function AdminDashboard({
 
                       <div className="admin-cell">
                         <span>Patikimumas</span>
-                        <b>{Math.round(Number(worker.attendance_rate ?? 100))}%</b>
+                        <b
+                          style={{
+                            color: reliabilityScoreColor(
+                              worker.attendance_rate ?? 100
+                            ),
+                          }}
+                        >
+                          {Math.round(Number(worker.attendance_rate ?? 100))}%
+                        </b>
                       </div>
 
                       <div className="admin-cell">
@@ -17125,7 +17161,13 @@ function AdminDashboard({
 
                       <div className="admin-cell">
                         <span>Patikimumas</span>
-                        <b>
+                        <b
+                          style={{
+                            color: reliabilityScoreColor(
+                              employer.reliability_rate ?? 100
+                            ),
+                          }}
+                        >
                           {Number(employer.reliability_rate ?? 100).toFixed(0)} / 100
                         </b>
                       </div>
