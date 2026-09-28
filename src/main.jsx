@@ -7990,6 +7990,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   ]);
 
   useEffect(() => {
+    if (!currentJob?.id) return;
+
+    const hasUnreadJobNews = unreadEmployerNotifications(currentJob.id).some(
+      (item) => item.event_type !== "message"
+    );
+    if (!hasUnreadJobNews) return;
+
+    const timer = window.setTimeout(() => {
+      markEmployerJobRead(currentJob.id);
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [currentJob?.id, employerNotifications]);
+
+  useEffect(() => {
     if (!company?.id || billingReturnHandledRef.current) return;
 
     const url = new URL(window.location.href);
@@ -12180,13 +12195,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className={`ed-note ${currentPresentation.tone === "red" ? "err" : "ok"}`} style={{ marginBottom: 16 }}>
                   {currentPresentation.label}
                   {currentNews.length > 1 ? ` · ${currentNews.length} naujienos` : ""}
-                  <button
-                    className="ed-secondary"
-                    style={{ marginLeft: 10 }}
-                    onClick={() => markEmployerJobRead(currentJob.id)}
-                  >
-                    Peržiūrėta
-                  </button>
                 </div>
               );
             })()}
