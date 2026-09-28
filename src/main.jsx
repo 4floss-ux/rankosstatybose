@@ -12575,12 +12575,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div>
                 <div className="eyebrow">DARBDAVIO PLANAI</div>
                 <h2>Rinkitės planą pagal savo prioritetus</h2>
-                <p>
-                  Jei norite tik išbandyti sistemą – rinkitės Basic. Jei
-                  darbuotojų ieškote nuolat – Business. Jei dirbate komandoje ir
-                  norite pasiskirstyti darbus, vidinį komandos pokalbį bei
-                  daugiau valdymo – Business Pro.
-                </p>
               </div>
 
               <button
