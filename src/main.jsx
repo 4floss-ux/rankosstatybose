@@ -9304,6 +9304,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function findMatches(job) {
+    const confirmedCount = Number(job?.confirmedCount || 0);
+    const workersNeeded = Number(job?.workers_needed || 0);
+    const searchClosed =
+      job?.status !== "open" ||
+      (workersNeeded > 0 && confirmedCount >= workersNeeded);
+
+    if (searchClosed) {
+      setSearching(false);
+      setMatches([]);
+      return;
+    }
+
     setSearching(true);
     setError("");
     setMatches([]);
@@ -9624,7 +9636,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       setForm((current) => ({ ...current, city: canonicalCity }));
-      setCurrentJob({ ...job, confirmedCount: editingConfirmedCount || 0 });
+      const nextCurrentJob = {
+        ...job,
+        confirmedCount: editingConfirmedCount || 0,
+      };
+      setCurrentJob(nextCurrentJob);
       setInvitedIds([]);
       setInvitationStatuses({});
       setInvitationByWorker({});
@@ -9632,7 +9648,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setEditingConfirmedCount(0);
       await reloadJobs(company.id);
       await loadCompanyPlan(company.id);
-      await findMatches(job);
+      await findMatches(nextCurrentJob);
       setShowJobForm(false);
 
     } catch (err) {
@@ -9681,8 +9697,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         responsibleUserId: job.responsible_user_id || job.created_by || user.id,
       }));
 
+      const hasOpenWorkerSearch =
+        job.status === "open" &&
+        Number(job.confirmedCount || 0) < Number(job.workers_needed || 0);
+
+      if (!hasOpenWorkerSearch) {
+        setMatches([]);
+        setSearching(false);
+      }
+
       await Promise.all([
-        findMatches(job),
+        hasOpenWorkerSearch ? findMatches(job) : Promise.resolve(),
         loadCurrentJobWorkers(job.id),
       ]);
     } catch (err) {
@@ -10214,6 +10239,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const currentJobResponsibleUserId =
     currentJob?.responsible_user_id || currentJob?.created_by || null;
 
+  const currentJobWorkerSearchOpen = Boolean(
+    currentJob?.id &&
+      currentJob.status === "open" &&
+      Number(currentJob.confirmedCount || 0) <
+        Number(currentJob.workers_needed || 0)
+  );
+
   const canViewWorkerMetrics = Boolean(
     planSummary?.can_advanced_analytics
   );
@@ -10241,6 +10273,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const matchingSavedWorkersCount = baseCandidateWorkers.filter((worker) =>
     savedWorkerIdSet.has(worker.id)
   ).length;
+
+  useEffect(() => {
+    if (!currentJob?.id || currentJobWorkerSearchOpen) return;
+    setMatches([]);
+    setSearching(false);
+    setWorkerSource("available");
+  }, [currentJob?.id, currentJobWorkerSearchOpen]);
 
   const myEmployerJobs = jobs.filter((job) => {
     const responsibleUserId = job.responsible_user_id || null;
@@ -11877,6 +11916,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
+            {currentJobWorkerSearchOpen && (
+              <>
             <div className="ed-results-head">
               <div>
                 <h2>
@@ -12071,6 +12112,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
                   : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
               </div>
+            )}
+              </>
             )}
           </section>
         )}
