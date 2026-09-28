@@ -5087,16 +5087,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             : "Jūsų atvykimas sistemoje užfiksuotas. Darbdavys gali jį papildomai patvirtinti.",
                         }
                       : hasStarted
-                      ? {
-                          tone: "",
-                          title: "Darbo diena vyksta",
-                          text: "Po numatyto darbo laiko pabaigos atsiras darbo dienos uždarymo veiksmai.",
-                        }
-                      : {
-                          tone: "",
-                          title: "Kitas žingsnis",
-                          text: "Atvykimo mygtukas atsiras likus 2 valandoms iki darbo pradžios.",
-                        };
+                      ? null
+                      : null;
 
                   if (!recentOrActive) return null;
 
@@ -5235,14 +5227,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </div>
                           )}
 
-                        <div
-                          className={`wd-next-step ${
-                            workdayNextStep.tone || ""
-                          }`}
-                        >
-                          <b>{workdayNextStep.title}</b>
-                          {workdayNextStep.text}
-                        </div>
+                        {workdayNextStep && (
+                          <div
+                            className={`wd-next-step ${
+                              workdayNextStep.tone || ""
+                            }`}
+                          >
+                            <b>{workdayNextStep.title}</b>
+                            {workdayNextStep.text}
+                          </div>
+                        )}
                       </div>
 
                       <div className="wd-workday-actions">
@@ -6913,6 +6907,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
+  const [jobInfoTarget, setJobInfoTarget] = useState(null);
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
   const [invitationStatuses, setInvitationStatuses] = useState({});
@@ -10029,7 +10024,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
         .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
         .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
-        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
+        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fff0ec;color:#b64d2a}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
         .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:9px;font-weight:900;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
@@ -11051,6 +11046,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         )}
 
                         <div className="ed-attendance-actions">
+                          <button
+                            className="ed-secondary"
+                            type="button"
+                            onClick={() => setJobInfoTarget(currentJob)}
+                          >
+                            Darbo informacija
+                          </button>
+
                           <button
                             className="ed-secondary"
                             onClick={() => openWorkerProfile(worker)}
@@ -12259,6 +12262,88 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </p>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {jobInfoTarget && (
+        <div
+          className="ed-saved-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setJobInfoTarget(null);
+          }}
+        >
+          <div className="ed-saved-modal" style={{ width: "min(760px, 100%)" }}>
+            <div className="ed-saved-head">
+              <div>
+                <div className="eyebrow">DARBO INFORMACIJA</div>
+                <h2>{jobInfoTarget.title || "Darbas"}</h2>
+                <p>Visa informacija, kuri buvo nurodyta kuriant šį darbo pasiūlymą.</p>
+              </div>
+              <button
+                className="rs-close"
+                type="button"
+                aria-label="Uždaryti darbo informaciją"
+                onClick={() => setJobInfoTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+              {[
+                ["Miestas", jobInfoTarget.city || "—"],
+                ["Adresas", jobInfoTarget.address_text || "—"],
+                ["Data", jobInfoTarget.work_date || "—"],
+                [
+                  "Darbo laikas",
+                  `${jobInfoTarget.start_time?.slice(0, 5) || "—"}${
+                    jobInfoTarget.end_time ? `–${jobInfoTarget.end_time.slice(0, 5)}` : ""
+                  }`,
+                ],
+                [
+                  "Pietų pertrauka",
+                  jobInfoTarget.break_start_time && jobInfoTarget.break_end_time
+                    ? `${jobInfoTarget.break_start_time.slice(0, 5)}–${jobInfoTarget.break_end_time.slice(0, 5)}`
+                    : "Nenurodyta",
+                ],
+                [
+                  "Atlygis",
+                  jobInfoTarget.pay_amount
+                    ? formatNetPay(jobInfoTarget.pay_amount, jobInfoTarget.pay_unit)
+                    : "—",
+                ],
+                ["Reikia darbuotojų", String(jobInfoTarget.workers_needed || 0)],
+                [
+                  "Atvykimas",
+                  jobInfoTarget.transport_mode === "employer_pickup"
+                    ? "Darbdavys paima darbuotoją"
+                    : "Darbuotojas atvyksta pats",
+                ],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{ border: "1px solid #e4ebf0", borderRadius: 12, padding: 13, minWidth: 0 }}
+                >
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>{label}</div>
+                  <b style={{ display: "block", marginTop: 4, overflowWrap: "anywhere" }}>{value}</b>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                marginTop: 10,
+                border: "1px solid #e4ebf0",
+                borderRadius: 12,
+                padding: 14,
+              }}
+            >
+              <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbo aprašymas</div>
+              <div style={{ marginTop: 6, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                {jobInfoTarget.description?.trim() || "Darbo aprašymas nepateiktas."}
               </div>
             </div>
           </div>
