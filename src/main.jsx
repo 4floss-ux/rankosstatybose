@@ -4888,7 +4888,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="wd-kpi">
               <span>Dirbta šį mėnesį</span>
               <b>
-                {workerStats.monthWorkedDays} d. ·{" "}
+                {workerStats.monthWorkedDays} d. /{" "}
                 {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
               </b>
             </div>
