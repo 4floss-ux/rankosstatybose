@@ -10044,7 +10044,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         <div className="ed-topbar-inner">
           <BrandLogo className="brand" href="#" height={42} />
 
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {company && planSummary && (
               <button
                 className="ed-plan-badge"
