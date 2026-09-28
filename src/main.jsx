@@ -3700,6 +3700,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showWorkerStats, setShowWorkerStats] = useState(false);
   const workerProfileEditorRef = useRef(null);
 
   useEffect(() => {
@@ -5514,7 +5515,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
-        .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
+        .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.wd-stats-toggle{width:34px;height:34px;border:1px solid #dbe4ea;border-radius:10px;background:#fff;color:#102438;display:grid;place-items:center;font-size:22px;font-weight:500;line-height:1;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}.wd-stats-toggle:hover{border-color:#f0a55c;background:#fff8f1}.wd-stats-toggle:active{transform:scale(.97)}.wd-stats-toggle span{display:block;transform:translateY(-1px)}
+        .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
+        @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
@@ -6191,51 +6194,63 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         )}
 
-        <section>
-          <div style={{ marginBottom: 10 }}>
+        <section className="wd-stats-section">
+          <div className="wd-stats-head">
             <div className="eyebrow">MANO STATISTIKA</div>
+            <button
+              className="wd-stats-toggle"
+              type="button"
+              aria-expanded={showWorkerStats}
+              aria-label={showWorkerStats ? "Slėpti mano statistiką" : "Rodyti mano statistiką"}
+              title={showWorkerStats ? "Slėpti statistiką" : "Rodyti statistiką"}
+              onClick={() => setShowWorkerStats((current) => !current)}
+            >
+              <span>{showWorkerStats ? "−" : "+"}</span>
+            </button>
           </div>
 
-          <div className="wd-kpis">
-            <div className="wd-kpi">
-              <span>Dirbta šį mėnesį</span>
-              <b>
-                {workerStats.monthWorkedDays} d. /{" "}
-                {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
-              </b>
+          {showWorkerStats && (
+            <div className="wd-kpis">
+              <div className="wd-kpi">
+                <span>Dirbta šį mėnesį</span>
+                <b>
+                  {workerStats.monthWorkedDays} d. /{" "}
+                  {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
+                </b>
+              </div>
+              <div className="wd-kpi">
+                <span>Užbaigti darbai</span>
+                <b>{metrics.completedJobs}</b>
+                <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                  Visa patvirtinta istorija
+                </small>
+              </div>
+              <div className="wd-kpi">
+                <span>Atvykimo patikimumas</span>
+                <b>{Math.round(metrics.attendanceRate)}%</b>
+              </div>
+              <div className="wd-kpi">
+                <span>Darbdavių įvertinimas</span>
+                <b>
+                  {metrics.ratingAverage === null
+                    ? "—"
+                    : `${metrics.ratingAverage.toFixed(1)} / 10`}
+                </b>
+                <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                  {metrics.ratingCount
+                    ? `${metrics.ratingCount} vertinimai`
+                    : "Dar nėra vertinimų"}
+                </small>
+              </div>
+              <div className="wd-kpi">
+                <span>Probleminės darbo dienos</span>
+                <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
+                <small style={{ display: "block", marginTop: 5, color: "#8a98a6", whiteSpace: "nowrap", fontSize: 11 }}>
+                  Neatvykimai {metrics.noShowCount} · ankstyvi išėjimai {workerStats.unexcusedEarlyLeaveCount}
+                </small>
+              </div>
             </div>
-            <div className="wd-kpi">
-              <span>Užbaigti darbai</span>
-              <b>{metrics.completedJobs}</b>
-              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
-                Visa patvirtinta istorija
-              </small>
-            </div>
-            <div className="wd-kpi">
-              <span>Atvykimo patikimumas</span>
-              <b>{Math.round(metrics.attendanceRate)}%</b>
-            </div>
-            <div className="wd-kpi">
-              <span>Darbdavių įvertinimas</span>
-              <b>
-                {metrics.ratingAverage === null
-                  ? "—"
-                  : `${metrics.ratingAverage.toFixed(1)} / 10`}
-              </b>
-              <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
-                {metrics.ratingCount
-                  ? `${metrics.ratingCount} vertinimai`
-                  : "Dar nėra vertinimų"}
-              </small>
-            </div>
-            <div className="wd-kpi">
-              <span>Probleminės darbo dienos</span>
-              <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
-              <small style={{ display: "block", marginTop: 5, color: "#8a98a6", whiteSpace: "nowrap", fontSize: 11 }}>
-                Neatvykimai {metrics.noShowCount} · ankstyvi išėjimai {workerStats.unexcusedEarlyLeaveCount}
-              </small>
-            </div>
-          </div>
+          )}
         </section>
 
         {employerReviewOpportunities.length > 0 && (
