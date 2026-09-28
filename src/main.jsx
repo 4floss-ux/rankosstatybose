@@ -3398,7 +3398,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (companyIds.length) {
       const companiesResult = await supabase
         .from("companies")
-        .select("id, name, reliability_rate, cancelled_confirmed_count")
+        .select("id, name, avatar_path, reliability_rate, cancelled_confirmed_count")
         .in("id", companyIds);
 
       if (companiesResult.error) throw companiesResult.error;
@@ -3449,6 +3449,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             ...invitation,
             job,
             companyName: company?.name || "Darbdavys",
+            companyAvatarPath: company?.avatar_path || "",
             companyReliability: Number(company?.reliability_rate ?? 100),
             companyCancelledConfirmed: Number(
               company?.cancelled_confirmed_count ?? 0
@@ -3479,6 +3480,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             ...booking,
             job,
             companyName: company?.name || "Darbdavys",
+            companyAvatarPath: company?.avatar_path || "",
             companyDisputeReviewCount: Number(
               companyReviewSummaryMap.get(job?.company_id)?.review_count || 0
             ),
@@ -4357,7 +4359,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-company-meta-row{display:flex;align-items:center;gap:10px}.wd-company-meta-line{min-width:0}.wd-company-badge{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;border:1px solid #dbe4ea;background:#fff;color:#102438;font-weight:800;box-shadow:0 1px 2px rgba(16,36,56,.04);flex:0 0 auto}.wd-company-badge img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:16%;background:#fff}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -5204,14 +5206,20 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <div>
                         <div className="wd-workday-title"><h3>{job.title}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
                         <div className="wd-workday-meta">
-                          <div>
-                            <b>{item.companyName}</b>
-                            {job.pay_amount
-                              ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                              : ""}
-                            {" · "}
-                            {job.work_date} · {job.start_time?.slice(0, 5)}
-                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          <div className="wd-company-meta-row">
+                            <CompanyBadge
+                              name={item.companyName}
+                              avatarPath={item.companyAvatarPath}
+                            />
+                            <div className="wd-company-meta-line">
+                              <b>{item.companyName}</b>
+                              {job.pay_amount
+                                ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                                : ""}
+                              {" · "}
+                              {job.work_date} · {job.start_time?.slice(0, 5)}
+                              {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                            </div>
                           </div>
                         </div>
 
@@ -5578,16 +5586,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </div>
 
                         <div className="wd-workday-meta">
-                          <div>
-                            <b>{item.companyName}</b>
-                            {job.pay_amount
-                              ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                              : ""}
-                            {" · "}
-                            {job.work_date} · {job.start_time?.slice(0, 5)}
-                            {job.end_time
-                              ? `–${job.end_time.slice(0, 5)}`
-                              : ""}
+                          <div className="wd-company-meta-row">
+                            <CompanyBadge
+                              name={item.companyName}
+                              avatarPath={item.companyAvatarPath}
+                            />
+                            <div className="wd-company-meta-line">
+                              <b>{item.companyName}</b>
+                              {job.pay_amount
+                                ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                                : ""}
+                              {" · "}
+                              {job.work_date} · {job.start_time?.slice(0, 5)}
+                              {job.end_time
+                                ? `–${job.end_time.slice(0, 5)}`
+                                : ""}
+                            </div>
                           </div>
                         </div>
 
@@ -5843,9 +5857,24 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div style={{ color: "#6c7a88", fontSize: 12 }}>
                   Darbdavys
                 </div>
-                <b style={{ display: "block", marginTop: 4, fontSize: 17 }}>
-                  {workdayDetailsTarget.companyName || "Darbdavys"}
-                </b>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginTop: 6,
+                  }}
+                >
+                  <CompanyBadge
+                    name={workdayDetailsTarget.companyName || "Darbdavys"}
+                    avatarPath={workdayDetailsTarget.companyAvatarPath}
+                    size={42}
+                    fontSize={15}
+                  />
+                  <b style={{ display: "block", fontSize: 17 }}>
+                    {workdayDetailsTarget.companyName || "Darbdavys"}
+                  </b>
+                </div>
               </div>
 
               {workdayDetailsTarget.companyReliability !== undefined && (
@@ -7096,6 +7125,34 @@ function workerInitials(name) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function companyInitials(name) {
+  return String(name || "Į")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function CompanyBadge({ name, avatarPath, size = 34, fontSize = 13 }) {
+  const logoUrl = companyAvatarUrl(avatarPath);
+
+  return (
+    <span
+      className="wd-company-badge"
+      style={{ width: size, height: size, minWidth: size, fontSize }}
+      aria-hidden="true"
+    >
+      {logoUrl ? (
+        <img src={logoUrl} alt="" />
+      ) : (
+        <span>{companyInitials(name)}</span>
+      )}
+    </span>
+  );
 }
 
 function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
