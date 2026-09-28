@@ -7282,6 +7282,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
+  const addressInputRef = useRef(null);
   const payAmountInputRef = useRef(null);
   const descriptionInputRef = useRef(null);
   const [form, setForm] = useState({
@@ -8441,7 +8442,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-    if (key === "payAmount" || key === "description") {
+    if (key === "address" || key === "payAmount" || key === "description") {
       setJobFormErrors((current) => ({ ...current, [key]: "" }));
     }
   }
@@ -9257,6 +9258,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
+    if (!form.city.trim()) {
+      setError("Pasirinkite miestą.");
+      return;
+    }
+
+    if (!form.address.trim()) {
+      const message = "Įrašykite objekto vietą / adresą, kad darbuotojas žinotų, kur atvykti.";
+      setJobFormErrors({ address: message });
+      requestAnimationFrame(() => {
+        addressInputRef.current?.focus();
+        addressInputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
+      return;
+    }
+
     if (!form.workDate || !form.startTime) {
       setError("Pasirinkite datą ir pradžios laiką.");
       return;
@@ -9325,7 +9344,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const payload = {
         city: canonicalCity,
-        address_text: form.address.trim() || null,
+        address_text: form.address.trim(),
         work_date: form.workDate,
         start_time: form.startTime,
         end_time: form.endTime || null,
@@ -10845,7 +10864,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
 
             <label className="ed-label">
-              Miestas
+              Miestas *
               <CityAutocomplete
                 className="ed-input"
                 value={form.city}
@@ -10868,14 +10887,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </label>
 
             <label className="ed-label ed-span-2">
-              Objekto vieta / adresas
+              Objekto vieta / adresas *
               <input
+                ref={addressInputRef}
                 className="ed-input"
                 value={form.address}
+                required
+                aria-invalid={Boolean(jobFormErrors.address)}
                 disabled={editingConfirmedCount > 0}
                 onChange={(e) => updateField("address", e.target.value)}
-                placeholder="Pvz. Naujamiestis, Vilnius"
+                placeholder="Pvz. Žalgirio g. 10, Vilnius"
+                style={jobFormErrors.address ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
               />
+              {jobFormErrors.address && (
+                <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
+                  {jobFormErrors.address}
+                </span>
+              )}
             </label>
 
 <label className="ed-label ed-span-2">
