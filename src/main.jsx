@@ -254,10 +254,11 @@ function RoundedSelect({ value, options, disabled, onChange, className = "ed-sel
   );
 }
 
-function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left" }) {
+function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
+  const hasValue = Boolean(value);
   const [hour = "08", minute = "00"] = String(value || "08:00").split(":");
 
   useEffect(() => {
@@ -292,10 +293,10 @@ function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left
 
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
-      <button ref={triggerRef} type="button" className="wd-time wd-time-trigger"
+      <button ref={triggerRef} type="button" className={className}
         disabled={disabled} aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open}
         onClick={() => setOpen((current) => !current)}>
-        <span>{hour}:{minute}</span><span aria-hidden="true">◷</span>
+        <span style={!hasValue ? { color: "#8a98a6" } : undefined}>{hasValue ? `${hour}:${minute}` : placeholder}</span><span aria-hidden="true">◷</span>
       </button>
       {open && !disabled && (
         <div role="dialog" aria-label={ariaLabel} className="wd-time-popover"
@@ -336,6 +337,7 @@ const unifiedCloseStyles = `
   button.admin-setup-close:focus-visible, button[aria-label^="Uždaryti"]:focus-visible {
     outline:2px solid #f08a28; outline-offset:2px;
   }
+  .wd-time-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:44px;text-align:left!important;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px;scrollbar-width:thin}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
 `;
 
 const LITHUANIAN_CITY_NAMES = [
@@ -6049,24 +6051,23 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </b>
               </div>
 
-              {workdayDetailsTarget.job?.break_start_time &&
-                workdayDetailsTarget.job?.break_end_time && (
-                  <div
-                    style={{
-                      border: "1px solid #e4ebf0",
-                      borderRadius: 12,
-                      padding: 14,
-                    }}
-                  >
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>
-                      Pietų pertrauka
-                    </div>
-                    <b style={{ display: "block", marginTop: 4 }}>
-                      {workdayDetailsTarget.job.break_start_time.slice(0, 5)}–
-                      {workdayDetailsTarget.job.break_end_time.slice(0, 5)}
-                    </b>
-                  </div>
-                )}
+              <div
+                style={{
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                  Pietų pertrauka
+                </div>
+                <b style={{ display: "block", marginTop: 4 }}>
+                  {workdayDetailsTarget.job?.break_start_time &&
+                  workdayDetailsTarget.job?.break_end_time
+                    ? `${workdayDetailsTarget.job.break_start_time.slice(0, 5)}–${workdayDetailsTarget.job.break_end_time.slice(0, 5)}`
+                    : "Nėra"}
+                </b>
+              </div>
 
               <div
                 style={{
@@ -6846,17 +6847,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     ? "darbdavys paima darbuotoją"
                     : "darbuotojas atvyksta pats"}
                 </b>
-                {confirmInvitation.job?.break_start_time &&
-                  confirmInvitation.job?.break_end_time && (
-                    <>
-                      <br />
-                      Pietų pertrauka:{" "}
-                      <b>
-                        {confirmInvitation.job.break_start_time.slice(0, 5)}–
-                        {confirmInvitation.job.break_end_time.slice(0, 5)}
-                      </b>
-                    </>
-                  )}
+                <>
+                  <br />
+                  Pietų pertrauka:{" "}
+                  <b>
+                    {confirmInvitation.job?.break_start_time &&
+                    confirmInvitation.job?.break_end_time
+                      ? `${confirmInvitation.job.break_start_time.slice(0, 5)}–${confirmInvitation.job.break_end_time.slice(0, 5)}`
+                      : "nėra"}
+                  </b>
+                </>
               </div>
               <div className="wd-pay">
                 {formatNetPay(
@@ -9268,14 +9268,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (
-      editingConfirmedCount === 0 &&
-      (!form.breakStartTime || !form.breakEndTime)
-    ) {
-      setError("Nurodykite pietų pertraukos pradžią ir pabaigą.");
-      return;
-    }
-
-    if (
       (form.breakStartTime || form.breakEndTime) &&
       (
         !form.breakStartTime ||
@@ -10902,22 +10894,69 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   Darbo laikas
   <div className="ed-time-pair">
     <label className="ed-label">Nuo
-      <input className="ed-input" type="time" value={form.startTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("startTime", e.target.value)} />
+      <RoundedTimeSelect
+        ariaLabel="Darbo pradžios laikas"
+        className="ed-input wd-time-trigger"
+        value={form.startTime}
+        disabled={editingConfirmedCount > 0}
+        onChange={(value) => updateField("startTime", value)}
+      />
     </label>
     <label className="ed-label">Iki
-      <input className="ed-input" type="time" value={form.endTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("endTime", e.target.value)} />
+      <RoundedTimeSelect
+        ariaLabel="Darbo pabaigos laikas"
+        className="ed-input wd-time-trigger"
+        value={form.endTime}
+        disabled={editingConfirmedCount > 0}
+        onChange={(value) => updateField("endTime", value)}
+        align="right"
+      />
     </label>
   </div>
 </div>
 
 <div className="ed-label ed-span-2">
-  Pietų pertrauka
-  <div className="ed-time-pair">
-    <label className="ed-label">Nuo *
-      <input className="ed-input" type="time" required value={form.breakStartTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakStartTime", e.target.value)} />
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+    <span>Pietų pertrauka</span>
+    <label className="ed-check" style={{ minHeight: 0, fontSize: 12, fontWeight: 800 }}>
+      <input
+        type="checkbox"
+        checked={!form.breakStartTime && !form.breakEndTime}
+        disabled={editingConfirmedCount > 0}
+        onChange={(e) => {
+          if (e.target.checked) {
+            setForm((current) => ({ ...current, breakStartTime: "", breakEndTime: "" }));
+          } else {
+            setForm((current) => ({
+              ...current,
+              breakStartTime: current.breakStartTime || "12:00",
+              breakEndTime: current.breakEndTime || "12:30",
+            }));
+          }
+        }}
+      />
+      Pietų pertraukos nėra
     </label>
-    <label className="ed-label">Iki *
-      <input className="ed-input" type="time" required value={form.breakEndTime} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("breakEndTime", e.target.value)} />
+  </div>
+  <div className="ed-time-pair">
+    <label className="ed-label">Nuo
+      <RoundedTimeSelect
+        ariaLabel="Pietų pertraukos pradžia"
+        className="ed-input wd-time-trigger"
+        value={form.breakStartTime}
+        disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
+        onChange={(value) => updateField("breakStartTime", value)}
+      />
+    </label>
+    <label className="ed-label">Iki
+      <RoundedTimeSelect
+        ariaLabel="Pietų pertraukos pabaiga"
+        className="ed-input wd-time-trigger"
+        value={form.breakEndTime}
+        disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
+        onChange={(value) => updateField("breakEndTime", value)}
+        align="right"
+      />
     </label>
   </div>
 </div>
@@ -12163,11 +12202,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                   <label className="ed-label" style={{ marginBottom: 14 }}>
                     Faktinis išėjimo laikas *
-                    <input
-                      className="ed-input"
-                      type="time"
+                    <RoundedTimeSelect
+                      ariaLabel="Faktinis išėjimo laikas"
+                      className="ed-input wd-time-trigger"
                       value={attendanceEndTime}
-                      onChange={(e) => setAttendanceEndTime(e.target.value)}
+                      onChange={setAttendanceEndTime}
                     />
                   </label>
                 </>
@@ -12755,7 +12794,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   "Pietų pertrauka",
                   jobInfoTarget.break_start_time && jobInfoTarget.break_end_time
                     ? `${jobInfoTarget.break_start_time.slice(0, 5)}–${jobInfoTarget.break_end_time.slice(0, 5)}`
-                    : "Nenurodyta",
+                    : "Nėra",
                 ],
                 [
                   "Atlygis",
@@ -16700,46 +16739,42 @@ function AdminDashboard({
                 </label>
                 <label className="admin-label">
                   Pradžia
-                  <input
-                    className="admin-input"
-                    type="time"
+                  <RoundedTimeSelect
+                    ariaLabel="Darbo pradžios laikas"
+                    className="admin-input wd-time-trigger"
                     value={editorForm.startTime}
-                    onChange={(e) =>
-                      updateEditorField("startTime", e.target.value)
-                    }
+                    onChange={(value) => updateEditorField("startTime", value)}
                   />
                 </label>
                 <label className="admin-label">
                   Pabaiga
-                  <input
-                    className="admin-input"
-                    type="time"
+                  <RoundedTimeSelect
+                    ariaLabel="Darbo pabaigos laikas"
+                    className="admin-input wd-time-trigger"
                     value={editorForm.endTime}
-                    onChange={(e) =>
-                      updateEditorField("endTime", e.target.value)
-                    }
+                    onChange={(value) => updateEditorField("endTime", value)}
+                    align="right"
                   />
                 </label>
                 <label className="admin-label">
                   Pietų pradžia
-                  <input
-                    className="admin-input"
-                    type="time"
+                  <RoundedTimeSelect
+                    ariaLabel="Pietų pertraukos pradžia"
+                    className="admin-input wd-time-trigger"
                     value={editorForm.breakStartTime}
-                    onChange={(e) =>
-                      updateEditorField("breakStartTime", e.target.value)
-                    }
+                    placeholder="Nėra"
+                    onChange={(value) => updateEditorField("breakStartTime", value)}
                   />
                 </label>
                 <label className="admin-label">
                   Pietų pabaiga
-                  <input
-                    className="admin-input"
-                    type="time"
+                  <RoundedTimeSelect
+                    ariaLabel="Pietų pertraukos pabaiga"
+                    className="admin-input wd-time-trigger"
                     value={editorForm.breakEndTime}
-                    onChange={(e) =>
-                      updateEditorField("breakEndTime", e.target.value)
-                    }
+                    placeholder="Nėra"
+                    onChange={(value) => updateEditorField("breakEndTime", value)}
+                    align="right"
                   />
                 </label>
                 <label className="admin-label">
