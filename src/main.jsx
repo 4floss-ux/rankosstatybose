@@ -254,6 +254,190 @@ function RoundedSelect({ value, options, disabled, onChange, className = "ed-sel
   );
 }
 
+function parseDateValue(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateInputValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateDisplay(value, placeholder = "Pasirinkite datą") {
+  const date = parseDateValue(value);
+  if (!date) return placeholder;
+  return new Intl.DateTimeFormat("lt-LT", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function RoundedDateSelect({
+  value,
+  disabled,
+  onChange,
+  ariaLabel = "Data",
+  align = "left",
+  className = "ed-input wd-date-trigger",
+  placeholder = "Pasirinkite datą",
+  allowClear = true,
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const selectedDate = parseDateValue(value);
+  const initialDate = selectedDate || new Date();
+  const [viewMonth, setViewMonth] = useState(
+    () => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1, 12)
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const next = parseDateValue(value) || new Date();
+    setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1, 12));
+  }, [open, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event) => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = new Date(year, month, 1, 12);
+  const mondayOffset = (firstDay.getDay() + 6) % 7;
+  const gridStart = new Date(year, month, 1 - mondayOffset, 12);
+  const todayValue = formatDateInputValue(new Date());
+  const monthLabel = new Intl.DateTimeFormat("lt-LT", {
+    month: "long",
+    year: "numeric",
+  }).format(viewMonth);
+  const dayLabels = ["Pr", "An", "Tr", "Kt", "Pn", "Št", "Sk"];
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={className}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span style={!value ? { color: "#8a98a6" } : undefined}>
+          {formatDateDisplay(value, placeholder)}
+        </span>
+        <span aria-hidden="true" className="wd-date-icon">▦</span>
+      </button>
+
+      {open && !disabled && (
+        <div
+          role="dialog"
+          aria-label={ariaLabel}
+          className="wd-date-popover"
+          style={align === "right" ? { right: 0 } : { left: 0 }}
+        >
+          <div className="wd-date-head">
+            <b>{monthLabel}</b>
+            <div className="wd-date-nav">
+              <button
+                type="button"
+                aria-label="Ankstesnis mėnuo"
+                onClick={() => setViewMonth(new Date(year, month - 1, 1, 12))}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="Kitas mėnuo"
+                onClick={() => setViewMonth(new Date(year, month + 1, 1, 12))}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div className="wd-date-weekdays" aria-hidden="true">
+            {dayLabels.map((day) => <span key={day}>{day}</span>)}
+          </div>
+
+          <div className="wd-date-grid">
+            {Array.from({ length: 42 }, (_, index) => {
+              const date = new Date(gridStart);
+              date.setDate(gridStart.getDate() + index);
+              const optionValue = formatDateInputValue(date);
+              const outside = date.getMonth() !== month;
+              const selected = optionValue === value;
+              const today = optionValue === todayValue;
+              return (
+                <button
+                  key={optionValue}
+                  type="button"
+                  className={[outside ? "outside" : "", selected ? "selected" : "", today ? "today" : ""].filter(Boolean).join(" ")}
+                  aria-label={new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(date)}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    onChange(optionValue);
+                    setOpen(false);
+                    triggerRef.current?.focus();
+                  }}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="wd-date-actions">
+            {allowClear ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
+              >
+                Išvalyti
+              </button>
+            ) : <span />}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(todayValue);
+                setOpen(false);
+                triggerRef.current?.focus();
+              }}
+            >
+              Šiandien
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką" }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -338,6 +522,8 @@ const unifiedCloseStyles = `
     outline:2px solid #f08a28; outline-offset:2px;
   }
   .wd-time-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:44px;text-align:left!important;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px;scrollbar-width:thin}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
+  .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
+
 `;
 
 const LITHUANIAN_CITY_NAMES = [
@@ -10906,16 +11092,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               )}
             </label>
 
-<label className="ed-label ed-span-2">
+<div className="ed-label ed-span-2">
   Data
-  <input
-    className="ed-input"
-    type="date"
+  <RoundedDateSelect
+    className="ed-input wd-date-trigger"
+    ariaLabel="Darbo data"
     value={form.workDate}
     disabled={editingConfirmedCount > 0}
-    onChange={(e) => updateField("workDate", e.target.value)}
+    allowClear={false}
+    onChange={(value) => updateField("workDate", value)}
   />
-</label>
+</div>
 
 
 <div className="ed-label ed-span-2">
@@ -16688,17 +16875,15 @@ function AdminDashboard({
                   />
                 </div>
 
-                <label className="admin-label">
+                <div className="admin-label">
                   Apmokėta iki / laikotarpio pabaiga
-                  <input
-                    className="admin-input"
-                    type="date"
+                  <RoundedDateSelect
+                    className="admin-input wd-date-trigger"
+                    ariaLabel="Apmokėta iki / laikotarpio pabaiga"
                     value={editorForm.planPeriodEnd}
-                    onChange={(e) =>
-                      updateEditorField("planPeriodEnd", e.target.value)
-                    }
+                    onChange={(value) => updateEditorField("planPeriodEnd", value)}
                   />
-                </label>
+                </div>
 
                 <label className="admin-label admin-wide">
                   Įmonės aprašymas
@@ -16741,17 +16926,15 @@ function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <div className="admin-label">
                   Data
-                  <input
-                    className="admin-input"
-                    type="date"
+                  <RoundedDateSelect
+                    className="admin-input wd-date-trigger"
+                    ariaLabel="Darbo data"
                     value={editorForm.workDate}
-                    onChange={(e) =>
-                      updateEditorField("workDate", e.target.value)
-                    }
+                    onChange={(value) => updateEditorField("workDate", value)}
                   />
-                </label>
+                </div>
                 <label className="admin-label">
                   Žmonių skaičius
                   <input
