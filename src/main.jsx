@@ -440,12 +440,29 @@ function RoundedDateSelect({
   );
 }
 
-function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką" }) {
+function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką", minTime = null, maxTime = null }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
   const hasValue = Boolean(value);
   const [hour = "08", minute = "00"] = String(value || "08:00").split(":");
+
+  const timeToMinutes = (time) => {
+    if (!time) return null;
+    const [h, m] = String(time).split(":").map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+
+  const isAllowedTime = (time) => {
+    const minutes = timeToMinutes(time);
+    const minMinutes = timeToMinutes(minTime);
+    const maxMinutes = timeToMinutes(maxTime);
+    if (minutes === null) return false;
+    if (minMinutes !== null && minutes < minMinutes) return false;
+    if (maxMinutes !== null && minutes > maxMinutes) return false;
+    return true;
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -492,11 +509,25 @@ function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left
             <div key={column.title} className="wd-time-column">
               <b>{column.title}</b>
               <div className="wd-time-options">
-                {Array.from({ length: column.count }, (_, index) => String(index).padStart(2, "0")).map((option) => (
-                  <button key={option} type="button" className={option === column.selected ? "selected" : ""}
-                    aria-label={`${column.title}: ${option}`} aria-pressed={option === column.selected}
-                    onClick={() => column.set(option)}>{option}</button>
-                ))}
+                {Array.from({ length: column.count }, (_, index) => String(index).padStart(2, "0")).map((option) => {
+                  const candidate = column.title === "Valandos"
+                    ? `${option}:${minute}`
+                    : `${hour}:${option}`;
+                  const optionDisabled = !isAllowedTime(candidate);
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className={option === column.selected ? "selected" : ""}
+                      aria-label={`${column.title}: ${option}`}
+                      aria-pressed={option === column.selected}
+                      disabled={optionDisabled}
+                      onClick={() => !optionDisabled && column.set(option)}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -523,7 +554,7 @@ const unifiedCloseStyles = `
   button.admin-setup-close:focus-visible, button[aria-label^="Uždaryti"]:focus-visible {
     outline:2px solid #f08a28; outline-offset:2px;
   }
-  .wd-time-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:44px;text-align:left!important;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px;scrollbar-width:thin}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover,.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}
+  .wd-time-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:44px;text-align:left!important;cursor:pointer}.wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-time-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(260px,calc(100vw - 48px));display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:9px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-time-column{min-width:0}.wd-time-column>b{display:block;padding:4px 8px 8px;color:#607180;font-size:11px}.wd-time-options{max-height:216px;overflow-y:auto;display:grid;gap:2px;scrollbar-width:thin}.wd-time-options button{border:0;border-radius:8px;background:#fff;color:#102438;padding:8px;font:inherit;text-align:center;cursor:pointer}.wd-time-options button:hover:not(:disabled),.wd-time-options button.selected{background:#fff1e5;color:#9c5417;font-weight:800}.wd-time-options button:disabled{opacity:.3;cursor:not-allowed;background:#fff;color:#9aa6b2}
   .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
 
 `;
@@ -3684,12 +3715,62 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  function confirmedJobsOnDate(date) {
+    return confirmedJobs
+      .filter((job) => job?.work_date === date)
+      .sort((a, b) =>
+        String(a?.start_time || "00:00").localeCompare(String(b?.start_time || "00:00"))
+      );
+  }
+
   function confirmedJobOnDate(date) {
-    return confirmedJobs.find((job) => job?.work_date === date) || null;
+    return confirmedJobsOnDate(date)[0] || null;
+  }
+
+  function timeToMinutes(value) {
+    if (!value) return null;
+    const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return hours * 60 + minutes;
+  }
+
+  function minutesToTime(value) {
+    const safe = Math.max(0, Math.min(23 * 60 + 59, Number(value) || 0));
+    const hours = Math.floor(safe / 60);
+    const minutes = safe % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }
+
+  function availabilityWindowForDate(date) {
+    const jobs = confirmedJobsOnDate(date);
+    if (!jobs.length) {
+      return { min: "00:00", max: "23:59", jobs: [] };
+    }
+
+    const latestEnd = jobs.reduce((latest, job) => {
+      const minutes = timeToMinutes(job?.end_time || "23:59");
+      return minutes === null ? latest : Math.max(latest, minutes);
+    }, 0);
+
+    const afterBuffer = latestEnd + 60;
+    if (afterBuffer <= 23 * 60 + 59) {
+      return { min: minutesToTime(afterBuffer), max: "23:59", jobs };
+    }
+
+    const earliestStart = jobs.reduce((earliest, job) => {
+      const minutes = timeToMinutes(job?.start_time || "00:00");
+      return minutes === null ? earliest : Math.min(earliest, minutes);
+    }, 24 * 60);
+    const beforeBuffer = earliestStart - 60;
+
+    if (beforeBuffer >= 1) {
+      return { min: "00:00", max: minutesToTime(beforeBuffer), jobs };
+    }
+
+    return { min: null, max: null, jobs };
   }
 
   function updateAvailability(date, patch) {
-    if (confirmedJobOnDate(date)) return;
     setProfileSaved(false);
     setAvailability((current) => ({
       ...current,
@@ -4397,13 +4478,37 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const availabilityRows = days.map((day) => {
         const state = availability[day.iso];
-        const occupiedByJob = confirmedJobOnDate(day.iso);
+        const window = availabilityWindowForDate(day.iso);
+
+        if (state.available) {
+          if (!window.min || !window.max) {
+            throw new Error(`${day.label}: po patvirtinto darbo ir būtino 1 val. tarpo šią dieną laisvo laiko nebelieka.`);
+          }
+
+          const fromMinutes = timeToMinutes(state.from);
+          const toMinutes = timeToMinutes(state.to);
+          const minMinutes = timeToMinutes(window.min);
+          const maxMinutes = timeToMinutes(window.max);
+
+          if (
+            fromMinutes === null ||
+            toMinutes === null ||
+            minMinutes === null ||
+            maxMinutes === null ||
+            fromMinutes < minMinutes ||
+            toMinutes > maxMinutes ||
+            toMinutes <= fromMinutes
+          ) {
+            throw new Error(`${day.label}: pasirinkite laisvą laiką nuo ${window.min} iki ${window.max}.`);
+          }
+        }
+
         return {
           worker_id: user.id,
           available_date: day.iso,
-          status: occupiedByJob || !state.available ? "unavailable" : "available",
-          available_from: occupiedByJob || !state.available ? null : state.from,
-          available_to: occupiedByJob || !state.available ? null : state.to,
+          status: state.available ? "available" : "unavailable",
+          available_from: state.available ? state.from : null,
+          available_to: state.available ? state.to : null,
         };
       });
 
@@ -5259,11 +5364,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="wd-days">
                 {days.map((day) => {
                   const state = availability[day.iso];
-                  const occupiedJob = confirmedJobOnDate(day.iso);
-                  const isOccupied = Boolean(occupiedJob);
+                  const occupiedJobs = confirmedJobsOnDate(day.iso);
+                  const isPartiallyOccupied = occupiedJobs.length > 0;
+                  const availableWindow = availabilityWindowForDate(day.iso);
+                  const hasFreeWindow = Boolean(availableWindow.min && availableWindow.max);
 
                   return (
-                    <div className={`wd-day ${isOccupied ? "occupied" : state.available ? "available" : ""}`} key={day.iso}>
+                    <div className={`wd-day ${isPartiallyOccupied ? "occupied" : state.available ? "available" : ""}`} key={day.iso}>
                       <div className="wd-day-date">
                         <b>{day.weekday}</b>
                         <span>{day.label}</span>
@@ -5274,21 +5381,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <RoundedSelect
                           className="wd-status-select"
                           ariaLabel={`${day.label} prieinamumas`}
-                          disabled={isOccupied}
-                          value={isOccupied ? "occupied" : state.available ? "available" : "unavailable"}
-                          onChange={(value) =>
-                            updateAvailability(day.iso, {
-                              available: value === "available",
-                            })
-                          }
-                          options={
-                            isOccupied
-                              ? [{ value: "occupied", label: "Užimta – turite darbą" }]
-                              : [
-                                  { value: "unavailable", label: "Užimtas" },
-                                  { value: "available", label: "Laisvas" },
-                                ]
-                          }
+                          disabled={!hasFreeWindow}
+                          value={state.available && hasFreeWindow ? "available" : "unavailable"}
+                          onChange={(value) => {
+                            const wantsAvailable = value === "available";
+                            updateAvailability(day.iso, wantsAvailable
+                              ? {
+                                  available: true,
+                                  from: availableWindow.min,
+                                  to: availableWindow.max,
+                                }
+                              : { available: false });
+                          }}
+                          options={[
+                            { value: "unavailable", label: isPartiallyOccupied ? "Kitu laiku nedirbu" : "Užimtas" },
+                            { value: "available", label: isPartiallyOccupied ? "Laisvas po darbo" : "Laisvas" },
+                          ]}
                         />
                       </div>
 
@@ -5296,8 +5404,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span>Nuo</span>
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} nuo`}
-                          disabled={isOccupied || !state.available}
-                          value={isOccupied ? occupiedJob?.start_time?.slice(0, 5) || state.from : state.from}
+                          disabled={!state.available || !hasFreeWindow}
+                          value={state.from}
+                          minTime={availableWindow.min}
+                          maxTime={availableWindow.max}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
                               from: value,
@@ -5311,8 +5421,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} iki`}
                           align="right"
-                          disabled={isOccupied || !state.available}
-                          value={isOccupied ? occupiedJob?.end_time?.slice(0, 5) || state.to : state.to}
+                          disabled={!state.available || !hasFreeWindow}
+                          value={state.to}
+                          minTime={state.from || availableWindow.min}
+                          maxTime={availableWindow.max}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
                               to: value,
@@ -5321,10 +5433,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         />
                       </div>
 
-                      {isOccupied && (
+                      {isPartiallyOccupied && (
                         <div className="wd-day-occupied-note">
-                          {occupiedJob?.title || "Patvirtintas darbas"} · {occupiedJob?.start_time?.slice(0, 5) || ""}
-                          {occupiedJob?.end_time ? `–${occupiedJob.end_time.slice(0, 5)}` : ""}
+                          {occupiedJobs.map((job) =>
+                            `${job?.title || "Patvirtintas darbas"} · ${job?.start_time?.slice(0, 5) || ""}${job?.end_time ? `–${job.end_time.slice(0, 5)}` : ""}`
+                          ).join(" • ")}
+                          {hasFreeWindow
+                            ? ` · Naują laiką galite rinktis nuo ${availableWindow.min} iki ${availableWindow.max} (paliekamas 1 val. tarpas).`
+                            : " · Po darbo ir 1 val. tarpo šią dieną laisvo laiko nebelieka."}
                         </div>
                       )}
                     </div>
@@ -11025,7 +11141,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
         .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
-        .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}
+        .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
         .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
@@ -12775,24 +12891,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
                           : ""}
                       </div>
-                      {planSummary?.can_team_management && (
-                        <span className="ed-responsible">
-                          Atsakingas:{" "}
-                          {teamMemberName(
-                            job.responsible_user_id || job.created_by
-                          )}
-                        </span>
-                      )}
-                      {(Number(job.employerWonDisputes || 0) > 0 ||
+                      {(planSummary?.can_team_management ||
+                        Number(job.employerWonDisputes || 0) > 0 ||
                         Number(job.workerWonDisputes || 0) > 0) && (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",
-                            marginTop: 7,
-                          }}
-                        >
+                        <div className="ed-job-responsibility-line">
+                          {planSummary?.can_team_management && (
+                            <span className="ed-responsible">
+                              Atsakingas:{" "}
+                              {teamMemberName(
+                                job.responsible_user_id || job.created_by
+                              )}
+                            </span>
+                          )}
                           {Number(job.employerWonDisputes || 0) > 0 && (
                             <span className="ed-attendance-badge green">
                               ✓ Ginčas išspręstas jūsų naudai
@@ -12965,24 +13075,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
                           : ""}
                       </div>
-                      {planSummary?.can_team_management && (
-                        <span className="ed-responsible">
-                          Atsakingas:{" "}
-                          {teamMemberName(
-                            job.responsible_user_id || job.created_by
-                          )}
-                        </span>
-                      )}
-                      {(Number(job.employerWonDisputes || 0) > 0 ||
+                      {(planSummary?.can_team_management ||
+                        Number(job.employerWonDisputes || 0) > 0 ||
                         Number(job.workerWonDisputes || 0) > 0) && (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",
-                            marginTop: 7,
-                          }}
-                        >
+                        <div className="ed-job-responsibility-line">
+                          {planSummary?.can_team_management && (
+                            <span className="ed-responsible">
+                              Atsakingas:{" "}
+                              {teamMemberName(
+                                job.responsible_user_id || job.created_by
+                              )}
+                            </span>
+                          )}
                           {Number(job.employerWonDisputes || 0) > 0 && (
                             <span className="ed-attendance-badge green">
                               ✓ Ginčas išspręstas jūsų naudai
