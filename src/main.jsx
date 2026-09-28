@@ -5518,7 +5518,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
-        .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;min-height:34px;border:1px solid #dbe4ea;border-radius:999px;background:#fff;color:#526374;padding:7px 12px;font:inherit;font-size:12px;font-weight:800;line-height:1;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease}.wd-stats-toggle:hover{border-color:#f0a55c;background:#fff8f1;color:#9c5417}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}
+        .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.wd-stats-toggle:hover{color:#c96c13}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.wd-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
@@ -6212,7 +6212,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <section className="wd-stats-section">
           <div className="wd-stats-head">
-            <div className="eyebrow">MANO STATISTIKA</div>
             <button
               className={`wd-stats-toggle ${showWorkerStats ? "open" : ""}`}
               type="button"
@@ -6220,7 +6219,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               aria-label={showWorkerStats ? "Slėpti mano statistiką" : "Rodyti mano statistiką"}
               onClick={() => setShowWorkerStats((current) => !current)}
             >
-              {showWorkerStats ? "Slėpti statistiką" : "Rodyti statistiką"}
+              MANO STATISTIKA
             </button>
           </div>
 
