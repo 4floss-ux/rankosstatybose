@@ -4007,12 +4007,30 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
-  const [showWorkerStats, setShowWorkerStats] = useState(false);
+  const [showWorkerStats, setShowWorkerStats] = useState(() => {
+    try {
+      if (typeof window === "undefined") return false;
+      return window.localStorage.getItem(`worker-stats-open:${user?.id || "guest"}`) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [showWorkerReliabilityInfo, setShowWorkerReliabilityInfo] = useState(false);
+  const [workerPenaltyHistory, setWorkerPenaltyHistory] = useState([]);
   const [showWorkTimeLoginReminder, setShowWorkTimeLoginReminder] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
   const workerProfileEditorRef = useRef(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      window.localStorage.setItem(
+        `worker-stats-open:${user.id}`,
+        showWorkerStats ? "1" : "0"
+      );
+    } catch {}
+  }, [user?.id, showWorkerStats]);
 
   useEffect(() => {
     if (loading || !user?.id) return undefined;
@@ -4431,6 +4449,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         skillsResult,
         workerSkillsResult,
         availabilityResult,
+        workerPenaltiesResult,
       ] = await Promise.all([
         supabase
           .from("profiles")
@@ -4464,6 +4483,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .eq("worker_id", user.id)
           .gte("available_date", start)
           .lte("available_date", end),
+        supabase
+          .from("worker_penalties")
+          .select("id, penalty_type, reason, restriction_days, restricted_until, created_at")
+          .eq("worker_id", user.id)
+          .order("created_at", { ascending: false }),
       ]);
 
       const failed = [
@@ -4473,6 +4497,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         skillsResult,
         workerSkillsResult,
         availabilityResult,
+        workerPenaltiesResult,
       ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
@@ -4512,6 +4537,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setUrgentForm({
         city: worker?.urgent_city || profile?.city || "Vilnius",
       });
+
+      setWorkerPenaltyHistory(workerPenaltiesResult.data || []);
 
       setMetrics({
         attendanceRate: Number(worker?.attendance_rate ?? 100),
@@ -5939,7 +5966,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
-        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:max-content;max-width:100%;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438}.wd-kpi-info-mark{display:grid!important;place-items:center!important;width:18px;height:18px;min-height:18px!important;flex:0 0 18px;border-radius:50%;background:#eef3f6;color:#526374!important;font-size:11px!important;font-weight:850;line-height:1!important}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
+        .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}.wd-kpi-info-btn{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-btn:hover{color:#102438;text-decoration:underline;text-underline-offset:3px}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-card>.eyebrow{margin-bottom:14px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
@@ -6688,7 +6715,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               aria-label={showWorkerStats ? "Slėpti mano statistiką" : "Rodyti mano statistiką"}
               onClick={() => setShowWorkerStats((current) => !current)}
             >
-              MANO STATISTIKA
+              MANO STATISTIKA · SPAUSK IR ŽIŪRĖK
             </button>
           </div>
 
@@ -6716,7 +6743,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   aria-label="Atidaryti darbuotojo patikimumo paaiškinimą"
                 >
                   <span className="wd-kpi-info-label">Atvykimo patikimumas</span>
-                  <span className="wd-kpi-info-mark">i</span>
                 </button>
                 <b
                   style={{ color: reliabilityScoreColor(metrics.attendanceRate) }}
@@ -9165,7 +9191,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <style>{`
             .reliability-modal-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:24px;background:rgba(16,36,56,.62);backdrop-filter:blur(2px);font-family:Inter,sans-serif}
             .reliability-modal{width:min(620px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:26px;color:#102438}
-            .reliability-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px}.reliability-modal-eyebrow{color:#f08a28;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:7px}.reliability-modal h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.025em;color:#102438}.reliability-modal-close{width:38px;height:38px;flex:0 0 auto;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-family:Inter,sans-serif;font-size:22px;line-height:1;cursor:pointer}.reliability-score-box{display:flex;align-items:center;gap:16px;padding:15px;margin-bottom:20px;border:1px solid #e3e9ed;border-radius:14px;background:#f7f9fa}.reliability-score-copy strong{display:block;font-family:Manrope,Inter,sans-serif;font-size:18px;margin-bottom:4px}.reliability-score-copy span{color:#6c7a88;font-size:13px;line-height:1.45}.reliability-rules{display:grid;gap:10px}.reliability-rule{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #edf1f4}.reliability-rule:last-child{border-bottom:0}.reliability-rule-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#f1f4f6;font-weight:800;font-size:12px;color:#425466}.reliability-rule p{margin:0;color:#425466;font-size:14px;line-height:1.55}.reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}.reliability-modal-actions{display:flex;justify-content:flex-end;margin-top:20px}.reliability-modal-actions button{border:0;border-radius:10px;padding:11px 17px;background:#f08a28;color:#fff;font-family:Manrope,Inter,sans-serif;font-weight:800;cursor:pointer}@media(max-width:600px){.reliability-modal-overlay{padding:12px}.reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}.reliability-modal h2{font-size:23px}.reliability-score-box{align-items:flex-start}}
+            .reliability-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px}.reliability-modal-eyebrow{color:#f08a28;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:7px}.reliability-modal h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.025em;color:#102438}.reliability-modal-close{width:38px;height:38px;flex:0 0 auto;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-family:Inter,sans-serif;font-size:22px;line-height:1;cursor:pointer}.reliability-score-box{display:flex;align-items:center;gap:16px;padding:15px;margin-bottom:20px;border:1px solid #e3e9ed;border-radius:14px;background:#f7f9fa}.reliability-score-copy strong{display:block;font-family:Manrope,Inter,sans-serif;font-size:18px;margin-bottom:4px}.reliability-score-copy span{color:#6c7a88;font-size:13px;line-height:1.45}.reliability-rules{display:grid;gap:8px}
+            .reliability-rule{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;border:1px solid #e5ecef;border-radius:12px;background:#fff}
+            .reliability-rule:last-child{border-bottom:1px solid #e5ecef}
+            .reliability-rule-icon{width:48px;height:28px;border-radius:999px;display:grid;place-items:center;background:#f1f4f6;font-weight:850;font-size:12px;color:#425466}
+            .reliability-rule p{margin:0;color:#425466;font-size:13px;line-height:1.5}
+            .reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
+            .reliability-history{margin-top:20px;padding-top:18px;border-top:1px solid #e8eef2}
+            .reliability-history-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+            .reliability-history-head h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:16px;color:#102438}
+            .reliability-history-head span{font-size:11px;color:#8a98a6}
+            .reliability-history-list{display:grid;gap:8px}
+            .reliability-history-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5ecef;border-radius:12px;background:#f8fafb}
+            .reliability-history-change{display:grid;place-items:center;min-height:30px;border-radius:9px;background:#fff0ec;color:#b64d2a;font-family:Manrope,Inter,sans-serif;font-size:13px;font-weight:900}
+            .reliability-history-copy{min-width:0}
+            .reliability-history-copy b{display:block;color:#102438;font-size:12px;line-height:1.35}
+            .reliability-history-copy small{display:block;margin-top:3px;color:#6c7a88;font-size:11px;line-height:1.4}
+            .reliability-history-date{color:#8a98a6;font-size:10.5px;white-space:nowrap}
+            .reliability-history-empty{padding:12px 14px;border:1px dashed #d8e1e7;border-radius:12px;background:#f8fafb;color:#6c7a88;font-size:12px;line-height:1.45}
+            @media(max-width:600px){.reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}.reliability-rule-icon{width:42px}.reliability-history-item{grid-template-columns:52px minmax(0,1fr)}.reliability-history-date{grid-column:2;justify-self:start}}
+            .reliability-modal-actions{display:flex;justify-content:flex-end;margin-top:20px}.reliability-modal-actions button{border:0;border-radius:10px;padding:11px 17px;background:#f08a28;color:#fff;font-family:Manrope,Inter,sans-serif;font-weight:800;cursor:pointer}@media(max-width:600px){.reliability-modal-overlay{padding:12px}.reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}.reliability-modal h2{font-size:23px}.reliability-score-box{align-items:flex-start}}
           `}</style>
 
           <div
@@ -9241,6 +9286,43 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <b>{metrics.reliabilityGoodJobsSincePenalty}</b>.
                 </p>
               </div>
+            </div>
+
+            <div className="reliability-history">
+              <div className="reliability-history-head">
+                <h3>Patikimumo sumažėjimų istorija</h3>
+                {workerPenaltyHistory.length > 5 && (
+                  <span>Rodomi 5 naujausi iš {workerPenaltyHistory.length}</span>
+                )}
+              </div>
+
+              {workerPenaltyHistory.length ? (
+                <div className="reliability-history-list">
+                  {workerPenaltyHistory.slice(0, 5).map((penalty) => {
+                    const meta = workerReliabilityPenaltyMeta(penalty);
+                    return (
+                      <div className="reliability-history-item" key={penalty.id}>
+                        <div className="reliability-history-change">
+                          {meta.change < 0 ? formatReliabilityChange(meta.change) : "—"}
+                        </div>
+                        <div className="reliability-history-copy">
+                          <b>{meta.label}</b>
+                          {penalty.reason && penalty.reason !== meta.label && (
+                            <small>{penalty.reason}</small>
+                          )}
+                        </div>
+                        <div className="reliability-history-date">
+                          {formatReliabilityPenaltyDate(penalty.created_at)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="reliability-history-empty">
+                  Patikimumas dar nebuvo sumažintas.
+                </div>
+              )}
             </div>
 
             <div className="reliability-note">
@@ -9464,6 +9546,41 @@ function formatReliabilityScore(value) {
   return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
+function formatReliabilityPenaltyDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("lt-LT");
+}
+
+function formatReliabilityChange(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "—";
+  const normalized = Number.isInteger(number) ? String(number) : number.toFixed(1).replace(".", ",");
+  return number > 0 ? `+${normalized}` : normalized;
+}
+
+function workerReliabilityPenaltyMeta(penalty) {
+  if (penalty?.penalty_type === "no_show") {
+    return { change: -10, label: "Neatvykimas į patvirtintą darbą" };
+  }
+  if (penalty?.penalty_type === "unexcused_early_leave") {
+    return { change: -5, label: "Nepagrįstas ankstyvas išėjimas iš darbo" };
+  }
+  return { change: 0, label: penalty?.reason || "Patikimumo pažeidimas" };
+}
+
+function employerReliabilityPenaltyMeta(penalty) {
+  const change = Number(penalty?.reliability_change || 0);
+  if (penalty?.penalty_type === "job_cancelled") {
+    return { change, label: "Atšauktas darbuotojo jau patvirtintas darbas" };
+  }
+  if (penalty?.penalty_type === "false_attendance_claim") {
+    return { change, label: "Nepagrįstas neigiamas darbo dienos pažymėjimas" };
+  }
+  return { change, label: penalty?.reason || "Patikimumo pažeidimas" };
+}
+
 function workerAvatarUrl(path) {
   if (!path) return "";
   return (
@@ -9588,7 +9705,23 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobScope, setJobScope] = useState("mine");
   const [employerActivePage, setEmployerActivePage] = useState(1);
   const [employerHistoryPage, setEmployerHistoryPage] = useState(1);
-  const [showEmployerStats, setShowEmployerStats] = useState(false);
+  const [showEmployerStats, setShowEmployerStats] = useState(() => {
+    try {
+      if (typeof window === "undefined") return false;
+      return window.localStorage.getItem(`employer-stats-open:${user?.id || "guest"}`) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      window.localStorage.setItem(
+        `employer-stats-open:${user.id}`,
+        showEmployerStats ? "1" : "0"
+      );
+    } catch {}
+  }, [user?.id, showEmployerStats]);
   const [teamInviteForm, setTeamInviteForm] = useState({
     displayName: "",
     email: "",
@@ -9618,6 +9751,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     reliabilityLastPenaltyAt: null,
   });
   const [employerPenaltyByJob, setEmployerPenaltyByJob] = useState({});
+  const [employerPenaltyHistory, setEmployerPenaltyHistory] = useState([]);
   const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
@@ -11314,9 +11448,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .single(),
       supabase
         .from("employer_penalties")
-        .select("job_id, reliability_change, affected_workers, created_at")
+        .select("id, job_id, booking_id, penalty_type, reliability_change, affected_workers, reason, created_at")
         .eq("company_id", companyId)
-        .eq("penalty_type", "job_cancelled")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -11466,9 +11599,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         companyResult.data?.reliability_last_penalty_at || null,
     });
 
+    setEmployerPenaltyHistory(penaltiesResult.data || []);
+
     setEmployerPenaltyByJob(
       Object.fromEntries(
-        (penaltiesResult.data || []).map((penalty) => [
+        (penaltiesResult.data || [])
+          .filter((penalty) => penalty.penalty_type === "job_cancelled")
+          .map((penalty) => [
           penalty.job_id,
           {
             change: Number(penalty.reliability_change || 0),
@@ -17098,45 +17235,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               font-size:13px;
               line-height:1.45;
             }
-            .reliability-rules{
-              display:grid;
-              gap:10px;
-            }
-            .reliability-rule{
-              display:grid;
-              grid-template-columns:28px 1fr;
-              gap:10px;
-              align-items:flex-start;
-              padding:12px 0;
-              border-bottom:1px solid #edf1f4;
-            }
-            .reliability-rule:last-child{border-bottom:0}
-            .reliability-rule-icon{
-              width:28px;
-              height:28px;
-              border-radius:50%;
-              display:grid;
-              place-items:center;
-              background:#f1f4f6;
-              font-weight:800;
-              font-size:12px;
-              color:#425466;
-            }
-            .reliability-rule p{
-              margin:0;
-              color:#425466;
-              font-size:14px;
-              line-height:1.55;
-            }
-            .reliability-note{
-              margin-top:16px;
-              padding:13px 14px;
-              border-radius:12px;
-              background:#fff3e7;
-              color:#8a531d;
-              font-size:13px;
-              line-height:1.5;
-            }
+            .reliability-rules{display:grid;gap:8px}
+            .reliability-rule{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;border:1px solid #e5ecef;border-radius:12px;background:#fff}
+            .reliability-rule:last-child{border-bottom:1px solid #e5ecef}
+            .reliability-rule-icon{width:48px;height:28px;border-radius:999px;display:grid;place-items:center;background:#f1f4f6;font-weight:850;font-size:12px;color:#425466}
+            .reliability-rule p{margin:0;color:#425466;font-size:13px;line-height:1.5}
+            .reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
+            .reliability-history{margin-top:20px;padding-top:18px;border-top:1px solid #e8eef2}
+            .reliability-history-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+            .reliability-history-head h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:16px;color:#102438}
+            .reliability-history-head span{font-size:11px;color:#8a98a6}
+            .reliability-history-list{display:grid;gap:8px}
+            .reliability-history-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5ecef;border-radius:12px;background:#f8fafb}
+            .reliability-history-change{display:grid;place-items:center;min-height:30px;border-radius:9px;background:#fff0ec;color:#b64d2a;font-family:Manrope,Inter,sans-serif;font-size:13px;font-weight:900}
+            .reliability-history-copy{min-width:0}
+            .reliability-history-copy b{display:block;color:#102438;font-size:12px;line-height:1.35}
+            .reliability-history-copy small{display:block;margin-top:3px;color:#6c7a88;font-size:11px;line-height:1.4}
+            .reliability-history-date{color:#8a98a6;font-size:10.5px;white-space:nowrap}
+            .reliability-history-empty{padding:12px 14px;border:1px dashed #d8e1e7;border-radius:12px;background:#f8fafb;color:#6c7a88;font-size:12px;line-height:1.45}
+            @media(max-width:600px){.reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}.reliability-rule-icon{width:42px}.reliability-history-item{grid-template-columns:52px minmax(0,1fr)}.reliability-history-date{grid-column:2;justify-self:start}}
             .reliability-modal-actions{
               display:flex;
               justify-content:flex-end;
@@ -17195,7 +17312,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       color: reliabilityScoreColor(employerStats.reliabilityRate),
                     }}
                   >
-                    {Math.round(employerStats.reliabilityRate)} / 100
+                    {formatReliabilityScore(employerStats.reliabilityRate)} / 100
                   </span>
                 </strong>
                 <span>
@@ -17266,7 +17383,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div className="reliability-rule">
-                <div className="reliability-rule-icon">i</div>
+                <div className="reliability-rule-icon">#</div>
                 <p>
                   Jei darbuotojas užginčija jūsų pažymėtą neigiamą darbo dienos
                   rezultatą ir administratorius nusprendžia darbuotojo naudai,
@@ -17274,6 +17391,43 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   atvejų šiuo metu: <b>{employerStats.falseAttendanceClaimCount}</b>.
                 </p>
               </div>
+            </div>
+
+            <div className="reliability-history">
+              <div className="reliability-history-head">
+                <h3>Patikimumo sumažėjimų istorija</h3>
+                {employerPenaltyHistory.length > 5 && (
+                  <span>Rodomi 5 naujausi iš {employerPenaltyHistory.length}</span>
+                )}
+              </div>
+
+              {employerPenaltyHistory.length ? (
+                <div className="reliability-history-list">
+                  {employerPenaltyHistory.slice(0, 5).map((penalty) => {
+                    const meta = employerReliabilityPenaltyMeta(penalty);
+                    return (
+                      <div className="reliability-history-item" key={penalty.id}>
+                        <div className="reliability-history-change">
+                          {meta.change < 0 ? formatReliabilityChange(meta.change) : "—"}
+                        </div>
+                        <div className="reliability-history-copy">
+                          <b>{meta.label}</b>
+                          {penalty.reason && penalty.reason !== meta.label && (
+                            <small>{penalty.reason}</small>
+                          )}
+                        </div>
+                        <div className="reliability-history-date">
+                          {formatReliabilityPenaltyDate(penalty.created_at)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="reliability-history-empty">
+                  Patikimumas dar nebuvo sumažintas.
+                </div>
+              )}
             </div>
 
             <div className="reliability-note">
