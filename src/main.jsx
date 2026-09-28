@@ -3358,7 +3358,7 @@ function WorkerProfileModal({
   const [phoneCopied, setPhoneCopied] = useState(false);
 
   useEffect(() => {
-    if (!worker?.id || !canViewWorkerMetrics) {
+    if (!worker?.id) {
       setRatingReviews([]);
       setRatingReviewsLoading(false);
       return;
@@ -3369,11 +3369,10 @@ function WorkerProfileModal({
     async function loadRatingReviews() {
       setRatingReviewsLoading(true);
 
-      const result = await supabase
-        .from("worker_ratings")
-        .select("id, score, comment, created_at")
-        .eq("worker_id", worker.id)
-        .order("created_at", { ascending: false });
+      const result = await supabase.rpc("get_worker_recent_ratings", {
+        p_worker_id: worker.id,
+        p_limit: 3,
+      });
 
       if (!cancelled) {
         setRatingReviews(result.error ? [] : result.data || []);
@@ -3386,7 +3385,7 @@ function WorkerProfileModal({
     return () => {
       cancelled = true;
     };
-  }, [worker?.id, canViewWorkerMetrics]);
+  }, [worker?.id]);
 
   useEffect(() => {
     if (!worker?.id || !jobId) {
@@ -3630,42 +3629,39 @@ function WorkerProfileModal({
           </p>
         </div>
 
-        {canViewWorkerMetrics && (
-          <div className="rs-profile-section">
-            <b>Darbdavių atsiliepimai</b>
+        <div className="rs-profile-section">
+          <b>Paskutiniai darbdavių įvertinimai</b>
+          <p style={{ margin: "5px 0 0", color: "#7a8996", fontSize: 12 }}>
+            Rodomi iki 3 naujausių darbdavių įvertinimų.
+          </p>
 
-            {ratingReviewsLoading ? (
-              <div style={{ marginTop: 10, color: "#6c7a88" }}>
-                Kraunami atsiliepimai...
-              </div>
-            ) : ratingReviews.length ? (
-              <div className="rs-review-list">
-                {ratingReviews.map((review) => (
-                  <div className="rs-review" key={review.id}>
-                    <div className="rs-review-head">
-                      <span className="rs-review-score">
-                        {review.score} / 10
-                      </span>
-                      <span className="rs-review-date">
-                        {new Date(review.created_at).toLocaleDateString("lt-LT")}
-                      </span>
-                    </div>
-
-                    <p>
-                      {review.comment?.trim()
-                        ? review.comment
-                        : "Darbdavys komentaro nepaliko."}
-                    </p>
+          {ratingReviewsLoading ? (
+            <div style={{ marginTop: 10, color: "#6c7a88" }}>
+              Kraunami įvertinimai...
+            </div>
+          ) : ratingReviews.length ? (
+            <div className="rs-review-list">
+              {ratingReviews.map((review) => (
+                <div className="rs-review" key={review.id}>
+                  <div className="rs-review-head">
+                    <span className="rs-review-score">
+                      {review.score} / 10
+                    </span>
+                    <span className="rs-review-date">
+                      {new Date(review.created_at).toLocaleDateString("lt-LT")}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ marginTop: 10, color: "#6c7a88" }}>
-                Dar nėra darbdavių atsiliepimų.
-              </div>
-            )}
-          </div>
-        )}
+
+                  {review.comment?.trim() && <p>{review.comment}</p>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, color: "#6c7a88" }}>
+              Dar nėra darbdavių įvertinimų.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3876,6 +3872,13 @@ function DeleteAccountModal({ open, onClose, accountKind = "paskyra" }) {
 function AccountDeleteZone({ onDelete, description }) {
   return (
     <div className="account-delete-zone">
+      <style>{`
+        .account-delete-zone{margin-top:22px;padding:16px 18px;border:1px solid #efd5cc;border-radius:14px;background:#fffaf8;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+        .account-delete-zone b{display:block;color:#102438;font-size:14px;margin-bottom:4px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.5;max-width:720px}
+        .account-delete-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #e7a894;background:#fff;color:#b64d2a;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(182,77,42,.05);transition:background .15s ease,border-color .15s ease,transform .15s ease}
+        .account-delete-open:hover{background:#fff2ed;border-color:#d98569}.account-delete-open:active{transform:translateY(1px)}
+        @media(max-width:560px){.account-delete-zone{align-items:stretch}.account-delete-open{width:100%}}
+      `}</style>
       <div>
         <b>Paskyros ištrynimas</b>
         <span>
@@ -3901,6 +3904,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [originalSkills, setOriginalSkills] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [workerInvitationPage, setWorkerInvitationPage] = useState(1);
+  const [recentEmployerRatings, setRecentEmployerRatings] = useState([]);
+  const [recentEmployerRatingsLoading, setRecentEmployerRatingsLoading] = useState(false);
   const [workerNotifications, setWorkerNotifications] = useState([]);
   const [confirmedJobs, setConfirmedJobs] = useState([]);
   const [respondingInvitation, setRespondingInvitation] = useState(null);
@@ -4055,10 +4061,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, [user.id]);
 
   useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(invitations.length / DASHBOARD_PAGE_SIZE));
+    setWorkerInvitationPage((current) => Math.min(current, totalPages));
+  }, [invitations.length]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       Promise.all([
         loadInvitations(),
         loadWorkerStats(),
+        loadRecentEmployerRatings(),
         loadEmployerReviewOpportunities(),
         loadLongTermOffers(),
       ]).catch(() => {
@@ -4440,6 +4452,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       await Promise.all([
         loadInvitations(),
         loadWorkerStats(),
+        loadRecentEmployerRatings(),
         loadEmployerReviewOpportunities(),
         loadLongTermOffers(),
       ]);
@@ -4668,6 +4681,20 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       ...current,
       [date]: { ...current[date], ...patch },
     }));
+  }
+
+  async function loadRecentEmployerRatings() {
+    setRecentEmployerRatingsLoading(true);
+    try {
+      const result = await supabase.rpc("get_worker_recent_ratings", {
+        p_worker_id: user.id,
+        p_limit: 3,
+      });
+      if (result.error) throw result.error;
+      setRecentEmployerRatings(result.data || []);
+    } finally {
+      setRecentEmployerRatingsLoading(false);
+    }
   }
 
   async function loadWorkerStats() {
@@ -5785,7 +5812,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
-        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
+        .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
@@ -6531,6 +6558,38 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
         </section>
+
+        <section className="wd-card wd-recent-ratings-card">
+            <div className="eyebrow">PASKUTINIAI DARBDAVIŲ ĮVERTINIMAI</div>
+            <h2 style={{ marginTop: 6 }}>Naujausi įvertinimai apie jus</h2>
+            <p className="wd-card-sub">
+              Rodomi iki 3 naujausių darbdavių įvertinimų. Šiuos įvertinimus taip pat gali matyti darbdaviai, peržiūrėdami jūsų profilį.
+            </p>
+
+            {recentEmployerRatingsLoading ? (
+              <div style={{ color: "#6c7a88" }}>Kraunami įvertinimai...</div>
+            ) : recentEmployerRatings.length ? (
+              <div className="wd-recent-ratings-list">
+                {recentEmployerRatings.map((review) => (
+                  <div className="wd-recent-rating" key={review.id}>
+                    <div className="wd-recent-rating-head">
+                      <b>{review.score} / 10</b>
+                      <span>{new Date(review.created_at).toLocaleDateString("lt-LT")}</span>
+                    </div>
+                    {review.comment?.trim() && <p>{review.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="wd-empty-friendly" style={{ marginTop: 4 }}>
+                <div className="wd-empty-friendly-icon">☆</div>
+                <div>
+                  <b>Dar nėra darbdavių įvertinimų</b>
+                  Kai gausite įvertinimą po užbaigto darbo, naujausi bus rodomi čia.
+                </div>
+              </div>
+            )}
+          </section>
 
         {employerReviewOpportunities.length > 0 && (
           <section
@@ -7314,8 +7373,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </p>
 
             {invitations.length ? (
+              <>
               <div className="wd-invites">
-                {invitations.map((invitation) => {
+                {invitations
+                  .slice(
+                    (workerInvitationPage - 1) * DASHBOARD_PAGE_SIZE,
+                    workerInvitationPage * DASHBOARD_PAGE_SIZE
+                  )
+                  .map((invitation) => {
                   const job = invitation.job;
                   if (!job) return null;
 
@@ -7473,6 +7538,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   );
                 })}
               </div>
+              <DashboardPagination
+                page={workerInvitationPage}
+                totalItems={invitations.length}
+                onPageChange={setWorkerInvitationPage}
+              />
+              </>
             ) : (
               <div className="wd-empty-friendly">
                 <div className="wd-empty-friendly-icon">✓</div>
