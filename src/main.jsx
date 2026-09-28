@@ -18389,6 +18389,7 @@ function AdminDashboard({
   const [ratings, setRatings] = useState([]);
   const [files, setFiles] = useState([]);
   const [teamChats, setTeamChats] = useState([]);
+  const [longTermPlacements, setLongTermPlacements] = useState([]);
   const [auditLog, setAuditLog] = useState([]);
   const [actionDialog, setActionDialog] = useState(null);
   const [actionDays, setActionDays] = useState(7);
@@ -18412,6 +18413,7 @@ function AdminDashboard({
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
+    ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Komandų pokalbiai"],
     ["ratings", "Atsiliepimai"],
     ["files", "Failai"],
@@ -18464,6 +18466,7 @@ function AdminDashboard({
         ratingsResult,
         filesResult,
         teamChatsResult,
+        longTermPlacementsResult,
         auditResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
@@ -18474,6 +18477,7 @@ function AdminDashboard({
         supabase.rpc("get_admin_ratings"),
         supabase.rpc("get_admin_files"),
         supabase.rpc("get_admin_company_team_chats"),
+        supabase.rpc("get_admin_long_term_placements"),
         supabase.rpc("get_admin_audit_log"),
       ]);
 
@@ -18486,6 +18490,7 @@ function AdminDashboard({
         ratingsResult,
         filesResult,
         teamChatsResult,
+        longTermPlacementsResult,
         auditResult,
       ].find((result) => result.error);
 
@@ -18521,6 +18526,7 @@ function AdminDashboard({
       setRatings(ratingsResult.data || []);
       setFiles(fileRows);
       setTeamChats(teamChatsResult.data || []);
+      setLongTermPlacements(longTermPlacementsResult.data || []);
       setAuditLog(auditResult.data || []);
       setError("");
     } catch (err) {
@@ -19061,6 +19067,43 @@ function AdminDashboard({
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  function adminEmploymentStatusLabel(value) {
+    return ({
+      offered: "Laukiama darbuotojo",
+      active: "Aktyvus įdarbinimas",
+      ended: "Įdarbinimas pasibaigęs",
+      declined: "Darbuotojas atmetė",
+      withdrawn: "Pasiūlymas atšauktas",
+    })[value] || value || "—";
+  }
+
+  function adminEmploymentStatusTone(value) {
+    if (value === "active") return "green";
+    if (value === "offered") return "orange";
+    if (value === "ended") return "gray";
+    return "red";
+  }
+
+  const activeLongTermPlacements = longTermPlacements.filter(
+    (item) => item.status === "active"
+  );
+  const pendingLongTermPlacements = longTermPlacements.filter(
+    (item) => item.status === "offered"
+  );
+  const endedLongTermPlacements = longTermPlacements.filter(
+    (item) => item.status === "ended"
+  );
+  const longTermPlacementsThisMonth = longTermPlacements.filter((item) => {
+    if (!item?.created_at) return false;
+    const created = new Date(item.created_at);
+    const now = new Date();
+    return (
+      !Number.isNaN(created.getTime()) &&
+      created.getFullYear() === now.getFullYear() &&
+      created.getMonth() === now.getMonth()
+    );
+  }).length;
+
   if (loading) {
     return (
       <div className="ed-loading">
@@ -19086,7 +19129,7 @@ function AdminDashboard({
         .admin-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
         .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
-        .admin-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
+        .admin-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:11px}
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
         .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
@@ -19123,9 +19166,10 @@ function AdminDashboard({
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
-        @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
+        @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
       `}</style>
 
       <header className="admin-topbar">
@@ -19223,6 +19267,11 @@ function AdminDashboard({
             <div className="admin-kpi">
               <span>Darbuotojai</span>
               <b>{Number(stats.totalWorkers || 0)}</b>
+            </div>
+
+            <div className="admin-kpi">
+              <span>Įdarbinti darbuotojai</span>
+              <b>{activeLongTermPlacements.length}</b>
             </div>
 
             <div className="admin-kpi">
@@ -19762,6 +19811,90 @@ function AdminDashboard({
               </div>
             ) : (
               <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "employment" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Įdarbinti darbuotojai</h2>
+                <div className="admin-muted">
+                  Ilgalaikio įdarbinimo pasiūlymai ir aktyvūs įdarbinimai. Matote, kuri įmonė ir savininkas pateikė pasiūlymą, kam jis pateiktas ir kokia dabartinė būsena.
+                </div>
+              </div>
+              <span className="admin-pill green">
+                {activeLongTermPlacements.length} aktyvūs
+              </span>
+            </div>
+
+            <div className="admin-employment-stats">
+              <div className="admin-employment-stat">
+                <span>Aktyviai įdarbinti</span>
+                <b>{activeLongTermPlacements.length}</b>
+              </div>
+              <div className="admin-employment-stat">
+                <span>Laukiantys pasiūlymai</span>
+                <b>{pendingLongTermPlacements.length}</b>
+              </div>
+              <div className="admin-employment-stat">
+                <span>Pasibaigę įdarbinimai</span>
+                <b>{endedLongTermPlacements.length}</b>
+              </div>
+              <div className="admin-employment-stat">
+                <span>Pasiūlymai šį mėnesį</span>
+                <b>{longTermPlacementsThisMonth}</b>
+              </div>
+            </div>
+
+            {longTermPlacements.length ? (
+              <div className="admin-employment-list">
+                {longTermPlacements.map((placement) => (
+                  <div className="admin-employment-row" key={placement.placement_id}>
+                    <div className="admin-employment-person">
+                      <b>{placement.position_title || "Darbo pozicija"}</b>
+                      <span>
+                        Įdarbino: {placement.company_name || "Įmonė"} · {placement.hired_by_name || "Savininkas"}
+                      </span>
+                    </div>
+
+                    <div className="admin-employment-person">
+                      <b>{placement.worker_name || "Darbuotojas"}</b>
+                      <span>Įdarbintas darbuotojas</span>
+                    </div>
+
+                    <div className="admin-employment-cell">
+                      <span>Sutartis</span>
+                      <b>{longTermContractLabel(placement.contract_type)}</b>
+                      <div className="admin-employment-contract">
+                        nuo {placement.proposed_start_date || "—"}
+                        {placement.proposed_end_date ? ` iki ${placement.proposed_end_date}` : ""}
+                      </div>
+                    </div>
+
+                    <div className="admin-employment-cell">
+                      <span>Būsena</span>
+                      <span className={`admin-pill ${adminEmploymentStatusTone(placement.status)}`}>
+                        {adminEmploymentStatusLabel(placement.status)}
+                      </span>
+                    </div>
+
+                    <div className="admin-employment-cell">
+                      <span>Patvirtinta / sukurta</span>
+                      <b>
+                        {placement.employer_confirmed_at
+                          ? formatAdminDate(placement.employer_confirmed_at)
+                          : formatAdminDate(placement.created_at)}
+                      </b>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-employment-empty">
+                Ilgalaikių įdarbinimo pasiūlymų dar nėra.
+              </div>
             )}
           </section>
         )}
