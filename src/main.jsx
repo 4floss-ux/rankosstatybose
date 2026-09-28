@@ -9057,11 +9057,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             ? loadSavedWorkers(company.id, planSummary)
             : Promise.resolve(),
           loadCompanyTeamChatUnread(company.id, planSummary),
-          loadCompanyLongTermUnreadCounts(company.id),
+          companyMemberRole === "owner"
+            ? loadCompanyLongTermUnreadCounts(company.id, companyMemberRole)
+            : Promise.resolve(),
         ]);
 
-        if (showLongTermEmployment) {
-          await loadCompanyLongTermData(company.id);
+        if (showLongTermEmployment && companyMemberRole === "owner") {
+          await loadCompanyLongTermData(company.id, companyMemberRole);
         }
 
         if (currentJob?.id) {
@@ -9792,8 +9794,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     });
   }
 
-  async function loadCompanyLongTermUnreadCounts(companyId = company?.id) {
-    if (!companyId) return {};
+  async function loadCompanyLongTermUnreadCounts(
+    companyId = company?.id,
+    role = companyMemberRole
+  ) {
+    if (!companyId || role !== "owner") {
+      setLongTermUnreadByOffer({});
+      return {};
+    }
     const result = await supabase.rpc("get_company_long_term_unread_counts", {
       p_company_id: companyId,
     });
@@ -9808,8 +9816,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return unreadMap;
   }
 
-  async function loadCompanyLongTermData(companyId = company?.id) {
-    if (!companyId) return { candidates: [], offers: [] };
+  async function loadCompanyLongTermData(
+    companyId = company?.id,
+    role = companyMemberRole
+  ) {
+    if (!companyId || role !== "owner") {
+      setLongTermCandidates([]);
+      setCompanyLongTermOffers([]);
+      setLongTermUnreadByOffer({});
+      return { candidates: [], offers: [] };
+    }
 
     const [candidatesResult, offersResult, unreadResult] = await Promise.all([
       supabase.rpc("get_company_long_term_candidates", {
@@ -9843,6 +9859,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function openLongTermEmployment(mode = "hire") {
     if (!company?.id) return;
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimo pasiūlymus gali valdyti tik įmonės savininkas.");
+      return;
+    }
     setLongTermModalMode(mode);
     setShowLongTermEmployment(true);
     setLongTermSelectedWorker(null);
@@ -9851,7 +9871,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setLongTermBusy(true);
     setError("");
     try {
-      await loadCompanyLongTermData(company.id);
+      await loadCompanyLongTermData(company.id, companyMemberRole);
       setLongTermOfferForm((current) => ({
         ...current,
         positionTitle: "",
@@ -9876,6 +9896,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function chooseLongTermCandidate(worker) {
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimo pasiūlymą gali rengti tik įmonės savininkas.");
+      return;
+    }
     setLongTermSelectedWorker(worker);
     setLongTermCommitmentSummary(null);
     setLongTermContractFile(null);
@@ -9925,6 +9949,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function submitLongTermOffer() {
     if (!company?.id || !longTermSelectedWorker?.worker_id || longTermBusy) return;
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimo pasiūlymą gali pateikti tik įmonės savininkas.");
+      return;
+    }
 
     if (!longTermOfferForm.positionTitle.trim()) {
       setError("Nurodykite darbo poziciją.");
@@ -10035,7 +10063,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const positionTitle = longTermOfferForm.positionTitle.trim();
       setLongTermContractFile(null);
       setLongTermSelectedWorker(null);
-      await loadCompanyLongTermData(company.id);
+      await loadCompanyLongTermData(company.id, companyMemberRole);
       setNotice(
         `Pasiūlymas pateiktas darbuotojui ${workerName}. Darbuotojui išsiųsta darbo sutartis ir žinutė ją perskaityti, pasirašyti bei įkelti atgal.`
       );
@@ -10070,6 +10098,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function employerConfirmLongTermOffer(offer) {
     if (!offer?.id || longTermBusy) return;
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimą gali patvirtinti tik įmonės savininkas.");
+      return;
+    }
     setLongTermBusy(true);
     setError("");
     try {
@@ -10077,7 +10109,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_placement_id: offer.id,
       });
       if (result.error) throw result.error;
-      await loadCompanyLongTermData(company.id);
+      await loadCompanyLongTermData(company.id, companyMemberRole);
       setNotice(
         result.data === "active"
           ? "Pasirašyta sutartis priimta. Darbuotojo įdarbinimas aktyvuotas ir grafikas pradėjo galioti."
@@ -10101,6 +10133,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function endLongTermEmployment(offer) {
     if (!offer?.id || longTermBusy) return;
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimą gali valdyti tik įmonės savininkas.");
+      return;
+    }
     const confirmed = await askConfirm({
       title: "Užbaigti įdarbinimą?",
       message: `Ar tikrai norite pažymėti ${offer.worker_name || "darbuotojo"} įdarbinimą kaip pasibaigusį?`,
@@ -10118,7 +10154,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_note: null,
       });
       if (result.error) throw result.error;
-      await loadCompanyLongTermData(company.id);
+      await loadCompanyLongTermData(company.id, companyMemberRole);
       setNotice("Įdarbinimas pažymėtas kaip pasibaigęs.");
     } catch (err) {
       setError(err?.message || "Nepavyko užbaigti įdarbinimo.");
@@ -10129,6 +10165,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function withdrawLongTermOffer(offer) {
     if (!offer?.id || longTermBusy) return;
+    if (companyMemberRole !== "owner") {
+      setError("Įdarbinimo pasiūlymą gali atšaukti tik įmonės savininkas.");
+      return;
+    }
     setLongTermBusy(true);
     setError("");
     try {
@@ -10136,7 +10176,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_placement_id: offer.id,
       });
       if (result.error) throw result.error;
-      await loadCompanyLongTermData(company.id);
+      await loadCompanyLongTermData(company.id, companyMemberRole);
       setNotice("Įdarbinimo pasiūlymas atšauktas.");
     } catch (err) {
       setError(err?.message || "Nepavyko atšaukti pasiūlymo.");
@@ -10253,7 +10293,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadedPlan?.can_team_chat
           ? loadCompanyTeamChatUnread(companyId, loadedPlan)
           : Promise.resolve(),
-        loadCompanyLongTermUnreadCounts(companyId),
+        loadedMemberRole === "owner"
+          ? loadCompanyLongTermUnreadCounts(companyId, loadedMemberRole)
+          : Promise.resolve(),
       ]);
 
       setForm((current) => ({
@@ -12928,36 +12970,40 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
-            <button
-              className={`ed-secondary ${
-                Object.values(longTermUnreadByOffer).reduce(
-                  (sum, value) => sum + Number(value || 0),
-                  0
-                ) > 0
-                  ? "wd-workday-chat has-unread"
-                  : ""
-              }`}
-              type="button"
-              onClick={() => openLongTermEmployment("hire")}
-            >
-              {Object.values(longTermUnreadByOffer).reduce(
-                (sum, value) => sum + Number(value || 0),
-                0
-              ) > 0
-                ? `Įdarbinti darbuotoją · ${Object.values(longTermUnreadByOffer).reduce(
+            {companyMemberRole === "owner" && (
+              <>
+                <button
+                  className={`ed-secondary ${
+                    Object.values(longTermUnreadByOffer).reduce(
+                      (sum, value) => sum + Number(value || 0),
+                      0
+                    ) > 0
+                      ? "wd-workday-chat has-unread"
+                      : ""
+                  }`}
+                  type="button"
+                  onClick={() => openLongTermEmployment("hire")}
+                >
+                  {Object.values(longTermUnreadByOffer).reduce(
                     (sum, value) => sum + Number(value || 0),
                     0
-                  )} nauja`
-                : "Įdarbinti darbuotoją"}
-            </button>
+                  ) > 0
+                    ? `Įdarbinti darbuotoją · ${Object.values(longTermUnreadByOffer).reduce(
+                        (sum, value) => sum + Number(value || 0),
+                        0
+                      )} nauja`
+                    : "Įdarbinti darbuotoją"}
+                </button>
 
-            <button
-              className="ed-secondary"
-              type="button"
-              onClick={() => openLongTermEmployment("employees")}
-            >
-              Įdarbinti darbuotojai
-            </button>
+                <button
+                  className="ed-secondary"
+                  type="button"
+                  onClick={() => openLongTermEmployment("employees")}
+                >
+                  Įdarbinti darbuotojai
+                </button>
+              </>
+            )}
 
             <button
               className="ed-secondary"
