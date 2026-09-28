@@ -4275,6 +4275,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
+    if (target === "availability-review") {
+      document
+        .getElementById("worker-availability-alert")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     document
       .getElementById(
         target === "invitations" ? "worker-invitations" : "worker-workdays"
@@ -4304,8 +4311,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user{display:flex;align-items:center;gap:11px}
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
-        .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:12px 13px;min-width:0}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.wd-overview-card b{display:block;margin-top:3px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:4px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}
-        .wd-focus{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding:16px 18px;border:1px solid #dfe7ed;border-radius:15px;background:#fff}.wd-focus.action{border-color:#efc99e;background:#fff9f2}.wd-focus.live{border-color:#cce5d8;background:#f4faf7}.wd-focus.danger{border-color:#efc7bb;background:#fff5f2}.wd-focus-copy b{display:block;color:#102438;font-size:15px;margin-bottom:4px}.wd-focus-copy span{display:block;color:#607180;font-size:12px;line-height:1.5}.wd-focus-btn{border:0;border-radius:9px;background:#102438;color:#fff;padding:10px 13px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}.wd-focus.action .wd-focus-btn{background:#f08a28}.wd-focus.live .wd-focus-btn{background:#1c9b67}.wd-focus.danger .wd-focus-btn{background:#b64d2a}
+        .wd-overview-heading{margin:0 0 9px 2px}
+        .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
         .wd-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1;margin-top:10px}
@@ -4390,8 +4397,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-onboarding-steps{grid-template-columns:1fr}
           .wd-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-heading-actions{width:100%}
-          .wd-focus{align-items:flex-start;flex-direction:column}
-          .wd-focus-btn{width:100%}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
           .wd-day{grid-template-columns:1fr 1fr}
@@ -4531,9 +4536,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
+        <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
+
         <div className="wd-overview">
           <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
-            <span>Nauji kvietimai</span>
+            <div className="wd-overview-card-top">
+              <span>Nauji kvietimai</span>
+              {invitations.length > 0 && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() => openWorkerDashboardTarget("invitations")}
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
             <b>{invitations.length}</b>
             <small>{invitations.length ? "Laukia jūsų atsakymo" : "Naujų kvietimų nėra"}</small>
           </div>
@@ -4543,7 +4561,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               nextConfirmedJob?.work_date === workerDashboardToday ? "live" : ""
             }`}
           >
-            <span>Artimiausias darbas</span>
+            <div className="wd-overview-card-top">
+              <span>Artimiausias darbas</span>
+              {nextConfirmedJob && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() => openWorkerDashboardTarget("workdays")}
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
             <b>
               {nextConfirmedJob
                 ? `${nextConfirmedWorkdayDateLabel} · ${
@@ -4570,7 +4599,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               workerRequiredActionCount ? "danger" : ""
             }`}
           >
-            <span>Reikia veiksmo</span>
+            <div className="wd-overview-card-top">
+              <span>Reikia veiksmo</span>
+              {workerRequiredActionCount > 0 && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() =>
+                    openWorkerDashboardTarget(
+                      needsAvailabilityConfirm ? "availability-review" : "workdays"
+                    )
+                  }
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
             <b>{workerRequiredActionCount}</b>
             <small>
               {workerRequiredActionCount
@@ -4586,7 +4630,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               workerUnreadMessages.length ? "action" : ""
             }`}
           >
-            <span>Naujos žinutės</span>
+            <div className="wd-overview-card-top">
+              <span>Naujos žinutės</span>
+              {workerUnreadMessages.length > 0 && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() => openWorkerDashboardTarget("workdays")}
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
             <b>{workerUnreadMessages.length}</b>
             <small>{workerUnreadMessages.length ? "Atidarykite pokalbį" : "Viskas perskaityta"}</small>
           </div>
@@ -4596,7 +4651,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               workerOpenDisputes.length ? "danger" : ""
             }`}
           >
-            <span>Ginčai</span>
+            <div className="wd-overview-card-top">
+              <span>Ginčai</span>
+              {workerOpenDisputes.length > 0 && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() => openWorkerDashboardTarget("workdays")}
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
             <b>{workerOpenDisputes.length}</b>
             <small>
               {workerOpenDisputes.length
@@ -4606,29 +4672,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 : "Aktyvių ginčų nėra"}
             </small>
           </div>
-        </div>
-
-        <div className={`wd-focus ${workerPrimaryFocus.tone || ""}`}>
-          <div className="wd-focus-copy">
-            <div className="eyebrow">DABAR SVARBIAUSIA</div>
-            <b>{workerPrimaryFocus.title}</b>
-            <span>{workerPrimaryFocus.text}</span>
-          </div>
-
-          <button
-            className="wd-focus-btn"
-            type="button"
-            disabled={
-              workerPrimaryFocus.target === "availability" &&
-              confirmingAvailability
-            }
-            onClick={() => openWorkerDashboardTarget(workerPrimaryFocus.target)}
-          >
-            {workerPrimaryFocus.target === "availability" &&
-            confirmingAvailability
-              ? "Patvirtinama..."
-              : workerPrimaryFocus.action}
-          </button>
         </div>
 
         {showProfileEditor && (
@@ -4878,7 +4921,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {needsAvailabilityConfirm && (
-          <div className="wd-availability-alert">
+          <div id="worker-availability-alert" className="wd-availability-alert" style={{ scrollMarginTop: 88 }}>
             <div>
               <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
               <span>
