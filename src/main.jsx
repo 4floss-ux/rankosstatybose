@@ -2226,6 +2226,212 @@ function ConversationModal({
 }
 
 
+function DisputeConversationModal({
+  open,
+  onClose,
+  attendanceId,
+  title,
+  workerName,
+  companyName,
+  user,
+}) {
+  const [messages, setMessages] = useState([]);
+  const [textValue, setTextValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const messagesRef = useRef(null);
+  const scrollOnLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (!open || !attendanceId) return;
+
+    scrollOnLoadRef.current = true;
+    setMessages([]);
+    loadMessages();
+
+    const timer = window.setInterval(loadMessages, 3000);
+    return () => window.clearInterval(timer);
+  }, [open, attendanceId]);
+
+  useEffect(() => {
+    if (!open || loading || !scrollOnLoadRef.current || !messagesRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (messagesRef.current) {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      }
+      scrollOnLoadRef.current = false;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [open, loading, messages]);
+
+  async function loadMessages() {
+    if (!attendanceId) return;
+
+    setLoading(true);
+    setError("");
+    try {
+      const result = await supabase.rpc(
+        "get_attendance_dispute_chat_messages",
+        { p_attendance_id: attendanceId }
+      );
+
+      if (result.error) throw result.error;
+      setMessages(result.data || []);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti ginčo žinučių.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    const body = textValue.trim();
+    if (!body || !attendanceId || sending) return;
+
+    setSending(true);
+    setError("");
+    try {
+      const result = await supabase.rpc(
+        "send_attendance_dispute_chat_message",
+        {
+          p_attendance_id: attendanceId,
+          p_body: body,
+        }
+      );
+
+      if (result.error) throw result.error;
+
+      setTextValue("");
+      scrollOnLoadRef.current = true;
+      await loadMessages();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function senderLabel(message) {
+    if (message.sender_role === "admin") return "Administratorius";
+    if (message.sender_role === "worker") {
+      return message.sender_name || workerName || "Darbuotojas";
+    }
+    if (message.sender_role === "employer") {
+      return message.sender_name || companyName || "Darbdavys";
+    }
+    return message.sender_name || "Vartotojas";
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="rs-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="rs-modal-card">
+        <style>{`
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .rs-modal-card{width:min(680px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+          .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;color:#6c7a88;font-size:12px}
+          .dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 8px}
+          .rs-messages{display:grid;gap:10px;max-height:390px;overflow:auto;padding:4px 2px 12px}
+          .rs-message{max-width:82%;border-radius:12px;padding:10px 12px;background:#f2f5f7}
+          .rs-message.mine{margin-left:auto;background:#fff3e7}
+          .rs-message.admin{border:1px solid #cfe0ec;background:#f3f8fb}
+          .rs-message b{display:block;font-size:12px;margin-bottom:4px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45}
+          .rs-message time{display:block;margin-top:5px;font-size:11px;color:#7a8996}
+          .rs-msg-form{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #e5ebef;padding-top:14px}
+          .rs-msg-form textarea{min-height:48px;max-height:120px;resize:vertical;border:1px solid #dbe4ea;border-radius:10px;padding:11px;font:inherit}
+          .rs-msg-form button{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:0 16px;font:inherit;font-weight:800;cursor:pointer}
+          .rs-msg-form button:disabled{opacity:.6}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:9px;padding:10px;margin-bottom:10px;font-size:13px}
+          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
+        `}</style>
+
+        <div className="rs-modal-head">
+          <div>
+            <div className="eyebrow">GINČO POKALBIS</div>
+            <h2>{title || "Ginčo aptarimas"}</h2>
+            <div className="dispute-parties">
+              {workerName && <span className="dispute-party">Darbuotojas: {workerName}</span>}
+              {companyName && <span className="dispute-party">Darbdavys: {companyName}</span>}
+              <span className="dispute-party">Administratorius</span>
+            </div>
+          </div>
+          <button className="rs-close" onClick={onClose}>
+            <CloseMark />
+          </button>
+        </div>
+
+        {error && <div className="rs-error">{error}</div>}
+
+        <div className="rs-messages" ref={messagesRef}>
+          {loading && !messages.length ? (
+            <div className="rs-empty">Kraunama...</div>
+          ) : messages.length ? (
+            messages.map((message) => {
+              const mine = message.sender_id === user?.id;
+              const className = [
+                "rs-message",
+                mine ? "mine" : "",
+                message.sender_role === "admin" ? "admin" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              return (
+                <div className={className} key={message.message_id}>
+                  <b>{mine ? "Jūs" : senderLabel(message)}</b>
+                  <p>{message.body}</p>
+                  <time>
+                    {new Date(message.created_at).toLocaleString("lt-LT", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </time>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rs-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
+          )}
+        </div>
+
+        <form className="rs-msg-form" onSubmit={sendMessage}>
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent?.isComposing
+              ) {
+                e.preventDefault();
+                if (!sending && textValue.trim()) sendMessage(e);
+              }
+            }}
+            maxLength={2000}
+            placeholder="Parašykite žinutę abiem ginčo pusėms..."
+          />
+          <button disabled={sending || !textValue.trim()}>
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
 function GroupConversationModal({
   open,
   onClose,
