@@ -11082,31 +11082,36 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             Profilis
                           </button>
 
-                          <button
-                            className="ed-secondary ed-chat-alert-btn"
-                            onClick={() =>
-                              openEmployerGroupConversation(currentJob)
-                            }
-                          >
-                            {planSummary?.can_job_chat
-                              ? "Darbo pokalbis"
-                              : "Darbo pokalbis · Business"}
-                            {unreadEmployerGroupChatNotifications(
-                              currentJob.id
-                            ).length > 0 && (
-                              <span
-                                className="ed-chat-alert"
-                                title="Nauja žinutė darbo pokalbyje"
-                              >
-                                {Math.min(
-                                  9,
-                                  unreadEmployerGroupChatNotifications(
-                                    currentJob.id
-                                  ).length
-                                )}
-                              </span>
-                            )}
-                          </button>
+                          {worker.invitationId && (
+                            <button
+                              className="ed-secondary ed-chat-alert-btn"
+                              onClick={() =>
+                                openEmployerPrivateConversation(
+                                  worker.invitationId,
+                                  `${worker.name} · ${currentJob.title}`
+                                )
+                              }
+                            >
+                              {planSummary?.can_job_chat
+                                ? "Privati žinutė"
+                                : "Privati žinutė · Business"}
+                              {unreadEmployerPrivateChatNotifications(
+                                worker.invitationId
+                              ).length > 0 && (
+                                <span
+                                  className="ed-chat-alert"
+                                  title="Nauja privati žinutė"
+                                >
+                                  {Math.min(
+                                    9,
+                                    unreadEmployerPrivateChatNotifications(
+                                      worker.invitationId
+                                    ).length
+                                  )}
+                                </span>
+                              )}
+                            </button>
+                          )}
 
                           {checkInOpen &&
                             isConfirmed &&
@@ -11598,7 +11603,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         type="button"
                         onClick={() => openEmployerGroupConversation(job)}
                       >
-                        {planSummary?.can_job_chat ? "Pokalbis" : "Pokalbis · Business"}
+                        {planSummary?.can_job_chat ? "Darbo pokalbis" : "Darbo pokalbis · Business"}
                         {unreadGroupMessages.length > 0 && (
                           <span className="ed-job-chat-new">
                             Nauja {Math.min(9, unreadGroupMessages.length)}
