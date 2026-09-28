@@ -5518,7 +5518,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
-        .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.wd-stats-toggle{width:34px;height:34px;border:1px solid #dbe4ea;border-radius:10px;background:#fff;color:#102438;display:grid;place-items:center;font-size:22px;font-weight:500;line-height:1;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}.wd-stats-toggle:hover{border-color:#f0a55c;background:#fff8f1}.wd-stats-toggle:active{transform:scale(.97)}.wd-stats-toggle span{display:block;transform:translateY(-1px)}
+        .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;min-height:34px;border:1px solid #dbe4ea;border-radius:999px;background:#fff;color:#526374;padding:7px 12px;font:inherit;font-size:12px;font-weight:800;line-height:1;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease}.wd-stats-toggle:hover{border-color:#f0a55c;background:#fff8f1;color:#9c5417}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}
         .wd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:0;animation:wdStatsReveal .18s ease-out}
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:flex-start;min-height:104px}
@@ -5564,7 +5564,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
-        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-head{display:flex;align-items:center;gap:14px;min-width:0}.wd-workday-head-main{min-width:0;flex:1}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-company-meta-line{min-width:0}.wd-company-badge{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;border:1px solid #dbe4ea;background:#fff;color:#102438;font-weight:800;box-shadow:0 1px 2px rgba(16,36,56,.04);flex:0 0 auto}.wd-workday-head .wd-company-badge{align-self:center}.wd-company-badge img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:12%;background:#fff}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-long-term-offer-card{border:1px solid #e4ebf0;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.58fr) minmax(260px,.72fr);gap:18px;align-items:center;background:#fff;overflow:hidden}.wd-long-term-offer-info{min-width:0}.wd-long-term-offer-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));align-items:center;gap:8px;min-width:0;max-width:340px;justify-self:end}.wd-long-term-offer-actions>button{width:100%;min-width:0;min-height:38px;padding:8px 13px;font-size:13px;line-height:1.2;border-radius:10px;position:relative}.wd-long-term-offer-status{display:grid;align-content:center;justify-items:center;gap:5px;min-width:190px;padding:6px 10px;text-align:center}.wd-long-term-status-label{display:block;font-size:11px;letter-spacing:.08em;font-weight:850;color:#7b8a97}.wd-long-term-status-main{display:block;font-size:13px;line-height:1.35;font-weight:850;color:#667788;max-width:240px}.wd-long-term-status-main.orange{color:#b85f0e}.wd-long-term-status-main.green{color:#167a54}.wd-long-term-status-main.muted{color:#667788}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-workday-chat{position:relative}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
+        .wd-workdays{display:grid;gap:10px}.wd-workday{border:1px solid #e4ebf0;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.wd-workday-head{display:flex;align-items:center;gap:14px;min-width:0}.wd-workday-head-main{min-width:0;flex:1}.wd-workday-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.wd-workday h3{margin:0;font-size:18px}.wd-workday-title{margin-bottom:5px}.wd-workday-phase{display:inline-flex;align-items:center;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;line-height:1.2}.wd-workday-phase.upcoming{background:#eaf2fb;color:#245d89}.wd-workday-phase.today{background:#edf8f3;color:#167a54}.wd-workday-phase.past{background:#fff3e7;color:#9c5417}.wd-workday-phase.done{background:#edf8f3;color:#167a54}.wd-workday-phase.cancelled{background:#fff0ec;color:#b64d2a}.wd-workday-meta{color:#6c7a88;font-size:13px;line-height:1.55}.wd-company-meta-line{min-width:0}.wd-company-badge{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;border:1px solid #dbe4ea;background:#fff;color:#102438;font-weight:800;box-shadow:0 1px 2px rgba(16,36,56,.04);flex:0 0 auto}.wd-workday-head .wd-company-badge{align-self:center}.wd-company-badge img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;padding:12%;background:#fff}.wd-workday-actions{display:grid;grid-template-columns:1fr;gap:6px;justify-content:stretch;width:160px}.wd-workday-actions>button{width:100%;min-height:38px;justify-content:center;padding:7px 10px;font-size:13px;line-height:1.2}.wd-long-term-offer-card{border:1px solid #e4ebf0;border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.58fr) minmax(260px,.72fr);gap:18px;align-items:center;background:#fff;overflow:hidden}.wd-long-term-offer-info{min-width:0}.wd-long-term-offer-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));align-items:center;gap:8px;min-width:0;max-width:340px;justify-self:end}.wd-long-term-offer-actions>button{width:100%;min-width:0;min-height:38px;padding:8px 13px;font-size:13px;line-height:1.2;border-radius:10px;position:relative}.wd-long-term-offer-status{display:flex;align-items:center;justify-content:center;min-width:190px;padding:6px 10px;text-align:center}.wd-long-term-status-label{display:none}.wd-long-term-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:260px;border-radius:999px;padding:6px 10px;font-size:12px;line-height:1.25;font-weight:850;color:#667788;background:#f1f4f6}.wd-long-term-status-main.orange{color:#b85f0e;background:#fff3e7}.wd-long-term-status-main.green{color:#167a54;background:#edf8f3}.wd-long-term-status-main.muted{color:#667788;background:#f1f4f6}.wd-workday-status{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-top:8px}.wd-workday-title .wd-workday-status{margin-top:0;padding:5px 8px;font-size:11px;line-height:1.2}.wd-workday-status.orange{background:#fff3e7;color:#b85f0e}.wd-workday-status.green{background:#edf8f3;color:#167a54}.wd-workday-status.red{background:#fff0ec;color:#b64d2a}.wd-workday-status.muted{background:#f1f4f6;color:#667788}.wd-workday-chat.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-workday-chat{position:relative}.wd-next-step{margin-top:11px;padding:10px 12px;border-left:3px solid #d7e0e7;border-radius:0 10px 10px 0;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.45}.wd-next-step b{display:block;color:#102438;margin-bottom:2px}.wd-next-step.action{border-left-color:#f08a28;background:#fff8f1}.wd-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}.wd-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
@@ -5610,7 +5610,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-day-date{grid-column:1/-1}.wd-day-occupied-note{grid-column:1/-1}
           .wd-availability-choice{grid-column:1/-1}
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
-          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}.wd-long-term-offer-card{grid-template-columns:1fr}.wd-long-term-offer-status{justify-items:start;text-align:left;min-width:0;padding:4px 0}.wd-long-term-offer-actions{width:100%;max-width:none;grid-template-columns:1fr}
+          .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}.wd-long-term-offer-card{grid-template-columns:1fr}.wd-long-term-offer-status{justify-content:flex-start;text-align:left;min-width:0;padding:4px 0}.wd-long-term-offer-actions{width:100%;max-width:none;grid-template-columns:1fr}
           .wd-heading-actions{justify-items:start}
           .wd-availability-alert{align-items:stretch;flex-direction:column}
           .wd-availability-alert-actions{justify-content:flex-start}
@@ -6201,14 +6201,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-stats-head">
             <div className="eyebrow">MANO STATISTIKA</div>
             <button
-              className="wd-stats-toggle"
+              className={`wd-stats-toggle ${showWorkerStats ? "open" : ""}`}
               type="button"
               aria-expanded={showWorkerStats}
               aria-label={showWorkerStats ? "Slėpti mano statistiką" : "Rodyti mano statistiką"}
-              title={showWorkerStats ? "Slėpti statistiką" : "Rodyti statistiką"}
               onClick={() => setShowWorkerStats((current) => !current)}
             >
-              <span>{showWorkerStats ? "−" : "+"}</span>
+              {showWorkerStats ? "Slėpti statistiką" : "Rodyti statistiką"}
             </button>
           </div>
 
@@ -6382,7 +6381,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
 
                   <div className="wd-long-term-offer-status">
-                    <div className="wd-long-term-status-label">BŪSENA</div>
                     <div
                       className={`wd-long-term-status-main ${longTermWorkerUpdateTone(
                         offer
@@ -8961,6 +8959,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
   const [jobInfoTarget, setJobInfoTarget] = useState(null);
+  const [jobInfoWorkers, setJobInfoWorkers] = useState([]);
+  const [jobInfoWorkersLoading, setJobInfoWorkersLoading] = useState(false);
   const [matches, setMatches] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
   const [invitationStatuses, setInvitationStatuses] = useState({});
@@ -10916,6 +10916,94 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function openJobInformation(job) {
+    if (!job?.id) return;
+
+    setJobInfoTarget(job);
+    setJobInfoWorkers([]);
+    setJobInfoWorkersLoading(true);
+
+    try {
+      const bookingsResult = await supabase
+        .from("bookings")
+        .select("id, worker_id, status, confirmed_at")
+        .eq("job_id", job.id)
+        .order("confirmed_at", { ascending: true });
+
+      if (bookingsResult.error) throw bookingsResult.error;
+
+      const bookingRows = (bookingsResult.data || []).filter(
+        (row) => !["cancelled_by_worker", "cancelled_by_employer"].includes(row.status)
+      );
+      const workerIds = [...new Set(bookingRows.map((row) => row.worker_id).filter(Boolean))];
+      const bookingIds = bookingRows.map((row) => row.id).filter(Boolean);
+
+      if (!workerIds.length) {
+        setJobInfoWorkers([]);
+        return;
+      }
+
+      const [profilesResult, workerProfilesResult, attendanceResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, display_name, city")
+          .in("id", workerIds),
+        supabase.rpc("get_employer_worker_profiles", {
+          p_job_id: job.id,
+          p_worker_ids: workerIds,
+        }),
+        bookingIds.length
+          ? supabase
+              .from("attendance")
+              .select("booking_id, final_outcome, employer_outcome, worked_minutes, finalized_at")
+              .in("booking_id", bookingIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      const failed = [profilesResult, workerProfilesResult, attendanceResult].find(
+        (result) => result?.error
+      );
+      if (failed?.error) throw failed.error;
+
+      const profileMap = new Map(
+        (profilesResult.data || []).map((row) => [row.id, row])
+      );
+      const workerProfileMap = new Map(
+        (workerProfilesResult.data || []).map((row) => [row.user_id, row])
+      );
+      const attendanceMap = new Map(
+        (attendanceResult.data || []).map((row) => [row.booking_id, row])
+      );
+
+      setJobInfoWorkers(
+        bookingRows
+          .map((booking) => {
+            const profile = profileMap.get(booking.worker_id);
+            const workerProfile = workerProfileMap.get(booking.worker_id);
+            if (!profile) return null;
+
+            const attendance = attendanceMap.get(booking.id) || null;
+            return {
+              id: booking.worker_id,
+              bookingId: booking.id,
+              name: shortWorkerName(profile.display_name),
+              initials: workerInitials(profile.display_name),
+              city: profile.city || "",
+              avatarUrl: workerAvatarUrl(workerProfile?.avatar_path),
+              bookingStatus: booking.status,
+              attendance,
+            };
+          })
+          .filter(Boolean)
+      );
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti dirbusių darbuotojų.");
+      setJobInfoWorkers([]);
+    } finally {
+      setJobInfoWorkersLoading(false);
+    }
+  }
+
   async function loadCurrentJobWorkers(jobId) {
     if (!jobId) {
       setJobWorkers([]);
@@ -12736,7 +12824,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr;gap:8px;min-width:210px}.ed-attendance-row>.ed-attendance-actions{display:grid;grid-template-columns:1fr;gap:8px;min-width:190px;width:190px}.ed-attendance-row>.ed-attendance-actions>button{width:100%;min-height:44px;justify-content:center}
         .ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
         .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
-        .ed-progress{font-size:12px;font-weight:800;color:#102438}.ed-job-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:stretch;justify-content:center}.ed-job-actions button{width:100%;min-height:34px;padding:7px 8px!important;font-size:12px!important}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
+        .ed-progress{font-size:12px;font-weight:800;color:#102438}.ed-job-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:stretch;justify-content:center}.ed-job-actions.single{grid-template-columns:1fr}.ed-job-actions button{width:100%;min-height:34px;padding:7px 8px!important;font-size:12px!important}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
@@ -14567,11 +14655,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       )}
                     </div>
 
-                    <div className="ed-job-actions">
+                    <div className={`ed-job-actions ${job.status === "completed" ? "single" : ""}`}>
                       {job.status === "completed" ? (
                         <button
                           type="button"
-                          onClick={() => setJobInfoTarget(job)}
+                          onClick={() => openJobInformation(job)}
                         >
                           Darbo informacija
                         </button>
@@ -14731,10 +14819,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       )}
                     </div>
 
-                    <div className="ed-job-actions">
+                    <div className="ed-job-actions single">
                       <button
                         type="button"
-                        onClick={() => setJobInfoTarget(job)}
+                        onClick={() => openJobInformation(job)}
                       >
                         Darbo informacija
                       </button>
@@ -15441,7 +15529,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         <div
           className="ed-saved-overlay"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setJobInfoTarget(null);
+            if (e.target === e.currentTarget) {
+              setJobInfoTarget(null);
+              setJobInfoWorkers([]);
+            }
           }}
         >
           <div className="ed-saved-modal" style={{ width: "min(760px, 100%)" }}>
@@ -15455,7 +15546,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 className="rs-close"
                 type="button"
                 aria-label="Uždaryti darbo informaciją"
-                onClick={() => setJobInfoTarget(null)}
+                onClick={() => {
+                  setJobInfoTarget(null);
+                  setJobInfoWorkers([]);
+                }}
               >
                 <CloseMark />
               </button>
@@ -15514,6 +15608,101 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div style={{ marginTop: 6, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
                 {jobInfoTarget.description?.trim() || "Darbo aprašymas nepateiktas."}
               </div>
+            </div>
+
+
+            <div
+              style={{
+                marginTop: 10,
+                border: "1px solid #e4ebf0",
+                borderRadius: 12,
+                padding: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div>
+                  <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbo komanda</div>
+                  <b style={{ display: "block", marginTop: 4 }}>Dirbę darbuotojai</b>
+                </div>
+                {!jobInfoWorkersLoading && jobInfoWorkers.length > 0 && (
+                  <span className="ed-attendance-badge green" style={{ marginTop: 0 }}>
+                    {jobInfoWorkers.length} {jobInfoWorkers.length === 1 ? "darbuotojas" : "darbuotojai"}
+                  </span>
+                )}
+              </div>
+
+              {jobInfoWorkersLoading ? (
+                <div style={{ marginTop: 12, color: "#6c7a88", fontSize: 12 }}>
+                  Kraunami darbuotojai...
+                </div>
+              ) : jobInfoWorkers.length ? (
+                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                  {jobInfoWorkers.map((worker) => {
+                    const outcome = attendanceOutcomeLabel(worker.attendance);
+                    const worked = Number(worker.attendance?.worked_minutes || 0);
+                    return (
+                      <div
+                        key={`${jobInfoTarget.id}-${worker.bookingId}`}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "auto minmax(0,1fr) auto",
+                          alignItems: "center",
+                          gap: 11,
+                          padding: "10px 11px",
+                          border: "1px solid #edf1f4",
+                          borderRadius: 11,
+                          background: "#f8fafb",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: "50%",
+                            display: "grid",
+                            placeItems: "center",
+                            overflow: "hidden",
+                            background: "#eef2f5",
+                            color: "#102438",
+                            fontWeight: 800,
+                            flex: "0 0 38px",
+                          }}
+                        >
+                          {worker.avatarUrl ? (
+                            <img
+                              src={worker.avatarUrl}
+                              alt={worker.name}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                            />
+                          ) : (
+                            worker.initials
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <b style={{ display: "block" }}>{worker.name}</b>
+                          <span style={{ display: "block", marginTop: 2, color: "#6c7a88", fontSize: 12 }}>
+                            {worker.city || "Miestas nenurodytas"}
+                          </span>
+                        </div>
+                        <span className={`ed-attendance-badge ${
+                          worker.attendance?.final_outcome === "no_show" ||
+                          worker.attendance?.final_outcome === "left_early_unexcused"
+                            ? "red"
+                            : worker.attendance?.finalized_at
+                            ? "green"
+                            : "muted"
+                        }`} style={{ marginTop: 0, textAlign: "center" }}>
+                          {outcome}{worked > 0 ? ` · ${formatWorkedMinutes(worked)}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ marginTop: 12, color: "#6c7a88", fontSize: 12 }}>
+                  Šiam darbui dirbusių darbuotojų nėra.
+                </div>
+              )}
             </div>
           </div>
         </div>
