@@ -10242,16 +10242,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     savedWorkerIdSet.has(worker.id)
   ).length;
 
+  const myEmployerJobs = jobs.filter((job) => {
+    const responsibleUserId = job.responsible_user_id || null;
+
+    // „Mano darbai“ reiškia darbus, už kuriuos šiuo metu atsakingas
+    // prisijungęs įmonės naudotojas. Tik seniems darbams, kuriuose dar nėra
+    // responsible_user_id, paliekamas created_by fallback.
+    if (responsibleUserId) return responsibleUserId === user.id;
+    return job.created_by === user.id;
+  });
+
   const visibleJobs =
-    planSummary?.can_team_management &&
-    (jobScope === "mine" || !canSeeAllCompanyJobs)
-      ? jobs.filter((job) => {
-          const responsibleUserId = job.responsible_user_id || null;
-          return responsibleUserId
-            ? responsibleUserId === user.id
-            : job.created_by === user.id;
-        })
-      : jobs;
+    jobScope === "all" && canSeeAllCompanyJobs ? jobs : myEmployerJobs;
 
   const activeVisibleJobs = visibleJobs.filter(
     (job) => !["completed", "cancelled"].includes(job.status)
@@ -12084,18 +12086,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             }}
           >
             <div>
-              <h2 style={{ marginBottom: 6 }}>
+              <h2 style={{ marginBottom: 6 }}>Aktyvūs darbai</h2>
+              <p className="ed-sub">
                 {planSummary?.can_team_management
                   ? jobScope === "mine"
-                    ? "Mano darbai"
-                    : "Visi įmonės darbai"
-                  : "Mano poreikiai"}
-              </h2>
-              {!planSummary?.can_team_management && (
-                <p className="ed-sub">
-                  Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas.
-                </p>
-              )}
+                    ? "Rodomi tik darbai, už kuriuos esate atsakingas."
+                    : "Rodomi visi aktyvūs įmonės darbai."
+                  : "Galite vėl atidaryti ankstesnį poreikį ir patikrinti, kas dabar laisvas."}
+              </p>
             </div>
 
             {canSeeAllCompanyJobs && (
@@ -12334,12 +12332,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <section className="ed-card">
           <div>
-            <h2 style={{ marginBottom: 6 }}>Darbų istorija</h2>
+            <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
             <p className="ed-sub">
-              Čia saugomi užbaigti ir atšaukti
+              Čia rodomi užbaigti ir atšaukti
               {planSummary?.can_team_management && jobScope === "all"
                 ? " įmonės"
-                : " jūsų"} darbai.
+                : " tik jūsų atsakomybės"} darbai.
             </p>
           </div>
 
