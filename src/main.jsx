@@ -6576,12 +6576,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 }}
               >
                 <div style={{ color: "#6c7a88", fontSize: 12 }}>
-                  Darbo adresas
+                  Atvykti adresu
                 </div>
                 <b style={{ display: "block", marginTop: 4 }}>
                   {workdayDetailsTarget.job?.address_text ||
                     workdayDetailsTarget.job?.city ||
-                    "Adresas nenurodytas"}
+                    "Atvykimo adresas nenurodytas"}
                 </b>
               </div>
 
@@ -7155,7 +7155,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {arrivalHelpTarget.job?.title} · {arrivalHelpTarget.job?.work_date}
               </div>
               <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                {arrivalHelpTarget.job?.address_text || "Adresas nenurodytas"}
+                Atvykti adresu: {arrivalHelpTarget.job?.address_text || "Atvykimo adresas nenurodytas"}
               </div>
             </div>
 
@@ -7427,7 +7427,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
                 {confirmInvitation.companyName} · {confirmInvitation.job?.city}
                 <br />
-                Darbo adresas: <b>{confirmInvitation.job?.address_text || "Adresas nenurodytas"}</b>
+                Atvykti adresu: <b>{confirmInvitation.job?.address_text || "Atvykimo adresas nenurodytas"}</b>
                 <br />
                 Darbdavio patikimumas:{" "}
                 <b
@@ -9972,7 +9972,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (!form.address.trim()) {
-      const message = "Įrašykite objekto vietą / adresą, kad darbuotojas žinotų, kur atvykti.";
+      const message = "Įrašykite adresą, kuriuo darbuotojas turi atvykti.";
       setJobFormErrors({ address: message });
       requestAnimationFrame(() => {
         addressInputRef.current?.focus();
@@ -11713,7 +11713,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </label>
 
             <label className="ed-label ed-span-2">
-              Objekto vieta / adresas *
+              Atvykti adresu *
               <input
                 ref={addressInputRef}
                 className="ed-input"
@@ -12121,7 +12121,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-current-job-grid">
                 {[
                   ["Miestas", currentJob.city || "—"],
-                  ["Adresas", currentJob.address_text || "—"],
+                  ["Atvykti adresu", currentJob.address_text || "—"],
                   ["Data", currentJob.work_date || "—"],
                   [
                     "Darbo laikas",
@@ -13902,7 +13902,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
               {[
                 ["Miestas", jobInfoTarget.city || "—"],
-                ["Adresas", jobInfoTarget.address_text || "—"],
+                ["Atvykti adresu", jobInfoTarget.address_text || "—"],
                 ["Data", jobInfoTarget.work_date || "—"],
                 [
                   "Darbo laikas",
@@ -17890,7 +17890,7 @@ function AdminDashboard({
                   />
                 </label>
                 <label className="admin-label">
-                  Adresas
+                  Atvykti adresu
                   <input
                     className="admin-input"
                     value={editorForm.addressText}
