@@ -3675,6 +3675,68 @@ function WorkerProfileModal({
   );
 }
 
+const DASHBOARD_PAGE_SIZE = 5;
+
+function DashboardPagination({ page, totalItems, onPageChange }) {
+  const totalPages = Math.max(1, Math.ceil(Number(totalItems || 0) / DASHBOARD_PAGE_SIZE));
+  if (totalPages <= 1) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        marginTop: 14,
+        flexWrap: "wrap",
+      }}
+    >
+      <button
+        type="button"
+        disabled={page <= 1}
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        style={{
+          border: "1px solid #dbe4ea",
+          background: "#fff",
+          color: "#102438",
+          borderRadius: 10,
+          padding: "9px 13px",
+          font: "inherit",
+          fontWeight: 800,
+          cursor: page <= 1 ? "not-allowed" : "pointer",
+          opacity: page <= 1 ? 0.45 : 1,
+        }}
+      >
+        Ankstesnis
+      </button>
+
+      <span style={{ color: "#6c7a88", fontSize: 12, fontWeight: 700 }}>
+        {page} / {totalPages}
+      </span>
+
+      <button
+        type="button"
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        style={{
+          border: "1px solid #dbe4ea",
+          background: "#fff",
+          color: "#102438",
+          borderRadius: 10,
+          padding: "9px 13px",
+          font: "inherit",
+          fontWeight: 800,
+          cursor: page >= totalPages ? "not-allowed" : "pointer",
+          opacity: page >= totalPages ? 0.45 : 1,
+        }}
+      >
+        Sekantis puslapis
+      </button>
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -3704,6 +3766,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showWorkerStats, setShowWorkerStats] = useState(false);
+  const [workerActivePage, setWorkerActivePage] = useState(1);
+  const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
   const workerProfileEditorRef = useRef(null);
 
   useEffect(() => {
@@ -5269,9 +5333,27 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (item) => !workerWorkdayIsHistory(item)
   );
   const workerWorkHistory = workdays.filter(workerWorkdayIsHistory);
+  const pagedActiveWorkerWorkdays = activeWorkerWorkdays.slice(
+    (workerActivePage - 1) * DASHBOARD_PAGE_SIZE,
+    workerActivePage * DASHBOARD_PAGE_SIZE
+  );
+  const pagedWorkerWorkHistory = workerWorkHistory.slice(
+    (workerHistoryPage - 1) * DASHBOARD_PAGE_SIZE,
+    workerHistoryPage * DASHBOARD_PAGE_SIZE
+  );
   const activeWorkerJobIds = new Set(
     activeWorkerWorkdays.map((item) => item.job?.id).filter(Boolean)
   );
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(activeWorkerWorkdays.length / DASHBOARD_PAGE_SIZE));
+    if (workerActivePage > totalPages) setWorkerActivePage(totalPages);
+  }, [activeWorkerWorkdays.length, workerActivePage]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(workerWorkHistory.length / DASHBOARD_PAGE_SIZE));
+    if (workerHistoryPage > totalPages) setWorkerHistoryPage(totalPages);
+  }, [workerWorkHistory.length, workerHistoryPage]);
 
   const workerTodayJobs = workdays.filter(
     (item) =>
@@ -6327,6 +6409,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
+        {longTermOffers.length > 0 && (
         <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
           <div
             style={{
@@ -6352,8 +6435,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </div>
 
-          {longTermOffers.length ? (
-            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+          <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
               {longTermOffers.map((offer) => (
                 <div
                   key={offer.id}
@@ -6431,21 +6513,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               ))}
             </div>
-          ) : (
-            <div
-              style={{
-                marginTop: 14,
-                padding: "18px 14px",
-                borderRadius: 12,
-                background: "#f7f9fb",
-                color: "#6c7a88",
-                textAlign: "center",
-              }}
-            >
-              Įdarbinimo pasiūlymų kol kas nėra.
-            </div>
-          )}
         </section>
+        )}
 
         <div className="wd-form">
           <section className="wd-card" id="worker-workdays">
@@ -6456,8 +6525,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </p>
 
             {activeWorkerWorkdays.length ? (
+              <>
               <div className="wd-workdays">
-                {activeWorkerWorkdays.map((item) => {
+                {pagedActiveWorkerWorkdays.map((item) => {
                   const job = item.job;
                   const attendance = item.attendance || {};
                   const ended = jobHasEnded(job);
@@ -6915,6 +6985,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   );
                 })}
               </div>
+              <DashboardPagination
+                page={workerActivePage}
+                totalItems={activeWorkerWorkdays.length}
+                onPageChange={setWorkerActivePage}
+              />
+              </>
             ) : (
               <div style={{ color: "#6c7a88" }}>
                 Šiuo metu aktyvių ar laukiamų darbų nėra.
@@ -6930,8 +7006,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </p>
 
             {workerWorkHistory.length ? (
+              <>
               <div className="wd-workdays">
-                {workerWorkHistory.map((item) => {
+                {pagedWorkerWorkHistory.map((item) => {
                   const job = item.job;
                   const attendance = item.attendance || {};
                   if (!job) return null;
@@ -7030,6 +7107,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   );
                 })}
               </div>
+              <DashboardPagination
+                page={workerHistoryPage}
+                totalItems={workerWorkHistory.length}
+                onPageChange={setWorkerHistoryPage}
+              />
+              </>
             ) : (
               <div style={{ color: "#6c7a88" }}>
                 Užbaigtų darbų istorijos kol kas nėra.
@@ -8927,6 +9010,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [teamActionBusy, setTeamActionBusy] = useState(false);
   const [lastTeamInviteLink, setLastTeamInviteLink] = useState("");
   const [jobScope, setJobScope] = useState("mine");
+  const [employerActivePage, setEmployerActivePage] = useState(1);
+  const [employerHistoryPage, setEmployerHistoryPage] = useState(1);
   const [teamInviteForm, setTeamInviteForm] = useState({
     displayName: "",
     email: "",
@@ -12435,6 +12520,30 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     ["completed", "cancelled"].includes(job.status)
   );
 
+  const pagedActiveVisibleJobs = activeVisibleJobs.slice(
+    (employerActivePage - 1) * DASHBOARD_PAGE_SIZE,
+    employerActivePage * DASHBOARD_PAGE_SIZE
+  );
+  const pagedEmployerJobHistory = employerJobHistory.slice(
+    (employerHistoryPage - 1) * DASHBOARD_PAGE_SIZE,
+    employerHistoryPage * DASHBOARD_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setEmployerActivePage(1);
+    setEmployerHistoryPage(1);
+  }, [jobScope]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(activeVisibleJobs.length / DASHBOARD_PAGE_SIZE));
+    if (employerActivePage > totalPages) setEmployerActivePage(totalPages);
+  }, [activeVisibleJobs.length, employerActivePage]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(employerJobHistory.length / DASHBOARD_PAGE_SIZE));
+    if (employerHistoryPage > totalPages) setEmployerHistoryPage(totalPages);
+  }, [employerJobHistory.length, employerHistoryPage]);
+
   const employerDashboardToday = localDateISO(new Date());
 
   function employerJobDashboardState(job) {
@@ -14526,7 +14635,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div className="ed-jobs">
-              {activeVisibleJobs.map((job) => {
+              {pagedActiveVisibleJobs.map((job) => {
                 const unreadNonMessageNews = unreadEmployerNotifications(job.id).filter(
                   (item) => item.event_type !== "message"
                 );
@@ -14705,6 +14814,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 );
               })}
               </div>
+              <DashboardPagination
+                page={employerActivePage}
+                totalItems={activeVisibleJobs.length}
+                onPageChange={setEmployerActivePage}
+              />
             </>
           ) : (
             <div className="ed-jobs-empty">
@@ -14733,8 +14847,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
 
           {employerJobHistory.length ? (
+            <>
             <div className="ed-jobs">
-              {employerJobHistory.map((job) => {
+              {pagedEmployerJobHistory.map((job) => {
                 const jobDashboardState = employerJobDashboardState(job);
 
                 return (
@@ -14830,6 +14945,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 );
               })}
             </div>
+            <DashboardPagination
+              page={employerHistoryPage}
+              totalItems={employerJobHistory.length}
+              onPageChange={setEmployerHistoryPage}
+            />
+            </>
           ) : (
             <div className="ed-jobs-empty">
               <div className="ed-jobs-empty-icon">✓</div>
