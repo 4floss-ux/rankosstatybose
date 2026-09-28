@@ -6850,7 +6850,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
   const payAmountInputRef = useRef(null);
-  const jobFormSectionRef = useRef(null);
   const [form, setForm] = useState({
     title: "Statybų pagalbiniai",
     city: "Vilnius",
@@ -6871,27 +6870,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   useEffect(() => {
     loadEmployerDashboard();
   }, [user.id]);
-
-  useEffect(() => {
-    if (!showJobForm) return;
-
-    const timer = window.setTimeout(() => {
-      const formSection = jobFormSectionRef.current;
-      if (!formSection) return;
-
-      const top =
-        formSection.getBoundingClientRect().top +
-        window.scrollY -
-        88;
-
-      window.scrollTo({
-        top: Math.max(0, top),
-        behavior: "smooth",
-      });
-    }, 80);
-
-    return () => window.clearTimeout(timer);
-  }, [showJobForm, editingJobId]);
 
   useEffect(() => {
     if (
@@ -10341,13 +10319,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
 
-        <SectionErrorBoundary key={showJobForm ? "job-form-open" : "job-form-closed"}>
         {showJobForm && (
         <section
-          ref={jobFormSectionRef}
           className="ed-card"
           id="employer-job-form"
-          style={{ scrollMarginTop: 92 }}
         >
           <h2>
             {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
@@ -10637,8 +10612,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </section>
         )}
-
-        </SectionErrorBoundary>
 
         <section>
           <div style={{ marginBottom: 10 }}>
