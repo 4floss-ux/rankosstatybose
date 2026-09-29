@@ -2042,9 +2042,6 @@ function notificationPresentation(events = []) {
   if (types.includes("invitation_cancelled")) {
     return { tone: "red", label: "⚑ Darbdavys atšaukė" };
   }
-  if (types.includes("message")) {
-    return { tone: "orange", label: "● Nauja žinutė" };
-  }
   if (types.includes("job_updated")) {
     return { tone: "orange", label: "● Darbas atnaujintas" };
   }
@@ -3750,6 +3747,245 @@ function WorkerProfileModal({
 }
 
 const DASHBOARD_PAGE_SIZE = 5;
+
+const EMPLOYER_JOBS_BATCH_SIZE = 500;
+const EMPLOYER_JOB_SELECT =
+  "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id";
+
+const RELIABILITY_MODAL_STYLES = `
+  .reliability-modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:3000;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    background:rgba(16,36,56,.62);
+    backdrop-filter:blur(2px);
+    font-family:Inter,sans-serif;
+  }
+  .reliability-modal{
+    width:min(620px,100%);
+    max-height:calc(100vh - 48px);
+    overflow:auto;
+    background:#fff;
+    border:1px solid rgba(16,36,56,.08);
+    border-radius:20px;
+    box-shadow:0 28px 90px rgba(16,36,56,.28);
+    padding:26px;
+    color:#102438;
+  }
+  .reliability-modal-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:18px;
+    margin-bottom:20px;
+  }
+  .reliability-modal-eyebrow{
+    color:#f08a28;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:7px;
+  }
+  .reliability-modal h2{
+    margin:0;
+    font-family:Manrope,Inter,sans-serif;
+    font-size:28px;
+    line-height:1.15;
+    letter-spacing:-.025em;
+    color:#102438;
+  }
+  .reliability-modal-close{
+    width:38px;
+    height:38px;
+    flex:0 0 auto;
+    border:0;
+    border-radius:10px;
+    background:#f1f4f6;
+    color:#102438;
+    font-family:Inter,sans-serif;
+    font-size:22px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .reliability-score-box{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:15px;
+    margin-bottom:20px;
+    border:1px solid #e3e9ed;
+    border-radius:14px;
+    background:#f7f9fa;
+  }
+  .reliability-score-copy strong{
+    display:block;
+    font-family:Manrope,Inter,sans-serif;
+    font-size:18px;
+    margin-bottom:4px;
+  }
+  .reliability-score-copy span{
+    color:#6c7a88;
+    font-size:13px;
+    line-height:1.45;
+  }
+  .reliability-rules{display:grid;gap:8px}
+  .reliability-rule{
+    display:grid;
+    grid-template-columns:58px minmax(0,1fr);
+    gap:12px;
+    align-items:center;
+    padding:12px 14px;
+    border:1px solid #e5ecef;
+    border-radius:12px;
+    background:#fff;
+  }
+  .reliability-rule:last-child{border-bottom:1px solid #e5ecef}
+  .reliability-rule-icon{
+    width:48px;
+    height:28px;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    background:#f1f4f6;
+    font-weight:850;
+    font-size:12px;
+    color:#425466;
+  }
+  .reliability-rule p{margin:0;color:#425466;font-size:13px;line-height:1.5}
+  .reliability-note{
+    margin-top:16px;
+    padding:13px 14px;
+    border-radius:12px;
+    background:#fff3e7;
+    color:#8a531d;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .reliability-history{
+    margin-top:20px;
+    padding-top:18px;
+    border-top:1px solid #e8eef2;
+  }
+  .reliability-history-head{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .reliability-history-head h3{
+    margin:0;
+    font-family:Manrope,Inter,sans-serif;
+    font-size:16px;
+    color:#102438;
+  }
+  .reliability-history-head span{font-size:11px;color:#8a98a6}
+  .reliability-history-list{display:grid;gap:8px}
+  .reliability-history-item{
+    display:grid;
+    grid-template-columns:58px minmax(0,1fr) auto;
+    gap:12px;
+    align-items:center;
+    padding:11px 12px;
+    border:1px solid #e5ecef;
+    border-radius:12px;
+    background:#f8fafb;
+  }
+  .reliability-history-change{
+    display:grid;
+    place-items:center;
+    min-height:30px;
+    border-radius:9px;
+    background:#fff0ec;
+    color:#b64d2a;
+    font-family:Manrope,Inter,sans-serif;
+    font-size:13px;
+    font-weight:900;
+  }
+  .reliability-history-copy{min-width:0}
+  .reliability-history-copy b{
+    display:block;
+    color:#102438;
+    font-size:12px;
+    line-height:1.35;
+  }
+  .reliability-history-copy small{
+    display:block;
+    margin-top:3px;
+    color:#6c7a88;
+    font-size:11px;
+    line-height:1.4;
+  }
+  .reliability-history-date{
+    color:#8a98a6;
+    font-size:10.5px;
+    white-space:nowrap;
+  }
+  .reliability-history-empty{
+    padding:12px 14px;
+    border:1px dashed #d8e1e7;
+    border-radius:12px;
+    background:#f8fafb;
+    color:#6c7a88;
+    font-size:12px;
+    line-height:1.45;
+  }
+  .reliability-modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:20px;
+  }
+  .reliability-modal-actions button{
+    border:0;
+    border-radius:10px;
+    padding:11px 17px;
+    background:#f08a28;
+    color:#fff;
+    font-family:Manrope,Inter,sans-serif;
+    font-weight:800;
+    cursor:pointer;
+  }
+  @media(max-width:600px){
+    .reliability-modal-overlay{padding:12px}
+    .reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}
+    .reliability-modal h2{font-size:23px}
+    .reliability-score-box{align-items:flex-start}
+    .reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}
+    .reliability-rule-icon{width:42px}
+    .reliability-history-item{grid-template-columns:52px minmax(0,1fr)}
+    .reliability-history-date{grid-column:2;justify-self:start}
+  }
+`;
+
+async function loadAllCompanyJobs(companyId) {
+  if (!supabase || !companyId) {
+    return { data: [], error: null };
+  }
+
+  const rows = [];
+
+  for (let from = 0; ; from += EMPLOYER_JOBS_BATCH_SIZE) {
+    const result = await supabase
+      .from("jobs")
+      .select(EMPLOYER_JOB_SELECT)
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .range(from, from + EMPLOYER_JOBS_BATCH_SIZE - 1);
+
+    if (result.error) return result;
+
+    const batch = result.data || [];
+    rows.push(...batch);
+
+    if (batch.length < EMPLOYER_JOBS_BATCH_SIZE) break;
+  }
+
+  return { data: rows, error: null };
+}
+
 
 function DashboardPagination({ page, totalItems, onPageChange }) {
   const totalPages = Math.max(1, Math.ceil(Number(totalItems || 0) / DASHBOARD_PAGE_SIZE));
@@ -6012,9 +6248,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
-        .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-        .rs-modal-card{width:min(640px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
-        .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#f8fafb}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
@@ -7573,9 +7806,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                   const busy = respondingInvitation === invitation.id;
                   const unreadNews = unreadWorkerNotifications(invitation.id);
-                  const unreadPresentation = notificationPresentation(unreadNews);
                   const unreadPrivateMessages = unreadNews.filter(
                     (item) => item.event_type === "message"
+                  );
+                  const unreadStatusNews = unreadNews.filter(
+                    (item) => item.event_type !== "message"
+                  );
+                  const unreadPresentation = notificationPresentation(
+                    unreadStatusNews
                   );
                   const hasConflict = invitationHasConflict(invitation);
                   const statusLabel =
@@ -7601,11 +7839,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       key={invitation.id}
                     >
                       <div className="wd-invite-main">
-                        {unreadNews.length > 0 && (
+                        {unreadStatusNews.length > 0 && (
                           <div>
                             <span className={`rs-alert ${unreadPresentation.tone}`}>
                               {unreadPresentation.label}
-                              {unreadNews.length > 1 ? ` · ${unreadNews.length}` : ""}
+                              {unreadStatusNews.length > 1
+                                ? ` · ${unreadStatusNews.length}`
+                                : ""}
                             </span>
                           </div>
                         )}
@@ -9188,30 +9428,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             if (e.target === e.currentTarget) setShowWorkerReliabilityInfo(false);
           }}
         >
-          <style>{`
-            .reliability-modal-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:24px;background:rgba(16,36,56,.62);backdrop-filter:blur(2px);font-family:Inter,sans-serif}
-            .reliability-modal{width:min(620px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:26px;color:#102438}
-            .reliability-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px}.reliability-modal-eyebrow{color:#f08a28;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:7px}.reliability-modal h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.025em;color:#102438}.reliability-modal-close{width:38px;height:38px;flex:0 0 auto;border:0;border-radius:10px;background:#f1f4f6;color:#102438;font-family:Inter,sans-serif;font-size:22px;line-height:1;cursor:pointer}.reliability-score-box{display:flex;align-items:center;gap:16px;padding:15px;margin-bottom:20px;border:1px solid #e3e9ed;border-radius:14px;background:#f7f9fa}.reliability-score-copy strong{display:block;font-family:Manrope,Inter,sans-serif;font-size:18px;margin-bottom:4px}.reliability-score-copy span{color:#6c7a88;font-size:13px;line-height:1.45}.reliability-rules{display:grid;gap:8px}
-            .reliability-rule{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;border:1px solid #e5ecef;border-radius:12px;background:#fff}
-            .reliability-rule:last-child{border-bottom:1px solid #e5ecef}
-            .reliability-rule-icon{width:48px;height:28px;border-radius:999px;display:grid;place-items:center;background:#f1f4f6;font-weight:850;font-size:12px;color:#425466}
-            .reliability-rule p{margin:0;color:#425466;font-size:13px;line-height:1.5}
-            .reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
-            .reliability-history{margin-top:20px;padding-top:18px;border-top:1px solid #e8eef2}
-            .reliability-history-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
-            .reliability-history-head h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:16px;color:#102438}
-            .reliability-history-head span{font-size:11px;color:#8a98a6}
-            .reliability-history-list{display:grid;gap:8px}
-            .reliability-history-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5ecef;border-radius:12px;background:#f8fafb}
-            .reliability-history-change{display:grid;place-items:center;min-height:30px;border-radius:9px;background:#fff0ec;color:#b64d2a;font-family:Manrope,Inter,sans-serif;font-size:13px;font-weight:900}
-            .reliability-history-copy{min-width:0}
-            .reliability-history-copy b{display:block;color:#102438;font-size:12px;line-height:1.35}
-            .reliability-history-copy small{display:block;margin-top:3px;color:#6c7a88;font-size:11px;line-height:1.4}
-            .reliability-history-date{color:#8a98a6;font-size:10.5px;white-space:nowrap}
-            .reliability-history-empty{padding:12px 14px;border:1px dashed #d8e1e7;border-radius:12px;background:#f8fafb;color:#6c7a88;font-size:12px;line-height:1.45}
-            @media(max-width:600px){.reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}.reliability-rule-icon{width:42px}.reliability-history-item{grid-template-columns:52px minmax(0,1fr)}.reliability-history-date{grid-column:2;justify-self:start}}
-            .reliability-modal-actions{display:flex;justify-content:flex-end;margin-top:20px}.reliability-modal-actions button{border:0;border-radius:10px;padding:11px 17px;background:#f08a28;color:#fff;font-family:Manrope,Inter,sans-serif;font-weight:800;cursor:pointer}@media(max-width:600px){.reliability-modal-overlay{padding:12px}.reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}.reliability-modal h2{font-size:23px}.reliability-score-box{align-items:flex-start}}
-          `}</style>
+          <style>{RELIABILITY_MODAL_STYLES}</style>
 
           <div
             className="reliability-modal"
@@ -11194,14 +11411,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             .select("id, name")
             .eq("is_active", true)
             .order("name"),
-          supabase
-            .from("jobs")
-            .select(
-              "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
-            )
-            .eq("company_id", companyId)
-            .order("created_at", { ascending: false })
-            .limit(12),
+          loadAllCompanyJobs(companyId),
           supabase.rpc("get_company_plan_summary", {
             p_company_id: companyId,
           }),
@@ -11707,14 +11917,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function reloadJobs(companyId = company?.id) {
     if (!companyId) return;
 
-    const result = await supabase
-      .from("jobs")
-      .select(
-        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
-      )
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false })
-      .limit(12);
+    const result = await loadAllCompanyJobs(companyId);
 
     if (!result.error) {
       try {
@@ -17152,146 +17355,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             if (e.target === e.currentTarget) setShowReliabilityInfo(false);
           }}
         >
-          <style>{`
-            .reliability-modal-overlay{
-              position:fixed;
-              inset:0;
-              z-index:3000;
-              display:grid;
-              place-items:center;
-              padding:24px;
-              background:rgba(16,36,56,.62);
-              backdrop-filter:blur(2px);
-              font-family:Inter,sans-serif;
-            }
-            .reliability-modal{
-              width:min(620px,100%);
-              max-height:calc(100vh - 48px);
-              overflow:auto;
-              background:#fff;
-              border:1px solid rgba(16,36,56,.08);
-              border-radius:20px;
-              box-shadow:0 28px 90px rgba(16,36,56,.28);
-              padding:26px;
-              color:#102438;
-            }
-            .reliability-modal-head{
-              display:flex;
-              justify-content:space-between;
-              align-items:flex-start;
-              gap:18px;
-              margin-bottom:20px;
-            }
-            .reliability-modal-eyebrow{
-              color:#f08a28;
-              font-size:12px;
-              font-weight:800;
-              letter-spacing:.08em;
-              margin-bottom:7px;
-            }
-            .reliability-modal h2{
-              margin:0;
-              font-family:Manrope,Inter,sans-serif;
-              font-size:28px;
-              line-height:1.15;
-              letter-spacing:-.025em;
-              color:#102438;
-            }
-            .reliability-modal-close{
-              width:38px;
-              height:38px;
-              flex:0 0 auto;
-              border:0;
-              border-radius:10px;
-              background:#f1f4f6;
-              color:#102438;
-              font-family:Inter,sans-serif;
-              font-size:22px;
-              line-height:1;
-              cursor:pointer;
-            }
-            .reliability-score-box{
-              display:flex;
-              align-items:center;
-              gap:16px;
-              padding:15px;
-              margin-bottom:20px;
-              border:1px solid #e3e9ed;
-              border-radius:14px;
-              background:#f7f9fa;
-            }
-            .reliability-score-ring{
-              width:64px;
-              height:64px;
-              flex:0 0 auto;
-              border-radius:50%;
-              display:grid;
-              place-items:center;
-            }
-            .reliability-score-ring-inner{
-              width:49px;
-              height:49px;
-              border-radius:50%;
-              display:grid;
-              place-items:center;
-              background:#fff;
-              box-shadow:inset 0 0 0 1px rgba(16,36,56,.05);
-              font-family:Manrope,Inter,sans-serif;
-              font-size:15px;
-              font-weight:800;
-            }
-            .reliability-score-copy strong{
-              display:block;
-              font-family:Manrope,Inter,sans-serif;
-              font-size:18px;
-              margin-bottom:4px;
-            }
-            .reliability-score-copy span{
-              color:#6c7a88;
-              font-size:13px;
-              line-height:1.45;
-            }
-            .reliability-rules{display:grid;gap:8px}
-            .reliability-rule{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:12px 14px;border:1px solid #e5ecef;border-radius:12px;background:#fff}
-            .reliability-rule:last-child{border-bottom:1px solid #e5ecef}
-            .reliability-rule-icon{width:48px;height:28px;border-radius:999px;display:grid;place-items:center;background:#f1f4f6;font-weight:850;font-size:12px;color:#425466}
-            .reliability-rule p{margin:0;color:#425466;font-size:13px;line-height:1.5}
-            .reliability-note{margin-top:16px;padding:13px 14px;border-radius:12px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
-            .reliability-history{margin-top:20px;padding-top:18px;border-top:1px solid #e8eef2}
-            .reliability-history-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
-            .reliability-history-head h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:16px;color:#102438}
-            .reliability-history-head span{font-size:11px;color:#8a98a6}
-            .reliability-history-list{display:grid;gap:8px}
-            .reliability-history-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #e5ecef;border-radius:12px;background:#f8fafb}
-            .reliability-history-change{display:grid;place-items:center;min-height:30px;border-radius:9px;background:#fff0ec;color:#b64d2a;font-family:Manrope,Inter,sans-serif;font-size:13px;font-weight:900}
-            .reliability-history-copy{min-width:0}
-            .reliability-history-copy b{display:block;color:#102438;font-size:12px;line-height:1.35}
-            .reliability-history-copy small{display:block;margin-top:3px;color:#6c7a88;font-size:11px;line-height:1.4}
-            .reliability-history-date{color:#8a98a6;font-size:10.5px;white-space:nowrap}
-            .reliability-history-empty{padding:12px 14px;border:1px dashed #d8e1e7;border-radius:12px;background:#f8fafb;color:#6c7a88;font-size:12px;line-height:1.45}
-            @media(max-width:600px){.reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}.reliability-rule-icon{width:42px}.reliability-history-item{grid-template-columns:52px minmax(0,1fr)}.reliability-history-date{grid-column:2;justify-self:start}}
-            .reliability-modal-actions{
-              display:flex;
-              justify-content:flex-end;
-              margin-top:20px;
-            }
-            .reliability-modal-actions button{
-              border:0;
-              border-radius:10px;
-              padding:11px 17px;
-              background:#f08a28;
-              color:#fff;
-              font-family:Manrope,Inter,sans-serif;
-              font-weight:800;
-              cursor:pointer;
-            }
-            @media(max-width:600px){
-              .reliability-modal-overlay{padding:12px}
-              .reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}
-              .reliability-modal h2{font-size:23px}
-              .reliability-score-box{align-items:flex-start}
-            }
-          `}</style>
+          <style>{RELIABILITY_MODAL_STYLES}</style>
 
           <div
             className="reliability-modal"
