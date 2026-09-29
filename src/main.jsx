@@ -6448,9 +6448,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         const conflictInfo = conflictingAvailabilityDays[0];
         if (conflictInfo) {
-          throw new Error(
-            `${conflictInfo.label}: pasirinktas laisvas laikas kertasi su užfiksuotu darbu arba nepalieka 1 val. tarpo nuvykimui.`
-          );
+          return;
         }
 
         const invalidDay = days.find((day) => day.iso === invalidAvailabilityDays[0]);
@@ -7682,7 +7680,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {conflictMarked && (
                         <div className="wd-day-conflict-note">
                           Pasirinktas laikas kertasi su užfiksuotu darbu arba nepalieka 1 val. tarpo nuvykimui.
-                          {conflict?.label ? ` Konfliktas: ${conflict.label}.` : ""}
+                          {conflict?.label ? ` Kertasi su: ${conflict.label}.` : ""}
                         </div>
                       )}
 
@@ -22407,7 +22405,7 @@ function AdminDashboard({
         .admin-tab.bug-alert,.admin-tab.dispute-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
         .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover{background:#b7362d;border-color:#b7362d}
         .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
-        .admin-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:11px}
+        .admin-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
         .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
