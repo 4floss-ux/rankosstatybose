@@ -20448,6 +20448,10 @@ function AdminDashboard({
   async function resolveSiteBug(report) {
     if (!report || report.status === "resolved") return;
 
+    // Pirmiausia uždarome klaidos peržiūros modalą, kad patvirtinimas
+    // visada būtų vienintelis aktyvus dialogas viršuje, o ne po juo.
+    setSelectedBugReport(null);
+
     const confirmed = await askConfirm({
       eyebrow: "SVETAINĖS KLAIDA",
       title: "Pažymėti klaidą sutvarkyta?",
@@ -20456,7 +20460,10 @@ function AdminDashboard({
       confirmLabel: "Sutvarkiau",
     });
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      setSelectedBugReport(report);
+      return;
+    }
 
     setResolvingBugId(report.id);
     setError("");
@@ -20500,6 +20507,9 @@ function AdminDashboard({
   async function markSiteBugIrrelevant(report) {
     if (!report || report.status !== "active") return;
 
+    // Tas pats dialogų eiliškumas kaip „Sutvarkiau“ veiksme.
+    setSelectedBugReport(null);
+
     const confirmed = await askConfirm({
       eyebrow: "SVETAINĖS KLAIDA",
       title: "Pažymėti pranešimą neaktualiu?",
@@ -20509,7 +20519,10 @@ function AdminDashboard({
       danger: true,
     });
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      setSelectedBugReport(report);
+      return;
+    }
 
     setResolvingBugId(report.id);
     setError("");
