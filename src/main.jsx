@@ -3843,14 +3843,28 @@ const RELIABILITY_MODAL_STYLES = `
   .reliability-modal{
     width:min(620px,100%);
     max-height:calc(100vh - 48px);
-    overflow:auto;
+    overflow:hidden;
     background:#fff;
     border:1px solid rgba(16,36,56,.08);
     border-radius:20px;
     box-shadow:0 28px 90px rgba(16,36,56,.28);
-    padding:26px;
+    padding:0;
     color:#102438;
   }
+  .reliability-modal-scroll{
+    max-height:calc(100vh - 48px);
+    overflow-y:auto;
+    overflow-x:hidden;
+    box-sizing:border-box;
+    padding:26px;
+    border-radius:inherit;
+    scrollbar-gutter:stable;
+    scrollbar-width:thin;
+    scrollbar-color:#c7d0d7 transparent;
+  }
+  .reliability-modal-scroll::-webkit-scrollbar{width:8px}
+  .reliability-modal-scroll::-webkit-scrollbar-track{background:transparent}
+  .reliability-modal-scroll::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}
   .reliability-modal-head{
     display:flex;
     justify-content:space-between;
@@ -4026,7 +4040,8 @@ const RELIABILITY_MODAL_STYLES = `
   }
   @media(max-width:600px){
     .reliability-modal-overlay{padding:12px}
-    .reliability-modal{padding:20px;border-radius:16px;max-height:calc(100vh - 24px)}
+    .reliability-modal{border-radius:16px;max-height:calc(100vh - 24px)}
+    .reliability-modal-scroll{padding:20px;max-height:calc(100vh - 24px)}
     .reliability-modal h2{font-size:23px}
     .reliability-score-box{align-items:flex-start}
     .reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}
@@ -4416,9 +4431,7 @@ function BugResolutionNotice({ userId }) {
       p_report_id: reportId,
     });
 
-    if (result.error) {
-      console.error(result.error);
-    }
+    if (result.error) console.error(result.error);
   }
 
   useEffect(() => {
@@ -4436,65 +4449,37 @@ function BugResolutionNotice({ userId }) {
   const reward = Number(notice.reward_points || 0);
 
   return (
-    <div
-      role="status"
-      style={{
-        width: "100%",
-        boxSizing: "border-box",
-        margin: "0 0 14px",
-        border: "1px solid #b9decf",
-        borderRadius: 13,
-        background: "#eef8f3",
-        color: "#125f45",
-        boxShadow: "0 4px 14px rgba(16,36,56,.035)",
-        padding: "12px 14px",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 14,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-            marginBottom: 5,
-          }}
-        >
-          Svetainės klaida sutvarkyta
-        </div>
-        <div style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 750 }}>
+    <div className="bug-resolution-banner" role="status">
+      <style>{`
+        .bug-resolution-banner{width:100%;min-width:0;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border:1px solid #b9decf;border-radius:13px;background:#eef8f3;color:#125f45;box-shadow:0 4px 14px rgba(16,36,56,.035);display:flex;align-items:center;justify-content:space-between;gap:14px;clear:both}
+        .bug-resolution-banner-copy{display:grid;gap:2px;min-width:0}
+        .bug-resolution-banner-copy b{color:#146f4d;font-size:13px;line-height:1.35}
+        .bug-resolution-banner-copy span{font-size:12px;line-height:1.45;color:#356f5b}
+        .bug-resolution-banner-close{flex:0 0 auto;border:1px solid #b9decf;background:#fff;color:#146f4d;border-radius:9px;width:38px;height:34px;display:grid;place-items:center;cursor:pointer}
+        .bug-resolution-banner-close:hover{background:#f7fcf9}
+        @media(max-width:700px){.bug-resolution-banner{align-items:flex-start}.bug-resolution-banner-close{width:34px}}
+      `}</style>
+      <div className="bug-resolution-banner-copy">
+        <b>Svetainės klaida sutvarkyta</b>
+        <span>
           Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
           {reward > 0
             ? `Jums pridėtas +${reward} patikimumo taškas.`
             : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}
-        </div>
+        </span>
       </div>
       <button
+        className="bug-resolution-banner-close"
         type="button"
         aria-label="Uždaryti pranešimą"
         onClick={() => acknowledge(notice.report_id)}
-        style={{
-          flex: "none",
-          width: 34,
-          height: 34,
-          border: 0,
-          borderRadius: 9,
-          background: "rgba(255,255,255,.7)",
-          color: "#125f45",
-          display: "grid",
-          placeItems: "center",
-          cursor: "pointer",
-        }}
       >
         <CloseMark />
       </button>
     </div>
   );
 }
+
 
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
@@ -10101,6 +10086,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             aria-modal="true"
             aria-labelledby="worker-reliability-modal-title"
           >
+            <div className="reliability-modal-scroll">
             <div className="reliability-modal-head">
               <div>
                 <div className="reliability-modal-eyebrow">PATIKIMUMO REITINGAS</div>
@@ -10215,6 +10201,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <button type="button" onClick={() => setShowWorkerReliabilityInfo(false)}>
                 Supratau
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -18307,6 +18294,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             aria-modal="true"
             aria-labelledby="reliability-modal-title"
           >
+            <div className="reliability-modal-scroll">
             <div className="reliability-modal-head">
               <div>
                 <div className="reliability-modal-eyebrow">
@@ -18467,6 +18455,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               >
                 Supratau
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -21196,8 +21185,8 @@ function AdminDashboard({
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
         .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
-        .admin-toast-stack{position:fixed;top:86px;right:22px;z-index:9800;display:grid;gap:8px;width:min(380px,calc(100vw - 44px))}
-        .admin-toast{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-radius:12px;padding:12px 13px;box-shadow:0 16px 44px rgba(16,36,56,.18);font-size:13px;font-weight:700;line-height:1.45}
+        .admin-toast-stack{position:relative;z-index:1;display:grid;gap:8px;width:100%;margin:0 0 14px}
+        .admin-toast{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:13px;padding:12px 14px;box-shadow:0 4px 14px rgba(16,36,56,.035);font-size:13px;font-weight:750;line-height:1.45}
         .admin-toast.ok{background:#edf8f3;border:1px solid #bfe6d3;color:#146f4d}
         .admin-toast.err{background:#fff0ec;border:1px solid #efc4b7;color:#a6462b}
         .admin-toast button{border:0;background:transparent;color:inherit;font:inherit;font-size:18px;line-height:1;cursor:pointer;padding:0 1px}
@@ -21242,7 +21231,7 @@ function AdminDashboard({
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
       `}</style>
 
       <header className="admin-topbar">
@@ -21301,21 +21290,6 @@ function AdminDashboard({
           <span className="admin-pill green">Administratorius</span>
         </div>
 
-        <div className="admin-tabs">
-          {tabs.map(([key, label]) => (
-            <button
-              key={key}
-              className={`admin-tab ${activeTab === key ? "active" : ""} ${
-                key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
-              } ${
-                key === "disputes" && activeDisputeCount ? "dispute-alert" : ""
-              }`}
-              onClick={() => setActiveTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
 
         {(notice || error) && (
           <div className="admin-toast-stack">
@@ -21346,6 +21320,23 @@ function AdminDashboard({
             )}
           </div>
         )}
+
+        <div className="admin-tabs">
+          {tabs.map(([key, label]) => (
+            <button
+              key={key}
+              className={`admin-tab ${activeTab === key ? "active" : ""} ${
+                key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
+              } ${
+                key === "disputes" && activeDisputeCount ? "dispute-alert" : ""
+              }`}
+              onClick={() => setActiveTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
 
         {activeTab === "overview" && (
           <div className="admin-kpis">
