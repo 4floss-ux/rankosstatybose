@@ -6122,21 +6122,62 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     const companyId = source?.job?.company_id;
     if (!companyId) return;
 
+    const reviewCacheKey = `worker-company-reviews-v1:${user.id}:${companyId}`;
+    const reviewCacheTtlMs = 24 * 60 * 60 * 1000;
+    let cachedReviews = [];
+    let cachedReviewsAreFresh = false;
+
+    try {
+      const rawCache = window.localStorage.getItem(reviewCacheKey);
+      if (rawCache) {
+        const parsedCache = JSON.parse(rawCache);
+        cachedReviews = Array.isArray(parsedCache?.reviews)
+          ? parsedCache.reviews.slice(0, 3)
+          : [];
+        cachedReviewsAreFresh =
+          Number(parsedCache?.fetchedAt || 0) > 0 &&
+          Date.now() - Number(parsedCache.fetchedAt) < reviewCacheTtlMs;
+      }
+    } catch {
+      cachedReviews = [];
+      cachedReviewsAreFresh = false;
+    }
+
     setError("");
     setWorkerCompanyProfileLoading(true);
 
     try {
-      const [summaryResult, reviewsResult] = await Promise.all([
-        supabase.rpc("get_company_worker_profile_summary", {
-          p_company_id: companyId,
-        }),
-        supabase.rpc("get_company_worker_reviews", {
-          p_company_id: companyId,
-        }),
-      ]);
+      const summaryResult = await supabase.rpc(
+        "get_company_worker_profile_summary",
+        { p_company_id: companyId }
+      );
 
       if (summaryResult.error) throw summaryResult.error;
-      if (reviewsResult.error) throw reviewsResult.error;
+
+      let latestReviews = cachedReviews;
+
+      if (!cachedReviewsAreFresh) {
+        const reviewsResult = await supabase.rpc("get_company_worker_reviews", {
+          p_company_id: companyId,
+        });
+
+        if (!reviewsResult.error) {
+          latestReviews = (reviewsResult.data || []).slice(0, 3);
+          try {
+            window.localStorage.setItem(
+              reviewCacheKey,
+              JSON.stringify({
+                fetchedAt: Date.now(),
+                reviews: latestReviews,
+              })
+            );
+          } catch {
+            // Naršyklės saugykla gali būti išjungta — profilis vis tiek veikia.
+          }
+        } else if (!latestReviews.length) {
+          latestReviews = (source.companyReviews || []).slice(0, 3);
+        }
+      }
 
       const company = summaryResult.data?.[0] || {};
 
@@ -6157,7 +6198,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             ? null
             : Number(company.review_average),
         awards: companyAwardsById[companyId] || [],
-        reviews: reviewsResult.data || source.companyReviews || [],
+        reviews: latestReviews.slice(0, 3),
       });
     } catch (err) {
       setWorkerCompanyProfileTarget({
@@ -6169,10 +6210,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         reliabilityRate: Number(source.companyReliability ?? 100),
         completedJobs: 0,
         cancelledJobs: 0,
-        reviewCount: Number(source.companyReviews?.length || 0),
+        reviewCount: Number(source.companyReviews?.length || cachedReviews.length || 0),
         reviewAverage: null,
         awards: companyAwardsById[companyId] || [],
-        reviews: source.companyReviews || [],
+        reviews: (cachedReviews.length ? cachedReviews : source.companyReviews || []).slice(0, 3),
       });
       setError(err?.message || "Nepavyko įkelti įmonės profilio.");
     } finally {
@@ -9631,7 +9672,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                   {workerCompanyProfileTarget.reviews?.length > 0 ? (
                     <div style={{ display: "grid", gap: 9 }}>
-                      {workerCompanyProfileTarget.reviews.map((review) => (
+                      {workerCompanyProfileTarget.reviews.slice(0, 3).map((review) => (
                         <div
                           key={review.id}
                           style={{
