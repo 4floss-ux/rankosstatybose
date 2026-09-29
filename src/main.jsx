@@ -4378,6 +4378,120 @@ function BugReportModal({ open, onClose, onSubmitted }) {
   );
 }
 
+
+function BugResolutionNotice({ userId }) {
+  const [notice, setNotice] = useState(null);
+
+  useEffect(() => {
+    if (!userId || !supabase) {
+      setNotice(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    supabase
+      .rpc("get_my_pending_bug_resolution_notice")
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        setNotice(data?.[0] || null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  async function acknowledge(reportId) {
+    setNotice(null);
+    if (!reportId || !supabase) return;
+
+    const result = await supabase.rpc("acknowledge_bug_resolution_notice", {
+      p_report_id: reportId,
+    });
+
+    if (result.error) {
+      console.error(result.error);
+    }
+  }
+
+  useEffect(() => {
+    if (!notice?.report_id) return undefined;
+
+    const timer = window.setTimeout(() => {
+      acknowledge(notice.report_id);
+    }, 60 * 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice?.report_id]);
+
+  if (!notice) return null;
+
+  const reward = Number(notice.reward_points || 0);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 82,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 15000,
+        width: "min(620px,calc(100vw - 28px))",
+        border: "1px solid #b9decf",
+        borderRadius: 14,
+        background: "#eef8f3",
+        color: "#125f45",
+        boxShadow: "0 18px 48px rgba(16,36,56,.18)",
+        padding: "15px 16px",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 14,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+            marginBottom: 5,
+          }}
+        >
+          Svetainės klaida sutvarkyta
+        </div>
+        <div style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 750 }}>
+          Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
+          {reward > 0
+            ? `Jums pridėtas +${reward} patikimumo taškas.`
+            : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}
+        </div>
+      </div>
+      <button
+        type="button"
+        aria-label="Uždaryti pranešimą"
+        onClick={() => acknowledge(notice.report_id)}
+        style={{
+          flex: "none",
+          width: 34,
+          height: 34,
+          border: 0,
+          borderRadius: 9,
+          background: "rgba(255,255,255,.7)",
+          color: "#125f45",
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
+        }}
+      >
+        <CloseMark />
+      </button>
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -20170,6 +20284,7 @@ function AdminDashboard({
   const [auditLog, setAuditLog] = useState([]);
   const [siteBugReports, setSiteBugReports] = useState([]);
   const [selectedBugReport, setSelectedBugReport] = useState(null);
+  const [resolvingBugId, setResolvingBugId] = useState(null);
   const [actionDialog, setActionDialog] = useState(null);
   const [actionDays, setActionDays] = useState(7);
   const [actionReason, setActionReason] = useState("");
@@ -20187,6 +20302,10 @@ function AdminDashboard({
   const [editorSaving, setEditorSaving] = useState(false);
   const [adminPage, setAdminPage] = useState(1);
 
+  const activeSiteBugCount = siteBugReports.filter(
+    (report) => report.status !== "resolved"
+  ).length;
+
   const tabs = [
     ["overview", "Suvestinė"],
     ["disputes", `Ginčai${disputes.length ? ` (${disputes.length})` : ""}`],
@@ -20197,7 +20316,7 @@ function AdminDashboard({
     ["teamChats", "Vadovų pokalbiai"],
     ["ratings", "Atsiliepimai"],
     ["files", "Failai"],
-    ["bugs", `Svetainės klaidos${siteBugReports.length ? ` (${siteBugReports.length})` : ""}`],
+    ["bugs", `Svetainės klaidos${activeSiteBugCount ? ` (${activeSiteBugCount})` : ""}`],
     ["audit", "Veiksmų istorija"],
   ];
 
@@ -20323,6 +20442,58 @@ function AdminDashboard({
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function resolveSiteBug(report) {
+    if (!report || report.status === "resolved") return;
+
+    const confirmed = await askConfirm({
+      eyebrow: "SVETAINĖS KLAIDA",
+      title: "Pažymėti klaidą sutvarkyta?",
+      message:
+        "Pranešimas bus pažymėtas sutvarkytu. Kitą kartą prisijungęs vartotojas gaus pranešimą, o jei jo patikimumas mažesnis nei 100, sistema pridės +1 patikimumo tašką.",
+      confirmLabel: "Sutvarkiau",
+    });
+
+    if (!confirmed) return;
+
+    setResolvingBugId(report.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("resolve_site_bug_report", {
+        p_report_id: report.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const resolved = result.data?.[0] || null;
+      const reward = Number(resolved?.reward_points || 0);
+
+      setSelectedBugReport((current) =>
+        current?.id === report.id
+          ? {
+              ...current,
+              status: "resolved",
+              resolved_at: resolved?.resolved_at || new Date().toISOString(),
+              reward_points: reward,
+            }
+          : current
+      );
+
+      setNotice(
+        reward > 0
+          ? `Klaida pažymėta sutvarkyta. Vartotojui skirta +${reward} patikimumo taškas.`
+          : "Klaida pažymėta sutvarkyta. Vartotojo patikimumas jau buvo 100 / 100."
+      );
+
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pažymėti klaidos sutvarkyta.");
+    } finally {
+      setResolvingBugId(null);
     }
   }
 
@@ -20934,6 +21105,9 @@ function AdminDashboard({
         .admin-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
         .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
+        .admin-tab.bug-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
+        .admin-tab.bug-alert:hover{background:#b7362d;border-color:#b7362d}
+        .admin-tab.bug-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
         .admin-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:11px}
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
@@ -20960,6 +21134,14 @@ function AdminDashboard({
         .admin-small-btn.warning{color:#b85f0e;border-color:#efc88e}
         .admin-small-btn:disabled{opacity:.55;cursor:wait}
         .admin-row-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+        .admin-bug-list{display:grid;gap:10px}
+        .admin-bug-row{display:grid;grid-template-columns:minmax(260px,1.3fr) minmax(170px,.7fr) minmax(120px,.45fr) auto;gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px;background:#fff}
+        .admin-bug-row.active{border-color:#efc5bd;background:#fffaf9}
+        .admin-bug-row.resolved{background:#fbfcfd}
+        .admin-bug-person b{display:block;font-size:14px}.admin-bug-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
+        .admin-bug-meta span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-bug-meta b{font-size:13px}
+        .admin-bug-actions{display:flex;justify-content:flex-end;gap:8px}
+        .admin-bug-resolved-note{margin-top:14px;padding:11px 12px;border:1px solid #bfe2d3;border-radius:11px;background:#eff8f4;color:#146f4d;font-size:12px;font-weight:800;line-height:1.45}
         .admin-dispute{border:1px solid #e4ebf0;border-radius:14px;padding:18px}.admin-dispute+.admin-dispute{margin-top:10px}
         .admin-dispute-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
         .admin-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.admin-fact{background:#f6f8fa;border-radius:10px;padding:11px}.admin-fact span{display:block;color:#6c7a88;font-size:10px;margin-bottom:4px}.admin-fact b{font-size:13px}
@@ -20974,8 +21156,8 @@ function AdminDashboard({
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
+        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+        @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{top:78px;right:12px;width:calc(100vw - 24px)}}
       `}</style>
 
       <header className="admin-topbar">
@@ -21038,7 +21220,9 @@ function AdminDashboard({
           {tabs.map(([key, label]) => (
             <button
               key={key}
-              className={`admin-tab ${activeTab === key ? "active" : ""}`}
+              className={`admin-tab ${activeTab === key ? "active" : ""} ${
+                key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
+              }`}
               onClick={() => setActiveTab(key)}
             >
               {label}
@@ -21919,29 +22103,55 @@ function AdminDashboard({
             <div className="admin-section-head">
               <div>
                 <h2>Svetainės klaidos</h2>
-                <div className="admin-muted">Vartotojų pateikti pranešimai apie pastebėtas svetainės klaidas.</div>
+                <div className="admin-muted">
+                  Aktyvūs pranešimai lieka pažymėti, kol administratorius paspaudžia „Sutvarkiau“.
+                </div>
               </div>
-              <span className={`admin-pill ${siteBugReports.length ? "orange" : "green"}`}>{siteBugReports.length} praneš.</span>
+              <span className={`admin-pill ${activeSiteBugCount ? "red" : "green"}`}>
+                {activeSiteBugCount} aktyvių
+              </span>
             </div>
 
             {siteBugReports.length ? (
               <>
-                <div style={{ display: "grid", gap: 9 }}>
-                  {adminPageSlice(siteBugReports).map((report) => (
-                    <div className="admin-row" key={report.id}>
-                      <div>
-                        <b>{report.reporter_name || "Vartotojas"}</b>
-                        <span>{report.reporter_email || "El. paštas nepasiekiamas"}</span>
+                <div className="admin-bug-list">
+                  {adminPageSlice(siteBugReports).map((report) => {
+                    const resolved = report.status === "resolved";
+                    return (
+                      <div
+                        className={`admin-bug-row ${resolved ? "resolved" : "active"}`}
+                        key={report.id}
+                      >
+                        <div className="admin-bug-person">
+                          <b>{report.reporter_name || "Vartotojas"}</b>
+                          <span>{report.reporter_email || "El. paštas nepasiekiamas"}</span>
+                        </div>
+
+                        <div className="admin-bug-meta">
+                          <span>{resolved ? "Sutvarkyta" : "Pateikta"}</span>
+                          <b>
+                            {formatAdminDate(
+                              resolved ? report.resolved_at : report.created_at
+                            )}
+                          </b>
+                        </div>
+
+                        <span className={`admin-pill ${resolved ? "green" : "red"}`}>
+                          {resolved ? "Sutvarkyta" : "Aktyvi"}
+                        </span>
+
+                        <div className="admin-bug-actions">
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            onClick={() => setSelectedBugReport(report)}
+                          >
+                            Atidaryti
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <span>Pateikta</span>
-                        <b>{formatAdminDate(report.created_at)}</b>
-                      </div>
-                      <div>
-                        <button className="admin-small-btn" type="button" onClick={() => setSelectedBugReport(report)}>Atidaryti</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {renderAdminPagination(siteBugReports.length)}
               </>
@@ -22644,21 +22854,161 @@ function AdminDashboard({
         </div>
       )}
       {selectedBugReport && (
-        <div onMouseDown={(e) => e.target === e.currentTarget && setSelectedBugReport(null)} style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(16,36,56,.62)" }}>
-          <div style={{ width: "min(640px,100%)", maxHeight: "calc(100vh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 14 }}>
-              <div><div className="eyebrow">SVETAINĖS KLAIDA</div><h2>{selectedBugReport.reporter_name || "Vartotojas"}</h2></div>
-              <button type="button" onClick={() => setSelectedBugReport(null)} style={{ border: 0, background: "#f2f5f7", color: "#102438", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
+        <div
+          onMouseDown={(e) =>
+            e.target === e.currentTarget &&
+            !resolvingBugId &&
+            setSelectedBugReport(null)
+          }
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 12000,
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+            background: "rgba(16,36,56,.62)",
+          }}
+        >
+          <div
+            style={{
+              width: "min(640px,100%)",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "auto",
+              background: "#fff",
+              borderRadius: 18,
+              padding: 22,
+              boxShadow: "0 28px 90px rgba(16,36,56,.28)",
+              color: "#102438",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 16,
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <div className="eyebrow">SVETAINĖS KLAIDA</div>
+                <h2>{selectedBugReport.reporter_name || "Vartotojas"}</h2>
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(resolvingBugId)}
+                onClick={() => setSelectedBugReport(null)}
+                style={{
+                  border: 0,
+                  background: "#f2f5f7",
+                  color: "#102438",
+                  borderRadius: 11,
+                  width: 40,
+                  height: 40,
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <CloseMark />
+              </button>
             </div>
-            <div style={{ color: "#6c7a88", fontSize: 12, marginBottom: 12 }}>
-              {selectedBugReport.reporter_email || "El. paštas nepasiekiamas"} · {formatAdminDate(selectedBugReport.created_at)}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ color: "#6c7a88", fontSize: 12 }}>
+                {selectedBugReport.reporter_email || "El. paštas nepasiekiamas"} ·{" "}
+                {formatAdminDate(selectedBugReport.created_at)}
+              </div>
+              <span
+                className={`admin-pill ${
+                  selectedBugReport.status === "resolved" ? "green" : "red"
+                }`}
+              >
+                {selectedBugReport.status === "resolved" ? "Sutvarkyta" : "Aktyvi"}
+              </span>
             </div>
-            <div style={{ border: "1px solid #dfe7ed", borderRadius: 14, padding: 16, background: "#fff", color: "#102438", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+
+            <div
+              style={{
+                border: "1px solid #dfe7ed",
+                borderRadius: 14,
+                padding: 16,
+                background: "#fff",
+                color: "#102438",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+              }}
+            >
               {selectedBugReport.message}
             </div>
+
+            {selectedBugReport.status === "resolved" ? (
+              <div className="admin-bug-resolved-note">
+                Sutvarkyta {formatAdminDate(selectedBugReport.resolved_at)}.{" "}
+                {Number(selectedBugReport.reward_points || 0) > 0
+                  ? `Vartotojui skirta +${Number(
+                      selectedBugReport.reward_points
+                    )} patikimumo taškas.`
+                  : "Papildomas patikimumo taškas nepridėtas, nes balas jau buvo 100 / 100 arba atlygis šiai paskyrai netaikomas."}
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 9,
+                  marginTop: 16,
+                }}
+              >
+                <button
+                  className="admin-small-btn"
+                  type="button"
+                  onClick={() => setSelectedBugReport(null)}
+                  disabled={Boolean(resolvingBugId)}
+                >
+                  Uždaryti
+                </button>
+                <button
+                  type="button"
+                  disabled={resolvingBugId === selectedBugReport.id}
+                  onClick={() => resolveSiteBug(selectedBugReport)}
+                  style={{
+                    border: "1px solid #9bd2ba",
+                    background: "#167a54",
+                    color: "#fff",
+                    borderRadius: 9,
+                    padding: "9px 13px",
+                    font: "inherit",
+                    fontSize: 12,
+                    fontWeight: 850,
+                    cursor:
+                      resolvingBugId === selectedBugReport.id
+                        ? "wait"
+                        : "pointer",
+                    opacity:
+                      resolvingBugId === selectedBugReport.id ? 0.65 : 1,
+                  }}
+                >
+                  {resolvingBugId === selectedBugReport.id
+                    ? "Žymima..."
+                    : "Sutvarkiau"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
+
 
       <DeleteAccountModal
         open={deleteAccountOpen}
@@ -23096,11 +23446,21 @@ function App() {
   }
 
   if (user && accountRole === "worker") {
-    return <WorkerDashboard user={user} onLogout={logout} />;
+    return (
+      <>
+        <WorkerDashboard user={user} onLogout={logout} />
+        <BugResolutionNotice userId={user.id} />
+      </>
+    );
   }
 
   if (user && accountRole === "employer") {
-    return <EmployerDashboard user={user} onLogout={logout} />;
+    return (
+      <>
+        <EmployerDashboard user={user} onLogout={logout} />
+        <BugResolutionNotice userId={user.id} />
+      </>
+    );
   }
 
   if (user && accountRole === "admin") {
