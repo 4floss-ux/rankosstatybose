@@ -10872,6 +10872,16 @@ function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
 function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
   const rows = visibleMonthlyAwardHistory(awards);
   const active = activeMonthlyAwards(rows);
+  const activeKeys = new Set(
+    active.map((award) =>
+      award?.id || `${String(award?.award_month || "").slice(0, 10)}-${award?.recipient_type || ""}-${award?.award_type || ""}`
+    )
+  );
+  const historyRows = rows.filter((award) => {
+    const key =
+      award?.id || `${String(award?.award_month || "").slice(0, 10)}-${award?.recipient_type || ""}-${award?.award_type || ""}`;
+    return !activeKeys.has(key);
+  });
 
   if (!rows.length && !showEmpty) return null;
 
@@ -10968,7 +10978,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
         </div>
       )}
 
-      {rows.length ? (
+      {historyRows.length ? (
         <div>
           <div
             style={{
@@ -10988,7 +10998,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
               gap: 9,
             }}
           >
-            {rows.map((award) => {
+            {historyRows.map((award) => {
               const meta = monthlyAwardMeta(award);
               return (
                 <div
@@ -11021,7 +11031,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
             })}
           </div>
         </div>
-      ) : showEmpty ? (
+      ) : showEmpty && active.length === 0 && rows.length === 0 ? (
         <div
           style={{
             border: "1px dashed #d7e0e7",
