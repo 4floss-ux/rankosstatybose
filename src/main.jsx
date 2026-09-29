@@ -7828,124 +7828,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card" id="worker-job-history">
-            <h2>Darbų istorija</h2>
-            <p className="wd-card-sub">
-              Čia saugomi užbaigti ir atšaukti darbai. Užbaigus darbą privatus
-              susirašinėjimas ir darbo pokalbis uždaromi — lieka tik darbo informacija.
-            </p>
-
-            {workerWorkHistory.length ? (
-              <>
-              <div className="wd-workdays">
-                {pagedWorkerWorkHistory.map((item) => {
-                  const job = item.job;
-                  const attendance = item.attendance || {};
-                  if (!job) return null;
-
-                  const cancelled = [
-                    "cancelled_by_employer",
-                    "cancelled_by_worker",
-                  ].includes(item.status);
-
-                  return (
-                    <div className="wd-workday" key={`history-${item.id}`}>
-                      <div>
-                        <div className="wd-workday-head">
-                          <CompanyBadge
-                            name={item.companyName}
-                            avatarPath={item.companyAvatarPath}
-                            size={52}
-                            fontSize={18}
-                          />
-                          <div className="wd-workday-head-main">
-                            <div className="wd-workday-title">
-                              <h3>{job.title}</h3>
-                              <span
-                                className={`wd-workday-phase ${
-                                  cancelled ? "cancelled" : "done"
-                                }`}
-                              >
-                                {cancelled ? "Atšauktas" : "Užbaigtas"}
-                              </span>
-                              {!cancelled && attendance.finalized_at && (
-                                <span
-                                  className={`wd-workday-status ${
-                                    attendance.final_outcome === "no_show" ||
-                                    attendance.final_outcome === "left_early_unexcused"
-                                      ? "red"
-                                      : "green"
-                                  }`}
-                                >
-                                  {attendanceOutcomeLabel(attendance)}
-                                  {attendance.worked_minutes > 0
-                                    ? ` · ${formatWorkedMinutes(
-                                        attendance.worked_minutes
-                                      )}`
-                                    : ""}
-                                </span>
-                              )}
-                              {attendance.dispute_status === "resolved_worker" && (
-                                <span className="wd-workday-status green">
-                                  ✓ Ginčas išspręstas jūsų naudai
-                                </span>
-                              )}
-                              {attendance.dispute_status === "resolved_employer" && (
-                                <span className="wd-workday-status red">
-                                  Ginčas išspręstas ne jūsų naudai
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="wd-workday-meta">
-                              <div className="wd-company-meta-line">
-                                <b>{item.companyName}</b>
-                                {job.pay_amount
-                                  ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                                  : ""}
-                                {" · "}
-                                {job.work_date} · {job.start_time?.slice(0, 5)}
-                                {job.end_time
-                                  ? `–${job.end_time.slice(0, 5)}`
-                                  : ""}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {!cancelled && !attendance.finalized_at ? (
-                          <span className="wd-workday-status green">
-                            Darbas užbaigtas
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="wd-workday-actions">
-                        <button
-                          className="wd-decline"
-                          type="button"
-                          onClick={() => openWorkdayDetails(item)}
-                        >
-                          Darbo informacija
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <DashboardPagination
-                page={workerHistoryPage}
-                totalItems={workerWorkHistory.length}
-                onPageChange={setWorkerHistoryPage}
-              />
-              </>
-            ) : (
-              <div style={{ color: "#6c7a88" }}>
-                Užbaigtų darbų istorijos kol kas nėra.
-              </div>
-            )}
-          </section>
-
           <section className="wd-card" id="worker-invitations">
             <h2>Darbo kvietimai</h2>
             <p className="wd-card-sub">
@@ -8142,6 +8024,123 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
+          <section className="wd-card" id="worker-job-history">
+            <h2>Darbų istorija</h2>
+            <p className="wd-card-sub">
+              Čia saugomi užbaigti ir atšaukti darbai. Užbaigus darbą privatus
+              susirašinėjimas ir darbo pokalbis uždaromi — lieka tik darbo informacija.
+            </p>
+
+            {workerWorkHistory.length ? (
+              <>
+              <div className="wd-workdays">
+                {pagedWorkerWorkHistory.map((item) => {
+                  const job = item.job;
+                  const attendance = item.attendance || {};
+                  if (!job) return null;
+
+                  const cancelled = [
+                    "cancelled_by_employer",
+                    "cancelled_by_worker",
+                  ].includes(item.status);
+
+                  return (
+                    <div className="wd-workday" key={`history-${item.id}`}>
+                      <div>
+                        <div className="wd-workday-head">
+                          <CompanyBadge
+                            name={item.companyName}
+                            avatarPath={item.companyAvatarPath}
+                            size={52}
+                            fontSize={18}
+                          />
+                          <div className="wd-workday-head-main">
+                            <div className="wd-workday-title">
+                              <h3>{job.title}</h3>
+                              <span
+                                className={`wd-workday-phase ${
+                                  cancelled ? "cancelled" : "done"
+                                }`}
+                              >
+                                {cancelled ? "Atšauktas" : "Užbaigtas"}
+                              </span>
+                              {!cancelled && attendance.finalized_at && (
+                                <span
+                                  className={`wd-workday-status ${
+                                    attendance.final_outcome === "no_show" ||
+                                    attendance.final_outcome === "left_early_unexcused"
+                                      ? "red"
+                                      : "green"
+                                  }`}
+                                >
+                                  {attendanceOutcomeLabel(attendance)}
+                                  {attendance.worked_minutes > 0
+                                    ? ` · ${formatWorkedMinutes(
+                                        attendance.worked_minutes
+                                      )}`
+                                    : ""}
+                                </span>
+                              )}
+                              {attendance.dispute_status === "resolved_worker" && (
+                                <span className="wd-workday-status green">
+                                  ✓ Ginčas išspręstas jūsų naudai
+                                </span>
+                              )}
+                              {attendance.dispute_status === "resolved_employer" && (
+                                <span className="wd-workday-status red">
+                                  Ginčas išspręstas ne jūsų naudai
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="wd-workday-meta">
+                              <div className="wd-company-meta-line">
+                                <b>{item.companyName}</b>
+                                {job.pay_amount
+                                  ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                                  : ""}
+                                {" · "}
+                                {job.work_date} · {job.start_time?.slice(0, 5)}
+                                {job.end_time
+                                  ? `–${job.end_time.slice(0, 5)}`
+                                  : ""}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {!cancelled && !attendance.finalized_at ? (
+                          <span className="wd-workday-status green">
+                            Darbas užbaigtas
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="wd-workday-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(item)}
+                        >
+                          Darbo informacija
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <DashboardPagination
+                page={workerHistoryPage}
+                totalItems={workerWorkHistory.length}
+                onPageChange={setWorkerHistoryPage}
+              />
+              </>
+            ) : (
+              <div style={{ color: "#6c7a88" }}>
+                Užbaigtų darbų istorijos kol kas nėra.
+              </div>
+            )}
+          </section>
         </div>
       </main>
 
