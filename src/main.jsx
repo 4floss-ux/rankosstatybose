@@ -15968,7 +15968,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-attendance-panel ed-declined-workers-panel">
                 <h2>Pasiūlymo atsisakę darbuotojai</h2>
                 <p className="ed-attendance-help">
-                  Šie darbuotojai atsisakė šio darbo pasiūlymo. Jie paliekami darbo istorijoje, tačiau pakartotinai kviesti jų negalima.
+                  Šie darbuotojai atsisakė šio darbo pasiūlymo. Jie paliekami darbo istorijoje ir negali būti pakviesti pakartotinai tik į šį konkretų pasiūlymą. Į kitus darbo pasiūlymus juos galima kviesti įprastai, jei jie atitinka kriterijus.
                 </p>
                 <div className="ed-results">
                   {pagedDeclinedWorkers.map((worker) => (
