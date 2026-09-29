@@ -1114,7 +1114,8 @@ function AuthModal({
   const [mode, setMode] = useState(initialMode);
   const [role, setRole] = useState(initialRole);
   const [form, setForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     city: "Vilnius",
@@ -1140,9 +1141,12 @@ function AuthModal({
       setSignupPlan(selectedPlanKey);
 
       if (teamInvite) {
+        const invitedName = String(teamInvite.invited_name || "").trim();
+        const invitedParts = invitedName.split(/\s+/).filter(Boolean);
         setForm((current) => ({
           ...current,
-          name: teamInvite.invited_name || current.name,
+          firstName: invitedParts[0] || current.firstName,
+          lastName: invitedParts.slice(1).join(" ") || current.lastName,
           email: teamInvite.email || current.email,
         }));
       }
@@ -1184,8 +1188,11 @@ function AuthModal({
         if (!termsAccepted) {
           throw new Error("Norėdami registruotis, susipažinkite su naudojimosi sąlygomis ir jas patvirtinkite.");
         }
-        if (!form.name.trim()) {
+        if (!form.firstName.trim()) {
           throw new Error("Įveskite vardą.");
+        }
+        if (!form.lastName.trim()) {
+          throw new Error("Įveskite pavardę.");
         }
 
         if (form.password.length < 8) {
@@ -1234,8 +1241,10 @@ function AuthModal({
               preferred_billing_interval:
                 signupPlan !== "basic" && selectedBillingCycle === "yearly"
                   ? "yearly" : "monthly",
-              display_name: form.name.trim(),
-              legal_name: form.name.trim(),
+              first_name: form.firstName.trim(),
+              last_name: form.lastName.trim(),
+              display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+              legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
               phone: form.phone.trim(),
               company_name:
@@ -1428,16 +1437,29 @@ function AuthModal({
         <form onSubmit={submit} style={{ display: "grid", gap: 13 }}>
           {mode === "signup" && (
             <>
-              <label style={labelStyle}>
-                Vardas
-                <input
-                  style={inputStyle}
-                  value={form.name}
-                  onChange={setField("name")}
-                  placeholder="Pvz. Tomas"
-                  autoComplete="name"
-                />
-              </label>
+              <div style={twoColumns}>
+                <label style={labelStyle}>
+                  Vardas
+                  <input
+                    style={inputStyle}
+                    value={form.firstName}
+                    onChange={setField("firstName")}
+                    placeholder="Pvz. Tomas"
+                    autoComplete="given-name"
+                  />
+                </label>
+
+                <label style={labelStyle}>
+                  Pavardė
+                  <input
+                    style={inputStyle}
+                    value={form.lastName}
+                    onChange={setField("lastName")}
+                    placeholder="Pvz. Jonaitis"
+                    autoComplete="family-name"
+                  />
+                </label>
+              </div>
 
               <div style={twoColumns}>
                 <label style={labelStyle}>
@@ -4407,6 +4429,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [avatarMarkedForRemoval, setAvatarMarkedForRemoval] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
     displayName: "",
     city: "Vilnius",
     phone: "",
@@ -4765,7 +4789,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       ] = await Promise.all([
         supabase
           .from("profiles")
-          .select("display_name, city")
+          .select("display_name, first_name, last_name, city")
           .eq("id", user.id)
           .single(),
         supabase
@@ -4828,8 +4852,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           Date.now() - availabilityConfirmedAt > activityWindowMs
       );
 
+      const fallbackNameParts = String(profile?.display_name || "").trim().split(/\s+/).filter(Boolean);
+      const firstName = profile?.first_name || fallbackNameParts[0] || "";
+      const lastName = profile?.last_name || fallbackNameParts.slice(1).join(" ") || "";
+
       setForm({
-        displayName: profile?.display_name || "",
+        firstName,
+        lastName,
+        displayName: `${firstName} ${lastName}`.trim() || profile?.display_name || "",
         city: profile?.city || "Vilnius",
         phone: privateData?.phone || "",
         travelRadius: worker?.travel_radius_km ?? 30,
@@ -4917,7 +4947,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setProfileSaved(false);
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (key === "firstName" || key === "lastName") {
+        next.displayName = `${next.firstName || ""} ${next.lastName || ""}`.trim();
+      }
+      return next;
+    });
   }
 
   function urgentAvailabilityIsActive() {
@@ -5848,6 +5884,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
+      if (!form.firstName.trim()) {
+        throw new Error("Įveskite vardą.");
+      }
+      if (!form.lastName.trim()) {
+        throw new Error("Įveskite pavardę.");
+      }
       if (!form.phone.trim()) {
         throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
       }
@@ -5860,7 +5902,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const profileUpdate = await supabase
         .from("profiles")
         .update({
-          display_name: form.displayName.trim(),
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
           city: canonicalCity,
         })
         .eq("id", user.id);
@@ -5869,7 +5913,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const privateUpdate = await supabase
         .from("user_private")
-        .update({ phone: form.phone.trim() || null })
+        .update({
+          phone: form.phone.trim() || null,
+          legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+        })
         .eq("user_id", user.id);
 
       if (privateUpdate.error) throw privateUpdate.error;
@@ -6452,7 +6499,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
-        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#f8fafb}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -6886,10 +6933,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Vardas
                   <input
                     className="wd-input"
-                    value={form.displayName}
-                    onChange={(e) =>
-                      updateField("displayName", e.target.value)
-                    }
+                    value={form.firstName}
+                    onChange={(e) => updateField("firstName", e.target.value)}
+                    autoComplete="given-name"
+                  />
+                </label>
+
+                <label className="wd-label">
+                  Pavardė
+                  <input
+                    className="wd-input"
+                    value={form.lastName}
+                    onChange={(e) => updateField("lastName", e.target.value)}
+                    autoComplete="family-name"
                   />
                 </label>
 
@@ -9756,12 +9812,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <p>Naujas darbuotojas pradeda nuo <b>100 patikimumo taškų</b>.</p>
               </div>
               <div className="reliability-rule">
-                <div className="reliability-rule-icon">−10</div>
-                <p>Patvirtintas <b>neatvykimas</b> sumažina patikimumą 10 taškų ir taikomas 3 dienų darbo priėmimo apribojimas.</p>
+                <div className="reliability-rule-icon">−7</div>
+                <p>Patvirtintas <b>neatvykimas</b> sumažina patikimumą 7 taškais ir taikomas 3 dienų darbo priėmimo apribojimas.</p>
               </div>
               <div className="reliability-rule">
-                <div className="reliability-rule-icon">−5</div>
-                <p>Patvirtintas <b>nepagrįstas ankstyvas išėjimas</b> sumažina patikimumą 5 taškais.</p>
+                <div className="reliability-rule-icon">−3</div>
+                <p>Patvirtintas <b>nepagrįstas ankstyvas išėjimas</b> sumažina patikimumą 3 taškais.</p>
               </div>
               <div className="reliability-rule">
                 <div className="reliability-rule-icon">+</div>
@@ -10110,10 +10166,10 @@ function formatReliabilityChange(value) {
 
 function workerReliabilityPenaltyMeta(penalty) {
   if (penalty?.penalty_type === "no_show") {
-    return { change: -10, label: "Neatvykimas į patvirtintą darbą" };
+    return { change: -7, label: "Neatvykimas į patvirtintą darbą" };
   }
   if (penalty?.penalty_type === "unexcused_early_leave") {
-    return { change: -5, label: "Nepagrįstas ankstyvas išėjimas iš darbo" };
+    return { change: -3, label: "Nepagrįstas ankstyvas išėjimas iš darbo" };
   }
   return { change: 0, label: penalty?.reason || "Patikimumo pažeidimas" };
 }
@@ -13562,7 +13618,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const confirmedCount = Number(
         cancelled?.confirmed_workers ?? cancelJobTarget.confirmedCount ?? 0
       );
-      const reliabilityChange = Number(cancelled?.reliability_change ?? -10);
+      const reliabilityChange = Number(cancelled?.reliability_change ?? -7);
       const newReliability = Number(cancelled?.new_reliability ?? 100);
       const cancelledAt = cancelled?.cancelled_at || new Date().toISOString();
       const savedReason = cancelled?.cancellation_reason || reason;
@@ -14191,10 +14247,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-worker-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         @media(max-width:900px){.ed-worker{grid-template-columns:1fr}.ed-worker.ed-worker-basic{grid-template-columns:1fr}.ed-worker-actions{justify-self:stretch;max-width:none}}
         .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(16,36,56,.035)}
-        .ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:18px 20px 16px;border-bottom:1px solid #edf1f4;background:#fbfcfd}
+        .ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:18px 20px 16px;border-bottom:1px solid #edf1f4;background:#fff}
         .ed-current-job-overview-head .eyebrow{margin-bottom:7px}.ed-current-job-overview-head h2{margin:0 0 5px;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.15}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:12.5px;line-height:1.45}
         .ed-current-job-status{display:inline-flex;align-items:center;justify-content:center;min-height:30px;border-radius:999px;padding:6px 11px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:900;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}
-        .ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px 18px;background:#f8fafb}
+        .ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px 18px;background:#fff}
         .ed-current-job-field{min-width:0;border:1px solid #e5ebf0;border-radius:11px;background:#fff;padding:11px 12px}
         .ed-current-job-field span{display:block;margin-bottom:4px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .ed-current-job-field b{display:block;color:#102438;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
@@ -17935,10 +17991,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div className="reliability-rule">
-                <div className="reliability-rule-icon">−10</div>
+                <div className="reliability-rule-icon">−7</div>
                 <p>
                   Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys visą
-                  darbą atšaukia, patikimumas sumažėja <b>10 taškų</b>.
+                  darbą atšaukia, patikimumas sumažėja <b>7 taškais</b>.
                 </p>
               </div>
 
@@ -17952,11 +18008,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div className="reliability-rule">
-                <div className="reliability-rule-icon">−20</div>
+                <div className="reliability-rule-icon">−15</div>
                 <p>
                   Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
                   darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
-                  patikimumas sumažėja <b>20 taškų</b>.
+                  patikimumas sumažėja <b>15 taškų</b>.
                 </p>
               </div>
 
@@ -18103,7 +18159,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
               <div style={{ marginTop: 5 }}>
                 Kadangi darbą jau patvirtino darbuotojas, atšaukimas sumažins
-                jūsų darbdavio patikimumo reitingą 10 punktų.
+                jūsų darbdavio patikimumo reitingą 7 punktais.
               </div>
             </div>
 
