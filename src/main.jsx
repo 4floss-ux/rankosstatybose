@@ -3663,6 +3663,10 @@ function WorkerProfileModal({
           .rs-profile-plan-lock{grid-column:1/-1;border:1px dashed #d7e0e7;background:#f8fafb;border-radius:12px;padding:13px 14px;color:#526374;font-size:12px;line-height:1.5}
           .rs-profile-plan-lock b{display:block;color:#102438;font-size:13px;margin-bottom:3px}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
+          .rs-profile-experience{margin-top:18px;border:1px solid #e4ebf0;border-radius:16px;background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%);padding:16px 18px;box-shadow:0 6px 18px rgba(16,36,56,.035)}
+          .rs-profile-experience-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.rs-profile-experience-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#fff1e4;color:#d66f14;flex:0 0 34px}.rs-profile-experience-icon svg{width:18px;height:18px;display:block}
+          .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#102438}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
+          .rs-profile-experience-text{margin:0;padding:12px 14px;border-radius:11px;background:#f6f8fa;color:#526374;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
           @media(max-width:620px){.worker-profile-modal{border-radius:16px}.worker-profile-modal-scroll{max-height:calc(100vh - 20px);padding:17px}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
           @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
@@ -3802,9 +3806,22 @@ function WorkerProfileModal({
           </div>
         )}
 
-        <div className="rs-profile-section">
-          <b>Patirtis</b>
-          <p style={{ color: "#526374", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: "8px 0 0" }}>
+        <div className="rs-profile-experience">
+          <div className="rs-profile-experience-head">
+            <span className="rs-profile-experience-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 6V4h6v2" />
+                <rect x="3" y="6" width="18" height="14" rx="3" />
+                <path d="M3 11h18" />
+                <path d="M10 14h4" />
+              </svg>
+            </span>
+            <div className="rs-profile-experience-title">
+              <b>Patirtis</b>
+              <span>Darbuotojo pateiktas patirties aprašymas</span>
+            </div>
+          </div>
+          <p className="rs-profile-experience-text">
             {worker.shortBio?.trim() || (Number(worker.yearsExperience || 0) > 0
               ? `Profilyje nurodyta ${Number(worker.yearsExperience)} m. patirtis. Išsamesnio aprašymo darbuotojas dar nepateikė.`
               : "Darbuotojas dar nepateikė savo patirties aprašymo.")}
