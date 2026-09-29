@@ -6843,7 +6843,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-long-term-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile,.wd-long-term-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.wd-long-term-btn{position:relative}
         .wd-urgent-btn{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(240,138,40,.18)}
         .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}.wd-urgent-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
-        .wd-urgent-status{font-size:11px;color:#167a54;font-weight:800;text-align:right;margin-top:-4px}
+        .wd-urgent-status{width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-height:18px;padding:0 6px;font-size:11px;line-height:1.35;color:#167a54;font-weight:800;text-align:center;margin-top:-3px}
         .wd-profile-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,36,56,.045);margin-bottom:22px}
         .wd-profile-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:4px}
         .wd-profile-editor-head h2{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:22px}
@@ -6992,7 +6992,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   initials || "D"
                 )}
               </div>
-              <MonthlyAwardMiniList awards={monthlyAwards} size={52} />
               <div>
                 <b>{form.displayName || "Darbuotojas"}</b>
                 <span>{form.city || "Miestas nenurodytas"}</span>
@@ -7297,6 +7296,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
+              <MonthlyAwardsPanel
+                awards={monthlyAwards}
+                recipientType="worker"
+                showEmpty={true}
+              />
+
               <div className="wd-grid-2">
                 <label className="wd-label">
                   Vardas *
@@ -7409,12 +7414,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </label>
             </div>
-
-            <MonthlyAwardsPanel
-              awards={monthlyAwards}
-              recipientType="worker"
-              showEmpty={true}
-            />
 
             <div className="wd-profile-editor-section wd-recent-ratings-card">
               <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
@@ -9996,7 +9995,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-worker-offer-modal">
             <style>{`
-              .lt-worker-offer-modal{width:min(860px,100%)!important;border-radius:22px!important;padding:24px!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable;background:#fff!important;box-sizing:border-box}
+              .lt-worker-offer-modal{width:min(860px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:22px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:24px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
               .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
               .lt-worker-offer-modal .rs-close{border-radius:12px!important}
               .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:92px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
@@ -10004,9 +10003,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
               .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
               .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#fff!important;font-size:12px;box-sizing:border-box;box-shadow:none!important;min-height:48px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
-              @media(max-width:620px){.lt-worker-offer-modal{padding:18px!important;border-radius:18px!important}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
+              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
+            <div className="lt-worker-offer-scroll">
             <div className="rs-modal-head">
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <CompanyBadge
@@ -10268,6 +10268,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Uždaryti
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -10807,6 +10808,42 @@ function activeMonthlyAwards(awards) {
   );
 }
 
+const MONTHLY_AWARD_TOOLTIP_STYLES = `
+  .monthly-award-hover{position:relative;display:inline-grid;place-items:center;flex:0 0 auto;border-radius:14px;outline:none}
+  .monthly-award-hover>img{display:block;object-fit:contain;transition:transform .15s ease,filter .15s ease}
+  .monthly-award-hover:hover>img,.monthly-award-hover:focus-visible>img{transform:translateY(-1px);filter:drop-shadow(0 5px 9px rgba(16,36,56,.16))}
+  .monthly-award-tooltip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,5px);z-index:5000;min-width:210px;max-width:280px;padding:10px 12px;border:1px solid #f0c79f;border-radius:12px;background:#fffaf5;box-shadow:0 12px 28px rgba(16,36,56,.16);color:#102438;font-size:11px;line-height:1.4;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
+  .monthly-award-tooltip:after{content:"";position:absolute;left:50%;top:100%;width:9px;height:9px;background:#fffaf5;border-right:1px solid #f0c79f;border-bottom:1px solid #f0c79f;transform:translate(-50%,-5px) rotate(45deg)}
+  .monthly-award-hover:hover .monthly-award-tooltip,.monthly-award-hover:focus-visible .monthly-award-tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
+  .monthly-award-tooltip b{display:block;margin-bottom:2px;color:#102438;font-size:11.5px}
+  .monthly-award-tooltip span{display:block;color:#6c7a88}
+  .monthly-award-tooltip strong{display:block;margin-top:3px;color:#b85f0e;font-size:10.5px}
+`;
+
+function MonthlyAwardBadgeVisual({ award, size = 31 }) {
+  const meta = monthlyAwardMeta(award);
+  return (
+    <span
+      className="monthly-award-hover"
+      tabIndex={0}
+      aria-label={`${meta.title}, ${monthlyAwardMonthLabel(award.award_month)}, ${monthlyAwardMetricText(award)}`}
+      style={{ width: size, height: size }}
+    >
+      <style>{MONTHLY_AWARD_TOOLTIP_STYLES}</style>
+      <img
+        src={monthlyAwardImage(award)}
+        alt={meta.title}
+        style={{ width: size, height: size }}
+      />
+      <span className="monthly-award-tooltip" role="tooltip">
+        <b>{meta.title}</b>
+        <span>{monthlyAwardMonthLabel(award.award_month)}</span>
+        <strong>{monthlyAwardMetricText(award)}</strong>
+      </span>
+    </span>
+  );
+}
+
 function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
   const rows = activeMonthlyAwards(awards).slice(0, max);
   if (!rows.length) return null;
@@ -10821,26 +10858,13 @@ function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
       }}
       aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"
     >
-      {rows.map((award) => {
-        const meta = monthlyAwardMeta(award);
-        return (
-          <img
-            key={award.id || `${award.award_month}-${award.award_type}`}
-            src={monthlyAwardImage(award)}
-            alt={meta.title}
-            title={`${meta.title} · ${monthlyAwardMonthLabel(
-              award.award_month
-            )} · ${monthlyAwardMetricText(award)}`}
-            style={{
-              width: size,
-              height: size,
-              objectFit: "contain",
-              display: "block",
-              flex: `0 0 ${size}px`,
-            }}
-          />
-        );
-      })}
+      {rows.map((award) => (
+        <MonthlyAwardBadgeVisual
+          key={award.id || `${award.award_month}-${award.award_type}`}
+          award={award}
+          size={size}
+        />
+      ))}
     </span>
   );
 }
@@ -10881,9 +10905,6 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
           <b style={{ display: "block", marginTop: 4, color: "#102438", fontSize: 16 }}>
             {heading}
           </b>
-          <span style={{ display: "block", marginTop: 4, color: "#6c7a88", fontSize: 12 }}>
-            Apdovanojimas galioja visą kitą mėnesį, o visa istorija lieka profilyje.
-          </span>
         </div>
         {rows.length > 0 && (
           <span style={{ color: "#6c7a88", fontSize: 12 }}>
@@ -10928,16 +10949,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
                     padding: 11,
                   }}
                 >
-                  <img
-                    src={monthlyAwardImage(award)}
-                    alt={meta.title}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      objectFit: "contain",
-                      flex: "0 0 64px",
-                    }}
-                  />
+                  <MonthlyAwardBadgeVisual award={award} size={64} />
                   <div style={{ minWidth: 0 }}>
                     <b style={{ display: "block", color: "#102438", fontSize: 13, lineHeight: 1.3 }}>
                       {meta.title}
@@ -10992,11 +11004,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
                     padding: 10,
                   }}
                 >
-                  <img
-                    src={monthlyAwardImage(award)}
-                    alt={meta.title}
-                    style={{ width: 46, height: 46, objectFit: "contain" }}
-                  />
+                  <MonthlyAwardBadgeVisual award={award} size={46} />
                   <div style={{ minWidth: 0 }}>
                     <b style={{ display: "block", color: "#102438", fontSize: 12 }}>
                       {meta.title}
@@ -15347,6 +15355,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
 
+            <MonthlyAwardsPanel
+              awards={companyMonthlyAwards}
+              recipientType="company"
+              showEmpty={true}
+            />
+
             <div className="ed-profile-summary">
               <div className="ed-profile-summary-card">
                 <span>Jūs prisijungę kaip</span>
@@ -15470,12 +15484,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </label>
             </div>
-
-            <MonthlyAwardsPanel
-              awards={companyMonthlyAwards}
-              recipientType="company"
-              showEmpty={true}
-            />
 
             <div className="ed-company-reviews">
               <div className="ed-company-reviews-head">
