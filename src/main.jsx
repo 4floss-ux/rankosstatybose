@@ -17637,6 +17637,83 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
+            {jobInfoWorkers.some((worker) =>
+              ["resolved_worker", "resolved_employer"].includes(
+                worker.attendance?.dispute_status
+              )
+            ) && (
+              <div
+                style={{
+                  marginTop: 10,
+                  border: "1px solid #e4ebf0",
+                  borderRadius: 12,
+                  padding: 14,
+                  background: "#fff",
+                }}
+              >
+                <div style={{ color: "#6c7a88", fontSize: 12 }}>Ginčai</div>
+                <b style={{ display: "block", marginTop: 4 }}>Ginčo sprendimas</b>
+
+                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                  {jobInfoWorkers
+                    .filter((worker) =>
+                      ["resolved_worker", "resolved_employer"].includes(
+                        worker.attendance?.dispute_status
+                      )
+                    )
+                    .map((worker) => {
+                      const employerWon =
+                        worker.attendance?.dispute_status === "resolved_employer";
+                      return (
+                        <div
+                          key={`dispute-${jobInfoTarget.id}-${worker.bookingId}`}
+                          style={{
+                            border: `1px solid ${employerWon ? "#b9dfcd" : "#efc5c5"}`,
+                            borderRadius: 11,
+                            padding: "11px 12px",
+                            background: employerWon ? "#f4fbf7" : "#fff6f6",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <b style={{ color: "#102438", fontSize: 13 }}>
+                              {worker.name}
+                            </b>
+                            <span
+                              style={{
+                                color: employerWon ? "#167a54" : "#b64242",
+                                fontSize: 11,
+                                fontWeight: 800,
+                              }}
+                            >
+                              {employerWon ? "JŪSŲ NAUDAI" : "NE JŪSŲ NAUDAI"}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 7,
+                              lineHeight: 1.5,
+                              whiteSpace: "pre-wrap",
+                              color: "#102438",
+                              fontSize: 12,
+                            }}
+                          >
+                            {worker.attendance?.resolution_note?.trim() ||
+                              "Administratorius papildomo komentaro nepateikė."}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
             <div
               style={{
                 marginTop: 10,
@@ -17733,55 +17810,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 worked > 0 ? ` · ${formatWorkedMinutes(worked)}` : ""
                               }`}
                         </span>
-                        {["resolved_worker", "resolved_employer"].includes(
-                          worker.attendance?.dispute_status
-                        ) && (
-                          <div
-                            style={{
-                              gridColumn: "1 / -1",
-                              border: `1px solid ${
-                                worker.attendance?.dispute_status === "resolved_employer"
-                                  ? "#b9dfcd"
-                                  : "#efc5c5"
-                              }`,
-                              borderRadius: 10,
-                              padding: "10px 11px",
-                              background:
-                                worker.attendance?.dispute_status === "resolved_employer"
-                                  ? "#f4fbf7"
-                                  : "#fff6f6",
-                            }}
-                          >
-                            <div
-                              style={{
-                                color:
-                                  worker.attendance?.dispute_status === "resolved_employer"
-                                    ? "#167a54"
-                                    : "#b64242",
-                                fontSize: 11,
-                                fontWeight: 800,
-                              }}
-                            >
-                              GINČO SPRENDIMAS · {
-                                worker.attendance?.dispute_status === "resolved_employer"
-                                  ? "JŪSŲ NAUDAI"
-                                  : "NE JŪSŲ NAUDAI"
-                              }
-                            </div>
-                            <div
-                              style={{
-                                marginTop: 5,
-                                lineHeight: 1.5,
-                                whiteSpace: "pre-wrap",
-                                color: "#102438",
-                                fontSize: 12,
-                              }}
-                            >
-                              {worker.attendance?.resolution_note?.trim() ||
-                                "Administratorius papildomo komentaro nepateikė."}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -17794,6 +17822,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               )}
             </div>
+
             </div>
           </div>
         </div>
