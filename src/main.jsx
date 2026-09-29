@@ -4512,7 +4512,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       await loadLongTermOffers();
       setNotice(
         result.data === "active"
-          ? "Įsidarbinimas patvirtintas abiejų pusių. Dabar pasirinkite, ar ieškosite papildomų darbų laisvu metu."
+          ? "Įsidarbinimas patvirtintas abiejų pusių. Papildomų darbų matomumas automatiškai priklausys nuo jūsų pažymėto laisvo laiko ir aktyvaus įdarbinimo grafiko."
           : "Jūsų patvirtinimas išsaugotas. Laukiama darbdavio patvirtinimo."
       );
     } catch (err) {
@@ -4666,28 +4666,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  async function setLongTermSearchPreference(offer, value) {
-    if (!offer?.id || longTermBusy) return;
-    setLongTermBusy(true);
-    setError("");
-    try {
-      const result = await supabase.rpc("worker_set_long_term_search_preference", {
-        p_placement_id: offer.id,
-        p_search_extra_jobs: value,
-      });
-      if (result.error) throw result.error;
-      await loadLongTermOffers();
-      setNotice(
-        value
-          ? "Papildomų workforce darbų paieška palikta įjungta laisvu metu."
-          : "Papildomų workforce darbų paieška išjungta."
-      );
-    } catch (err) {
-      setError(err?.message || "Nepavyko išsaugoti pasirinkimo.");
-    } finally {
-      setLongTermBusy(false);
-    }
-  }
 
   async function loadDashboard() {
     setLoading(true);
@@ -9428,37 +9406,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   background: "#f3faf6",
                 }}
               >
-                <b>Ar norite toliau ieškoti papildomų workforce darbų?</b>
-                <p style={{ margin: "5px 0 11px", color: "#607180", fontSize: 13 }}>
-                  Galite toliau naudotis workforce laisvu metu. Pastovus aktyvaus
-                  įdarbinimo grafikas automatiškai saugomas nuo persidengiančių darbų.
+                <b>Papildomi darbai valdomi pagal jūsų laisvumo grafiką</b>
+                <p style={{ margin: "5px 0 0", color: "#607180", fontSize: 13, lineHeight: 1.5 }}>
+                  Aktyvaus įdarbinimo valandos yra užrakintos automatiškai. Jei prie kito
+                  laiko pažymite „Laisvas“ arba „Laisvas kitu laiku“, darbdaviai gali jus
+                  matyti tik tam laisvam laikui tinkamuose darbuose. Jei laisvo laiko
+                  nepažymite, papildomiems darbams jūsų nerodys.
                 </p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    className={
-                      longTermOfferTarget.search_extra_jobs === true
-                        ? "wd-accept"
-                        : "wd-decline"
-                    }
-                    type="button"
-                    disabled={longTermBusy}
-                    onClick={() => setLongTermSearchPreference(longTermOfferTarget, true)}
-                  >
-                    Ieškau papildomų darbų laisvu metu
-                  </button>
-                  <button
-                    className={
-                      longTermOfferTarget.search_extra_jobs === false
-                        ? "wd-accept"
-                        : "wd-decline"
-                    }
-                    type="button"
-                    disabled={longTermBusy}
-                    onClick={() => setLongTermSearchPreference(longTermOfferTarget, false)}
-                  >
-                    Šiuo metu papildomų darbų neieškau
-                  </button>
-                </div>
               </div>
             )}
 
@@ -18411,9 +18365,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 ? "Pastovus grafikas"
                                 : "Kintamas grafikas"}
                               <br />
-                              {offer.search_extra_jobs === false
-                                ? "Papildomų darbų neieško"
-                                : "Gali ieškoti papildomų darbų laisvu metu"}
+                              Papildomų darbų matomumas pagal darbuotojo laisvumo grafiką
                             </div>
                             <div className="lt-existing-actions">
                               <button
