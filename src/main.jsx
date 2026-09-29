@@ -3147,11 +3147,12 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
         .lt-chat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 22px 18px;border-bottom:1px solid #e8eef2}
         .lt-chat-head h2{margin:5px 0 0;font-size:24px;line-height:1.2}.lt-chat-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
         .lt-chat-close{border:0;background:#f2f5f7;color:#102438;border-radius:12px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer;flex:0 0 42px}
-        .lt-chat-body{overflow:auto;padding:18px 20px;display:grid;gap:10px;align-content:start;background:#f8fafb}
-        .lt-chat-empty{padding:18px;border:1px dashed #d7e0e7;border-radius:12px;background:#fff;color:#71808d;text-align:center;font-size:13px}
-        .lt-chat-message{width:min(86%,560px);padding:11px 13px;border:1px solid #dfe7ec;border-radius:14px 14px 14px 5px;background:#fff;box-shadow:0 2px 8px rgba(16,36,56,.035)}
-        .lt-chat-message.mine{justify-self:end;border-color:#f3d4b7;background:#fff6ee;border-radius:14px 14px 5px 14px}.lt-chat-message b{display:block;font-size:12px;margin-bottom:5px}.lt-chat-message p{margin:0;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}.lt-chat-message time{display:block;margin-top:7px;color:#84919c;font-size:10px}
-        .lt-chat-error{margin:12px 20px 0;background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;font-size:12px}
+        .lt-chat-body{overflow:auto;padding:18px 20px 20px;display:grid;gap:10px;align-content:start;background:#f5f8fa}
+        .lt-chat-body .chat-conduct-inline{margin:0 0 4px}
+        .lt-chat-empty{padding:18px;border:1px dashed #d7e0e7;border-radius:13px;background:#fff;color:#71808d;text-align:center;font-size:13px}
+        .lt-chat-message{width:min(82%,560px);padding:10px 12px 11px;border:1px solid #dce5eb;border-radius:16px 16px 16px 6px;background:#fff;box-shadow:0 3px 10px rgba(16,36,56,.04)}
+        .lt-chat-message.mine{justify-self:end;border-color:#f0cda9;background:#fff7ef;border-radius:16px 16px 6px 16px}.lt-chat-message-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.lt-chat-message-sender{display:flex;align-items:center;gap:7px;min-width:0}.lt-chat-message-sender b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lt-chat-role{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;background:#edf2f5;color:#607180;font-size:9px;font-weight:850;line-height:1}.lt-chat-message.mine .lt-chat-role{background:#ffe8d3;color:#a85a17}.lt-chat-message p{margin:0;color:#263b4d;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.lt-chat-message time{flex:0 0 auto;color:#8a98a6;font-size:10px;white-space:nowrap}
+        .lt-chat-error{margin:0 0 4px;background:#fff0ec;color:#b64d2a;border:1px solid #f0c7bc;border-radius:11px;padding:10px 12px;font-size:12px}
         .lt-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 16px 16px;border-top:1px solid #e8eef2;background:#fff}
         .lt-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.lt-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
         .lt-chat-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}.lt-chat-form button:disabled{opacity:.45;cursor:not-allowed}
@@ -3160,10 +3161,10 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
       <div className="lt-chat-card">
         <div className="lt-chat-head">
           <div>
-            <div className="eyebrow">ĮDARBINIMO PASIŪLYMO POKALBIS</div>
+            <div className="eyebrow">ILGALAIKIO DARBO POKALBIS</div>
             <h2>{title || "Aptarti pasiūlymą"}</h2>
             <p style={{ margin: "6px 0 0", color: "#6c7a88", fontSize: 13 }}>
-              Čia galite aptarti pasiūlymo sąlygas prieš realų įsidarbinimo patvirtinimą.
+              Čia galite aptarti ilgalaikio darbo sąlygas, sutartį ir kitus su įdarbinimu susijusius klausimus.
             </p>
           </div>
           <button className="lt-chat-close" type="button" onClick={onClose} aria-label="Uždaryti pokalbį">
@@ -3171,11 +3172,9 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
           </button>
         </div>
 
-        {error && <div className="lt-chat-error">{error}</div>}
-
-        <ChatConductNotice />
-
         <div className="lt-chat-body" ref={messagesRef}>
+          {error && <div className="lt-chat-error">{error}</div>}
+          <div className="chat-conduct-inline"><ChatConductNotice /></div>
           {loading && !messages.length ? (
             <div className="lt-chat-empty">Kraunama...</div>
           ) : messages.length ? (
@@ -3183,14 +3182,27 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
               const mine = message.sender_id === user?.id;
               return (
                 <div className={`lt-chat-message ${mine ? "mine" : ""}`} key={message.id}>
-                  <b>{message.sender_name || (mine ? "Jūs" : "Vartotojas")}</b>
+                  <div className="lt-chat-message-head">
+                    <div className="lt-chat-message-sender">
+                      <b>{message.sender_name || (mine ? "Jūs" : "Vartotojas")}</b>
+                      <span className="lt-chat-role">
+                        {message.sender_role === "worker"
+                          ? "Darbuotojas"
+                          : message.sender_role === "employer"
+                            ? "Darbdavys"
+                            : message.sender_role === "admin"
+                              ? "Administratorius"
+                              : "Pokalbis"}
+                      </span>
+                    </div>
+                    <time>
+                      {new Date(message.created_at).toLocaleString("lt-LT", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </time>
+                  </div>
                   <p>{message.body}</p>
-                  <time>
-                    {new Date(message.created_at).toLocaleString("lt-LT", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </time>
                 </div>
               );
             })
@@ -4245,6 +4257,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermOfferProgressById, setLongTermOfferProgressById] = useState({});
   const [longTermOfferTarget, setLongTermOfferTarget] = useState(null);
   const [longTermConversation, setLongTermConversation] = useState(null);
+  const [longTermEndNotice, setLongTermEndNotice] = useState(null);
+  const [longTermEndNoticeBusy, setLongTermEndNoticeBusy] = useState(false);
   const [longTermBusy, setLongTermBusy] = useState(false);
   const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
@@ -4460,7 +4474,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   useEffect(() => {
     const refreshLongTermStatus = () => {
-      loadLongTermOffers().catch(() => {
+      Promise.all([loadLongTermOffers(), loadLongTermEndNotice()]).catch(() => {
         // Aktyvaus įdarbinimo būsenos atnaujinimas neturi trukdyti naudotis paskyra.
       });
     };
@@ -4513,6 +4527,36 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       current ? rows.find((row) => row.id === current.id) || null : current
     );
     return rows;
+  }
+
+  async function loadLongTermEndNotice() {
+    const result = await supabase.rpc("get_worker_unacknowledged_long_term_end");
+    if (result.error) throw result.error;
+    const nextNotice = Array.isArray(result.data) ? result.data[0] || null : null;
+    setLongTermEndNotice(nextNotice);
+    return nextNotice;
+  }
+
+  async function acknowledgeLongTermEnd() {
+    if (!longTermEndNotice?.id || longTermEndNoticeBusy) return;
+    setLongTermEndNoticeBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("worker_acknowledge_long_term_end", {
+        p_placement_id: longTermEndNotice.id,
+      });
+      if (result.error) throw result.error;
+      setLongTermEndNotice(null);
+      await Promise.all([
+        loadLongTermOffers(),
+        loadInvitations(),
+        loadWorkerStats(),
+      ]);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti pranešimo apie nutrauktą įdarbinimą.");
+    } finally {
+      setLongTermEndNoticeBusy(false);
+    }
   }
 
   async function workerConfirmLongTermOffer(offer) {
@@ -4858,6 +4902,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadRecentEmployerRatings(),
         loadEmployerReviewOpportunities(),
         loadLongTermOffers(),
+        loadLongTermEndNotice(),
       ]);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
@@ -9789,6 +9834,54 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
+      {longTermEndNotice && (
+        <div className="lt-end-notice-overlay" role="dialog" aria-modal="true" aria-labelledby="lt-end-notice-title">
+          <style>{`
+            .lt-end-notice-overlay{position:fixed;inset:0;z-index:12500;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.66);backdrop-filter:blur(2px)}
+            .lt-end-notice-card{width:min(560px,100%);background:#fff;border:1px solid #e3eaef;border-radius:20px;box-shadow:0 30px 100px rgba(16,36,56,.34);padding:22px;color:#102438}
+            .lt-end-notice-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#fff1ed;color:#b64d2a;font-size:22px;font-weight:900;margin-bottom:14px}
+            .lt-end-notice-card h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}.lt-end-notice-card p{margin:10px 0 0;color:#607180;line-height:1.55}.lt-end-notice-company{margin-top:16px;padding:13px 14px;border:1px solid #e2e9ee;border-radius:13px;background:#f8fafb}.lt-end-notice-company b{display:block;font-size:16px}.lt-end-notice-company span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-end-notice-note{margin-top:10px;padding:11px 13px;border-radius:12px;background:#fff8f1;border:1px solid #f2d3b8;color:#8a531d;font-size:12px;line-height:1.5}.lt-end-notice-actions{display:flex;justify-content:flex-end;margin-top:18px}.lt-end-notice-confirm{border:0;border-radius:11px;background:#102438;color:#fff;padding:11px 18px;font:inherit;font-weight:850;cursor:pointer}.lt-end-notice-confirm:disabled{opacity:.55;cursor:not-allowed}
+            @media(max-width:560px){.lt-end-notice-overlay{padding:10px}.lt-end-notice-card{padding:18px;border-radius:17px}.lt-end-notice-actions{display:grid}.lt-end-notice-confirm{width:100%}}
+          `}</style>
+          <div className="lt-end-notice-card">
+            <div className="lt-end-notice-icon" aria-hidden="true">!</div>
+            <h2 id="lt-end-notice-title">Jūsų ilgalaikis įdarbinimas nutrauktas</h2>
+            <p>
+              Darbdavys nutraukė jūsų ilgalaikį įdarbinimą. Nuo nutraukimo momento
+              ilgalaikio darbo grafikas jūsų prieinamumo neberiboja, o laisvu laiku vėl
+              galite įprastai priimti darbo pasiūlymus pagal savo nustatytą grafiką.
+            </p>
+            <div className="lt-end-notice-company">
+              <b>{longTermEndNotice.company_name || "Darbdavys"}</b>
+              <span>
+                {longTermEndNotice.position_title || "Ilgalaikis darbas"}
+                {longTermEndNotice.ended_at
+                  ? ` · nutraukta ${new Date(longTermEndNotice.ended_at).toLocaleString("lt-LT", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}`
+                  : ""}
+              </span>
+            </div>
+            {longTermEndNotice.ended_note && (
+              <div className="lt-end-notice-note">
+                <b>Darbdavio pastaba:</b> {longTermEndNotice.ended_note}
+              </div>
+            )}
+            <div className="lt-end-notice-actions">
+              <button
+                className="lt-end-notice-confirm"
+                type="button"
+                disabled={longTermEndNoticeBusy}
+                onClick={acknowledgeLongTermEnd}
+              >
+                {longTermEndNoticeBusy ? "Tvirtinama..." : "Patvirtinti"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <LongTermConversationModal
         open={Boolean(longTermConversation)}
         onClose={() => setLongTermConversation(null)}
@@ -11560,9 +11653,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
     const confirmed = await askConfirm({
-      title: "Užbaigti įdarbinimą?",
-      message: `Ar tikrai norite pažymėti ${offer.worker_name || "darbuotojo"} įdarbinimą kaip pasibaigusį?`,
-      confirmLabel: "Užbaigti",
+      title: "Nutraukti įdarbinimą?",
+      message: `Ar tikrai norite nutraukti ${offer.worker_name || "darbuotojo"} ilgalaikį įdarbinimą? Darbuotojas apie tai bus informuotas prisijungęs prie paskyros.`,
+      confirmLabel: "Nutraukti įdarbinimą",
       cancelLabel: "Atšaukti",
       tone: "danger",
     });
@@ -11577,9 +11670,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       });
       if (result.error) throw result.error;
       await loadCompanyLongTermData(company.id, companyMemberRole);
-      setNotice("Įdarbinimas pažymėtas kaip pasibaigęs.");
+      setNotice("Įdarbinimas nutrauktas. Darbuotojas bus informuotas prisijungęs prie paskyros.");
     } catch (err) {
-      setError(err?.message || "Nepavyko užbaigti įdarbinimo.");
+      setError(err?.message || "Nepavyko nutraukti įdarbinimo.");
     } finally {
       setLongTermBusy(false);
     }
@@ -18022,7 +18115,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fbfcfd}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.8fr) auto;gap:12px;align-items:center;border:1px solid #cfe7dc;border-radius:13px;padding:13px 14px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#f9fbfc}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fbfcfd}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#f7f9fb;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
               @media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-offer{grid-template-columns:1fr}.lt-existing-status{justify-items:start;text-align:left;padding:6px 0}.lt-existing-actions{grid-template-columns:repeat(2,minmax(126px,1fr));justify-content:stretch;max-width:none;min-width:0}}
               @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{grid-template-columns:1fr}.lt-employment-worker .ed-primary{width:100%}.wd-long-term-offer-actions{width:100%;justify-content:flex-start}.wd-long-term-offer-actions>button{flex:1 1 140px}}
             `}</style>
@@ -18644,7 +18737,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </div>
                             <div className="lt-existing-actions">
                               <button
-                                className={`ed-secondary ${
+                                className={`ed-secondary lt-employee-chat-btn ${
                                   Number(longTermUnreadByOffer[offer.id] || 0) > 0
                                     ? "wd-workday-chat has-unread"
                                     : ""
@@ -18670,7 +18763,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </button>
                               {offer.worker_signed_contract_path && (
                                 <button
-                                  className="ed-secondary"
+                                  className="ed-secondary lt-employee-contract-btn"
                                   type="button"
                                   onClick={() => employerOpenLongTermContract(offer.worker_signed_contract_path)}
                                 >
@@ -18678,12 +18771,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 </button>
                               )}
                               <button
-                                className="ed-secondary"
+                                className="ed-secondary lt-employee-end-btn"
                                 type="button"
                                 disabled={longTermBusy}
                                 onClick={() => endLongTermEmployment(offer)}
                               >
-                                Užbaigti įdarbinimą
+                                Nutraukti įdarbinimą
                               </button>
                             </div>
                           </div>
