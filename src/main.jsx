@@ -11263,6 +11263,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
         background: "#fff",
         padding: 16,
         marginTop: 14,
+        marginBottom: 18,
       }}
     >
       <div
