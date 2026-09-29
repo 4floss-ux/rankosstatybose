@@ -20303,7 +20303,7 @@ function AdminDashboard({
   const [adminPage, setAdminPage] = useState(1);
 
   const activeSiteBugCount = siteBugReports.filter(
-    (report) => report.status !== "resolved"
+    (report) => report.status === "active"
   ).length;
 
   const tabs = [
@@ -20492,6 +20492,52 @@ function AdminDashboard({
       await loadAdminData(true);
     } catch (err) {
       setError(err?.message || "Nepavyko pažymėti klaidos sutvarkyta.");
+    } finally {
+      setResolvingBugId(null);
+    }
+  }
+
+  async function markSiteBugIrrelevant(report) {
+    if (!report || report.status !== "active") return;
+
+    const confirmed = await askConfirm({
+      eyebrow: "SVETAINĖS KLAIDA",
+      title: "Pažymėti pranešimą neaktualiu?",
+      message:
+        "Pranešimas nebebus skaičiuojamas kaip aktyvi svetainės klaida. Vartotojui patikimumo taškai nebus skiriami ir pranešimas apie sutvarkytą klaidą nebus siunčiamas.",
+      confirmLabel: "Neaktualu",
+      danger: true,
+    });
+
+    if (!confirmed) return;
+
+    setResolvingBugId(report.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await supabase.rpc("mark_site_bug_report_irrelevant", {
+        p_report_id: report.id,
+      });
+
+      if (result.error) throw result.error;
+
+      const updated = result.data?.[0] || null;
+      setSelectedBugReport((current) =>
+        current?.id === report.id
+          ? {
+              ...current,
+              status: "irrelevant",
+              resolved_at: updated?.marked_at || new Date().toISOString(),
+              reward_points: 0,
+            }
+          : current
+      );
+
+      setNotice("Pranešimas pažymėtas neaktualiu.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko pažymėti pranešimo neaktualiu.");
     } finally {
       setResolvingBugId(null);
     }
@@ -21138,6 +21184,7 @@ function AdminDashboard({
         .admin-bug-row{display:grid;grid-template-columns:minmax(260px,1.3fr) minmax(170px,.7fr) minmax(120px,.45fr) auto;gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px;background:#fff}
         .admin-bug-row.active{border-color:#efc5bd;background:#fffaf9}
         .admin-bug-row.resolved{background:#fbfcfd}
+        .admin-bug-row.irrelevant{background:#f7f9fa;border-color:#dfe6eb}
         .admin-bug-person b{display:block;font-size:14px}.admin-bug-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}
         .admin-bug-meta span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-bug-meta b{font-size:13px}
         .admin-bug-actions{display:flex;justify-content:flex-end;gap:8px}
@@ -22117,9 +22164,17 @@ function AdminDashboard({
                 <div className="admin-bug-list">
                   {adminPageSlice(siteBugReports).map((report) => {
                     const resolved = report.status === "resolved";
+                    const irrelevant = report.status === "irrelevant";
+                    const statusLabel = resolved
+                      ? "Sutvarkyta"
+                      : irrelevant
+                      ? "Neaktualu"
+                      : "Aktyvi";
                     return (
                       <div
-                        className={`admin-bug-row ${resolved ? "resolved" : "active"}`}
+                        className={`admin-bug-row ${
+                          resolved ? "resolved" : irrelevant ? "irrelevant" : "active"
+                        }`}
                         key={report.id}
                       >
                         <div className="admin-bug-person">
@@ -22128,16 +22183,20 @@ function AdminDashboard({
                         </div>
 
                         <div className="admin-bug-meta">
-                          <span>{resolved ? "Sutvarkyta" : "Pateikta"}</span>
+                          <span>{resolved ? "Sutvarkyta" : irrelevant ? "Neaktualu" : "Pateikta"}</span>
                           <b>
                             {formatAdminDate(
-                              resolved ? report.resolved_at : report.created_at
+                              resolved || irrelevant ? report.resolved_at : report.created_at
                             )}
                           </b>
                         </div>
 
-                        <span className={`admin-pill ${resolved ? "green" : "red"}`}>
-                          {resolved ? "Sutvarkyta" : "Aktyvi"}
+                        <span
+                          className={`admin-pill ${
+                            resolved ? "green" : irrelevant ? "gray" : "red"
+                          }`}
+                        >
+                          {statusLabel}
                         </span>
 
                         <div className="admin-bug-actions">
@@ -22931,10 +22990,18 @@ function AdminDashboard({
               </div>
               <span
                 className={`admin-pill ${
-                  selectedBugReport.status === "resolved" ? "green" : "red"
+                  selectedBugReport.status === "resolved"
+                    ? "green"
+                    : selectedBugReport.status === "irrelevant"
+                    ? "gray"
+                    : "red"
                 }`}
               >
-                {selectedBugReport.status === "resolved" ? "Sutvarkyta" : "Aktyvi"}
+                {selectedBugReport.status === "resolved"
+                  ? "Sutvarkyta"
+                  : selectedBugReport.status === "irrelevant"
+                  ? "Neaktualu"
+                  : "Aktyvi"}
               </span>
             </div>
 
@@ -22961,6 +23028,23 @@ function AdminDashboard({
                     )} patikimumo taškas.`
                   : "Papildomas patikimumo taškas nepridėtas, nes balas jau buvo 100 / 100 arba atlygis šiai paskyrai netaikomas."}
               </div>
+            ) : selectedBugReport.status === "irrelevant" ? (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: "11px 12px",
+                  border: "1px solid #dfe6eb",
+                  borderRadius: 11,
+                  background: "#f7f9fa",
+                  color: "#667788",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  lineHeight: 1.45,
+                }}
+              >
+                Pažymėta neaktualia {formatAdminDate(selectedBugReport.resolved_at)}.
+                Vartotojui patikimumo taškai neskirti.
+              </div>
             ) : (
               <div
                 style={{
@@ -22968,6 +23052,7 @@ function AdminDashboard({
                   justifyContent: "flex-end",
                   gap: 9,
                   marginTop: 16,
+                  flexWrap: "wrap",
                 }}
               >
                 <button
@@ -22977,6 +23062,16 @@ function AdminDashboard({
                   disabled={Boolean(resolvingBugId)}
                 >
                   Uždaryti
+                </button>
+                <button
+                  className="admin-small-btn danger"
+                  type="button"
+                  disabled={resolvingBugId === selectedBugReport.id}
+                  onClick={() => markSiteBugIrrelevant(selectedBugReport)}
+                >
+                  {resolvingBugId === selectedBugReport.id
+                    ? "Žymima..."
+                    : "Neaktualu"}
                 </button>
                 <button
                   type="button"
