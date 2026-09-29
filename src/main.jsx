@@ -3545,7 +3545,7 @@ function WorkerProfileModal({
         .eq("recipient_type", "worker")
         .eq("recipient_id", worker.id)
         .order("award_month", { ascending: false })
-        .limit(18);
+        .limit(120);
 
       if (!cancelled) {
         setMonthlyAwards(result.error ? [] : result.data || []);
@@ -3699,12 +3699,10 @@ function WorkerProfileModal({
                 worker.initials
               )}
             </div>
+            <MonthlyAwardMiniList awards={monthlyAwards} size={50} />
             <div>
               <div className="eyebrow">DARBUOTOJO PROFILIS</div>
               <h2>{worker.name}</h2>
-              <div style={{ marginTop: 6 }}>
-                <MonthlyAwardMiniList awards={monthlyAwards} size={30} />
-              </div>
             </div>
           </div>
           <button className="rs-close" onClick={onClose}><CloseMark /></button>
@@ -4814,6 +4812,33 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         Number(row.unread_count || 0),
       ])
     );
+
+    const companyIds = [...new Set(rows.map((row) => row.company_id).filter(Boolean))];
+    if (companyIds.length) {
+      const awardsResult = await supabase
+        .from("monthly_awards")
+        .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
+        .eq("recipient_type", "company")
+        .eq("award_month", monthlyAwardPreviousMonthISO())
+        .in("recipient_id", companyIds);
+
+      if (!awardsResult.error) {
+        setCompanyAwardsById((current) => {
+          const next = { ...current };
+          for (const companyId of companyIds) {
+            next[companyId] = (next[companyId] || []).filter(
+              (award) => String(award.award_month || "").slice(0, 10) !== monthlyAwardPreviousMonthISO()
+            );
+          }
+          for (const award of awardsResult.data || []) {
+            if (!next[award.recipient_id]) next[award.recipient_id] = [];
+            next[award.recipient_id].push(award);
+          }
+          return next;
+        });
+      }
+    }
+
     setLongTermOffers(rows);
     setLongTermUnreadByOffer(unreadMap);
     setLongTermOfferTarget((current) =>
@@ -5096,7 +5121,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .eq("recipient_type", "worker")
           .eq("recipient_id", user.id)
           .order("award_month", { ascending: false })
-          .limit(18),
+          .limit(120),
       ]);
 
       const failed = [
@@ -6785,7 +6810,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
-        .wd-user{display:flex;align-items:center;gap:11px}
+        .wd-user{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
@@ -6828,7 +6853,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-profile-editor-section:first-of-type{margin-top:16px}
         .wd-profile-editor-section h3{margin:0 0 6px;font-family:Manrope,Inter,sans-serif;font-size:17px}
         .wd-profile-editor-section>p{margin:0 0 14px;color:#6c7a88;font-size:13px;line-height:1.5}
-        .wd-avatar-editor{display:flex;align-items:center;gap:14px;margin:14px 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
+        .wd-avatar-editor{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
         .wd-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}
         .wd-avatar-preview img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}.wd-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:50%}
         .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
@@ -6967,12 +6992,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   initials || "D"
                 )}
               </div>
+              <MonthlyAwardMiniList awards={monthlyAwards} size={52} />
               <div>
                 <b>{form.displayName || "Darbuotojas"}</b>
                 <span>{form.city || "Miestas nenurodytas"}</span>
-                <div style={{ marginTop: 5 }}>
-                  <MonthlyAwardMiniList awards={monthlyAwards} size={28} />
-                </div>
               </div>
             </div>
 
@@ -7033,12 +7056,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </button>
           </div>
         </div>
-
-        <MonthlyAwardsPanel
-          awards={monthlyAwards}
-          recipientType="worker"
-          showEmpty={false}
-        />
 
         {notice && <div className="wd-note ok">{notice}</div>}
         {error && <div className="wd-note err">{error}</div>}
@@ -7248,6 +7265,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     initials || "D"
                   )}
                 </div>
+                <MonthlyAwardMiniList awards={monthlyAwards} size={76} />
 
                 <div className="wd-avatar-editor-copy">
                   <b>Profilio nuotrauka</b>
@@ -7391,6 +7409,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </label>
             </div>
+
+            <MonthlyAwardsPanel
+              awards={monthlyAwards}
+              recipientType="worker"
+              showEmpty={true}
+            />
 
             <div className="wd-profile-editor-section wd-recent-ratings-card">
               <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
@@ -7778,6 +7802,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       size={46}
                       fontSize={16}
                     />
+                    <MonthlyAwardMiniList
+                      awards={companyAwardsById[offer.company_id] || []}
+                      size={46}
+                    />
                     <div style={{ minWidth: 0 }}>
                       <b style={{ display: "block", fontSize: 16 }}>
                         {offer.position_title || "Įdarbinimo pasiūlymas"}
@@ -7939,16 +7967,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               size={42}
                               fontSize={12}
                             />
+                            <MonthlyAwardMiniList
+                              awards={companyAwardsById[job.company_id] || []}
+                              size={42}
+                            />
                             <div style={{ minWidth: 0 }}>
                               <b style={{ display: "block" }}>
                                 {invitation.companyName}
                               </b>
-                              <div style={{ marginTop: 4 }}>
-                                <MonthlyAwardMiniList
-                                  awards={companyAwardsById[job.company_id] || []}
-                                  size={27}
-                                />
-                              </div>
                             </div>
                           </div>
                           <span>
@@ -8222,6 +8248,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             avatarPath={item.companyAvatarPath}
                             size={52}
                             fontSize={18}
+                          />
+                          <MonthlyAwardMiniList
+                            awards={companyAwardsById[job.company_id] || []}
+                            size={52}
                           />
                           <div className="wd-workday-head-main">
                             <div className="wd-workday-title"><h3>{job.title}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
@@ -8613,6 +8643,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             size={52}
                             fontSize={18}
                           />
+                          <MonthlyAwardMiniList
+                            awards={companyAwardsById[job.company_id] || []}
+                            size={52}
+                          />
                           <div className="wd-workday-head-main">
                             <div className="wd-workday-title">
                               <h3>{job.title}</h3>
@@ -8768,18 +8802,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     size={42}
                     fontSize={15}
                   />
+                  <MonthlyAwardMiniList
+                    awards={
+                      companyAwardsById[workdayDetailsTarget.job?.company_id] || []
+                    }
+                    size={42}
+                  />
                   <div style={{ minWidth: 0 }}>
                     <b style={{ display: "block", fontSize: 17 }}>
                       {workdayDetailsTarget.companyName || "Darbdavys"}
                     </b>
-                    <div style={{ marginTop: 5 }}>
-                      <MonthlyAwardMiniList
-                        awards={
-                          companyAwardsById[workdayDetailsTarget.job?.company_id] || []
-                        }
-                        size={29}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -9983,6 +10015,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   size={50}
                   fontSize={17}
                 />
+                <MonthlyAwardMiniList
+                  awards={companyAwardsById[longTermOfferTarget.company_id] || []}
+                  size={50}
+                />
                 <div>
                   <div className="eyebrow">
                     {longTermOfferTarget.status === "active"
@@ -10741,15 +10777,38 @@ function sortedMonthlyAwards(awards) {
   });
 }
 
-function latestMonthlyAwards(awards) {
-  const rows = sortedMonthlyAwards(awards);
-  if (!rows.length) return [];
-  const latestMonth = rows[0].award_month;
-  return rows.filter((row) => row.award_month === latestMonth);
+function monthlyAwardPreviousMonthISO(reference = new Date()) {
+  const date = new Date(reference);
+  date.setDate(1);
+  date.setMonth(date.getMonth() - 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-01`;
+}
+
+function monthlyAwardTemporaryStillVisible(award, reference = new Date()) {
+  const until = award?.metric_detail?.temporary_test_until;
+  if (!until) return true;
+  const end = new Date(`${String(until).slice(0, 10)}T23:59:59`);
+  return !Number.isNaN(end.getTime()) && reference <= end;
+}
+
+function visibleMonthlyAwardHistory(awards) {
+  const now = new Date();
+  return sortedMonthlyAwards(awards).filter((award) =>
+    monthlyAwardTemporaryStillVisible(award, now)
+  );
+}
+
+function activeMonthlyAwards(awards) {
+  const activeMonth = monthlyAwardPreviousMonthISO();
+  return visibleMonthlyAwardHistory(awards).filter(
+    (row) => String(row?.award_month || "").slice(0, 10) === activeMonth
+  );
 }
 
 function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
-  const rows = latestMonthlyAwards(awards).slice(0, max);
+  const rows = activeMonthlyAwards(awards).slice(0, max);
   if (!rows.length) return null;
 
   return (
@@ -10757,10 +10816,10 @@ function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 4,
+        gap: Math.max(4, Math.round(size * 0.08)),
         flexWrap: "wrap",
       }}
-      aria-label="Naujausi mėnesio apdovanojimai"
+      aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"
     >
       {rows.map((award) => {
         const meta = monthlyAwardMeta(award);
@@ -10787,10 +10846,15 @@ function MonthlyAwardMiniList({ awards, size = 31, max = 3 }) {
 }
 
 function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
-  const rows = sortedMonthlyAwards(awards);
-  const latest = latestMonthlyAwards(rows);
+  const rows = visibleMonthlyAwardHistory(awards);
+  const active = activeMonthlyAwards(rows);
 
   if (!rows.length && !showEmpty) return null;
+
+  const heading =
+    recipientType === "company"
+      ? "Įmonės apdovanojimai"
+      : "Darbuotojo apdovanojimai";
 
   return (
     <div
@@ -10809,16 +10873,17 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
           alignItems: "flex-start",
           gap: 12,
           flexWrap: "wrap",
-          marginBottom: rows.length ? 12 : 0,
+          marginBottom: rows.length ? 14 : 0,
         }}
       >
         <div>
           <div className="eyebrow">MĖNESIO APDOVANOJIMAI</div>
-          <b style={{ display: "block", marginTop: 4, color: "#102438" }}>
-            {recipientType === "company"
-              ? "Įmonės pasiekimai"
-              : "Darbuotojo pasiekimai"}
+          <b style={{ display: "block", marginTop: 4, color: "#102438", fontSize: 16 }}>
+            {heading}
           </b>
+          <span style={{ display: "block", marginTop: 4, color: "#6c7a88", fontSize: 12 }}>
+            Apdovanojimas galioja visą kitą mėnesį, o visa istorija lieka profilyje.
+          </span>
         </div>
         {rows.length > 0 && (
           <span style={{ color: "#6c7a88", fontSize: 12 }}>
@@ -10827,78 +10892,128 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
         )}
       </div>
 
-      {latest.length ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(185px,1fr))",
-            gap: 10,
-          }}
-        >
-          {latest.map((award) => {
-            const meta = monthlyAwardMeta(award);
-            return (
-              <div
-                key={award.id || `${award.award_month}-${award.award_type}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  minWidth: 0,
-                  border: "1px solid #edf1f4",
-                  borderRadius: 13,
-                  background: "#f8fafb",
-                  padding: 11,
-                }}
-              >
-                <img
-                  src={monthlyAwardImage(award)}
-                  alt={meta.title}
+      {active.length > 0 && (
+        <div style={{ marginBottom: 15 }}>
+          <div
+            style={{
+              color: "#167a54",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: ".04em",
+              marginBottom: 8,
+            }}
+          >
+            AKTYVŪS ŠĮ MĖNESĮ
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))",
+              gap: 10,
+            }}
+          >
+            {active.map((award) => {
+              const meta = monthlyAwardMeta(award);
+              return (
+                <div
+                  key={`active-${award.id || `${award.award_month}-${award.award_type}`}`}
                   style={{
-                    width: 64,
-                    height: 64,
-                    objectFit: "contain",
-                    flex: "0 0 64px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    minWidth: 0,
+                    border: "1px solid #cfe9dc",
+                    borderRadius: 13,
+                    background: "#f3fbf7",
+                    padding: 11,
                   }}
-                />
-                <div style={{ minWidth: 0 }}>
-                  <b
+                >
+                  <img
+                    src={monthlyAwardImage(award)}
+                    alt={meta.title}
                     style={{
-                      display: "block",
-                      color: "#102438",
-                      fontSize: 13,
-                      lineHeight: 1.3,
+                      width: 64,
+                      height: 64,
+                      objectFit: "contain",
+                      flex: "0 0 64px",
                     }}
-                  >
-                    {meta.title}
-                  </b>
-                  <span
-                    style={{
-                      display: "block",
-                      color: "#6c7a88",
-                      fontSize: 11,
-                      marginTop: 3,
-                    }}
-                  >
-                    {monthlyAwardMonthLabel(award.award_month)}
-                  </span>
-                  <span
-                    style={{
-                      display: "block",
-                      color: "#b85f0e",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      marginTop: 4,
-                    }}
-                  >
-                    {monthlyAwardMetricText(award)}
-                  </span>
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ display: "block", color: "#102438", fontSize: 13, lineHeight: 1.3 }}>
+                      {meta.title}
+                    </b>
+                    <span style={{ display: "block", color: "#6c7a88", fontSize: 11, marginTop: 3 }}>
+                      Už {monthlyAwardMonthLabel(award.award_month)}
+                    </span>
+                    <span style={{ display: "block", color: "#167a54", fontSize: 11, fontWeight: 800, marginTop: 4 }}>
+                      {monthlyAwardMetricText(award)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      ) : (
+      )}
+
+      {rows.length ? (
+        <div>
+          <div
+            style={{
+              color: "#6c7a88",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: ".04em",
+              marginBottom: 8,
+            }}
+          >
+            APDOVANOJIMŲ ISTORIJA
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(205px,1fr))",
+              gap: 9,
+            }}
+          >
+            {rows.map((award) => {
+              const meta = monthlyAwardMeta(award);
+              return (
+                <div
+                  key={`history-${award.id || `${award.award_month}-${award.award_type}`}`}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "46px minmax(0,1fr)",
+                    alignItems: "center",
+                    gap: 10,
+                    border: "1px solid #edf1f4",
+                    borderRadius: 12,
+                    background: "#f8fafb",
+                    padding: 10,
+                  }}
+                >
+                  <img
+                    src={monthlyAwardImage(award)}
+                    alt={meta.title}
+                    style={{ width: 46, height: 46, objectFit: "contain" }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <b style={{ display: "block", color: "#102438", fontSize: 12 }}>
+                      {meta.title}
+                    </b>
+                    <span style={{ display: "block", color: "#6c7a88", fontSize: 10.5, marginTop: 2 }}>
+                      {monthlyAwardMonthLabel(award.award_month)}
+                    </span>
+                    <span style={{ display: "block", color: "#b85f0e", fontSize: 10.5, fontWeight: 800, marginTop: 3 }}>
+                      {monthlyAwardMetricText(award)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : showEmpty ? (
         <div
           style={{
             border: "1px dashed #d7e0e7",
@@ -10910,58 +11025,13 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
           }}
         >
           <b style={{ display: "block", color: "#102438", marginBottom: 5 }}>
-            Pirmieji apdovanojimai bus skirti už užbaigtą kalendorinį mėnesį
+            Apdovanojimų istorijos dar nėra
           </b>
           <span>
-            Sistema juos apskaičiuoja automatiškai kiekvieno mėnesio 1 dieną pagal praėjusio mėnesio statistiką.
+            Kiekvieno mėnesio 1 dieną sistema automatiškai įvertina praėjusio mėnesio statistiką.
           </span>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
-              gap: 8,
-              marginTop: 11,
-            }}
-          >
-            {(recipientType === "company"
-              ? [
-                  ["Mėnesio aktyviausia", "Daugiausia užbaigtų darbų"],
-                  ["Mėnesio geriausia", "Aukščiausias įvertinimų vidurkis · bent 3 įvertinimai"],
-                  ["Mėnesio patikimiausia", "Aukščiausias patikimumas · bent 3 užbaigti darbai"],
-                ]
-              : [
-                  ["Mėnesio aktyviausias", "Daugiausia užbaigtų darbų"],
-                  ["Mėnesio geriausias", "Aukščiausias įvertinimų vidurkis · bent 3 įvertinimai"],
-                  ["Mėnesio patikimiausias", "Aukščiausias patikimumas · bent 3 užbaigti darbai"],
-                ]
-            ).map(([title, rule]) => (
-              <div
-                key={title}
-                style={{
-                  border: "1px solid #e5ebef",
-                  borderRadius: 10,
-                  background: "#fff",
-                  padding: "9px 10px",
-                }}
-              >
-                <b style={{ display: "block", color: "#102438", fontSize: 11.5 }}>
-                  {title}
-                </b>
-                <span style={{ display: "block", marginTop: 3, fontSize: 10.5, lineHeight: 1.35 }}>
-                  {rule}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
-
-      {rows.length > latest.length && (
-        <div style={{ marginTop: 10, color: "#7a8996", fontSize: 11 }}>
-          Ankstesni apdovanojimai saugomi profilio istorijoje. Naujausiame
-          mėnesyje rodomi visi laimėti įvertinimai.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -11032,6 +11102,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [searching, setSearching] = useState(false);
   const [company, setCompany] = useState(null);
   const [companyMonthlyAwards, setCompanyMonthlyAwards] = useState([]);
+  const [workerAwardsById, setWorkerAwardsById] = useState({});
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
@@ -12576,6 +12647,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobsResult,
         planResult,
         companyAwardsResult,
+        activeWorkerAwardsResult,
       ] = await Promise.all([
           supabase
             .from("companies")
@@ -12604,7 +12676,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             .eq("recipient_type", "company")
             .eq("recipient_id", companyId)
             .order("award_month", { ascending: false })
-            .limit(18),
+            .limit(120),
+          supabase
+            .from("monthly_awards")
+            .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
+            .eq("recipient_type", "worker")
+            .eq("award_month", monthlyAwardPreviousMonthISO()),
         ]);
 
       const failed = [
@@ -12614,11 +12691,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobsResult,
         planResult,
         companyAwardsResult,
+        activeWorkerAwardsResult,
       ].find((result) => result.error);
       if (failed?.error) throw failed.error;
 
       setCompany(companyResult.data);
       setCompanyMonthlyAwards(companyAwardsResult.data || []);
+      const nextWorkerAwardsById = {};
+      for (const award of activeWorkerAwardsResult.data || []) {
+        if (!nextWorkerAwardsById[award.recipient_id]) {
+          nextWorkerAwardsById[award.recipient_id] = [];
+        }
+        nextWorkerAwardsById[award.recipient_id].push(award);
+      }
+      setWorkerAwardsById(nextWorkerAwardsById);
       const loadedBilling = await loadCompanyBillingStatus(companyId);
       setPlanBillingCycle(
         loadedBilling?.billing_interval === "yearly"
@@ -14895,7 +14981,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
-        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-remove:disabled{opacity:.45;cursor:not-allowed;background:#f7f8f9;color:#8a98a6;border-color:#dfe6eb}
+        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-remove:disabled{opacity:.45;cursor:not-allowed;background:#f7f8f9;color:#8a98a6;border-color:#dfe6eb}
         .ed-profile-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px}
         .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
         .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
@@ -15227,6 +15313,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     .join("") || "Į"
                 )}
               </div>
+              <MonthlyAwardMiniList awards={companyMonthlyAwards} size={76} />
               <div className="ed-company-avatar-copy">
                 <b>Įmonės logotipas</b>
                 <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
@@ -15259,12 +15346,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
             </div>
-
-            <MonthlyAwardsPanel
-              awards={companyMonthlyAwards}
-              recipientType="company"
-              showEmpty={true}
-            />
 
             <div className="ed-profile-summary">
               <div className="ed-profile-summary-card">
@@ -15389,6 +15470,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </label>
             </div>
+
+            <MonthlyAwardsPanel
+              awards={companyMonthlyAwards}
+              recipientType="company"
+              showEmpty={true}
+            />
 
             <div className="ed-company-reviews">
               <div className="ed-company-reviews-head">
@@ -15964,12 +16051,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <BugResolutionNotice userId={user.id} />
 
-        <MonthlyAwardsPanel
-          awards={companyMonthlyAwards}
-          recipientType="company"
-          showEmpty={true}
-        />
-
         <section className="ed-stats-section">
           <div className="ed-stats-head">
             <button
@@ -16310,6 +16391,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             worker.initials
                           )}
                         </div>
+                        <MonthlyAwardMiniList
+                          awards={workerAwardsById[worker.id] || []}
+                          size={42}
+                        />
                         <div>
                           <b>{worker.name}</b>
                           <span>
@@ -16538,7 +16623,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       >
                         <div className="ed-worker-id">
                           <div className="ed-worker-main">
-                            <b>{worker.name}</b>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <b>{worker.name}</b>
+                              <MonthlyAwardMiniList
+                                awards={workerAwardsById[worker.id] || []}
+                                size={32}
+                              />
+                            </div>
                             <span>
                               {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
                             </span>
@@ -16833,6 +16924,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             worker.initials
                           )}
                         </div>
+                        <MonthlyAwardMiniList
+                          awards={workerAwardsById[worker.id] || []}
+                          size={42}
+                        />
                         <div>
                           <b>{worker.name}</b>
                           <span>
@@ -18208,7 +18303,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         key={`${jobInfoTarget.id}-${worker.bookingId}`}
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "auto minmax(0,1fr) auto",
+                          gridTemplateColumns: "auto auto minmax(0,1fr) auto",
                           alignItems: "center",
                           gap: 11,
                           padding: "10px 11px",
@@ -18241,6 +18336,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             worker.initials
                           )}
                         </div>
+                        <MonthlyAwardMiniList
+                          awards={workerAwardsById[worker.id] || []}
+                          size={38}
+                        />
                         <div style={{ minWidth: 0 }}>
                           <b style={{ display: "block" }}>{worker.name}</b>
                           <span style={{ display: "block", marginTop: 2, color: "#6c7a88", fontSize: 12 }}>
@@ -18329,6 +18428,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           worker.initials
                         )}
                       </div>
+                      <MonthlyAwardMiniList
+                        awards={workerAwardsById[worker.id] || []}
+                        size={42}
+                      />
                       <div>
                         <b>{worker.name}</b>
                         <span>
@@ -18465,6 +18568,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           workerInitials(worker.display_name)
                         )}
                       </div>
+                      <MonthlyAwardMiniList
+                        awards={workerAwardsById[worker.worker_id] || []}
+                        size={44}
+                      />
 
                       <div>
                         <b>{shortWorkerName(worker.display_name)}</b>
@@ -19636,6 +19743,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 workerInitials(worker.worker_name)
                               )}
                             </div>
+                            <MonthlyAwardMiniList
+                              awards={workerAwardsById[worker.worker_id] || []}
+                              size={52}
+                            />
                             <div>
                               <b>{worker.worker_name}</b>
                               <small>
