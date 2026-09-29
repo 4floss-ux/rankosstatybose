@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
 import "./styles.css";
 
@@ -6087,39 +6088,36 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setWorkerCompanyProfileLoading(true);
 
     try {
-      const [companyResult, reviewsResult] = await Promise.all([
-        supabase
-          .from("companies")
-          .select(
-            "id, name, city, description, avatar_path, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
-          )
-          .eq("id", companyId)
-          .single(),
+      const [summaryResult, reviewsResult] = await Promise.all([
+        supabase.rpc("get_company_worker_profile_summary", {
+          p_company_id: companyId,
+        }),
         supabase.rpc("get_company_worker_reviews", {
           p_company_id: companyId,
         }),
       ]);
 
-      if (companyResult.error) throw companyResult.error;
+      if (summaryResult.error) throw summaryResult.error;
       if (reviewsResult.error) throw reviewsResult.error;
 
-      const company = companyResult.data || {};
+      const company = summaryResult.data?.[0] || {};
 
       setWorkerCompanyProfileTarget({
-        id: company.id || companyId,
-        name: company.name || source.companyName || "Darbdavys",
+        id: company.company_id || companyId,
+        name: company.company_name || source.companyName || "Darbdavys",
         city: company.city || source.job?.city || "",
         description: company.description || "",
         avatarPath: company.avatar_path || source.companyAvatarPath || "",
         reliabilityRate: Number(
           company.reliability_rate ?? source.companyReliability ?? 100
         ),
-        cancelledConfirmedCount: Number(
-          company.cancelled_confirmed_count ?? source.companyCancelledConfirmed ?? 0
-        ),
-        falseAttendanceClaimCount: Number(
-          company.false_attendance_claim_count ?? 0
-        ),
+        completedJobs: Number(company.completed_jobs || 0),
+        cancelledJobs: Number(company.cancelled_jobs || 0),
+        reviewCount: Number(company.review_count || 0),
+        reviewAverage:
+          company.review_average === null || company.review_average === undefined
+            ? null
+            : Number(company.review_average),
         awards: companyAwardsById[companyId] || [],
         reviews: reviewsResult.data || source.companyReviews || [],
       });
@@ -6131,8 +6129,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         description: "",
         avatarPath: source.companyAvatarPath || "",
         reliabilityRate: Number(source.companyReliability ?? 100),
-        cancelledConfirmedCount: Number(source.companyCancelledConfirmed ?? 0),
-        falseAttendanceClaimCount: 0,
+        completedJobs: 0,
+        cancelledJobs: 0,
+        reviewCount: Number(source.companyReviews?.length || 0),
+        reviewAverage: null,
         awards: companyAwardsById[companyId] || [],
         reviews: source.companyReviews || [],
       });
@@ -8876,14 +8876,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <b style={{ display: "block", fontSize: 17 }}>
                       {workdayDetailsTarget.companyName || "Darbdavys"}
                     </b>
-                    <button
-                      className="wd-decline"
-                      type="button"
-                      style={{ marginTop: 8, padding: "8px 14px", borderRadius: 12 }}
-                      onClick={() => openWorkerCompanyProfile(workdayDetailsTarget)}
-                    >
-                      Įmonės profilis
-                    </button>
                   </div>
                 </div>
               </div>
@@ -9374,6 +9366,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <button
                 className="wd-decline"
                 type="button"
+                onClick={async () => {
+                  const target = workdayDetailsTarget;
+                  setWorkdayDetailsTarget(null);
+                  await openWorkerCompanyProfile(target);
+                }}
+              >
+                Įmonės profilis
+              </button>
+
+              <button
+                className="wd-decline"
+                type="button"
                 onClick={() => setWorkdayDetailsTarget(null)}
               >
                 Uždaryti
@@ -9450,34 +9454,35 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+                    gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
                     gap: 10,
                   }}
                 >
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įvykdyti darbai</div>
+                    <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
+                      {Number(workerCompanyProfileTarget.completedJobs || 0)}
+                    </b>
+                  </div>
+
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Atšaukti darbai</div>
+                    <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
+                      {Number(workerCompanyProfileTarget.cancelledJobs || 0)}
+                    </b>
+                  </div>
+
                   <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
                     <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės patikimumas</div>
                     <b
                       style={{
                         display: "block",
                         marginTop: 4,
+                        fontSize: 20,
                         color: reliabilityScoreColor(workerCompanyProfileTarget.reliabilityRate),
                       }}
                     >
                       {Math.round(Number(workerCompanyProfileTarget.reliabilityRate || 0))} / 100
-                    </b>
-                  </div>
-
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Atšaukti patvirtinti darbai</div>
-                    <b style={{ display: "block", marginTop: 4 }}>
-                      {Number(workerCompanyProfileTarget.cancelledConfirmedCount || 0)}
-                    </b>
-                  </div>
-
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Mėnesio apdovanojimai</div>
-                    <b style={{ display: "block", marginTop: 4 }}>
-                      {activeMonthlyAwards(workerCompanyProfileTarget.awards || []).length}
                     </b>
                   </div>
                 </div>
@@ -9491,25 +9496,38 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 )}
 
-                {workerCompanyProfileTarget.reviews?.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #f0d1b2",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: "#fffaf5",
+                  }}
+                >
                   <div
                     style={{
-                      border: "1px solid #f0d1b2",
-                      borderRadius: 16,
-                      padding: 14,
-                      background: "#fffaf5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      marginBottom: 8,
                     }}
                   >
-                    <div
-                      style={{
-                        fontWeight: 800,
-                        color: "#102438",
-                        marginBottom: 8,
-                      }}
-                    >
+                    <div style={{ fontWeight: 800, color: "#102438" }}>
                       Darbuotojų atsiliepimai apie įmonę
                     </div>
+                    {Number(workerCompanyProfileTarget.reviewCount || 0) > 0 && (
+                      <span style={{ color: "#6c7a88", fontSize: 12, fontWeight: 700 }}>
+                        {workerCompanyProfileTarget.reviewAverage !== null
+                          ? `${Number(workerCompanyProfileTarget.reviewAverage).toFixed(1)} / 10 · `
+                          : ""}
+                        {Number(workerCompanyProfileTarget.reviewCount || 0)} atsiliep.
+                      </span>
+                    )}
+                  </div>
 
+                  {workerCompanyProfileTarget.reviews?.length > 0 ? (
                     <div style={{ display: "grid", gap: 9 }}>
                       {workerCompanyProfileTarget.reviews.map((review) => (
                         <div
@@ -9518,40 +9536,62 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             background: "#fff",
                             border: "1px solid #eadfd5",
                             borderRadius: 14,
-                            padding: 11,
+                            padding: 12,
                           }}
                         >
                           <div
                             style={{
                               display: "flex",
+                              alignItems: "center",
                               justifyContent: "space-between",
                               gap: 10,
                               flexWrap: "wrap",
-                              marginBottom: 5,
+                              marginBottom: 6,
                             }}
                           >
-                            <b>{review.score} / 10</b>
-                            <span style={{ color: "#7a8996", fontSize: 11 }}>
-                              {review.work_date || ""}
-                            </span>
+                            <div>
+                              <b style={{ display: "block", color: "#102438" }}>
+                                {review.worker_name || "Darbuotojas"}
+                              </b>
+                              <span style={{ color: "#7a8996", fontSize: 11 }}>
+                                {review.created_at
+                                  ? new Date(review.created_at).toLocaleDateString("lt-LT")
+                                  : review.work_date || ""}
+                              </span>
+                            </div>
+                            <b style={{ color: "#b85f0e" }}>{review.score} / 10</b>
                           </div>
+
+                          {!!review.job_title && (
+                            <div
+                              style={{
+                                color: "#6c7a88",
+                                fontSize: 11,
+                                marginBottom: 6,
+                              }}
+                            >
+                              Darbas: {review.job_title}
+                            </div>
+                          )}
+
                           <div
                             style={{
-                              color: "#6c7a88",
-                              fontSize: 11,
-                              marginBottom: 5,
+                              lineHeight: 1.5,
+                              whiteSpace: "pre-wrap",
+                              color: "#24384a",
                             }}
                           >
-                            {review.job_title}
-                          </div>
-                          <div style={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                            {review.comment}
+                            {review.comment || "Atsiliepimas be komentaro."}
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                      Darbuotojų atsiliepimų apie šią įmonę dar nėra.
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div
@@ -11087,25 +11127,85 @@ const MONTHLY_AWARD_TOOLTIP_STYLES = `
 
 function MonthlyAwardBadgeVisual({ award, size = 31 }) {
   const meta = monthlyAwardMeta(award);
+  const badgeRef = useRef(null);
+  const [tooltipPos, setTooltipPos] = useState(null);
+
+  function showAwardTooltip() {
+    const rect = badgeRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const tooltipWidth = 232;
+    const margin = 12;
+    const canShowRight = window.innerWidth - rect.right >= tooltipWidth + margin;
+    const left = canShowRight
+      ? rect.right + margin
+      : Math.max(14, rect.left - tooltipWidth - margin);
+    const top = Math.min(
+      Math.max(14, rect.top + rect.height / 2 - 40),
+      Math.max(14, window.innerHeight - 96)
+    );
+
+    setTooltipPos({ left, top, side: canShowRight ? "right" : "left" });
+  }
+
   return (
-    <span
-      className="monthly-award-hover"
-      tabIndex={0}
-      aria-label={`${meta.title}, ${monthlyAwardMonthLabel(award.award_month)}, ${monthlyAwardMetricText(award)}`}
-      style={{ width: size, height: size }}
-    >
-      <style>{MONTHLY_AWARD_TOOLTIP_STYLES}</style>
-      <img
-        src={monthlyAwardImage(award)}
-        alt={meta.title}
+    <>
+      <span
+        ref={badgeRef}
+        className="monthly-award-hover"
+        tabIndex={0}
+        aria-label={`${meta.title}, ${monthlyAwardMonthLabel(award.award_month)}, ${monthlyAwardMetricText(award)}`}
         style={{ width: size, height: size }}
-      />
-      <span className="monthly-award-tooltip" role="tooltip">
-        <b>{meta.title}</b>
-        <span>{monthlyAwardMonthLabel(award.award_month)}</span>
-        <strong>{monthlyAwardMetricText(award)}</strong>
+        onMouseEnter={showAwardTooltip}
+        onMouseLeave={() => setTooltipPos(null)}
+        onFocus={showAwardTooltip}
+        onBlur={() => setTooltipPos(null)}
+      >
+        <style>{MONTHLY_AWARD_TOOLTIP_STYLES}</style>
+        <img
+          src={monthlyAwardImage(award)}
+          alt={meta.title}
+          style={{ width: size, height: size }}
+        />
       </span>
-    </span>
+      {tooltipPos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              position: "fixed",
+              left: tooltipPos.left,
+              top: tooltipPos.top,
+              zIndex: 20000,
+              width: 232,
+              maxWidth: "calc(100vw - 28px)",
+              padding: "10px 12px",
+              border: "1px solid #f0c79f",
+              borderRadius: 12,
+              background: "#fffaf5",
+              boxShadow: "0 12px 28px rgba(16,36,56,.16)",
+              color: "#102438",
+              fontSize: 11,
+              lineHeight: 1.4,
+              pointerEvents: "none",
+            }}
+          >
+            <b style={{ display: "block", marginBottom: 2, fontSize: 11.5 }}>
+              {meta.title}
+            </b>
+            <span style={{ display: "block", color: "#6c7a88" }}>
+              {monthlyAwardMonthLabel(award.award_month)}
+            </span>
+            <strong
+              style={{ display: "block", marginTop: 3, color: "#b85f0e", fontSize: 10.5 }}
+            >
+              {monthlyAwardMetricText(award)}
+            </strong>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 
