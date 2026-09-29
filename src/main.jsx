@@ -5269,7 +5269,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     const hasShortTermWork = workdays.some((item) =>
       ["confirmed", "no_show"].includes(item.status) &&
       ["open", "filled", "in_progress"].includes(item.job?.status) &&
-      jobCheckInWindowOpen(item.job) && !jobHasEnded(item.job)
+      !jobHasEnded(item.job)
     );
 
     if (hasShortTermWork) return true;
@@ -5784,6 +5784,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       attendanceRows.map((row) => [row.booking_id, row])
     );
 
+    const hasAcceptedFutureOrCurrentJob = bookingRows.some((booking) => {
+      if (!["confirmed", "no_show"].includes(booking.status)) return false;
+      const job = jobMap.get(booking.job_id);
+      if (!job || !["open", "filled", "in_progress"].includes(job.status)) return false;
+      return !jobHasEnded(job);
+    });
+
+    if (hasAcceptedFutureOrCurrentJob) {
+      setUrgentAvailability((current) =>
+        current.active ? { city: "", active: false } : current
+      );
+    }
+
     setInvitations(
       invitationRows
         .filter((invitation) => invitation.status === "pending")
@@ -6010,6 +6023,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       await Promise.all([loadInvitations(), loadWorkerStats()]);
+      if (status === "accepted") {
+        setUrgentAvailability({ city: "", active: false });
+      }
       setConfirmInvitation(null);
       setCommitmentChecked(false);
 
@@ -6997,12 +7013,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
-        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-top:20px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-top:30px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
-        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#fff!important;color:#102438!important;border-color:#dbe4ea!important}.wd-day.occupied.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.occupied.available .wd-day-date b{color:#a85212}.wd-day.occupied.available .wd-status-select{background:#fff!important;color:#102438!important;border-color:#f0ba86!important}.wd-day.conflict{background:#fff4f1!important;border-color:#d85b3f!important;box-shadow:inset 4px 0 0 #c4472d,0 0 0 2px rgba(196,71,45,.08)!important}.wd-day.conflict .wd-day-date b{color:#a83924!important}.wd-day-conflict-note{grid-column:1/-1;border:1px solid #efc7bb;border-radius:10px;background:#fff0ec;color:#a74428;padding:10px 12px;font-size:12px;font-weight:800;line-height:1.45;text-align:left}.wd-day-occupied-note{grid-column:1/-1;color:#607180;font-size:11px;font-weight:700;margin-top:2px;text-align:center;line-height:1.5;padding:2px 10px}.wd-day-occupied-note b{color:#102438}
+        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#fff!important;color:#102438!important;border-color:#dbe4ea!important}.wd-day.occupied.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.occupied.available .wd-day-date b{color:#a85212}.wd-day.occupied.available .wd-status-select{background:#fff!important;color:#102438!important;border-color:#f0ba86!important}.wd-day.conflict{background:#fff4f1!important;border-color:#d85b3f!important;box-shadow:inset 4px 0 0 #c4472d,0 0 0 2px rgba(196,71,45,.08)!important}.wd-day.conflict .wd-day-date b{color:#a83924!important}.wd-day-conflict-note{grid-column:1/-1;border:1px solid #efc7bb;border-radius:10px;background:#fff0ec;color:#a74428;padding:10px 12px;font-size:12px;font-weight:800;line-height:1.45;text-align:center}.wd-day-occupied-note{grid-column:1/-1;color:#607180;font-size:11px;font-weight:700;margin-top:2px;text-align:center;line-height:1.5;padding:2px 10px}.wd-day-occupied-note b{color:#102438}
         .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
         .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
@@ -7011,7 +7027,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-bottom{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:flex-end}
         .wd-save{border:0;border-radius:12px;background:#f08a28;color:#fff;padding:14px 24px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 10px 25px rgba(240,138,40,.24)}
         .wd-save:disabled{opacity:.6;cursor:wait}
-        .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:18px}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a}
+        .wd-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:18px}.wd-note.ok{background:#edf8f3;color:#167a54}.wd-note.err{background:#fff0ec;color:#b64d2a;text-align:center}
         .wd-availability-alert{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff8ed;border:1px solid #f1cf9e;border-radius:14px;padding:16px 18px;margin-bottom:20px}
         .wd-availability-alert b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#8a531d;margin-bottom:4px}
         .wd-availability-alert span{display:block;color:#6f5a42;font-size:13px;line-height:1.5;max-width:650px}
@@ -7457,7 +7473,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </label>
 
                 <label className="wd-label">
-                  Miestas
+                  Miestas *
                   <CityAutocomplete
                     className="wd-input"
                     value={form.city}
@@ -15643,7 +15659,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-current-job-description span{display:block;margin-bottom:5px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .ed-current-job-description div{color:#263b4d;font-size:13px;line-height:1.55;white-space:pre-wrap}
         #employer-open-job,.ed-current-job-overview,.ed-current-job-overview-head,.ed-current-job-grid{background:#fff!important}.ed-current-job-grid{border-bottom:0!important}
-        .ed-attendance-panel{margin-top:20px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
+        .ed-attendance-panel{margin-top:30px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
         .ed-next-step{margin-top:9px;padding:9px 11px;border-left:3px solid #d7e0e7;border-radius:0 9px 9px 0;background:#f7f9fb;color:#526374;font-size:11.5px;line-height:1.45}
@@ -21484,6 +21500,7 @@ function AdminDashboard({
   const [longTermPlacements, setLongTermPlacements] = useState([]);
   const [auditLog, setAuditLog] = useState([]);
   const [siteBugReports, setSiteBugReports] = useState([]);
+  const [monthlyAwardLeaders, setMonthlyAwardLeaders] = useState([]);
   const [selectedBugReport, setSelectedBugReport] = useState(null);
   const [resolvingBugId, setResolvingBugId] = useState(null);
   const [actionDialog, setActionDialog] = useState(null);
@@ -21516,6 +21533,7 @@ function AdminDashboard({
     ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
+    ["monthlyAwards", "Mėnesio geriausi"],
     ["jobs", "Darbai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Vadovų pokalbiai"],
@@ -21578,6 +21596,7 @@ function AdminDashboard({
         longTermPlacementsResult,
         auditResult,
         siteBugReportsResult,
+        monthlyAwardsResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
         supabase.rpc("get_attendance_disputes"),
@@ -21590,6 +21609,7 @@ function AdminDashboard({
         supabase.rpc("get_admin_long_term_placements"),
         supabase.rpc("get_admin_audit_log"),
         supabase.rpc("get_admin_site_bug_reports"),
+        supabase.rpc("get_admin_monthly_awards"),
       ]);
 
       const failed = [
@@ -21604,6 +21624,7 @@ function AdminDashboard({
         longTermPlacementsResult,
         auditResult,
         siteBugReportsResult,
+        monthlyAwardsResult,
       ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
@@ -21641,6 +21662,7 @@ function AdminDashboard({
       setLongTermPlacements(longTermPlacementsResult.data || []);
       setAuditLog(auditResult.data || []);
       setSiteBugReports(siteBugReportsResult.data || []);
+      setMonthlyAwardLeaders(monthlyAwardsResult.data || []);
       setError("");
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti administratoriaus duomenų.");
@@ -22398,6 +22420,11 @@ function AdminDashboard({
         .admin-section+.admin-section{margin-top:14px}
         .admin-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-section h2{font-family:Manrope,Inter,sans-serif;margin:0;font-size:20px}
+        .admin-awards-month{margin-top:4px;color:#6c7a88;font-size:12px;font-weight:700}
+        .admin-awards-group+.admin-awards-group{margin-top:18px}.admin-awards-group h3{margin:0 0 10px;font-family:Manrope,Inter,sans-serif;font-size:16px;color:#102438}
+        .admin-awards-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .admin-award-card{min-height:152px;border:1px solid #e4ebf0;border-radius:15px;background:#f8fafb;padding:15px;display:flex;align-items:center;gap:14px;box-sizing:border-box}.admin-award-card.empty{justify-content:center;text-align:center;color:#7a8996;border-style:dashed}
+        .admin-award-copy{min-width:0}.admin-award-copy span{display:block;color:#6c7a88;font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}.admin-award-copy b{display:block;margin-top:5px;font-size:16px;color:#102438}.admin-award-copy strong{display:block;margin-top:5px;color:#b85f0e;font-size:12px}.admin-award-copy small{display:block;margin-top:4px;color:#7a8996;font-size:11px;line-height:1.4}
         .admin-muted{color:#6c7a88;font-size:13px;line-height:1.5}
         .admin-list{display:grid;gap:10px}
         .admin-pagination{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #edf1f4}.admin-pagination button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.admin-pagination button:disabled{opacity:.42;cursor:not-allowed}.admin-pagination span{min-width:58px;text-align:center;color:#6c7a88;font-size:12px;font-weight:800}
@@ -22439,7 +22466,7 @@ function AdminDashboard({
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media(max-width:900px){.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+        @media(max-width:900px){.admin-awards-grid{grid-template-columns:1fr}.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
         @media(max-width:620px){.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
       `}</style>
 
@@ -23053,6 +23080,94 @@ function AdminDashboard({
             )}
           </section>
         )}
+
+        {activeTab === "monthlyAwards" && (() => {
+          const awardMonth =
+            monthlyAwardLeaders[0]?.award_month || monthlyAwardPreviousMonthISO();
+          const awardGroups = [
+            {
+              type: "worker",
+              title: "Darbuotojai",
+              categories: ["activity", "best", "reliability"],
+            },
+            {
+              type: "company",
+              title: "Įmonės",
+              categories: ["activity", "best", "reliability"],
+            },
+          ];
+
+          return (
+            <section className="admin-section">
+              <div className="admin-section-head">
+                <div>
+                  <h2>Mėnesio geriausi</h2>
+                  <div className="admin-muted">
+                    Čia rodoma, kas pagal užbaigto mėnesio statistiką gavo kiekvieną mėnesio apdovanojimą.
+                  </div>
+                  <div className="admin-awards-month">
+                    Vertinamas laikotarpis: {monthlyAwardMonthLabel(awardMonth)}
+                  </div>
+                </div>
+                <b>{monthlyAwardLeaders.length}/6 skirti</b>
+              </div>
+
+              {awardGroups.map((group) => (
+                <div className="admin-awards-group" key={group.type}>
+                  <h3>{group.title}</h3>
+                  <div className="admin-awards-grid">
+                    {group.categories.map((awardType) => {
+                      const award = monthlyAwardLeaders.find(
+                        (row) =>
+                          row.recipient_type === group.type &&
+                          row.award_type === awardType
+                      );
+                      const meta = monthlyAwardMeta({
+                        recipient_type: group.type,
+                        award_type: awardType,
+                      });
+
+                      if (!award) {
+                        return (
+                          <div
+                            className="admin-award-card empty"
+                            key={`${group.type}-${awardType}`}
+                          >
+                            <div className="admin-award-copy">
+                              <span>{meta.title}</span>
+                              <b>Apdovanojimas neskirtas</b>
+                              <small>
+                                Šio mėnesio statistika neatitiko minimalios kategorijos sąlygos.
+                              </small>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          className="admin-award-card"
+                          key={award.id || `${group.type}-${awardType}`}
+                        >
+                          <MonthlyAwardBadgeVisual award={award} size={78} />
+                          <div className="admin-award-copy">
+                            <span>{meta.title}</span>
+                            <b>{award.recipient_name || "—"}</b>
+                            <strong>{monthlyAwardMetricText(award)}</strong>
+                            <small>
+                              {award.metric_detail?.rule ||
+                                "Apdovanojimas skirtas pagal mėnesio statistiką."}
+                            </small>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </section>
+          );
+        })()}
 
         {activeTab === "jobs" && (
           <section className="admin-section">
