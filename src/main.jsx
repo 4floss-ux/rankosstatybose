@@ -14626,7 +14626,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
         .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
-        .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-responsible-name{color:#f08a28;font-weight:800}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
+        .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-responsible-name{color:#f08a28;font-weight:800;margin-left:4px}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
         .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
