@@ -20417,6 +20417,7 @@ function AdminDashboard({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resolvingId, setResolvingId] = useState(null);
+  const [disputeResolutionNotes, setDisputeResolutionNotes] = useState({});
   const [deletingRatingId, setDeletingRatingId] = useState(null);
   const [editor, setEditor] = useState(null);
   const [adminConversation, setAdminConversation] = useState(null);
@@ -20684,6 +20685,17 @@ function AdminDashboard({
   }
 
   async function resolveDispute(dispute, resolution) {
+    const resolutionNote = String(
+      disputeResolutionNotes[dispute.attendance_id] || ""
+    ).trim();
+
+    if (!resolutionNote) {
+      setError(
+        "Prieš išspręsdami ginčą įrašykite administratoriaus komentarą. Jį matys abi ginčo pusės."
+      );
+      return;
+    }
+
     const workerWon = resolution === "worker";
     const finalOutcome = workerWon
       ? dispute.employer_outcome === "no_show"
@@ -20722,15 +20734,17 @@ function AdminDashboard({
         p_resolution: resolution,
         p_final_outcome: finalOutcome,
         p_actual_end_time: actualEndTime || null,
-        p_note:
-          resolution === "worker"
-            ? "Ginčas peržiūrėtas ir išspręstas darbuotojo naudai."
-            : "Ginčas peržiūrėtas ir išspręstas darbdavio naudai.",
+        p_note: resolutionNote,
       });
 
       if (result.error) throw result.error;
 
-      setNotice("Ginčas išspręstas.");
+      setDisputeResolutionNotes((current) => {
+        const next = { ...current };
+        delete next[dispute.attendance_id];
+        return next;
+      });
+      setNotice("Ginčas išspręstas. Administratoriaus komentaras išsaugotas ir rodomas abiem pusėms.");
       await loadAdminData(true);
     } catch (err) {
       setError(err?.message || "Nepavyko išspręsti ginčo.");
@@ -21333,6 +21347,11 @@ function AdminDashboard({
         .admin-dispute-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
         .admin-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.admin-fact{background:#f6f8fa;border-radius:10px;padding:11px}.admin-fact span{display:block;color:#6c7a88;font-size:10px;margin-bottom:4px}.admin-fact b{font-size:13px}
         .admin-note{margin-top:10px;padding:11px;border-radius:10px;background:#fff3e7;color:#8a531d;font-size:13px;line-height:1.5}
+        .admin-resolution-field{margin-top:14px;border:1px solid #dbe4ea;border-radius:12px;background:#f8fafb;padding:12px}
+        .admin-resolution-field label{display:block;font-size:12px;font-weight:800;color:#102438;margin-bottom:7px}
+        .admin-resolution-field textarea{width:100%;min-height:92px;resize:vertical;border:1px solid #d6e0e7;border-radius:10px;background:#fff;padding:10px 12px;color:#102438;font:inherit;line-height:1.5;outline:none;box-sizing:border-box}
+        .admin-resolution-field textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-resolution-help{margin-top:6px;font-size:11px;color:#6c7a88;line-height:1.45}
         .admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
         .admin-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:9000;display:grid;place-items:center;padding:20px}
         .admin-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28)}
@@ -21598,6 +21617,28 @@ function AdminDashboard({
                         )}
                       </div>
                     )}
+
+                    <div className="admin-resolution-field">
+                      <label htmlFor={`admin-resolution-note-${dispute.attendance_id}`}>
+                        Administratoriaus komentaras *
+                      </label>
+                      <textarea
+                        id={`admin-resolution-note-${dispute.attendance_id}`}
+                        value={disputeResolutionNotes[dispute.attendance_id] || ""}
+                        onChange={(event) =>
+                          setDisputeResolutionNotes((current) => ({
+                            ...current,
+                            [dispute.attendance_id]: event.target.value,
+                          }))
+                        }
+                        maxLength={2000}
+                        placeholder="Trumpai paaiškinkite, kodėl ginčas išspręstas pasirinktos pusės naudai..."
+                        disabled={busy}
+                      />
+                      <div className="admin-resolution-help">
+                        Šis komentaras po sprendimo bus rodomas ir darbuotojui, ir darbdaviui darbo informacijoje.
+                      </div>
+                    </div>
 
                     <div className="admin-actions">
                       {dispute.employer_note?.trim() &&
