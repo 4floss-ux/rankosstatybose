@@ -4434,13 +4434,35 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadWorkerStats(),
         loadRecentEmployerRatings(),
         loadEmployerReviewOpportunities(),
-        loadLongTermOffers(),
       ]).catch(() => {
         // Periodinis atnaujinimas neturi trukdyti pagrindiniam darbui.
       });
     }, 5000);
 
     return () => clearInterval(timer);
+  }, [user.id]);
+
+  useEffect(() => {
+    const refreshLongTermStatus = () => {
+      loadLongTermOffers().catch(() => {
+        // Aktyvaus įdarbinimo būsenos atnaujinimas neturi trukdyti naudotis paskyra.
+      });
+    };
+
+    const timer = window.setInterval(refreshLongTermStatus, 2000);
+    const onFocus = () => refreshLongTermStatus();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshLongTermStatus();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [user.id]);
 
   useEffect(() => {
@@ -5007,6 +5029,41 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return confirmedJobsOnDate(date)[0] || null;
   }
 
+  function isoWeekday(date) {
+    const parsed = new Date(`${date}T12:00:00Z`);
+    const day = parsed.getUTCDay();
+    return day === 0 ? 7 : day;
+  }
+
+  function longTermSchedulesOnDate(date) {
+    const weekday = isoWeekday(date);
+
+    return longTermOffers.flatMap((offer) => {
+      if (offer?.status !== "active" || offer?.schedule_type !== "fixed") {
+        return [];
+      }
+      if (offer.proposed_start_date && date < offer.proposed_start_date) return [];
+      if (offer.proposed_end_date && date > offer.proposed_end_date) return [];
+
+      const schedule = Array.isArray(offer.schedule) ? offer.schedule : [];
+      return schedule
+        .filter((row) => Number(row?.weekday) === weekday && row?.start_time && row?.end_time)
+        .map((row) => ({
+          placementId: offer.id,
+          companyName: offer.company_name || "Darbdavys",
+          positionTitle: offer.position_title || "Ilgalaikis įdarbinimas",
+          start_time: String(row.start_time).slice(0, 5),
+          end_time: String(row.end_time).slice(0, 5),
+          break_start_time: row.break_start_time
+            ? String(row.break_start_time).slice(0, 5)
+            : null,
+          break_end_time: row.break_end_time
+            ? String(row.break_end_time).slice(0, 5)
+            : null,
+        }));
+    });
+  }
+
   function timeToMinutes(value) {
     if (!value) return null;
     const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
@@ -5023,31 +5080,84 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function availabilityWindowForDate(date) {
     const jobs = confirmedJobsOnDate(date);
-    if (!jobs.length) {
-      return { min: "00:00", max: "23:59", jobs: [] };
+    const longTermSchedules = longTermSchedulesOnDate(date);
+    const occupied = [
+      ...jobs.map((job) => ({
+        type: "short-term",
+        start_time: job?.start_time || "00:00",
+        end_time: job?.end_time || "23:59",
+      })),
+      ...longTermSchedules.map((row) => ({
+        type: "long-term",
+        start_time: row.start_time,
+        end_time: row.end_time,
+      })),
+    ];
+
+    if (!occupied.length) {
+      return {
+        min: "00:00",
+        max: "23:59",
+        jobs,
+        longTermSchedules,
+        occupied,
+      };
     }
 
-    const latestEnd = jobs.reduce((latest, job) => {
-      const minutes = timeToMinutes(job?.end_time || "23:59");
+    const latestEnd = occupied.reduce((latest, item) => {
+      const minutes = timeToMinutes(item?.end_time || "23:59");
       return minutes === null ? latest : Math.max(latest, minutes);
     }, 0);
 
     const afterBuffer = latestEnd + 60;
     if (afterBuffer <= 23 * 60 + 59) {
-      return { min: minutesToTime(afterBuffer), max: "23:59", jobs };
+      return {
+        min: minutesToTime(afterBuffer),
+        max: "23:59",
+        jobs,
+        longTermSchedules,
+        occupied,
+      };
     }
 
-    const earliestStart = jobs.reduce((earliest, job) => {
-      const minutes = timeToMinutes(job?.start_time || "00:00");
+    const earliestStart = occupied.reduce((earliest, item) => {
+      const minutes = timeToMinutes(item?.start_time || "00:00");
       return minutes === null ? earliest : Math.min(earliest, minutes);
     }, 24 * 60);
     const beforeBuffer = earliestStart - 60;
 
     if (beforeBuffer >= 1) {
-      return { min: "00:00", max: minutesToTime(beforeBuffer), jobs };
+      return {
+        min: "00:00",
+        max: minutesToTime(beforeBuffer),
+        jobs,
+        longTermSchedules,
+        occupied,
+      };
     }
 
-    return { min: null, max: null, jobs };
+    return { min: null, max: null, jobs, longTermSchedules, occupied };
+  }
+
+  function availabilityFitsWindow(date, state = availability[date]) {
+    if (!state?.available) return false;
+    const window = availabilityWindowForDate(date);
+    if (!window.min || !window.max) return false;
+
+    const fromMinutes = timeToMinutes(state.from);
+    const toMinutes = timeToMinutes(state.to);
+    const minMinutes = timeToMinutes(window.min);
+    const maxMinutes = timeToMinutes(window.max);
+
+    return (
+      fromMinutes !== null &&
+      toMinutes !== null &&
+      minMinutes !== null &&
+      maxMinutes !== null &&
+      fromMinutes >= minMinutes &&
+      toMinutes <= maxMinutes &&
+      toMinutes > fromMinutes
+    );
   }
 
   function updateAvailability(date, patch) {
@@ -5785,36 +5895,49 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const availabilityRows = days.map((day) => {
         const state = availability[day.iso];
         const window = availabilityWindowForDate(day.iso);
+        const hasLockedWork = Boolean(window.occupied?.length);
+        let available = Boolean(state.available);
+        let from = state.from;
+        let to = state.to;
 
-        if (state.available) {
+        if (available) {
           if (!window.min || !window.max) {
-            throw new Error(`${day.label}: po patvirtinto darbo ir būtino 1 val. tarpo šią dieną laisvo laiko nebelieka.`);
-          }
+            if (hasLockedWork) {
+              available = false;
+              from = null;
+              to = null;
+            } else {
+              throw new Error(`${day.label}: šią dieną laisvo laiko nebelieka.`);
+            }
+          } else {
+            const fromMinutes = timeToMinutes(from);
+            const toMinutes = timeToMinutes(to);
+            const minMinutes = timeToMinutes(window.min);
+            const maxMinutes = timeToMinutes(window.max);
+            const invalid =
+              fromMinutes === null ||
+              toMinutes === null ||
+              minMinutes === null ||
+              maxMinutes === null ||
+              fromMinutes < minMinutes ||
+              toMinutes > maxMinutes ||
+              toMinutes <= fromMinutes;
 
-          const fromMinutes = timeToMinutes(state.from);
-          const toMinutes = timeToMinutes(state.to);
-          const minMinutes = timeToMinutes(window.min);
-          const maxMinutes = timeToMinutes(window.max);
-
-          if (
-            fromMinutes === null ||
-            toMinutes === null ||
-            minMinutes === null ||
-            maxMinutes === null ||
-            fromMinutes < minMinutes ||
-            toMinutes > maxMinutes ||
-            toMinutes <= fromMinutes
-          ) {
-            throw new Error(`${day.label}: pasirinkite laisvą laiką nuo ${window.min} iki ${window.max}.`);
+            if (invalid && hasLockedWork) {
+              from = window.min;
+              to = window.max;
+            } else if (invalid) {
+              throw new Error(`${day.label}: pasirinkite laisvą laiką nuo ${window.min} iki ${window.max}.`);
+            }
           }
         }
 
         return {
           worker_id: user.id,
           available_date: day.iso,
-          status: state.available ? "available" : "unavailable",
-          available_from: state.available ? state.from : null,
-          available_to: state.available ? state.to : null,
+          status: available ? "available" : "unavailable",
+          available_from: available ? from : null,
+          available_to: available ? to : null,
         };
       });
 
@@ -5823,6 +5946,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .upsert(availabilityRows, { onConflict: "worker_id,available_date" });
 
       if (availabilityResult.error) throw availabilityResult.error;
+
+      setAvailability(
+        Object.fromEntries(
+          availabilityRows.map((row) => [
+            row.available_date,
+            {
+              available: row.status === "available",
+              from: row.available_from || "08:00",
+              to: row.available_to || "17:00",
+            },
+          ])
+        )
+      );
 
       const confirmResult = await supabase.rpc("worker_confirm_availability");
       if (confirmResult.error) throw confirmResult.error;
@@ -5856,8 +5992,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-  const availableCount = Object.values(availability).filter(
-    (item) => item.available
+  const availableCount = days.filter((day) =>
+    availabilityFitsWindow(day.iso, availability[day.iso])
   ).length;
 
   const profileAvatarUrl = avatarMarkedForRemoval
@@ -6324,7 +6460,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         {!onAdminReturn &&
           (!form.displayName.trim() ||
             !form.phone.trim() ||
-            !Object.values(availability).some((day) => day.available)) && (
+            availableCount === 0) && (
             <section
               style={{
                 marginBottom: 18,
@@ -6347,7 +6483,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
               <div className="wd-onboarding-steps">
                 <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{Object.values(availability).some((day) => day.available) ? "✓" : "2"}</b> Bent viena laisva diena</div>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
                 <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
               </div>
             </section>
@@ -6786,12 +6922,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {days.map((day) => {
                   const state = availability[day.iso];
                   const occupiedJobs = confirmedJobsOnDate(day.iso);
-                  const isPartiallyOccupied = occupiedJobs.length > 0;
+                  const longTermSchedules = longTermSchedulesOnDate(day.iso);
+                  const isPartiallyOccupied =
+                    occupiedJobs.length > 0 || longTermSchedules.length > 0;
                   const availableWindow = availabilityWindowForDate(day.iso);
                   const hasFreeWindow = Boolean(availableWindow.min && availableWindow.max);
+                  const stateFitsWindow = availabilityFitsWindow(day.iso, state);
 
                   return (
-                    <div className={`wd-day ${isPartiallyOccupied ? "occupied" : state.available ? "available" : ""}`} key={day.iso}>
+                    <div className={`wd-day ${isPartiallyOccupied ? "occupied" : stateFitsWindow ? "available" : ""}`} key={day.iso}>
                       <div className="wd-day-date">
                         <b>{day.weekday}</b>
                         <span>{day.label}</span>
@@ -6803,7 +6942,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           className="wd-status-select"
                           ariaLabel={`${day.label} prieinamumas`}
                           disabled={!hasFreeWindow}
-                          value={state.available && hasFreeWindow ? "available" : "unavailable"}
+                          value={stateFitsWindow && hasFreeWindow ? "available" : "unavailable"}
                           onChange={(value) => {
                             const wantsAvailable = value === "available";
                             updateAvailability(day.iso, wantsAvailable
@@ -6816,7 +6955,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           }}
                           options={[
                             { value: "unavailable", label: isPartiallyOccupied ? "Kitu laiku nedirbu" : "Užimtas" },
-                            { value: "available", label: isPartiallyOccupied ? "Laisvas po darbo" : "Laisvas" },
+                            { value: "available", label: isPartiallyOccupied ? "Laisvas kitu laiku" : "Laisvas" },
                           ]}
                         />
                       </div>
@@ -6825,8 +6964,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <span>Nuo</span>
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} nuo`}
-                          disabled={!state.available || !hasFreeWindow}
-                          value={state.from}
+                          disabled={!stateFitsWindow || !hasFreeWindow}
+                          value={stateFitsWindow ? state.from : availableWindow.min || "00:00"}
                           minTime={availableWindow.min}
                           maxTime={availableWindow.max}
                           onChange={(value) =>
@@ -6842,9 +6981,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <RoundedTimeSelect
                           ariaLabel={`${day.label} iki`}
                           align="right"
-                          disabled={!state.available || !hasFreeWindow}
-                          value={state.to}
-                          minTime={state.from || availableWindow.min}
+                          disabled={!stateFitsWindow || !hasFreeWindow}
+                          value={stateFitsWindow ? state.to : availableWindow.max || "23:59"}
+                          minTime={stateFitsWindow ? state.from : availableWindow.min}
                           maxTime={availableWindow.max}
                           onChange={(value) =>
                             updateAvailability(day.iso, {
@@ -6856,18 +6995,30 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                       {isPartiallyOccupied && (
                         <div className="wd-day-occupied-note">
-                          <div>
-                            {occupiedJobs.map((job, index) => (
-                              <span key={job.id || `${day.iso}-${index}`}>
-                                {index > 0 ? " • " : ""}
-                                Dirbate įmonėje <b>{job.companyName || "Darbdavys"}</b> · {job?.title || "Patvirtintas darbas"} · {job?.start_time?.slice(0, 5) || ""}{job?.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
-                              </span>
-                            ))}
-                          </div>
+                          {longTermSchedules.length > 0 && (
+                            <div>
+                              {longTermSchedules.map((row, index) => (
+                                <span key={`${row.placementId}-${day.iso}-${index}`}>
+                                  {index > 0 ? " • " : ""}
+                                  <b>Užfiksuota · Įdarbinimo grafikas</b> · {row.companyName} · {row.start_time}–{row.end_time}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {occupiedJobs.length > 0 && (
+                            <div>
+                              {occupiedJobs.map((job, index) => (
+                                <span key={job.id || `${day.iso}-${index}`}>
+                                  {index > 0 ? " • " : ""}
+                                  Dirbate įmonėje <b>{job.companyName || "Darbdavys"}</b> · {job?.title || "Patvirtintas darbas"} · {job?.start_time?.slice(0, 5) || ""}{job?.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           <div>
                             {hasFreeWindow
-                              ? `Kitą darbo laiką galite rinktis nuo ${availableWindow.min} iki ${availableWindow.max}. Paliekamas 1 val. tarpas nuvykimui į kitą darbą.`
-                              : "Po darbo ir 1 val. tarpo šią dieną laisvo laiko nebelieka."}
+                              ? `Kitą darbo laiką galite rinktis nuo ${availableWindow.min} iki ${availableWindow.max}. Užfiksuotas darbo laikas nekeičiamas, paliekamas 1 val. tarpas nuvykimui į kitą darbą.`
+                              : "Dėl užfiksuoto darbo laiko ir 1 val. tarpo šią dieną papildomo laisvo laiko nebelieka."}
                           </div>
                         </div>
                       )}
