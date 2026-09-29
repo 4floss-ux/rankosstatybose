@@ -1214,18 +1214,14 @@ function AuthModal({
           throw new Error("Slaptažodis turi būti bent 8 simbolių.");
         }
 
-        if (
-          role === "worker" &&
-          !teamInvite &&
-          !form.phone.trim()
-        ) {
+        if (!form.phone.trim()) {
           throw new Error(
-            "Darbuotojo registracijai telefono numeris yra privalomas."
+            "Registracijai galiojantis Lietuvos mobiliojo telefono numeris yra privalomas."
           );
         }
 
         const normalizedPhone = normalizeLithuanianMobilePhone(form.phone);
-        if (form.phone.trim() && !normalizedPhone) {
+        if (!normalizedPhone) {
           throw new Error(
             "Įveskite galiojantį Lietuvos mobiliojo telefono numerį, pvz. +37061234567."
           );
@@ -4186,7 +4182,7 @@ function DeleteAccountModal({ open, onClose, accountKind = "paskyra" }) {
       try {
         await supabase.auth.signOut();
       } catch {}
-      window.location.reload();
+      window.location.replace("/");
     } catch (err) {
       setError(err?.message || "Nepavyko ištrinti paskyros.");
       setBusy(false);
@@ -8822,7 +8818,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 }}
               >
                 <div style={{ color: "#6c7a88", fontSize: 12 }}>
-                  Darbdavio telefono numeris
+                  Darbo kontakto telefono numeris
                 </div>
 
                 {workdayDetailsTarget.companyPhone ? (
@@ -9440,7 +9436,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }}
                 >
                   <div style={{ color: "#6c7a88", fontSize: 13, marginBottom: 6 }}>
-                    Darbdavio telefono numeris
+                    Darbo kontakto telefono numeris
                   </div>
                   <div
                     style={{
@@ -12204,6 +12200,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function chooseCompanyAvatarFile(file) {
+    if (companyMemberRole !== "owner") {
+      setError("Įmonės logotipą gali keisti tik įmonės savininkas.");
+      return;
+    }
     if (!file) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -12228,6 +12228,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function markCompanyAvatarForRemoval() {
+    if (companyMemberRole !== "owner") {
+      setError("Įmonės logotipą gali ištrinti tik įmonės savininkas.");
+      return;
+    }
     if (companyAvatarPreview?.startsWith("blob:")) {
       URL.revokeObjectURL(companyAvatarPreview);
     }
@@ -14407,7 +14411,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
-        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-remove:disabled{opacity:.45;cursor:not-allowed;background:#f7f8f9;color:#8a98a6;border-color:#dfe6eb}
         .ed-profile-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px}
         .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
         .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
@@ -14429,7 +14433,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
         .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
-        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:20px;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
+        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:0;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
         .ed-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}
         .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:10px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
@@ -14753,15 +14757,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         }
                       />
                     </label>
-                    {currentCompanyAvatarUrl && (
-                      <button
-                        className="ed-company-avatar-remove"
-                        type="button"
-                        onClick={markCompanyAvatarForRemoval}
-                      >
-                        Ištrinti logotipą
-                      </button>
-                    )}
+                    <button
+                      className="ed-company-avatar-remove"
+                      type="button"
+                      disabled={!currentCompanyAvatarUrl}
+                      onClick={markCompanyAvatarForRemoval}
+                      title={
+                        currentCompanyAvatarUrl
+                          ? "Pašalinti dabartinį įmonės logotipą"
+                          : "Įmonės logotipas neįkeltas"
+                      }
+                    >
+                      Ištrinti logotipą
+                    </button>
                   </div>
                 )}
               </div>
