@@ -15158,8 +15158,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
-            {jobWorkers.length > 0 && (
-              <div className="ed-attendance-panel">
+            <div className="ed-attendance-panel">
                 <h2>Pasiūlymą priėmę darbuotojai</h2>
                 <p className="ed-attendance-help">
                   Čia matote pasiūlymą priėmusius darbuotojus ir jų darbo dienos veiksmus.
@@ -15539,6 +15538,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     );
                   })}
                 </div>
+                {jobWorkers.length === 0 && (
+                  <div className="ed-empty">
+                    Šiuo metu pasiūlymo dar nepriėmė nė vienas darbuotojas.
+                  </div>
+                )}
                 <DashboardPagination
                   page={acceptedWorkersPage}
                   totalItems={jobWorkers.length}
@@ -15546,7 +15550,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   onPageChange={setAcceptedWorkersPage}
                 />
               </div>
-            )}
 
             {declinedCandidateWorkers.length > 0 && (
               <div className="ed-attendance-panel ed-declined-workers-panel">
@@ -15815,7 +15818,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 })}
               </div>
             ) : (
-              <div className="ed-empty compact">
+              <div className="ed-empty">
                 {workerSource === "team"
                   ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
                   : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
