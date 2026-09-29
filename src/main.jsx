@@ -8872,6 +8872,58 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
+              {["resolved_worker", "resolved_employer"].includes(
+                workdayDetailsTarget.attendance?.dispute_status
+              ) && (
+                <div
+                  style={{
+                    border: `1px solid ${
+                      workdayDetailsTarget.attendance?.dispute_status ===
+                      "resolved_worker"
+                        ? "#b9dfcd"
+                        : "#efc5c5"
+                    }`,
+                    borderRadius: 16,
+                    padding: 14,
+                    background:
+                      workdayDetailsTarget.attendance?.dispute_status ===
+                      "resolved_worker"
+                        ? "#f4fbf7"
+                        : "#fff6f6",
+                  }}
+                >
+                  <div
+                    style={{
+                      color:
+                        workdayDetailsTarget.attendance?.dispute_status ===
+                        "resolved_worker"
+                          ? "#167a54"
+                          : "#b64242",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    GINČO SPRENDIMAS · {
+                      workdayDetailsTarget.attendance?.dispute_status ===
+                      "resolved_worker"
+                        ? "JŪSŲ NAUDAI"
+                        : "NE JŪSŲ NAUDAI"
+                    }
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      lineHeight: 1.55,
+                      whiteSpace: "pre-wrap",
+                      color: "#102438",
+                    }}
+                  >
+                    {workdayDetailsTarget.attendance?.resolution_note?.trim() ||
+                      "Administratorius papildomo komentaro nepateikė."}
+                  </div>
+                </div>
+              )}
+
               {(workdayDetailsTarget.job?.status === "cancelled" ||
                 workdayDetailsTarget.status === "cancelled_by_employer") && (
                 <div
@@ -12729,6 +12781,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             employer_outcome: row.attendance_employer_outcome || null,
             worked_minutes: Number(row.attendance_worked_minutes || 0),
             finalized_at: row.attendance_finalized_at || null,
+            dispute_status: row.attendance_dispute_status || null,
+            resolution_note: row.attendance_resolution_note || null,
           },
         }))
       );
@@ -17677,6 +17731,55 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 worked > 0 ? ` · ${formatWorkedMinutes(worked)}` : ""
                               }`}
                         </span>
+                        {["resolved_worker", "resolved_employer"].includes(
+                          worker.attendance?.dispute_status
+                        ) && (
+                          <div
+                            style={{
+                              gridColumn: "1 / -1",
+                              border: `1px solid ${
+                                worker.attendance?.dispute_status === "resolved_employer"
+                                  ? "#b9dfcd"
+                                  : "#efc5c5"
+                              }`,
+                              borderRadius: 10,
+                              padding: "10px 11px",
+                              background:
+                                worker.attendance?.dispute_status === "resolved_employer"
+                                  ? "#f4fbf7"
+                                  : "#fff6f6",
+                            }}
+                          >
+                            <div
+                              style={{
+                                color:
+                                  worker.attendance?.dispute_status === "resolved_employer"
+                                    ? "#167a54"
+                                    : "#b64242",
+                                fontSize: 11,
+                                fontWeight: 800,
+                              }}
+                            >
+                              GINČO SPRENDIMAS · {
+                                worker.attendance?.dispute_status === "resolved_employer"
+                                  ? "JŪSŲ NAUDAI"
+                                  : "NE JŪSŲ NAUDAI"
+                              }
+                            </div>
+                            <div
+                              style={{
+                                marginTop: 5,
+                                lineHeight: 1.5,
+                                whiteSpace: "pre-wrap",
+                                color: "#102438",
+                                fontSize: 12,
+                              }}
+                            >
+                              {worker.attendance?.resolution_note?.trim() ||
+                                "Administratorius papildomo komentaro nepateikė."}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
