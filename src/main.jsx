@@ -3026,13 +3026,7 @@ function LongTermOfferDetails({ offer }) {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2,minmax(0,1fr))",
-          gap: 10,
-        }}
-      >
+      <div className="lt-detail-grid">
         <div className="lt-detail-card">
           <span>Darbo pozicija</span>
           <b>{offer.position_title || "—"}</b>
@@ -3781,7 +3775,7 @@ function WorkerProfileModal({
         )}
 
         <div className="rs-profile-section">
-          <b>Trumpai apie patirtį</b>
+          <b>Patirtis</b>
           <p style={{ color: "#526374", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: "8px 0 0" }}>
             {worker.shortBio?.trim() || (Number(worker.yearsExperience || 0) > 0
               ? `Profilyje nurodyta ${Number(worker.yearsExperience)} m. patirtis. Išsamesnio aprašymo darbuotojas dar nepateikė.`
@@ -4293,6 +4287,97 @@ function AccountDeleteZone({ onDelete, description }) {
   );
 }
 
+function AccountBugReportZone({ onOpen }) {
+  return (
+    <div className="account-bug-zone">
+      <style>{`
+        .account-bug-zone{margin-top:12px;padding:16px 18px;border:1px solid #dbe5eb;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+        .account-bug-zone b{display:block;color:#102438;font-size:14px;margin-bottom:4px}.account-bug-zone span{display:block;color:#6c7a88;font-size:12px;line-height:1.5;max-width:720px}
+        .account-bug-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #d4dee5;background:#fff;color:#102438;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(16,36,56,.04)}
+        .account-bug-open:hover{background:#f7fafb;border-color:#c2d0da}
+        @media(max-width:560px){.account-bug-zone{align-items:stretch}.account-bug-open{width:100%}}
+      `}</style>
+      <div>
+        <b>Pastebėjote svetainės klaidą?</b>
+        <span>Aprašykite, kas nutiko. Pranešimas bus perduotas administratoriui kartu su jūsų vardu ir pateikimo laiku.</span>
+      </div>
+      <button className="account-bug-open" type="button" onClick={onOpen}>
+        Pranešti apie svetainės klaidą
+      </button>
+    </div>
+  );
+}
+
+function BugReportModal({ open, onClose, onSubmitted }) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setMessage("");
+    setError("");
+  }, [open]);
+
+  if (!open) return null;
+
+  async function submitBugReport() {
+    const text = message.trim();
+    if (text.length < 10) {
+      setError("Aprašykite klaidą bent 10 simbolių.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const result = await supabase.rpc("report_site_bug", { p_message: text });
+      if (result.error) throw result.error;
+      onClose();
+      onSubmitted?.();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti klaidos pranešimo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
+      style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(16,36,56,.62)" }}
+    >
+      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100vh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
+          <div>
+            <div className="eyebrow">SVETAINĖS KLAIDA</div>
+            <h2>Pranešti administratoriui</h2>
+          </div>
+          <button type="button" disabled={busy} onClick={onClose} style={{ border: 0, background: "#f2f5f7", color: "#102438", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
+        </div>
+        <div style={{ padding: "0 2px 2px" }}>
+          <p style={{ margin: "0 0 12px", color: "#6c7a88", fontSize: 13, lineHeight: 1.5 }}>
+            Trumpai aprašykite, ką darėte, ką paspaudėte ir kokią klaidą pamatėte.
+          </p>
+          <textarea
+            value={message}
+            maxLength={4000}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Pvz. paspaudus „Išsaugoti“ pasirodė baltas ekranas..."
+            style={{ width: "100%", minHeight: 150, resize: "vertical", border: "1px solid #d8e2e8", borderRadius: 12, padding: 12, font: "inherit", color: "#102438", boxSizing: "border-box", outline: "none" }}
+          />
+          {error && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#fff1ef", border: "1px solid #f0c9c2", color: "#a23b2f", fontSize: 12, fontWeight: 700 }}>{error}</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 14 }}>
+            <button type="button" disabled={busy} onClick={onClose} style={{ border: "1px solid #d8e2e8", background: "#fff", color: "#102438", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Atšaukti</button>
+            <button type="button" disabled={busy || message.trim().length < 10} onClick={submitBugReport} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 850, cursor: busy || message.trim().length < 10 ? "not-allowed" : "pointer", opacity: busy || message.trim().length < 10 ? .55 : 1 }}>
+              {busy ? "Siunčiama..." : "Išsiųsti pranešimą"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextSevenDays();
   const [loading, setLoading] = useState(true);
@@ -4327,6 +4412,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
   const [showWorkerStats, setShowWorkerStats] = useState(() => {
     try {
       if (typeof window === "undefined") return false;
@@ -5564,6 +5650,24 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
   }
 
+  async function markWorkerJobUpdateNotificationsRead(jobId) {
+    const ids = unreadWorkerJobNotifications(jobId)
+      .filter((item) => item.event_type === "job_updated")
+      .map((item) => item.id);
+    if (!ids.length) return;
+
+    const result = await supabase
+      .from("job_notifications")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+
+    if (!result.error) {
+      setWorkerNotifications((current) =>
+        current.filter((item) => !ids.includes(item.id))
+      );
+    }
+  }
+
   async function markWorkerJobNotificationsRead(jobId) {
     const ids = unreadWorkerJobNotifications(jobId).map((item) => item.id);
     if (!ids.length) return;
@@ -5741,6 +5845,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (!item?.job?.id) return;
 
     setError("");
+    await markWorkerJobUpdateNotificationsRead(item.job.id);
 
     try {
       const [contactResult, reviewsResult] = await Promise.all([
@@ -5944,6 +6049,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
       if (!form.phone.trim()) {
         throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
+      }
+      if (!form.shortBio.trim()) {
+        throw new Error('Užpildykite patirties lauką. Jei patirties neturite, įrašykite „Neturiu“.');
       }
 
       const normalizedPhone = normalizeLithuanianMobilePhone(form.phone);
@@ -7090,12 +7198,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <label className="wd-label" style={{ marginTop: 16 }}>
-                Trumpai apie patirtį
+                Patirtis *
                 <textarea
                   className="wd-textarea"
                   value={form.shortBio}
+                  required
                   onChange={(e) => updateField("shortBio", e.target.value)}
-                  placeholder="Pvz. 2 metus dirbau statybų pagalbiniu, moku naudotis pagrindiniais elektriniais įrankiais."
+                  placeholder="Pvz. 2 metus dirbau statybų pagalbiniu. Jei patirties neturite, įrašykite „Neturiu“."
                 />
               </label>
             </div>
@@ -7273,6 +7382,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               onDelete={() => setDeleteAccountOpen(true)}
               description="Ištrynus darbuotojo paskyrą bus pašalintas jūsų profilis, sukurti duomenys ir įkelti failai. Šio veiksmo atkurti nebus galima."
             />
+            <AccountBugReportZone onOpen={() => setBugReportOpen(true)} />
           </section>
         )}
 
@@ -7572,6 +7682,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {pagedActiveWorkerWorkdays.map((item) => {
                   const job = item.job;
                   const attendance = item.attendance || {};
+                  const hasJobInformationUpdate = unreadWorkerJobNotifications(job.id).some(
+                    (notification) => notification.event_type === "job_updated"
+                  );
                   const ended = jobHasEnded(job);
                   const workStarts = job.work_date && job.start_time
                     ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
@@ -7714,6 +7827,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                         </div>
 
+                        {hasJobInformationUpdate && (
+                          <span className="wd-workday-status orange" style={{ marginTop: 10 }}>
+                            Darbo informacija pasikeitė · atidarykite ir peržiūrėkite
+                          </span>
+                        )}
+
                         {item.status === "cancelled_by_employer" && (
                           <div className="wd-note err" style={{ marginTop: 10 }}>
                             <b>Darbdavys atšaukė darbą.</b>
@@ -7847,8 +7966,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           className="wd-decline"
                           type="button"
                           onClick={() => openWorkdayDetails(item)}
+                          style={hasJobInformationUpdate ? { background: "#fff3e7", borderColor: "#efb77b", color: "#a85810" } : undefined}
                         >
-                          Atidaryti
+                          {hasJobInformationUpdate ? "Atidaryti · atnaujinta" : "Atidaryti"}
                         </button>
 
                         {item.invitation_id && (
@@ -9569,12 +9689,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               .lt-worker-offer-modal{width:min(860px,100%)!important;border-radius:22px!important;padding:24px!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable;background:#fff!important;box-sizing:border-box}
               .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
               .lt-worker-offer-modal .rs-close{border-radius:12px!important}
-              .lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important}
+              .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:92px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
               .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:5px}
               .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
               .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
-              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#f8fafb!important;font-size:12px;box-sizing:border-box;box-shadow:none!important}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
-              @media(max-width:620px){.lt-worker-offer-modal{padding:18px!important;border-radius:18px!important}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
+              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#fff!important;font-size:12px;box-sizing:border-box;box-shadow:none!important;min-height:48px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
+              @media(max-width:620px){.lt-worker-offer-modal{padding:18px!important;border-radius:18px!important}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
             <div className="rs-modal-head">
@@ -10059,6 +10179,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
       />
 
+      <BugReportModal
+        open={bugReportOpen}
+        onClose={() => setBugReportOpen(false)}
+        onSubmitted={() => setNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
+      />
       <DeleteAccountModal
         open={deleteAccountOpen}
         onClose={() => setDeleteAccountOpen(false)}
@@ -10331,6 +10456,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
   const companyEditorRef = useRef(null);
 
   useEffect(() => {
@@ -10369,6 +10495,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showUrgentSearch, setShowUrgentSearch] = useState(false);
   const [urgentSearchCity, setUrgentSearchCity] = useState("");
   const [urgentSearchResults, setUrgentSearchResults] = useState([]);
+  const [urgentSearchPage, setUrgentSearchPage] = useState(1);
   const [urgentSearchLoading, setUrgentSearchLoading] = useState(false);
   const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
   const [showSavedWorkers, setShowSavedWorkers] = useState(false);
@@ -13445,6 +13572,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     setUrgentSearchCity(company?.city || "");
     setUrgentSearchResults([]);
+    setUrgentSearchPage(1);
     setShowUrgentSearch(true);
     setError("");
   }
@@ -13472,6 +13600,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (result.error) throw result.error;
 
       setUrgentSearchCity(canonicalCity);
+      setUrgentSearchPage(1);
       setUrgentSearchResults(
         (result.data || []).map((row) => ({
           ...row,
@@ -14746,6 +14875,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   : "Ištrynus paskyrą bus pašalinta jūsų asmeninė prieiga, jūsų sukurti darbai ir įkelti failai. Įmonės savininko paskyra išliks."
               }
             />
+            <AccountBugReportZone onOpen={() => setBugReportOpen(true)} />
           </section>
         )}
 
@@ -14859,7 +14989,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </h2>
           <p className="ed-sub">
             {editingJobId
-              ? "Atnaujinkite poreikį. Kai darbuotojas jau patvirtino darbą, esminės sąlygos užrakinamos."
+              ? "Galite atnaujinti papildomą informaciją. Darbo data, laikas, miestas ir atlygis po paskelbimo nebekeičiami."
               : "Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių."}
           </p>
 
@@ -14909,7 +15039,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <CityAutocomplete
                 className="ed-input"
                 value={form.city}
-                disabled={editingConfirmedCount > 0}
+                disabled={Boolean(editingJobId)}
                 onChange={(value) => updateField("city", value)}
                 placeholder="Pradėkite rašyti miestą"
               />
@@ -14953,7 +15083,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     className="ed-input wd-date-trigger"
     ariaLabel="Darbo data"
     value={form.workDate}
-    disabled={editingConfirmedCount > 0}
+    disabled={Boolean(editingJobId)}
     allowClear={false}
     onChange={(value) => updateField("workDate", value)}
   />
@@ -14968,7 +15098,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         ariaLabel="Darbo pradžios laikas"
         className="ed-input wd-time-trigger"
         value={form.startTime}
-        disabled={editingConfirmedCount > 0}
+        disabled={Boolean(editingJobId)}
         onChange={(value) => updateField("startTime", value)}
       />
     </label>
@@ -14977,7 +15107,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         ariaLabel="Darbo pabaigos laikas"
         className="ed-input wd-time-trigger"
         value={form.endTime}
-        disabled={editingConfirmedCount > 0}
+        disabled={Boolean(editingJobId)}
         onChange={(value) => updateField("endTime", value)}
         align="right"
       />
@@ -15044,7 +15174,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     required
     aria-invalid={Boolean(jobFormErrors.payAmount)}
     value={form.payAmount}
-    disabled={editingConfirmedCount > 0}
+    disabled={Boolean(editingJobId)}
     onChange={(e) => updateField("payAmount", e.target.value)}
     placeholder="Pvz. 12"
     style={jobFormErrors.payAmount ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
@@ -15061,7 +15191,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   <RoundedSelect
     ariaLabel="Mokėjimo tipas"
     value={form.payUnit}
-    disabled={editingConfirmedCount > 0}
+    disabled={Boolean(editingJobId)}
     onChange={(value) => updateField("payUnit", value)}
     options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
   />
@@ -17595,8 +17725,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             {urgentSearchResults.length ? (
+              <>
               <div className="ed-urgent-results">
-                {urgentSearchResults.map((worker) => (
+                {urgentSearchResults
+                  .slice((urgentSearchPage - 1) * DASHBOARD_PAGE_SIZE, urgentSearchPage * DASHBOARD_PAGE_SIZE)
+                  .map((worker) => (
                   <div className="ed-urgent-row" key={worker.worker_id}>
                     <div className="ed-urgent-worker">
                       <div className="ed-urgent-avatar">
@@ -17640,6 +17773,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 ))}
               </div>
+              <DashboardPagination
+                page={urgentSearchPage}
+                totalItems={urgentSearchResults.length}
+                onPageChange={setUrgentSearchPage}
+              />
+              </>
             ) : (
               <div className="ed-urgent-empty">
                 {urgentSearchLoading
@@ -19042,6 +19181,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         user={user}
       />
 
+      <BugReportModal
+        open={bugReportOpen}
+        onClose={() => setBugReportOpen(false)}
+        onSubmitted={() => setNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
+      />
       <DeleteAccountModal
         open={deleteAccountOpen}
         onClose={() => setDeleteAccountOpen(false)}
@@ -20022,6 +20166,8 @@ function AdminDashboard({
   const [teamChats, setTeamChats] = useState([]);
   const [longTermPlacements, setLongTermPlacements] = useState([]);
   const [auditLog, setAuditLog] = useState([]);
+  const [siteBugReports, setSiteBugReports] = useState([]);
+  const [selectedBugReport, setSelectedBugReport] = useState(null);
   const [actionDialog, setActionDialog] = useState(null);
   const [actionDays, setActionDays] = useState(7);
   const [actionReason, setActionReason] = useState("");
@@ -20046,9 +20192,10 @@ function AdminDashboard({
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
-    ["teamChats", "Komandų pokalbiai"],
+    ["teamChats", "Vadovų pokalbiai"],
     ["ratings", "Atsiliepimai"],
     ["files", "Failai"],
+    ["bugs", `Svetainės klaidos${siteBugReports.length ? ` (${siteBugReports.length})` : ""}`],
     ["audit", "Veiksmų istorija"],
   ];
 
@@ -20104,6 +20251,7 @@ function AdminDashboard({
         teamChatsResult,
         longTermPlacementsResult,
         auditResult,
+        siteBugReportsResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
         supabase.rpc("get_attendance_disputes"),
@@ -20115,6 +20263,7 @@ function AdminDashboard({
         supabase.rpc("get_admin_company_team_chats"),
         supabase.rpc("get_admin_long_term_placements"),
         supabase.rpc("get_admin_audit_log"),
+        supabase.rpc("get_admin_site_bug_reports"),
       ]);
 
       const failed = [
@@ -20128,6 +20277,7 @@ function AdminDashboard({
         teamChatsResult,
         longTermPlacementsResult,
         auditResult,
+        siteBugReportsResult,
       ].find((result) => result.error);
 
       if (failed?.error) throw failed.error;
@@ -20164,6 +20314,7 @@ function AdminDashboard({
       setTeamChats(teamChatsResult.data || []);
       setLongTermPlacements(longTermPlacementsResult.data || []);
       setAuditLog(auditResult.data || []);
+      setSiteBugReports(siteBugReportsResult.data || []);
       setError("");
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti administratoriaus duomenų.");
@@ -20874,7 +21025,7 @@ function AdminDashboard({
             <h1>Svetainės suvestinė ir valdymas</h1>
             <p>
               Čia matote realų sistemos naudojimą, ginčus, vartotojus, darbus,
-              įmonių komandų pokalbius, atsiliepimus ir įkeltus failus.
+              įmonių vadovų pokalbius, atsiliepimus ir įkeltus failus.
             </p>
           </div>
 
@@ -21571,7 +21722,7 @@ function AdminDashboard({
           <section className="admin-section">
             <div className="admin-section-head">
               <div>
-                <h2>Įmonių komandų pokalbiai</h2>
+                <h2>Įmonių vadovų pokalbiai</h2>
                 <div className="admin-muted">
                   Vidinis Business Pro įmonių susirašinėjimas. Administratorius
                   gali peržiūrėti pokalbių istoriją ir parašyti administratoriaus
@@ -21636,7 +21787,7 @@ function AdminDashboard({
               </div>
             ) : (
               <div className="admin-empty">
-                Įmonių komandų pokalbių dar nėra.
+                Įmonių vadovų pokalbių dar nėra.
               </div>
             )}
           </section>
@@ -21761,6 +21912,43 @@ function AdminDashboard({
             )}
           </section>
         )}
+        {activeTab === "bugs" && (
+          <section className="admin-section">
+            <div className="admin-section-head">
+              <div>
+                <h2>Svetainės klaidos</h2>
+                <div className="admin-muted">Vartotojų pateikti pranešimai apie pastebėtas svetainės klaidas.</div>
+              </div>
+              <span className={`admin-pill ${siteBugReports.length ? "orange" : "green"}`}>{siteBugReports.length} praneš.</span>
+            </div>
+
+            {siteBugReports.length ? (
+              <>
+                <div style={{ display: "grid", gap: 9 }}>
+                  {adminPageSlice(siteBugReports).map((report) => (
+                    <div className="admin-row" key={report.id}>
+                      <div>
+                        <b>{report.reporter_name || "Vartotojas"}</b>
+                        <span>{report.reporter_email || "El. paštas nepasiekiamas"}</span>
+                      </div>
+                      <div>
+                        <span>Pateikta</span>
+                        <b>{formatAdminDate(report.created_at)}</b>
+                      </div>
+                      <div>
+                        <button className="admin-small-btn" type="button" onClick={() => setSelectedBugReport(report)}>Atidaryti</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {renderAdminPagination(siteBugReports.length)}
+              </>
+            ) : (
+              <div className="admin-empty">Svetainės klaidų pranešimų nėra.</div>
+            )}
+          </section>
+        )}
+
         {activeTab === "audit" && (
           <section className="admin-section">
             <div className="admin-section-head">
@@ -22453,6 +22641,23 @@ function AdminDashboard({
           </div>
         </div>
       )}
+      {selectedBugReport && (
+        <div onMouseDown={(e) => e.target === e.currentTarget && setSelectedBugReport(null)} style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(16,36,56,.62)" }}>
+          <div style={{ width: "min(640px,100%)", maxHeight: "calc(100vh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 14 }}>
+              <div><div className="eyebrow">SVETAINĖS KLAIDA</div><h2>{selectedBugReport.reporter_name || "Vartotojas"}</h2></div>
+              <button type="button" onClick={() => setSelectedBugReport(null)} style={{ border: 0, background: "#f2f5f7", color: "#102438", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
+            </div>
+            <div style={{ color: "#6c7a88", fontSize: 12, marginBottom: 12 }}>
+              {selectedBugReport.reporter_email || "El. paštas nepasiekiamas"} · {formatAdminDate(selectedBugReport.created_at)}
+            </div>
+            <div style={{ border: "1px solid #dfe7ed", borderRadius: 14, padding: 16, background: "#fff", color: "#102438", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {selectedBugReport.message}
+            </div>
+          </div>
+        </div>
+      )}
+
       <DeleteAccountModal
         open={deleteAccountOpen}
         onClose={() => setDeleteAccountOpen(false)}
