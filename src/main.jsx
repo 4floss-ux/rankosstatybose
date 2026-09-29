@@ -6562,7 +6562,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
-        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#fff!important;color:#102438!important;border-color:#dbe4ea!important}.wd-day-occupied-note{grid-column:1/-1;color:#607180;font-size:11px;font-weight:700;margin-top:2px;text-align:center;line-height:1.5;padding:2px 10px}.wd-day-occupied-note b{color:#102438}
+        .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#fff!important;color:#102438!important;border-color:#dbe4ea!important}.wd-day.occupied.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.occupied.available .wd-day-date b{color:#a85212}.wd-day.occupied.available .wd-status-select{background:#fff!important;color:#102438!important;border-color:#f0ba86!important}.wd-day-occupied-note{grid-column:1/-1;color:#607180;font-size:11px;font-weight:700;margin-top:2px;text-align:center;line-height:1.5;padding:2px 10px}.wd-day-occupied-note b{color:#102438}
         .wd-day-date{align-self:center}.wd-day-date b{display:block;text-transform:capitalize}.wd-day-date span{font-size:13px;color:#6c7a88}
         .wd-availability-choice{display:grid;gap:5px}.wd-availability-choice span,.wd-time-field span{font-size:11px;color:#6c7a88;font-weight:700}
         .wd-status-select,.wd-time{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:9px 10px;background:#fff;color:#102438;font:inherit}
@@ -7147,7 +7147,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   const stateFitsWindow = availabilityFitsWindow(day.iso, state);
 
                   return (
-                    <div className={`wd-day ${isPartiallyOccupied ? "occupied" : stateFitsWindow ? "available" : ""}`} key={day.iso}>
+                    <div className={`wd-day${isPartiallyOccupied ? " occupied" : ""}${stateFitsWindow ? " available" : ""}`} key={day.iso}>
                       <div className="wd-day-date">
                         <b>{day.weekday}</b>
                         <span>{day.label}</span>
