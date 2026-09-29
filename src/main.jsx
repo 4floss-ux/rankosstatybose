@@ -20305,10 +20305,13 @@ function AdminDashboard({
   const activeSiteBugCount = siteBugReports.filter(
     (report) => report.status === "active"
   ).length;
+  const activeDisputeCount = disputes.filter(
+    (dispute) => !dispute?.dispute_status || dispute.dispute_status === "disputed"
+  ).length;
 
   const tabs = [
     ["overview", "Suvestinė"],
-    ["disputes", `Ginčai${disputes.length ? ` (${disputes.length})` : ""}`],
+    ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
@@ -21164,9 +21167,9 @@ function AdminDashboard({
         .admin-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
         .admin-tab{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
-        .admin-tab.bug-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
-        .admin-tab.bug-alert:hover{background:#b7362d;border-color:#b7362d}
-        .admin-tab.bug-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
+        .admin-tab.bug-alert,.admin-tab.dispute-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
+        .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover{background:#b7362d;border-color:#b7362d}
+        .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
         .admin-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:11px}
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
@@ -21282,6 +21285,8 @@ function AdminDashboard({
               key={key}
               className={`admin-tab ${activeTab === key ? "active" : ""} ${
                 key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
+              } ${
+                key === "disputes" && activeDisputeCount ? "dispute-alert" : ""
               }`}
               onClick={() => setActiveTab(key)}
             >
