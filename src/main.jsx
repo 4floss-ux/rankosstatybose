@@ -6726,7 +6726,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setLongTermOfferTarget(activeLongTermEmployment);
                 }}
               >
-                Ilgalaikis darbas
+                Darbdavys
                 {Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0) > 0 && (
                   <span className="wd-chat-count">
                     {Math.min(9, Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0))}
