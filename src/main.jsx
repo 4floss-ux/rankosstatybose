@@ -14294,12 +14294,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (job.status === "completed") {
+      const historicallyAccepted = Number(job.historicalAcceptedCount || 0);
+      const hadFullTeam = needed > 0 && historicallyAccepted >= needed;
+
       return {
         key: "completed",
         tone: "ok",
         label: "Įvykdyta",
-        detail: "Darbo ciklas užbaigtas",
-        missing: 0,
+        detail: hadFullTeam ? "Darbo ciklas užbaigtas" : "Trūko darbuotojų",
+        missing: Math.max(0, needed - historicallyAccepted),
       };
     }
 
