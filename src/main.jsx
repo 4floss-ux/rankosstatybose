@@ -4287,10 +4287,15 @@ function AccountDeleteZone({ onDelete, description }) {
   );
 }
 
-function AccountBugReportZone({ onOpen }) {
+function AccountBugReportZone({ onOpen, successMessage = "" }) {
   return (
-    <div className="account-bug-zone">
+    <>
+      {successMessage && (
+        <div className="account-bug-success">{successMessage}</div>
+      )}
+      <div className="account-bug-zone">
       <style>{`
+        .account-bug-success{margin-top:12px;padding:12px 16px;border:1px solid #bfe1d0;border-radius:12px;background:#eef9f3;color:#167a54;font-size:13px;font-weight:800;line-height:1.45}
         .account-bug-zone{margin-top:12px;padding:16px 18px;border:1px solid #dbe5eb;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
         .account-bug-zone b{display:block;color:#102438;font-size:14px;margin-bottom:4px}.account-bug-zone span{display:block;color:#6c7a88;font-size:12px;line-height:1.5;max-width:720px}
         .account-bug-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #d4dee5;background:#fff;color:#102438;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(16,36,56,.04)}
@@ -4304,7 +4309,8 @@ function AccountBugReportZone({ onOpen }) {
       <button className="account-bug-open" type="button" onClick={onOpen}>
         Pranešti apie svetainės klaidą
       </button>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -4525,6 +4531,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [bugReportNotice, setBugReportNotice] = useState("");
   const [showWorkerStats, setShowWorkerStats] = useState(() => {
     try {
       if (typeof window === "undefined") return false;
@@ -7494,7 +7501,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               onDelete={() => setDeleteAccountOpen(true)}
               description="Ištrynus darbuotojo paskyrą bus pašalintas jūsų profilis, sukurti duomenys ir įkelti failai. Šio veiksmo atkurti nebus galima."
             />
-            <AccountBugReportZone onOpen={() => setBugReportOpen(true)} />
+            <AccountBugReportZone
+              successMessage={bugReportNotice}
+              onOpen={() => {
+                setBugReportNotice("");
+                setBugReportOpen(true);
+              }}
+            />
           </section>
         )}
 
@@ -10296,7 +10309,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       <BugReportModal
         open={bugReportOpen}
         onClose={() => setBugReportOpen(false)}
-        onSubmitted={() => setNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
+        onSubmitted={() => setBugReportNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
       />
       <DeleteAccountModal
         open={deleteAccountOpen}
@@ -10571,6 +10584,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [bugReportNotice, setBugReportNotice] = useState("");
   const companyEditorRef = useRef(null);
 
   useEffect(() => {
@@ -14989,7 +15003,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   : "Ištrynus paskyrą bus pašalinta jūsų asmeninė prieiga, jūsų sukurti darbai ir įkelti failai. Įmonės savininko paskyra išliks."
               }
             />
-            <AccountBugReportZone onOpen={() => setBugReportOpen(true)} />
+            <AccountBugReportZone
+              successMessage={bugReportNotice}
+              onOpen={() => {
+                setBugReportNotice("");
+                setBugReportOpen(true);
+              }}
+            />
           </section>
         )}
 
@@ -19302,7 +19322,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <BugReportModal
         open={bugReportOpen}
         onClose={() => setBugReportOpen(false)}
-        onSubmitted={() => setNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
+        onSubmitted={() => setBugReportNotice("Ačiū. Klaidos pranešimas perduotas administratoriui.")}
       />
       <DeleteAccountModal
         open={deleteAccountOpen}
