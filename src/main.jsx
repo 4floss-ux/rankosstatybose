@@ -15102,7 +15102,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {planSummary?.can_advanced_analytics && (
               <div className="ed-kpi">
-                <span>Pilnai žmonėmis užpildyti darbai</span>
+                <span>Žmonėmis užpildyti darbai</span>
                 <b>{employerStats.filledJobs}</b>
               </div>
             )}
