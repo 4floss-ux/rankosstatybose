@@ -3815,7 +3815,7 @@ function WorkerProfileModal({
         <MonthlyAwardsPanel
           awards={monthlyAwards}
           recipientType="worker"
-          showEmpty={false}
+          showEmpty={true}
         />
 
         <div className="rs-profile-section">
@@ -10903,14 +10903,56 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
           style={{
             border: "1px dashed #d7e0e7",
             borderRadius: 12,
-            padding: 12,
+            padding: 13,
             color: "#6c7a88",
             fontSize: 12,
             background: "#f8fafb",
           }}
         >
-          Mėnesio apdovanojimų dar nėra. Jie skiriami automatiškai pagal
-          praėjusio kalendorinio mėnesio statistiką.
+          <b style={{ display: "block", color: "#102438", marginBottom: 5 }}>
+            Pirmieji apdovanojimai bus skirti už užbaigtą kalendorinį mėnesį
+          </b>
+          <span>
+            Sistema juos apskaičiuoja automatiškai kiekvieno mėnesio 1 dieną pagal praėjusio mėnesio statistiką.
+          </span>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+              gap: 8,
+              marginTop: 11,
+            }}
+          >
+            {(recipientType === "company"
+              ? [
+                  ["Mėnesio aktyviausia", "Daugiausia užbaigtų darbų"],
+                  ["Mėnesio geriausia", "Aukščiausias įvertinimų vidurkis · bent 3 įvertinimai"],
+                  ["Mėnesio patikimiausia", "Aukščiausias patikimumas · bent 3 užbaigti darbai"],
+                ]
+              : [
+                  ["Mėnesio aktyviausias", "Daugiausia užbaigtų darbų"],
+                  ["Mėnesio geriausias", "Aukščiausias įvertinimų vidurkis · bent 3 įvertinimai"],
+                  ["Mėnesio patikimiausias", "Aukščiausias patikimumas · bent 3 užbaigti darbai"],
+                ]
+            ).map(([title, rule]) => (
+              <div
+                key={title}
+                style={{
+                  border: "1px solid #e5ebef",
+                  borderRadius: 10,
+                  background: "#fff",
+                  padding: "9px 10px",
+                }}
+              >
+                <b style={{ display: "block", color: "#102438", fontSize: 11.5 }}>
+                  {title}
+                </b>
+                <span style={{ display: "block", marginTop: 3, fontSize: 10.5, lineHeight: 1.35 }}>
+                  {rule}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -15921,6 +15963,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         <BugResolutionNotice userId={user.id} />
+
+        <MonthlyAwardsPanel
+          awards={companyMonthlyAwards}
+          recipientType="company"
+          showEmpty={true}
+        />
 
         <section className="ed-stats-section">
           <div className="ed-stats-head">
