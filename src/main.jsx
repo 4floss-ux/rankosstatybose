@@ -4534,6 +4534,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function workerSubmitSignedContract(offer) {
     if (!offer?.id || !longTermSignedContractFile || longTermBusy) return;
 
+    const blockingActiveEmployment = longTermOffers.find(
+      (row) => row.status === "active" && row.id !== offer.id
+    );
+    if (blockingActiveEmployment) {
+      setError(
+        `Jau turite aktyvų ilgalaikį darbą su ${
+          blockingActiveEmployment.company_name || "kitu darbdaviu"
+        }. Šį pasiūlymą galite peržiūrėti ir aptarti, tačiau patvirtinti galėsite tik pasibaigus dabartiniam ilgalaikiam darbui.`
+      );
+      return;
+    }
+
     const allowedTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -6301,6 +6313,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   );
   const activeLongTermEmployment =
     longTermOffers.find((offer) => offer.status === "active") || null;
+  const blockingActiveLongTermEmployment =
+    longTermOfferTarget &&
+    longTermOfferTarget.status === "offered" &&
+    activeLongTermEmployment &&
+    activeLongTermEmployment.id !== longTermOfferTarget.id
+      ? activeLongTermEmployment
+      : null;
 
   if (loading) {
     return (
@@ -7277,6 +7296,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <div style={{ marginTop: 3, color: "#6c7a88", fontSize: 12 }}>
                         {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date}
                       </div>
+                      {activeLongTermEmployment && activeLongTermEmployment.id !== offer.id && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            color: "#9a5b18",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          Jau turite aktyvų ilgalaikį darbą · šį pasiūlymą kol kas galite tik peržiūrėti ir aptarti
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -9422,15 +9454,31 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   marginTop: 14,
                   padding: 13,
                   borderRadius: 12,
+                  border: blockingActiveLongTermEmployment
+                    ? "1px solid #f0d3aa"
+                    : "1px solid transparent",
                   background: "#fff8f1",
                   color: "#7a4a1d",
                   fontSize: 13,
                   lineHeight: 1.5,
                 }}
               >
-                Perskaitykite darbdavio įkeltą darbo sutartį. Jei visos sąlygos tinka,
-                pasirašykite dokumentą ir įkelkite pasirašytą sutartį žemiau. Kol
-                darbdavys jos nepatvirtino, jūsų ilgalaikis grafikas neaktyvuojamas.
+                {blockingActiveLongTermEmployment ? (
+                  <>
+                    <b>Jūs jau turite aktyvią ilgalaikio darbo sutartį</b>
+                    <div style={{ marginTop: 5 }}>
+                      Šiuo metu dirbate pas {blockingActiveLongTermEmployment.company_name || "kitą darbdavį"}.
+                      Šį naują pasiūlymą galite peržiūrėti, skaityti sutartį ir aptarti su darbdaviu,
+                      tačiau jo patvirtinti negalėsite, kol dabartinis ilgalaikis įdarbinimas nebus užbaigtas.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    Perskaitykite darbdavio įkeltą darbo sutartį. Jei visos sąlygos tinka,
+                    pasirašykite dokumentą ir įkelkite pasirašytą sutartį žemiau. Kol
+                    darbdavys jos nepatvirtino, jūsų ilgalaikis grafikas neaktyvuojamas.
+                  </>
+                )}
               </div>
             )}
 
@@ -9464,7 +9512,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   background: "#f8fafb",
                 }}
               >
-                {longTermOfferTarget.worker_signed_contract_path ? (
+                {blockingActiveLongTermEmployment ? (
+                  <div>
+                    <b style={{ color: "#9a5b18" }}>Patvirtinimas laikinai negalimas</b>
+                    <div style={{ marginTop: 5, color: "#607180", fontSize: 12, lineHeight: 1.5 }}>
+                      Kai dabartinis ilgalaikis darbas bus užbaigtas, šiame pasiūlyme automatiškai
+                      vėl atsiras galimybė įkelti pasirašytą sutartį ir tęsti įdarbinimą.
+                    </div>
+                  </div>
+                ) : longTermOfferTarget.worker_signed_contract_path ? (
                   <div
                     style={{
                       display: "flex",
@@ -9538,7 +9594,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {longTermOfferTarget.status === "active" && (
+                {["active", "offered"].includes(longTermOfferTarget.status) && (
                   <button
                     className={`wd-decline wd-workday-chat ${
                       Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0
