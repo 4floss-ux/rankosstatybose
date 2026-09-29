@@ -16553,13 +16553,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         {currentJob?.id === job.id && (
                           <span className="ed-opened-badge">Atidarytas</span>
                         )}
-                        {Number(job.declinedInvitationCount || 0) > 0 && (
-                          <span className="ed-attendance-badge red" style={{ marginTop: 0 }}>
-                            Darbuotojų atsisakė · {Number(job.declinedInvitationCount || 0)}
-                          </span>
-                        )}
                       </div>
                       {(planSummary?.can_team_management ||
+                        Number(job.declinedInvitationCount || 0) > 0 ||
                         Number(job.employerWonDisputes || 0) > 0 ||
                         Number(job.workerWonDisputes || 0) > 0) && (
                         <div className="ed-job-responsibility-line">
@@ -16571,6 +16567,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   job.responsible_user_id || job.created_by
                                 )}
                               </span>
+                            </span>
+                          )}
+                          {Number(job.declinedInvitationCount || 0) > 0 && (
+                            <span className="ed-attendance-badge red">
+                              Darbuotojų atsisakė · {Number(job.declinedInvitationCount || 0)}
                             </span>
                           )}
                           {Number(job.employerWonDisputes || 0) > 0 && (
