@@ -10156,6 +10156,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobScope, setJobScope] = useState("mine");
   const [employerActivePage, setEmployerActivePage] = useState(1);
   const [employerHistoryPage, setEmployerHistoryPage] = useState(1);
+  const [acceptedWorkersPage, setAcceptedWorkersPage] = useState(1);
+  const [declinedWorkersPage, setDeclinedWorkersPage] = useState(1);
   const [showEmployerStats, setShowEmployerStats] = useState(() => {
     try {
       if (typeof window === "undefined") return false;
@@ -12625,21 +12627,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       job?.status !== "open" ||
       (workersNeeded > 0 && confirmedCount >= workersNeeded);
 
-    if (searchClosed) {
-      setSearching(false);
-      setMatches([]);
-      return;
-    }
-
     setSearching(true);
     setError("");
     setMatches([]);
 
     try {
       const [candidateResult, invitationsResult] = await Promise.all([
-        supabase.rpc("get_job_match_candidates", {
-          p_job_id: job.id,
-        }),
+        searchClosed
+          ? Promise.resolve({ data: [], error: null })
+          : supabase.rpc("get_job_match_candidates", {
+              p_job_id: job.id,
+            }),
         supabase
           .from("job_invitations")
           .select("id, worker_id, status")
@@ -13042,17 +13040,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         responsibleUserId: job.responsible_user_id || job.created_by || user.id,
       }));
 
-      const hasOpenWorkerSearch =
-        job.status === "open" &&
-        Number(job.confirmedCount || 0) < Number(job.workers_needed || 0);
-
-      if (!hasOpenWorkerSearch) {
-        setMatches([]);
-        setSearching(false);
-      }
-
       await Promise.all([
-        hasOpenWorkerSearch ? findMatches(job) : Promise.resolve(),
+        findMatches(job),
         loadCurrentJobWorkers(job.id),
       ]);
     } catch (err) {
@@ -13607,20 +13596,50 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (worker) => !jobWorkers.some((item) => item.id === worker.id)
   );
 
+  const declinedCandidateWorkers = baseCandidateWorkers.filter(
+    (worker) => worker.declinedInvitation
+  );
+  const searchableCandidateWorkers = baseCandidateWorkers.filter(
+    (worker) => !worker.declinedInvitation
+  );
+
   const visibleCandidateWorkers =
     workerSource === "team"
-      ? baseCandidateWorkers.filter((worker) =>
+      ? searchableCandidateWorkers.filter((worker) =>
           savedWorkerIdSet.has(worker.id)
         )
-      : baseCandidateWorkers;
+      : searchableCandidateWorkers;
 
-  const matchingSavedWorkersCount = baseCandidateWorkers.filter((worker) =>
+  const matchingSavedWorkersCount = searchableCandidateWorkers.filter((worker) =>
     savedWorkerIdSet.has(worker.id)
   ).length;
 
+  const pagedAcceptedWorkers = jobWorkers.slice(
+    (acceptedWorkersPage - 1) * DASHBOARD_PAGE_SIZE,
+    acceptedWorkersPage * DASHBOARD_PAGE_SIZE
+  );
+  const pagedDeclinedWorkers = declinedCandidateWorkers.slice(
+    (declinedWorkersPage - 1) * DASHBOARD_PAGE_SIZE,
+    declinedWorkersPage * DASHBOARD_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setAcceptedWorkersPage(1);
+    setDeclinedWorkersPage(1);
+  }, [currentJob?.id]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(jobWorkers.length / DASHBOARD_PAGE_SIZE));
+    if (acceptedWorkersPage > totalPages) setAcceptedWorkersPage(totalPages);
+  }, [jobWorkers.length, acceptedWorkersPage]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(declinedCandidateWorkers.length / DASHBOARD_PAGE_SIZE));
+    if (declinedWorkersPage > totalPages) setDeclinedWorkersPage(totalPages);
+  }, [declinedCandidateWorkers.length, declinedWorkersPage]);
+
   useEffect(() => {
     if (!currentJob?.id || currentJobWorkerSearchOpen) return;
-    setMatches([]);
     setSearching(false);
     setWorkerSource("available");
   }, [currentJob?.id, currentJobWorkerSearchOpen]);
@@ -15141,14 +15160,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {jobWorkers.length > 0 && (
               <div className="ed-attendance-panel">
-                <h2>Prisijungę darbuotojai</h2>
+                <h2>Pasiūlymą priėmę darbuotojai</h2>
                 <p className="ed-attendance-help">
-                  Čia matote visus prie šio darbo prisijungusius darbuotojus ir
-                  jų darbo dienos veiksmus.
+                  Čia matote pasiūlymą priėmusius darbuotojus ir jų darbo dienos veiksmus.
                 </p>
 
                 <div className="ed-attendance-list">
-                  {jobWorkers.map((worker) => {
+                  {pagedAcceptedWorkers.map((worker) => {
                     const attendance = worker.attendance || {};
                     const ended = jobHasEnded(currentJob);
                     const checkInOpen = jobCheckInWindowOpen(currentJob);
@@ -15521,6 +15539,88 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     );
                   })}
                 </div>
+                <DashboardPagination
+                  page={acceptedWorkersPage}
+                  totalItems={jobWorkers.length}
+                  pageSize={DASHBOARD_PAGE_SIZE}
+                  onPageChange={setAcceptedWorkersPage}
+                />
+              </div>
+            )}
+
+            {declinedCandidateWorkers.length > 0 && (
+              <div className="ed-attendance-panel ed-declined-workers-panel">
+                <h2>Pasiūlymo atsisakę darbuotojai</h2>
+                <p className="ed-attendance-help">
+                  Šie darbuotojai atsisakė šio darbo pasiūlymo. Jie paliekami darbo istorijoje, tačiau pakartotinai kviesti jų negalima.
+                </p>
+                <div className="ed-results">
+                  {pagedDeclinedWorkers.map((worker) => (
+                    <div
+                      className={
+                        canViewWorkerMetrics
+                          ? "ed-worker declined-worker"
+                          : "ed-worker ed-worker-basic declined-worker"
+                      }
+                      key={worker.id}
+                    >
+                      <div className="ed-worker-id">
+                        <div className="ed-avatar">
+                          {worker.avatarUrl ? (
+                            <img src={worker.avatarUrl} alt={worker.name} />
+                          ) : (
+                            worker.initials
+                          )}
+                        </div>
+                        <div>
+                          <b>{worker.name}</b>
+                          <span>
+                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
+                            {worker.distanceKm !== null
+                              ? ` · ${worker.distanceKm} km nuo darbo`
+                              : ""}
+                          </span>
+                        </div>
+                      </div>
+
+                      {canViewWorkerMetrics && (
+                        <>
+                          <div className="ed-worker-activity">
+                            <span className="ed-attendance-badge red">
+                              Atsisakė pasiūlymo
+                            </span>
+                          </div>
+                          <div className="ed-metric">
+                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                            <span>atvykimas</span>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="ed-worker-actions">
+                        <button
+                          className="ed-secondary"
+                          onClick={() => openWorkerProfile(worker)}
+                        >
+                          Profilis
+                        </button>
+                        <button
+                          className="ed-invite sent declined"
+                          type="button"
+                          disabled
+                        >
+                          Atmetė
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <DashboardPagination
+                  page={declinedWorkersPage}
+                  totalItems={declinedCandidateWorkers.length}
+                  pageSize={DASHBOARD_PAGE_SIZE}
+                  onPageChange={setDeclinedWorkersPage}
+                />
               </div>
             )}
 
@@ -15634,24 +15734,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </span>
                             </div>
                           )}
-                          {worker.declinedInvitation && (
-                            <div className="ed-worker-status">
-                              <span className="ed-attendance-badge red">
-                                Atsisakė darbo pasiūlymo
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
 
                       {canViewWorkerMetrics && (
                         <>
                           <div className="ed-worker-activity">
-                            {worker.declinedInvitation ? (
-                              <span className="ed-attendance-badge red">
-                                Atsisakė pasiūlymo
-                              </span>
-                            ) : worker.activityLabel ? (
+                            {worker.activityLabel ? (
                               <span className="ed-attendance-badge green">
                                 {worker.activityLabel}
                               </span>
@@ -15675,13 +15764,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </button>
 
                         <button
-                          className={
-                            worker.declinedInvitation
-                              ? "ed-invite sent declined"
-                              : invited
-                              ? "ed-invite sent"
-                              : "ed-invite"
-                          }
+                          className={invited ? "ed-invite sent" : "ed-invite"}
                           disabled={invited || currentJob.status !== "open"}
                           onClick={() => inviteWorker(worker.id)}
                         >
@@ -15696,7 +15779,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             : "Pakviestas"}
                         </button>
 
-                        {invitationByWorker[worker.id] && (
+                        {invitationByWorker[worker.id] && !worker.declinedInvitation && (
                           <button
                             className="ed-secondary ed-chat-alert-btn"
                             onClick={() =>
@@ -15869,9 +15952,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         )}
                         {Number(job.declinedInvitationCount || 0) > 0 && (
                           <span className="ed-opened-badge declined">
-                            {Number(job.declinedInvitationCount || 0) === 1
-                              ? "Darbuotojas atsisakė"
-                              : `${job.declinedInvitationCount} darbuotojai atsisakė`}
+                            Darbuotojų atsisakė · {Number(job.declinedInvitationCount || 0)}
                           </span>
                         )}
                       </div>
