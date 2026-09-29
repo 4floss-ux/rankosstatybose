@@ -15964,11 +15964,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 />
               </div>
 
-            {declinedCandidateWorkers.length > 0 && (
+            {declinedCandidateWorkers.length > 0 &&
+              !["completed", "cancelled"].includes(currentJob?.status) && (
               <div className="ed-attendance-panel ed-declined-workers-panel">
                 <h2>Pasiūlymo atsisakę darbuotojai</h2>
                 <p className="ed-attendance-help">
-                  Šie darbuotojai atsisakė šio darbo pasiūlymo. Jie paliekami darbo istorijoje ir negali būti pakviesti pakartotinai tik į šį konkretų pasiūlymą. Į kitus darbo pasiūlymus juos galima kviesti įprastai, jei jie atitinka kriterijus.
+                  Šie darbuotojai atsisakė šio darbo pasiūlymo ir negali būti pakviesti pakartotinai tik į šį konkretų pasiūlymą. Į kitus darbo pasiūlymus juos galima kviesti įprastai, jei jie atitinka kriterijus.
                 </p>
                 <div className="ed-results">
                   {pagedDeclinedWorkers.map((worker) => (
