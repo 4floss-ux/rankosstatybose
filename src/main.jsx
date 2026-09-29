@@ -254,7 +254,7 @@ function useStyledConfirm() {
   return { dialog, askConfirm, resolveConfirm };
 }
 
-function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas" }) {
+function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas", buttonRef = null }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
@@ -569,7 +569,11 @@ function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
       <button
-        ref={triggerRef}
+        ref={(node) => {
+          triggerRef.current = node;
+          if (typeof buttonRef === "function") buttonRef(node);
+          else if (buttonRef) buttonRef.current = node;
+        }}
         type="button"
         className={className}
         disabled={disabled}
@@ -3293,7 +3297,7 @@ function CompanyTeamChatModal({
       if (readResult.error) throw readResult.error;
       onRead?.();
     } catch (err) {
-      setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+      setError(err?.message || "Nepavyko įkelti vadovų pokalbio.");
     } finally {
       setLoading(false);
     }
@@ -3358,7 +3362,7 @@ function CompanyTeamChatModal({
 
         <div className="ctc-head">
           <div>
-            <div className="eyebrow">BUSINESS PRO · KOMANDOS POKALBIS</div>
+            <div className="eyebrow">BUSINESS PRO · VADOVŲ POKALBIS</div>
             <h2>{companyName || "Įmonės komanda"}</h2>
             <p>
               Vidinis pokalbis tik jūsų įmonės Savininkui, Vadovams ir
@@ -3383,7 +3387,7 @@ function CompanyTeamChatModal({
 
         <div className="ctc-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="ctc-empty">Kraunamas komandos pokalbis...</div>
+            <div className="ctc-empty">Kraunamas vadovų pokalbis...</div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -3406,7 +3410,7 @@ function CompanyTeamChatModal({
             ))
           ) : (
             <div className="ctc-empty">
-              Komandos pokalbis dar tuščias. Parašykite pirmą žinutę.
+              Vadovų pokalbis dar tuščias. Parašykite pirmą žinutę.
             </div>
           )}
         </div>
@@ -9996,7 +10000,7 @@ const EMPLOYER_PLANS = [
       "Atsakingo žmogaus priskyrimas ir darbų perskirstymas",
       "Atskira vadybininko darbų statistika",
       "„Skubiai!“ – tiesioginiai šiuo metu laisvų darbuotojų kontaktai",
-      "Vidinis įmonės komandos pokalbis platformoje",
+      "Vidinis įmonės vadovų pokalbis platformoje",
     ],
   },
 ];
@@ -10798,7 +10802,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function openCompanyTeamChat() {
     if (!planSummary?.can_team_chat) {
       setNotice(
-        "Vidinis įmonės komandos pokalbis prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
+        "Vidinis įmonės vadovų pokalbis prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
       );
       return;
     }
@@ -12192,32 +12196,42 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return rows.map((job) => ({
         ...job,
         confirmedCount: 0,
+        historicalAcceptedCount: 0,
         declinedInvitationCount: 0,
         employerWonDisputes: 0,
         workerWonDisputes: 0,
       }));
     }
 
-    const [bookingsResult, invitationsResult] = await Promise.all([
+    const [bookingsResult, invitationsResult, acceptanceCountsResult] = await Promise.all([
       supabase
         .from("bookings")
-        .select("id, job_id, status")
+        .select("id, job_id, status, confirmed_at")
         .in("job_id", ids),
       supabase
         .from("job_invitations")
         .select("job_id, status")
         .in("job_id", ids),
+      supabase.rpc("get_employer_job_acceptance_counts", {
+        p_job_ids: ids,
+      }),
     ]);
 
-    if (bookingsResult.error) throw bookingsResult.error;
-    if (invitationsResult.error) throw invitationsResult.error;
-
-    const bookingRows = bookingsResult.data || [];
+    const bookingRows = bookingsResult.error ? [] : bookingsResult.data || [];
+    const invitationRows = invitationsResult.error ? [] : invitationsResult.data || [];
     const counts = {};
+    const historicalAcceptedCounts = {};
     const declinedInvitationCounts = {};
     const jobIdByBookingId = new Map();
 
-    for (const invitation of invitationsResult.data || []) {
+    if (!acceptanceCountsResult.error) {
+      for (const row of acceptanceCountsResult.data || []) {
+        counts[row.job_id] = Number(row.confirmed_now || 0);
+        historicalAcceptedCounts[row.job_id] = Number(row.accepted_historically || 0);
+      }
+    }
+
+    for (const invitation of invitationRows) {
       if (invitation.status === "declined") {
         declinedInvitationCounts[invitation.job_id] =
           (declinedInvitationCounts[invitation.job_id] || 0) + 1;
@@ -12226,8 +12240,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     for (const booking of bookingRows) {
       jobIdByBookingId.set(booking.id, booking.job_id);
-      if (booking.status === "confirmed") {
+      if (acceptanceCountsResult.error && booking.status === "confirmed") {
         counts[booking.job_id] = (counts[booking.job_id] || 0) + 1;
+      }
+      if (acceptanceCountsResult.error && booking.confirmed_at) {
+        historicalAcceptedCounts[booking.job_id] =
+          (historicalAcceptedCounts[booking.job_id] || 0) + 1;
       }
     }
 
@@ -12260,6 +12278,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return rows.map((job) => ({
       ...job,
       confirmedCount: counts[job.id] || 0,
+      historicalAcceptedCount: historicalAcceptedCounts[job.id] || 0,
       declinedInvitationCount: declinedInvitationCounts[job.id] || 0,
       employerWonDisputes: disputeCounts[job.id]?.employer || 0,
       workerWonDisputes: disputeCounts[job.id]?.worker || 0,
@@ -13394,6 +13413,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       responsibleUserId: user.id,
     });
     setShowJobForm(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById("employer-job-form")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
   }
 
   async function startEditJob(job) {
@@ -14654,13 +14681,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               onClick={openCompanyTeamChat}
             >
               {planSummary?.can_team_chat
-                ? "Komandos pokalbis"
-                : "Komandos pokalbis · Pro"}
+                ? "Vadovų pokalbis"
+                : "Vadovų pokalbis · Pro"}
 
               {planSummary?.can_team_chat && teamChatUnread > 0 && (
                 <span
                   className="ed-chat-alert"
-                  title="Nauja žinutė komandos pokalbyje"
+                  title="Nauja žinutė vadovų pokalbyje"
                 >
                   {Math.min(9, teamChatUnread)}
                 </span>
@@ -16267,7 +16294,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </div>
 
                     <span className="ed-progress">
-                      {job.confirmedCount || 0}/{job.workers_needed} patvirtinti
+                      {job.status === "completed" || job.status === "cancelled"
+                        ? `${Number(job.historicalAcceptedCount || 0)}/${job.workers_needed} buvo priėmę darbą`
+                        : `${Number(job.confirmedCount || 0)}/${job.workers_needed} patvirtinti`}
                     </span>
 
                     <div className="ed-job-state-cell">
@@ -19624,7 +19653,7 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err?.message || "Nepavyko įkelti komandos pokalbio.");
+          setError(err?.message || "Nepavyko įkelti vadovų pokalbio.");
         }
       } finally {
         if (!cancelled) setLoading(false);
