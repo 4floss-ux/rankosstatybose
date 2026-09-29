@@ -254,6 +254,21 @@ function useStyledConfirm() {
   return { dialog, askConfirm, resolveConfirm };
 }
 
+function normalizeLithuanianMobilePhone(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+
+  if (/^3706\d{7}$/.test(digits)) return `+${digits}`;
+  if (/^06\d{7}$/.test(digits)) return `+370${digits.slice(1)}`;
+  if (/^6\d{7}$/.test(digits)) return `+370${digits}`;
+  return "";
+}
+
+function isValidLithuanianMobilePhone(value) {
+  return Boolean(normalizeLithuanianMobilePhone(value));
+}
+
 function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas", buttonRef = null }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -1209,6 +1224,13 @@ function AuthModal({
           );
         }
 
+        const normalizedPhone = normalizeLithuanianMobilePhone(form.phone);
+        if (form.phone.trim() && !normalizedPhone) {
+          throw new Error(
+            "Įveskite galiojantį Lietuvos mobiliojo telefono numerį, pvz. +37061234567."
+          );
+        }
+
         if (
           role === "employer" &&
           !teamInvite &&
@@ -1246,7 +1268,7 @@ function AuthModal({
               display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
-              phone: form.phone.trim(),
+              phone: normalizedPhone,
               company_name:
                 role === "employer" && !teamInvite
                   ? form.companyName.trim()
@@ -1482,8 +1504,15 @@ function AuthModal({
                     style={inputStyle}
                     value={form.phone}
                     onChange={setField("phone")}
-                    placeholder="+370..."
+                    onBlur={() => {
+                      const normalized = normalizeLithuanianMobilePhone(form.phone);
+                      if (normalized) {
+                        setForm((current) => ({ ...current, phone: normalized }));
+                      }
+                    }}
+                    placeholder="+37061234567"
                     autoComplete="tel"
+                    inputMode="tel"
                     required={role === "worker" && !teamInvite}
                   />
                 </label>
@@ -3567,10 +3596,16 @@ function WorkerProfileModal({
 
   const stats = worker.publicStats || {};
   const monthMinutes = Number(stats.monthWorkedMinutes || 0);
+  const reviewAverage = ratingReviews.length
+    ? ratingReviews.reduce((sum, review) => sum + Number(review.score || 0), 0) / ratingReviews.length
+    : null;
+  const rawRatingAverage = stats.ratingAverage ?? worker.ratingAverage ?? null;
+  const rawRatingCount = Number(stats.ratingCount ?? worker.ratingCount ?? 0);
+  const ratingCount = rawRatingCount > 0 ? rawRatingCount : ratingReviews.length;
   const ratingAverage =
-    stats.ratingAverage ?? worker.ratingAverage ?? null;
-  const ratingCount =
-    Number(stats.ratingCount ?? worker.ratingCount ?? 0);
+    rawRatingAverage === null || rawRatingAverage === undefined
+      ? reviewAverage
+      : Number(rawRatingAverage);
   const attendanceRate =
     Number(stats.attendanceRate ?? worker.attendanceRate ?? 100);
   const noShows =
@@ -4436,6 +4471,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     phone: "",
     travelRadius: 30,
     hasDrivingLicenseB: false,
+    hasIndividualActivity: false,
     yearsExperience: 0,
     shortBio: "",
     avatarPath: "",
@@ -4800,7 +4836,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at"
+            "travel_radius_km, has_driving_license_b, has_individual_activity, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at"
           )
           .eq("user_id", user.id)
           .single(),
@@ -4864,6 +4900,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         phone: privateData?.phone || "",
         travelRadius: worker?.travel_radius_km ?? 30,
         hasDrivingLicenseB: Boolean(worker?.has_driving_license_b),
+        hasIndividualActivity: Boolean(worker?.has_individual_activity),
         yearsExperience: worker?.years_experience ?? 0,
         shortBio: worker?.short_bio || "",
         avatarPath: worker?.avatar_path || "",
@@ -5267,7 +5304,20 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         p_limit: 3,
       });
       if (result.error) throw result.error;
-      setRecentEmployerRatings(result.data || []);
+      const rows = result.data || [];
+      setRecentEmployerRatings(rows);
+      if (rows.length) {
+        const fallbackAverage =
+          rows.reduce((sum, review) => sum + Number(review.score || 0), 0) / rows.length;
+        setMetrics((current) => ({
+          ...current,
+          ratingAverage:
+            current.ratingAverage === null || current.ratingAverage === undefined
+              ? fallbackAverage
+              : current.ratingAverage,
+          ratingCount: Math.max(Number(current.ratingCount || 0), rows.length),
+        }));
+      }
     } finally {
       if (!background) setRecentEmployerRatingsLoading(false);
     }
@@ -5894,6 +5944,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
       }
 
+      const normalizedPhone = normalizeLithuanianMobilePhone(form.phone);
+      if (!normalizedPhone) {
+        throw new Error(
+          "Įveskite galiojantį Lietuvos mobiliojo telefono numerį, pvz. +37061234567."
+        );
+      }
+
       const canonicalCity = await canonicalCityName(form.city);
       if (!canonicalCity) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
@@ -5914,7 +5971,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const privateUpdate = await supabase
         .from("user_private")
         .update({
-          phone: form.phone.trim() || null,
+          phone: normalizedPhone,
           legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
         })
         .eq("user_id", user.id);
@@ -5949,6 +6006,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .update({
           travel_radius_km: Number(form.travelRadius),
           has_driving_license_b: form.hasDrivingLicenseB,
+          has_individual_activity: form.hasIndividualActivity,
           years_experience: Number(form.yearsExperience) || 0,
           short_bio: form.shortBio.trim() || null,
           avatar_path: nextAvatarPath || null,
@@ -6965,7 +7023,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     className="wd-input"
                     value={form.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
-                    placeholder="+370..."
+                    onBlur={() => {
+                      const normalized = normalizeLithuanianMobilePhone(form.phone);
+                      if (normalized) updateField("phone", normalized);
+                    }}
+                    placeholder="+37061234567"
+                    inputMode="tel"
+                    autoComplete="tel"
                     required
                   />
                 </label>
@@ -7007,6 +7071,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }
                   />
                   Turiu B kategorijos vairuotojo pažymėjimą
+                </label>
+
+                <label className="wd-check wd-profile-editor-check">
+                  <input
+                    type="checkbox"
+                    checked={form.hasIndividualActivity}
+                    onChange={(e) =>
+                      updateField("hasIndividualActivity", e.target.checked)
+                    }
+                  />
+                  Turiu individualią veiklą
                 </label>
               </div>
 
@@ -11920,6 +11995,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const name = companyForm.name.trim();
     const cityInput = companyForm.city.trim();
     const phone = companyForm.phone.trim();
+    const normalizedPhone = phone ? normalizeLithuanianMobilePhone(phone) : "";
     const description = companyForm.description.trim();
 
     if (!company?.id) return;
@@ -11936,6 +12012,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (cityInput.length < 2) {
       setError("Pasirinkite įmonės miestą.");
+      return;
+    }
+
+    if (phone && !normalizedPhone) {
+      setError("Įveskite galiojantį Lietuvos mobiliojo telefono numerį, pvz. +37061234567.");
       return;
     }
 
@@ -12005,7 +12086,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .upsert(
           {
             user_id: user.id,
-            phone: phone || null,
+            phone: normalizedPhone || null,
           },
           { onConflict: "user_id" }
         );
@@ -12017,7 +12098,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         name: companyResult.data?.name || "",
         companyCode: companyResult.data?.company_code || "",
         city: companyResult.data?.city || "",
-        phone,
+        phone: normalizedPhone,
         description: companyResult.data?.description || "",
         avatarPath: companyResult.data?.avatar_path || "",
       });
@@ -14257,6 +14338,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-current-job-description{margin:0 18px 18px;border:1px solid #e5ebf0;border-radius:11px;background:#fff;padding:13px 14px}
         .ed-current-job-description span{display:block;margin-bottom:5px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .ed-current-job-description div{color:#263b4d;font-size:13px;line-height:1.55;white-space:pre-wrap}
+        #employer-open-job,.ed-current-job-overview,.ed-current-job-overview-head,.ed-current-job-grid,.ed-current-job-field,.ed-current-job-description{background:#fff!important}.ed-current-job-grid{border-bottom:0!important}
         .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
