@@ -10508,27 +10508,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               .eq("job_id", currentJob.id),
           ]);
 
+          const invitationRows = invitationsResult.error
+            ? []
+            : invitationsResult.data || [];
+          const declinedInvitationCount = invitationRows.filter(
+            (row) => row.status === "declined"
+          ).length;
+
           if (!jobResult.error) {
             const confirmedCount = bookingResult.count || 0;
             setCurrentJob((existing) =>
               existing?.id === currentJob.id
-                ? { ...jobResult.data, confirmedCount }
+                ? {
+                    ...jobResult.data,
+                    confirmedCount,
+                    declinedInvitationCount,
+                  }
                 : existing
             );
           }
 
           if (!invitationsResult.error) {
-            const invitationRows = invitationsResult.data || [];
-            const declinedWorkerIds = new Set(
-              invitationRows
-                .filter((row) => row.status === "declined")
-                .map((row) => row.worker_id)
-            );
-
-            setMatches((current) =>
-              current.filter((worker) => !declinedWorkerIds.has(worker.id))
-            );
-
             setInvitedIds(invitationRows.map((row) => row.worker_id));
             setInvitationStatuses(
               Object.fromEntries(
@@ -12097,21 +12097,37 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return rows.map((job) => ({
         ...job,
         confirmedCount: 0,
+        declinedInvitationCount: 0,
         employerWonDisputes: 0,
         workerWonDisputes: 0,
       }));
     }
 
-    const bookingsResult = await supabase
-      .from("bookings")
-      .select("id, job_id, status")
-      .in("job_id", ids);
+    const [bookingsResult, invitationsResult] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("id, job_id, status")
+        .in("job_id", ids),
+      supabase
+        .from("job_invitations")
+        .select("job_id, status")
+        .in("job_id", ids),
+    ]);
 
     if (bookingsResult.error) throw bookingsResult.error;
+    if (invitationsResult.error) throw invitationsResult.error;
 
     const bookingRows = bookingsResult.data || [];
     const counts = {};
+    const declinedInvitationCounts = {};
     const jobIdByBookingId = new Map();
+
+    for (const invitation of invitationsResult.data || []) {
+      if (invitation.status === "declined") {
+        declinedInvitationCounts[invitation.job_id] =
+          (declinedInvitationCounts[invitation.job_id] || 0) + 1;
+      }
+    }
 
     for (const booking of bookingRows) {
       jobIdByBookingId.set(booking.id, booking.job_id);
@@ -12149,6 +12165,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return rows.map((job) => ({
       ...job,
       confirmedCount: counts[job.id] || 0,
+      declinedInvitationCount: declinedInvitationCounts[job.id] || 0,
       employerWonDisputes: disputeCounts[job.id]?.employer || 0,
       workerWonDisputes: disputeCounts[job.id]?.worker || 0,
     }));
@@ -12619,14 +12636,40 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setMatches([]);
 
     try {
-      const candidateResult = await supabase.rpc("get_job_match_candidates", {
-        p_job_id: job.id,
-      });
+      const [candidateResult, invitationsResult] = await Promise.all([
+        supabase.rpc("get_job_match_candidates", {
+          p_job_id: job.id,
+        }),
+        supabase
+          .from("job_invitations")
+          .select("id, worker_id, status")
+          .eq("job_id", job.id),
+      ]);
 
       if (candidateResult.error) throw candidateResult.error;
+      if (invitationsResult.error) throw invitationsResult.error;
 
       const candidateRows = candidateResult.data || [];
-      const workerIds = candidateRows.map((row) => row.worker_id);
+      const invitationRows = invitationsResult.data || [];
+      const invitationStatusMap = Object.fromEntries(
+        invitationRows.map((row) => [row.worker_id, row.status])
+      );
+      const invitationByWorkerMap = Object.fromEntries(
+        invitationRows.map((row) => [row.worker_id, row])
+      );
+      const declinedWorkerIds = invitationRows
+        .filter((row) => row.status === "declined")
+        .map((row) => row.worker_id);
+      const workerIds = [
+        ...new Set([
+          ...candidateRows.map((row) => row.worker_id),
+          ...declinedWorkerIds,
+        ]),
+      ];
+
+      setInvitedIds(invitationRows.map((row) => row.worker_id));
+      setInvitationStatuses(invitationStatusMap);
+      setInvitationByWorker(invitationByWorkerMap);
 
       if (!workerIds.length) {
         setMatches([]);
@@ -12682,8 +12725,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .map((workerId) => {
           const profile = profileMap.get(workerId);
           const worker = workerMap.get(workerId);
-          const slot = candidateMap.get(workerId);
-          if (!profile || !worker || !slot) return null;
+          const slot = candidateMap.get(workerId) || null;
+          const declinedInvitation =
+            invitationStatusMap[workerId] === "declined";
+
+          if (!profile || !worker || (!slot && !declinedInvitation)) return null;
 
           const skillNames = (skillIdsByWorker.get(workerId) || [])
             .map((id) => skillNameMap.get(id))
@@ -12707,7 +12753,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             avatarUrl: workerAvatarUrl(worker.avatar_path),
             travelRadiusKm: Number(worker.travel_radius_km || 0),
             distanceKm:
-              slot.distance_km === null || slot.distance_km === undefined
+              slot?.distance_km === null || slot?.distance_km === undefined
                 ? null
                 : Number(slot.distance_km),
             noShowCount: Number(worker.no_show_count || 0),
@@ -12718,13 +12764,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               worker.rating_average === undefined
                 ? null
                 : Number(worker.rating_average),
-            availableFrom: slot.available_from?.slice(0, 5) || "",
-            availableTo: slot.available_to?.slice(0, 5) || "",
+            availableFrom: slot?.available_from?.slice(0, 5) || "",
+            availableTo: slot?.available_to?.slice(0, 5) || "",
             skillNames,
+            declinedInvitation,
           };
         })
         .filter(Boolean)
         .sort((a, b) => {
+          if (a.declinedInvitation !== b.declinedInvitation) {
+            return a.declinedInvitation ? -1 : 1;
+          }
+
           const distanceA =
             a.distanceKm === null ? Number.POSITIVE_INFINITY : a.distanceKm;
           const distanceB =
@@ -12739,37 +12790,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           return Number(b.ratingAverage || 0) - Number(a.ratingAverage || 0);
         });
 
-      const invitationsResult = await supabase
-        .from("job_invitations")
-        .select("id, worker_id, status")
-        .eq("job_id", job.id);
-
-      if (!invitationsResult.error) {
-        const invitationRows = invitationsResult.data || [];
-        const declinedWorkerIds = new Set(
-          invitationRows
-            .filter((row) => row.status === "declined")
-            .map((row) => row.worker_id)
-        );
-
-        setMatches(
-          combined.filter((worker) => !declinedWorkerIds.has(worker.id))
-        );
-
-        setInvitedIds(invitationRows.map((row) => row.worker_id));
-        setInvitationStatuses(
-          Object.fromEntries(
-            invitationRows.map((row) => [row.worker_id, row.status])
-          )
-        );
-        setInvitationByWorker(
-          Object.fromEntries(
-            invitationRows.map((row) => [row.worker_id, row])
-          )
-        );
-      } else {
-        setMatches(combined);
-      }
+      setMatches(combined);
     } catch (err) {
       setError(err?.message || "Nepavyko rasti darbuotojų.");
     } finally {
@@ -14012,14 +14033,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
         .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
-        .ed-responsible{display:inline-flex;margin-top:6px;border-radius:999px;background:#f1f4f6;color:#526374;padding:4px 7px;font-size:11px;font-weight:800}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
+        .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
         .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
         .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
-        .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}
+        .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}.ed-invite.sent.declined{background:#fff0ec;color:#b9472d;border:1px solid #f1c1b4}
         .ed-worker-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         @media(max-width:900px){.ed-worker{grid-template-columns:1fr}.ed-worker.ed-worker-basic{grid-template-columns:1fr}.ed-worker-actions{justify-self:stretch;max-width:none}}
         .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(16,36,56,.035)}
@@ -14061,7 +14082,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-jobs-empty-icon{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #e1e8ed;display:grid;place-items:center;color:#102438;font-size:20px;font-weight:800;flex:0 0 36px}
         .ed-jobs-empty b{display:block;color:#102438;font-size:13px;margin-bottom:2px}.ed-jobs-empty span{display:block;font-size:12px;line-height:1.45}
         .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
-        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}
+        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#b9472d;border:1px solid #f1c1b4}
         .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
         .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -15606,10 +15627,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               ? ` · ${worker.distanceKm} km nuo darbo`
                               : ""}
                           </span>
-                          {!canViewWorkerMetrics && worker.activityLabel && (
+                          {!canViewWorkerMetrics && worker.activityLabel && !worker.declinedInvitation && (
                             <div className="ed-worker-status">
                               <span className="ed-attendance-badge green">
                                 {worker.activityLabel}
+                              </span>
+                            </div>
+                          )}
+                          {worker.declinedInvitation && (
+                            <div className="ed-worker-status">
+                              <span className="ed-attendance-badge red">
+                                Atsisakė darbo pasiūlymo
                               </span>
                             </div>
                           )}
@@ -15619,7 +15647,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {canViewWorkerMetrics && (
                         <>
                           <div className="ed-worker-activity">
-                            {worker.activityLabel ? (
+                            {worker.declinedInvitation ? (
+                              <span className="ed-attendance-badge red">
+                                Atsisakė pasiūlymo
+                              </span>
+                            ) : worker.activityLabel ? (
                               <span className="ed-attendance-badge green">
                                 {worker.activityLabel}
                               </span>
@@ -15643,7 +15675,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         </button>
 
                         <button
-                          className={invited ? "ed-invite sent" : "ed-invite"}
+                          className={
+                            worker.declinedInvitation
+                              ? "ed-invite sent declined"
+                              : invited
+                              ? "ed-invite sent"
+                              : "ed-invite"
+                          }
                           disabled={invited || currentJob.status !== "open"}
                           onClick={() => inviteWorker(worker.id)}
                         >
@@ -15789,7 +15827,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-jobs">
               {pagedActiveVisibleJobs.map((job) => {
                 const unreadNonMessageNews = unreadEmployerNotifications(job.id).filter(
-                  (item) => item.event_type !== "message"
+                  (item) =>
+                    item.event_type !== "message" &&
+                    item.event_type !== "invitation_declined"
                 );
                 const newsPresentation = notificationPresentation(unreadNonMessageNews);
                 const unreadGroupMessages =
@@ -15826,6 +15866,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <b>{job.title}</b>
                         {currentJob?.id === job.id && (
                           <span className="ed-opened-badge">Atidarytas</span>
+                        )}
+                        {Number(job.declinedInvitationCount || 0) > 0 && (
+                          <span className="ed-opened-badge declined">
+                            {Number(job.declinedInvitationCount || 0) === 1
+                              ? "Darbuotojas atsisakė"
+                              : `${job.declinedInvitationCount} darbuotojai atsisakė`}
+                          </span>
                         )}
                       </div>
                       <div style={{ color: "#6c7a88", fontSize: 13 }}>
