@@ -9375,15 +9375,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-worker-offer-modal">
             <style>{`
-              .lt-worker-offer-modal{width:min(820px,100%)!important;border-radius:22px!important;padding:24px!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable;background:#fff!important}
+              .lt-worker-offer-modal{width:min(860px,100%)!important;border-radius:22px!important;padding:24px!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable;background:#fff!important;box-sizing:border-box}
               .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
               .lt-worker-offer-modal .rs-close{border-radius:12px!important}
-              .lt-detail-card{border:1px solid #e4ebf0;border-radius:14px!important;padding:14px;background:#fff;overflow:hidden;box-sizing:border-box}
-              .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:4px}
-              .lt-detail-card>b{display:block;color:#102438}.lt-detail-card small{display:block;margin-top:4px;color:#6c7a88;line-height:1.4}
-              .lt-schedule-table{display:grid;gap:8px;margin-top:10px;overflow:hidden;border-radius:14px}
-              .lt-schedule-row{display:grid;grid-template-columns:1.1fr .8fr 1.4fr;gap:10px;align-items:center;padding:11px 12px;border:1px solid #e4ebf0;border-radius:14px!important;background:#f9fbfc;font-size:12px;box-sizing:border-box}.lt-schedule-row span{color:#526374}
-              @media(max-width:620px){.lt-worker-offer-modal{padding:18px!important;border-radius:18px!important}.lt-schedule-row{grid-template-columns:1fr}.lt-detail-card+ .lt-detail-card{min-width:0}}
+              .lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important}
+              .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:5px}
+              .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
+              .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
+              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#f8fafb!important;font-size:12px;box-sizing:border-box;box-shadow:none!important}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
+              @media(max-width:620px){.lt-worker-offer-modal{padding:18px!important;border-radius:18px!important}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
             <div className="rs-modal-head">
@@ -10310,10 +10310,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const timer = window.setTimeout(async () => {
       setCityWorkerSignalLoading(true);
 
-      const result = await supabase.rpc("get_employer_city_worker_signal", {
+      const result = await supabase.rpc("get_employer_city_worker_signal_v2", {
         p_company_id: company.id,
         p_city: String(form.city || "").trim(),
         p_work_date: form.workDate,
+        p_start_time: form.startTime || null,
+        p_end_time: form.endTime || null,
       });
 
       if (cancelled) return;
@@ -10349,6 +10351,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     company?.id,
     form.city,
     form.workDate,
+    form.startTime,
+    form.endTime,
     planSummary?.plan_key,
   ]);
 
