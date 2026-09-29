@@ -1436,7 +1436,7 @@ function AuthModal({
         {mode === "signup" && role === "employer" && !teamInvite && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 9 }}>Pasirinkite darbdavio planą</div>
-            <div role="group" aria-label="Darbdavio planas" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+            <div role="group" aria-label="Darbdavio planas" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 8 }}>
               {EMPLOYER_PLANS.map((plan) => (
                 <button key={plan.key} type="button" onClick={() => setSignupPlan(plan.key)} aria-pressed={signupPlan === plan.key} style={{ minWidth: 0, minHeight: 76, border: signupPlan === plan.key ? "2px solid #f08a28" : "1px solid #dfe7ed", borderRadius: 11, padding: "10px 6px", background: signupPlan === plan.key ? "#fff7ef" : "#fff", color: "#102438", textAlign: "center", cursor: "pointer", font: "inherit" }}>
                   <b style={{ display: "block", fontSize: 13 }}>{plan.name}</b>
@@ -4672,6 +4672,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
   const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
   const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
+  const [workerCompanyProfileTarget, setWorkerCompanyProfileTarget] = useState(null);
+  const [workerCompanyProfileLoading, setWorkerCompanyProfileLoading] = useState(false);
   const [employerReviewOpportunities, setEmployerReviewOpportunities] = useState([]);
   const [employerReviewTarget, setEmployerReviewTarget] = useState(null);
   const [employerReviewScore, setEmployerReviewScore] = useState(null);
@@ -6074,6 +6076,69 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         companyReviews: [],
       });
       setError(err?.message || "Nepavyko įkelti darbo kontaktų.");
+    }
+  }
+
+  async function openWorkerCompanyProfile(source) {
+    const companyId = source?.job?.company_id;
+    if (!companyId) return;
+
+    setError("");
+    setWorkerCompanyProfileLoading(true);
+
+    try {
+      const [companyResult, reviewsResult] = await Promise.all([
+        supabase
+          .from("companies")
+          .select(
+            "id, name, city, description, avatar_path, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+          )
+          .eq("id", companyId)
+          .single(),
+        supabase.rpc("get_company_worker_reviews", {
+          p_company_id: companyId,
+        }),
+      ]);
+
+      if (companyResult.error) throw companyResult.error;
+      if (reviewsResult.error) throw reviewsResult.error;
+
+      const company = companyResult.data || {};
+
+      setWorkerCompanyProfileTarget({
+        id: company.id || companyId,
+        name: company.name || source.companyName || "Darbdavys",
+        city: company.city || source.job?.city || "",
+        description: company.description || "",
+        avatarPath: company.avatar_path || source.companyAvatarPath || "",
+        reliabilityRate: Number(
+          company.reliability_rate ?? source.companyReliability ?? 100
+        ),
+        cancelledConfirmedCount: Number(
+          company.cancelled_confirmed_count ?? source.companyCancelledConfirmed ?? 0
+        ),
+        falseAttendanceClaimCount: Number(
+          company.false_attendance_claim_count ?? 0
+        ),
+        awards: companyAwardsById[companyId] || [],
+        reviews: reviewsResult.data || source.companyReviews || [],
+      });
+    } catch (err) {
+      setWorkerCompanyProfileTarget({
+        id: companyId,
+        name: source.companyName || "Darbdavys",
+        city: source.job?.city || "",
+        description: "",
+        avatarPath: source.companyAvatarPath || "",
+        reliabilityRate: Number(source.companyReliability ?? 100),
+        cancelledConfirmedCount: Number(source.companyCancelledConfirmed ?? 0),
+        falseAttendanceClaimCount: 0,
+        awards: companyAwardsById[companyId] || [],
+        reviews: source.companyReviews || [],
+      });
+      setError(err?.message || "Nepavyko įkelti įmonės profilio.");
+    } finally {
+      setWorkerCompanyProfileLoading(false);
     }
   }
 
@@ -8807,10 +8872,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }
                     size={42}
                   />
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <b style={{ display: "block", fontSize: 17 }}>
                       {workdayDetailsTarget.companyName || "Darbdavys"}
                     </b>
+                    <button
+                      className="wd-decline"
+                      type="button"
+                      style={{ marginTop: 8, padding: "8px 14px", borderRadius: 12 }}
+                      onClick={() => openWorkerCompanyProfile(workdayDetailsTarget)}
+                    >
+                      Įmonės profilis
+                    </button>
                   </div>
                 </div>
               </div>
@@ -9306,6 +9379,198 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 Uždaryti
               </button>
             </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {workerCompanyProfileTarget && (
+        <div
+          className="wd-job-info-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !workerCompanyProfileLoading) {
+              setWorkerCompanyProfileTarget(null);
+            }
+          }}
+        >
+          <div className="wd-job-info-modal">
+            <div className="wd-job-info-head">
+              <div>
+                <div className="eyebrow">ĮMONĖS PROFILIS</div>
+                <h2>{workerCompanyProfileTarget.name || "Darbdavys"}</h2>
+              </div>
+              <button
+                className="wd-job-info-close"
+                type="button"
+                onClick={() => setWorkerCompanyProfileTarget(null)}
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            <div className="wd-job-info-scroll">
+              <div style={{ display: "grid", gap: 12 }}>
+                <div
+                  style={{
+                    border: "1px solid #e4ebf0",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: "#f8fafb",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <CompanyBadge
+                      name={workerCompanyProfileTarget.name || "Darbdavys"}
+                      avatarPath={workerCompanyProfileTarget.avatarPath}
+                      size={54}
+                      fontSize={18}
+                    />
+                    <MonthlyAwardMiniList
+                      awards={workerCompanyProfileTarget.awards || []}
+                      size={54}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <b style={{ display: "block", fontSize: 19 }}>
+                        {workerCompanyProfileTarget.name || "Darbdavys"}
+                      </b>
+                      <div style={{ color: "#6c7a88", marginTop: 4 }}>
+                        {workerCompanyProfileTarget.city || "Miestas nenurodytas"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės patikimumas</div>
+                    <b
+                      style={{
+                        display: "block",
+                        marginTop: 4,
+                        color: reliabilityScoreColor(workerCompanyProfileTarget.reliabilityRate),
+                      }}
+                    >
+                      {Math.round(Number(workerCompanyProfileTarget.reliabilityRate || 0))} / 100
+                    </b>
+                  </div>
+
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Atšaukti patvirtinti darbai</div>
+                    <b style={{ display: "block", marginTop: 4 }}>
+                      {Number(workerCompanyProfileTarget.cancelledConfirmedCount || 0)}
+                    </b>
+                  </div>
+
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Mėnesio apdovanojimai</div>
+                    <b style={{ display: "block", marginTop: 4 }}>
+                      {activeMonthlyAwards(workerCompanyProfileTarget.awards || []).length}
+                    </b>
+                  </div>
+                </div>
+
+                {!!workerCompanyProfileTarget.description && (
+                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės aprašymas</div>
+                    <div style={{ marginTop: 6, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                      {workerCompanyProfileTarget.description}
+                    </div>
+                  </div>
+                )}
+
+                {workerCompanyProfileTarget.reviews?.length > 0 && (
+                  <div
+                    style={{
+                      border: "1px solid #f0d1b2",
+                      borderRadius: 16,
+                      padding: 14,
+                      background: "#fffaf5",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        color: "#102438",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Darbuotojų atsiliepimai apie įmonę
+                    </div>
+
+                    <div style={{ display: "grid", gap: 9 }}>
+                      {workerCompanyProfileTarget.reviews.map((review) => (
+                        <div
+                          key={review.id}
+                          style={{
+                            background: "#fff",
+                            border: "1px solid #eadfd5",
+                            borderRadius: 14,
+                            padding: 11,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              flexWrap: "wrap",
+                              marginBottom: 5,
+                            }}
+                          >
+                            <b>{review.score} / 10</b>
+                            <span style={{ color: "#7a8996", fontSize: 11 }}>
+                              {review.work_date || ""}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              color: "#6c7a88",
+                              fontSize: 11,
+                              marginBottom: 5,
+                            }}
+                          >
+                            {review.job_title}
+                          </div>
+                          <div style={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                            {review.comment}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 16,
+                }}
+              >
+                <button
+                  className="wd-decline"
+                  type="button"
+                  onClick={() => setWorkerCompanyProfileTarget(null)}
+                >
+                  Uždaryti
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -10812,9 +11077,9 @@ const MONTHLY_AWARD_TOOLTIP_STYLES = `
   .monthly-award-hover{position:relative;display:inline-grid;place-items:center;flex:0 0 auto;border-radius:14px;outline:none}
   .monthly-award-hover>img{display:block;object-fit:contain;transition:transform .15s ease,filter .15s ease}
   .monthly-award-hover:hover>img,.monthly-award-hover:focus-visible>img{transform:translateY(-1px);filter:drop-shadow(0 5px 9px rgba(16,36,56,.16))}
-  .monthly-award-tooltip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,5px);z-index:5000;min-width:210px;max-width:280px;padding:10px 12px;border:1px solid #f0c79f;border-radius:12px;background:#fffaf5;box-shadow:0 12px 28px rgba(16,36,56,.16);color:#102438;font-size:11px;line-height:1.4;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
-  .monthly-award-tooltip:after{content:"";position:absolute;left:50%;top:100%;width:9px;height:9px;background:#fffaf5;border-right:1px solid #f0c79f;border-bottom:1px solid #f0c79f;transform:translate(-50%,-5px) rotate(45deg)}
-  .monthly-award-hover:hover .monthly-award-tooltip,.monthly-award-hover:focus-visible .monthly-award-tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
+  .monthly-award-tooltip{position:absolute;left:calc(100% + 12px);top:50%;bottom:auto;transform:translate(-6px,-50%);z-index:5000;min-width:210px;max-width:min(280px,calc(100vw - 28px));padding:10px 12px;border:1px solid #f0c79f;border-radius:12px;background:#fffaf5;box-shadow:0 12px 28px rgba(16,36,56,.16);color:#102438;font-size:11px;line-height:1.4;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
+  .monthly-award-tooltip:after{content:"";position:absolute;left:-1px;top:50%;width:9px;height:9px;background:#fffaf5;border-left:1px solid #f0c79f;border-bottom:1px solid #f0c79f;transform:translate(-50%,-50%) rotate(45deg)}
+  .monthly-award-hover:hover .monthly-award-tooltip,.monthly-award-hover:focus-visible .monthly-award-tooltip{opacity:1;visibility:visible;transform:translate(0,-50%)}
   .monthly-award-tooltip b{display:block;margin-bottom:2px;color:#102438;font-size:11.5px}
   .monthly-award-tooltip span{display:block;color:#6c7a88}
   .monthly-award-tooltip strong{display:block;margin-top:3px;color:#b85f0e;font-size:10.5px}
