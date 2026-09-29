@@ -21985,19 +21985,8 @@ function AdminDashboard({
                     <div className="admin-row-title">
                       <b>{chat.company_name || "Įmonė"}</b>
                       <span>
-                        {chat.last_message_at
-                          ? `Paskutinė žinutė: ${chat.last_sender_label || "Komandos narys"}${
-                              chat.last_sender_role
-                                ? ` · ${companyTeamRoleLabel(chat.last_sender_role)}`
-                                : ""
-                            }`
-                          : "Pokalbis dar tuščias"}
+                        {chat.last_message_at ? "Pokalbis aktyvus" : "Pokalbis dar tuščias"}
                       </span>
-                      {chat.last_message_preview && (
-                        <span style={{ color: "#405264", marginTop: 6 }}>
-                          „{chat.last_message_preview}“
-                        </span>
-                      )}
                     </div>
 
                     <div className="admin-cell">
