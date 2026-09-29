@@ -9713,8 +9713,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return false;
     }
   });
+  const employerStatsStorageUserRef = useRef(null);
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || employerStatsStorageUserRef.current === user.id) return;
+    employerStatsStorageUserRef.current = user.id;
+    try {
+      setShowEmployerStats(
+        window.localStorage.getItem(`employer-stats-open:${user.id}`) === "1"
+      );
+    } catch {}
+  }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id || employerStatsStorageUserRef.current !== user.id) return;
     try {
       window.localStorage.setItem(
         `employer-stats-open:${user.id}`,
@@ -13414,28 +13424,34 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-editor-wide{grid-column:1/-1}
         .ed-company-editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
         .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
-        .ed-stats-section{margin-bottom:20px}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
-        .ed-kpi span{display:block;font-size:12px;color:#6c7a88;line-height:1.35;min-height:34px}
-        .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:12px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
-        .ed-reliability-card{display:flex;align-items:center;justify-content:flex-start}
-        .ed-reliability-copy{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start}
+        .ed-stats-section{margin-bottom:20px}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+        .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
+        .ed-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}
+        .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:10px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
+        .ed-reliability-card{display:flex;align-items:center;justify-content:center;text-align:center}
+        .ed-reliability-copy{min-width:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
         .ed-reliability-title{
-          display:block;
+          display:flex;
           width:100%;
-          margin-bottom:9px;
+          justify-content:center;
+          margin-bottom:0;
         }
         .ed-reliability-title-btn{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:max-content;
+          max-width:100%;
           border:0;
           background:transparent;
           color:#6c7a88;
           font-family:Inter,sans-serif;
-          font-size:12px;
-          line-height:1.25;
+          font-size:13px;
+          line-height:1.35;
           cursor:pointer;
           padding:0;
-          margin:0;
-          text-align:left;
+          margin:0 auto;
+          text-align:center;
         }
         .ed-reliability-title-btn:hover{
           color:#102438;
@@ -13447,7 +13463,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           outline-offset:4px;
           border-radius:4px;
         }
-        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:30px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+        .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:25px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:10px!important}
         .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
@@ -14443,8 +14459,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             >
               {planSummary?.can_team_management &&
               companyMemberRole === "recruiter"
-                ? "MANO DARBŲ STATISTIKA"
-                : "ĮMONĖS STATISTIKA"}
+                ? "MANO DARBŲ STATISTIKA · SPAUSK IR ŽIŪRĖK"
+                : "ĮMONĖS STATISTIKA · SPAUSK IR ŽIŪRĖK"}
             </button>
           </div>
 
@@ -14496,7 +14512,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     aria-label="Atidaryti darbdavio patikimumo paaiškinimą"
                     onClick={() => setShowReliabilityInfo(true)}
                   >
-                    Patikimumas
+                    Įmonės patikimumas
                   </button>
                 </div>
 
@@ -17289,7 +17305,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   PATIKIMUMO REITINGAS
                 </div>
                 <h2 id="reliability-modal-title">
-                  Kaip veikia darbdavio patikimumas?
+                  Kaip veikia įmonės patikimumas?
                 </h2>
               </div>
 
