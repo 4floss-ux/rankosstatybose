@@ -4431,19 +4431,17 @@ function BugResolutionNotice({ userId }) {
 
   return (
     <div
+      role="status"
       style={{
-        position: "fixed",
-        top: 82,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 15000,
-        width: "min(620px,calc(100vw - 28px))",
+        width: "100%",
+        boxSizing: "border-box",
+        margin: "0 0 14px",
         border: "1px solid #b9decf",
-        borderRadius: 14,
+        borderRadius: 13,
         background: "#eef8f3",
         color: "#125f45",
-        boxShadow: "0 18px 48px rgba(16,36,56,.18)",
-        padding: "15px 16px",
+        boxShadow: "0 4px 14px rgba(16,36,56,.035)",
+        padding: "12px 14px",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
@@ -7534,6 +7532,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           </div>
         )}
+
+        <BugResolutionNotice userId={user.id} />
 
         <section className="wd-stats-section">
           <div className="wd-stats-head">
@@ -15455,6 +15455,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </section>
         )}
+
+        <BugResolutionNotice userId={user.id} />
 
         <section className="ed-stats-section">
           <div className="ed-stats-head">
@@ -23549,19 +23551,13 @@ function App() {
 
   if (user && accountRole === "worker") {
     return (
-      <>
-        <WorkerDashboard user={user} onLogout={logout} />
-        <BugResolutionNotice userId={user.id} />
-      </>
+      <WorkerDashboard user={user} onLogout={logout} />
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <>
-        <EmployerDashboard user={user} onLogout={logout} />
-        <BugResolutionNotice userId={user.id} />
-      </>
+      <EmployerDashboard user={user} onLogout={logout} />
     );
   }
 
