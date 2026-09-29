@@ -15571,6 +15571,206 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
+            {currentJobWorkerSearchOpen && (
+              <>
+            <div className="ed-results-head">
+              <div>
+                <h2>
+                  {workerSource === "team"
+                    ? "Kviesti darbuotojus iš favoritų"
+                    : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
+                </h2>
+                <p>
+                  Rodomi tik per paskutines 24 val. aktyvūs, savo grafiką
+                  patvirtinę ir šiam darbui tinkami darbuotojai.
+                </p>
+
+                <div className="ed-worker-source">
+                  <button
+                    type="button"
+                    className={workerSource === "available" ? "active" : ""}
+                    onClick={() => setWorkerSource("available")}
+                  >
+                    Laisvi darbuotojai
+                  </button>
+                  <button
+                    type="button"
+                    className={`${
+                      workerSource === "team" ? "active" : ""
+                    } ${planSummary?.can_saved_workers ? "" : "locked"}`}
+                    onClick={() => {
+                      if (!planSummary?.can_saved_workers) {
+                        setNotice(
+                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
+                        );
+                        return;
+                      }
+                      setWorkerSource("team");
+                    }}
+                  >
+                    {planSummary?.can_saved_workers
+                      ? `Darbuotojai favoritai · ${matchingSavedWorkersCount}`
+                      : "Darbuotojai favoritai · Business"}
+                  </button>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <b>{visibleCandidateWorkers.length} rasti</b>
+                <div className="ed-progress">
+                  {currentJob.status === "completed"
+                    ? "Darbo diena užbaigta"
+                    : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
+                </div>
+
+                {workerSource === "team" &&
+                  planSummary?.can_saved_workers &&
+                  currentJob.status === "open" && (
+                    <button
+                      className="ed-primary"
+                      type="button"
+                      style={{ marginTop: 10 }}
+                      disabled={
+                        invitingSavedTeam ||
+                        matchingSavedWorkersCount === 0
+                      }
+                      onClick={inviteSavedWorkerTeam}
+                    >
+                      {invitingSavedTeam
+                        ? "Siunčiami kvietimai..."
+                        : "Pakviesti visus tinkamus"}
+                    </button>
+                  )}
+              </div>
+            </div>
+
+            {searching ? (
+              <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
+            ) : visibleCandidateWorkers.length ? (
+              <div className="ed-results">
+                {visibleCandidateWorkers.map((worker) => {
+                  const invited = invitedIds.includes(worker.id);
+                  return (
+                    <div
+                      className={
+                        canViewWorkerMetrics
+                          ? "ed-worker"
+                          : "ed-worker ed-worker-basic"
+                      }
+                      key={worker.id}
+                    >
+                      <div className="ed-worker-id">
+                        <div className="ed-avatar">
+                          {worker.avatarUrl ? (
+                            <img src={worker.avatarUrl} alt={worker.name} />
+                          ) : (
+                            worker.initials
+                          )}
+                        </div>
+                        <div>
+                          <b>{worker.name}</b>
+                          <span>
+                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
+                            {worker.distanceKm !== null
+                              ? ` · ${worker.distanceKm} km nuo darbo`
+                              : ""}
+                          </span>
+                          {!canViewWorkerMetrics && worker.activityLabel && !worker.declinedInvitation && (
+                            <div className="ed-worker-status">
+                              <span className="ed-attendance-badge green">
+                                {worker.activityLabel}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {canViewWorkerMetrics && (
+                        <>
+                          <div className="ed-worker-activity">
+                            {worker.activityLabel ? (
+                              <span className="ed-attendance-badge green">
+                                {worker.activityLabel}
+                              </span>
+                            ) : (
+                              <span className="ed-attendance-badge">Neaktyvus</span>
+                            )}
+                          </div>
+                          <div className="ed-metric">
+                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
+                            <span>atvykimas</span>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="ed-worker-actions">
+                        <button
+                          className="ed-secondary"
+                          onClick={() => openWorkerProfile(worker)}
+                        >
+                          Profilis
+                        </button>
+
+                        <button
+                          className={invited ? "ed-invite sent" : "ed-invite"}
+                          disabled={invited || currentJob.status !== "open"}
+                          onClick={() => inviteWorker(worker.id)}
+                        >
+                          {!invited
+                            ? "Kviesti"
+                            : invitationStatuses[worker.id] === "accepted"
+                            ? "Priėmė"
+                            : invitationStatuses[worker.id] === "declined"
+                            ? "Atmetė"
+                            : invitationStatuses[worker.id] === "expired"
+                            ? "Užpildyta"
+                            : "Pakviestas"}
+                        </button>
+
+                        {invitationByWorker[worker.id] && !worker.declinedInvitation && (
+                          <button
+                            className="ed-secondary ed-chat-alert-btn"
+                            onClick={() =>
+                              openEmployerPrivateConversation(
+                                invitationByWorker[worker.id].id,
+                                `${worker.name} · ${currentJob.title}`
+                              )
+                            }
+                          >
+                            {planSummary?.can_job_chat
+                              ? "Žinutė"
+                              : "Žinutė · Business"}
+                            {unreadEmployerPrivateChatNotifications(
+                              invitationByWorker[worker.id].id
+                            ).length > 0 && (
+                              <span
+                                className="ed-chat-alert"
+                                title="Nauja privati žinutė"
+                              >
+                                {Math.min(
+                                  9,
+                                  unreadEmployerPrivateChatNotifications(
+                                    invitationByWorker[worker.id].id
+                                  ).length
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ed-empty">
+                {workerSource === "team"
+                  ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
+                  : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
+              </div>
+            )}
+              </>
+            )}
+
             <div className="ed-attendance-panel">
                 <h2>Pasiūlymą priėmę darbuotojai</h2>
                 <p className="ed-attendance-help">
@@ -16041,205 +16241,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
-            {currentJobWorkerSearchOpen && (
-              <>
-            <div className="ed-results-head">
-              <div>
-                <h2>
-                  {workerSource === "team"
-                    ? "Kviesti darbuotojus iš favoritų"
-                    : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
-                </h2>
-                <p>
-                  Rodomi tik per paskutines 24 val. aktyvūs, savo grafiką
-                  patvirtinę ir šiam darbui tinkami darbuotojai.
-                </p>
-
-                <div className="ed-worker-source">
-                  <button
-                    type="button"
-                    className={workerSource === "available" ? "active" : ""}
-                    onClick={() => setWorkerSource("available")}
-                  >
-                    Laisvi darbuotojai
-                  </button>
-                  <button
-                    type="button"
-                    className={`${
-                      workerSource === "team" ? "active" : ""
-                    } ${planSummary?.can_saved_workers ? "" : "locked"}`}
-                    onClick={() => {
-                      if (!planSummary?.can_saved_workers) {
-                        setNotice(
-                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
-                        );
-                        return;
-                      }
-                      setWorkerSource("team");
-                    }}
-                  >
-                    {planSummary?.can_saved_workers
-                      ? `Darbuotojai favoritai · ${matchingSavedWorkersCount}`
-                      : "Darbuotojai favoritai · Business"}
-                  </button>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <b>{visibleCandidateWorkers.length} rasti</b>
-                <div className="ed-progress">
-                  {currentJob.status === "completed"
-                    ? "Darbo diena užbaigta"
-                    : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
-                </div>
-
-                {workerSource === "team" &&
-                  planSummary?.can_saved_workers &&
-                  currentJob.status === "open" && (
-                    <button
-                      className="ed-primary"
-                      type="button"
-                      style={{ marginTop: 10 }}
-                      disabled={
-                        invitingSavedTeam ||
-                        matchingSavedWorkersCount === 0
-                      }
-                      onClick={inviteSavedWorkerTeam}
-                    >
-                      {invitingSavedTeam
-                        ? "Siunčiami kvietimai..."
-                        : "Pakviesti visus tinkamus"}
-                    </button>
-                  )}
-              </div>
-            </div>
-
-            {searching ? (
-              <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
-            ) : visibleCandidateWorkers.length ? (
-              <div className="ed-results">
-                {visibleCandidateWorkers.map((worker) => {
-                  const invited = invitedIds.includes(worker.id);
-                  return (
-                    <div
-                      className={
-                        canViewWorkerMetrics
-                          ? "ed-worker"
-                          : "ed-worker ed-worker-basic"
-                      }
-                      key={worker.id}
-                    >
-                      <div className="ed-worker-id">
-                        <div className="ed-avatar">
-                          {worker.avatarUrl ? (
-                            <img src={worker.avatarUrl} alt={worker.name} />
-                          ) : (
-                            worker.initials
-                          )}
-                        </div>
-                        <div>
-                          <b>{worker.name}</b>
-                          <span>
-                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            {worker.distanceKm !== null
-                              ? ` · ${worker.distanceKm} km nuo darbo`
-                              : ""}
-                          </span>
-                          {!canViewWorkerMetrics && worker.activityLabel && !worker.declinedInvitation && (
-                            <div className="ed-worker-status">
-                              <span className="ed-attendance-badge green">
-                                {worker.activityLabel}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {canViewWorkerMetrics && (
-                        <>
-                          <div className="ed-worker-activity">
-                            {worker.activityLabel ? (
-                              <span className="ed-attendance-badge green">
-                                {worker.activityLabel}
-                              </span>
-                            ) : (
-                              <span className="ed-attendance-badge">Neaktyvus</span>
-                            )}
-                          </div>
-                          <div className="ed-metric">
-                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
-                            <span>atvykimas</span>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="ed-worker-actions">
-                        <button
-                          className="ed-secondary"
-                          onClick={() => openWorkerProfile(worker)}
-                        >
-                          Profilis
-                        </button>
-
-                        <button
-                          className={invited ? "ed-invite sent" : "ed-invite"}
-                          disabled={invited || currentJob.status !== "open"}
-                          onClick={() => inviteWorker(worker.id)}
-                        >
-                          {!invited
-                            ? "Kviesti"
-                            : invitationStatuses[worker.id] === "accepted"
-                            ? "Priėmė"
-                            : invitationStatuses[worker.id] === "declined"
-                            ? "Atmetė"
-                            : invitationStatuses[worker.id] === "expired"
-                            ? "Užpildyta"
-                            : "Pakviestas"}
-                        </button>
-
-                        {invitationByWorker[worker.id] && !worker.declinedInvitation && (
-                          <button
-                            className="ed-secondary ed-chat-alert-btn"
-                            onClick={() =>
-                              openEmployerPrivateConversation(
-                                invitationByWorker[worker.id].id,
-                                `${worker.name} · ${currentJob.title}`
-                              )
-                            }
-                          >
-                            {planSummary?.can_job_chat
-                              ? "Žinutė"
-                              : "Žinutė · Business"}
-                            {unreadEmployerPrivateChatNotifications(
-                              invitationByWorker[worker.id].id
-                            ).length > 0 && (
-                              <span
-                                className="ed-chat-alert"
-                                title="Nauja privati žinutė"
-                              >
-                                {Math.min(
-                                  9,
-                                  unreadEmployerPrivateChatNotifications(
-                                    invitationByWorker[worker.id].id
-                                  ).length
-                                )}
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="ed-empty">
-                {workerSource === "team"
-                  ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
-                  : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
-              </div>
-            )}
-              </>
-            )}
           </section>
         )}
 
