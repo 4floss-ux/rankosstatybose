@@ -6287,6 +6287,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const pendingLongTermOffers = longTermOffers.filter(
+    (offer) => offer.status === "offered"
+  );
+  const activeLongTermEmployment =
+    longTermOffers.find((offer) => offer.status === "active") || null;
+
   if (loading) {
     return (
       <div className="wd-loading">
@@ -6336,7 +6342,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
         .wd-accept{border:0;background:#1c9b67;color:#fff}.wd-decline{border:1px solid #dbe4ea;background:#fff;color:#102438}.wd-accept:disabled,.wd-decline:disabled{opacity:.55;cursor:wait}
         .wd-invite-status{font-size:13px;font-weight:800;border-radius:999px;padding:7px 10px;width:max-content}.wd-invite-status.accepted{background:#edf8f3;color:#167a54}.wd-invite-status.declined{background:#f2f4f6;color:#667788}.wd-invite-status.pending{background:#fff3e7;color:#b85f0e}
-        .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+        .wd-heading-actions{display:grid;justify-items:stretch;gap:10px}.wd-heading-actions>.wd-urgent-btn,.wd-heading-actions>.wd-long-term-btn,.wd-heading-actions>.wd-edit-profile{width:100%;min-height:46px;box-sizing:border-box}.wd-edit-profile{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.wd-long-term-btn{position:relative;border:1px solid #bfd4c9;background:#f3faf6;color:#167a54;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer}.wd-long-term-btn:hover{background:#eaf7f0}
         .wd-urgent-btn{border:0;background:#f08a28;color:#fff;border-radius:10px;padding:10px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(240,138,40,.18)}
         .wd-urgent-btn.active{background:#1c9b67;box-shadow:0 6px 16px rgba(28,155,103,.16)}.wd-urgent-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
         .wd-urgent-status{font-size:11px;color:#167a54;font-weight:800;text-align:right;margin-top:-4px}
@@ -6520,6 +6526,24 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="wd-urgent-status">
                 {`${urgentAvailability.city} · matomas „Skubiai!“ paieškoje`}
               </div>
+            )}
+
+            {activeLongTermEmployment && (
+              <button
+                className="wd-long-term-btn"
+                type="button"
+                onClick={() => {
+                  setLongTermSignedContractFile(null);
+                  setLongTermOfferTarget(activeLongTermEmployment);
+                }}
+              >
+                Ilgalaikis darbas
+                {Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0) > 0 && (
+                  <span className="wd-chat-count">
+                    {Math.min(9, Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0))}
+                  </span>
+                )}
+              </button>
             )}
 
             <button
@@ -7197,7 +7221,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        {longTermOffers.length > 0 && (
+        {pendingLongTermOffers.length > 0 && (
         <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
           <div
             style={{
@@ -7216,15 +7240,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 o darbdavys patvirtina, kad ją gavo.
               </p>
             </div>
-            {longTermOffers.filter((offer) => offer.status === "offered").length > 0 && (
-              <span className="wd-workday-status orange" style={{ marginTop: 0 }}>
-                Nauji pasiūlymai · {longTermOffers.filter((offer) => offer.status === "offered").length}
-              </span>
-            )}
+            <span className="wd-workday-status orange" style={{ marginTop: 0 }}>
+              Nauji pasiūlymai · {pendingLongTermOffers.length}
+            </span>
           </div>
 
           <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-              {longTermOffers.map((offer) => (
+              {pendingLongTermOffers.map((offer) => (
                 <div
                   key={offer.id}
                   className="wd-long-term-offer-card"
@@ -9500,6 +9522,34 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {longTermOfferTarget.status === "active" && (
+                  <button
+                    className={`wd-decline wd-workday-chat ${
+                      Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0
+                        ? "has-unread"
+                        : ""
+                    }`}
+                    type="button"
+                    disabled={longTermBusy}
+                    onClick={() => {
+                      setLongTermUnreadByOffer((current) => ({
+                        ...current,
+                        [longTermOfferTarget.id]: 0,
+                      }));
+                      setLongTermConversation({
+                        placementId: longTermOfferTarget.id,
+                        title: `${longTermOfferTarget.company_name} · ${longTermOfferTarget.position_title}`,
+                      });
+                    }}
+                  >
+                    Pokalbis
+                    {Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0) > 0 && (
+                      <span className="wd-chat-count">
+                        {Math.min(9, Number(longTermUnreadByOffer[longTermOfferTarget.id] || 0))}
+                      </span>
+                    )}
+                  </button>
+                )}
                 {longTermOfferTarget.status === "offered" && (
                   <button
                     className="wd-danger"
