@@ -16559,12 +16559,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
-                        {job.city} · {job.start_time?.slice(0, 5)}
-                        {job.pay_amount
-                          ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                          : ""}
-                      </div>
                       {(planSummary?.can_team_management ||
                         Number(job.employerWonDisputes || 0) > 0 ||
                         Number(job.workerWonDisputes || 0) > 0) && (
@@ -16597,6 +16591,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           )}
                         </div>
                       )}
+                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                        {job.city} · {job.start_time?.slice(0, 5)}
+                      </div>
                       {jobHasEnded(job) &&
                         Number(job.confirmedCount || 0) > 0 &&
                         !["cancelled", "completed"].includes(job.status) && (
@@ -16737,12 +16734,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       >
                         <b>{job.title}</b>
                       </div>
-                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
-                        {job.city} · {job.start_time?.slice(0, 5)}
-                        {job.pay_amount
-                          ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                          : ""}
-                      </div>
                       {(planSummary?.can_team_management ||
                         Number(job.employerWonDisputes || 0) > 0 ||
                         Number(job.workerWonDisputes || 0) > 0) && (
@@ -16775,6 +16766,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           )}
                         </div>
                       )}
+                      <div style={{ color: "#6c7a88", fontSize: 13 }}>
+                        {job.city} · {job.start_time?.slice(0, 5)}
+                      </div>
                     </div>
 
                     <span className="ed-progress">
