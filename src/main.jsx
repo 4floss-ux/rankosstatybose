@@ -282,7 +282,11 @@ function RoundedSelect({ value, options, disabled, onChange, className = "ed-sel
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
       <button
-        ref={triggerRef}
+        ref={(node) => {
+          triggerRef.current = node;
+          if (typeof buttonRef === "function") buttonRef(node);
+          else if (buttonRef) buttonRef.current = node;
+        }}
         type="button"
         className={className}
         disabled={disabled}
@@ -512,7 +516,7 @@ function RoundedDateSelect({
   );
 }
 
-function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką", minTime = null, maxTime = null }) {
+function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left", className = "wd-time wd-time-trigger", placeholder = "Pasirinkite laiką", minTime = null, maxTime = null, buttonRef = null }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
@@ -3547,10 +3551,11 @@ function WorkerProfileModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="rs-modal-card">
+      <div className="rs-modal-card worker-profile-modal">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .rs-modal-card{width:min(700px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+          .worker-profile-modal{width:min(700px,100%);max-height:calc(100vh - 40px);overflow:hidden;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:0;color:#102438}
+          .worker-profile-modal-scroll{max-height:calc(100vh - 40px);overflow:auto;padding:22px;box-sizing:border-box;scrollbar-gutter:stable}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
           .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
           .rs-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -3563,10 +3568,11 @@ function WorkerProfileModal({
           .rs-profile-plan-lock b{display:block;color:#102438;font-size:13px;margin-bottom:3px}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
-          @media(max-width:620px){.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
+          @media(max-width:620px){.worker-profile-modal{border-radius:16px}.worker-profile-modal-scroll{max-height:calc(100vh - 20px);padding:17px}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
           @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
         `}</style>
 
+        <div className="worker-profile-modal-scroll">
         <div className="rs-modal-head">
           <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
             <div
@@ -3740,6 +3746,7 @@ function WorkerProfileModal({
               Dar nėra darbdavių įvertinimų.
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
@@ -10271,6 +10278,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
   const addressInputRef = useRef(null);
+  const breakStartInputRef = useRef(null);
+  const breakEndInputRef = useRef(null);
   const payAmountInputRef = useRef(null);
   const descriptionInputRef = useRef(null);
   const [form, setForm] = useState({
@@ -12821,7 +12830,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         form.breakEndTime <= form.breakStartTime
       )
     ) {
-      setError("Pietų pertrauka turi būti darbo laiko ribose.");
+      const startInvalid =
+        !form.breakStartTime || form.breakStartTime < form.startTime;
+      const target = startInvalid
+        ? breakStartInputRef.current
+        : breakEndInputRef.current;
+
+      requestAnimationFrame(() => {
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        target?.focus();
+      });
       return;
     }
 
@@ -14684,6 +14702,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <label className="ed-label">Nuo
       <RoundedTimeSelect
         ariaLabel="Pietų pertraukos pradžia"
+        buttonRef={breakStartInputRef}
         className="ed-input wd-time-trigger"
         value={form.breakStartTime}
         disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
@@ -14693,6 +14712,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <label className="ed-label">Iki
       <RoundedTimeSelect
         ariaLabel="Pietų pertraukos pabaiga"
+        buttonRef={breakEndInputRef}
         className="ed-input wd-time-trigger"
         value={form.breakEndTime}
         disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
