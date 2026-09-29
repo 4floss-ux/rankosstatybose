@@ -6997,7 +6997,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-danger{border:1px solid #efc7bc;background:#fff;color:#b64d2a;border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}.wd-danger:disabled{opacity:.55;cursor:wait}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;margin-bottom:9px;width:max-content}
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
-        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-top:20px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
         .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -8095,20 +8095,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             style={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 9,
+                              gap: 8,
                               minWidth: 190,
                             }}
                           >
-                            <CompanyBadge
-                              name={invitation.companyName}
-                              avatarPath={invitation.companyAvatarPath}
-                              size={42}
-                              fontSize={12}
-                            />
-                            <MonthlyAwardMiniList
-                              awards={companyAwardsById[job.company_id] || []}
-                              size={42}
-                            />
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                flex: "0 0 auto",
+                              }}
+                            >
+                              <CompanyBadge
+                                name={invitation.companyName}
+                                avatarPath={invitation.companyAvatarPath}
+                                size={42}
+                                fontSize={12}
+                              />
+                              <MonthlyAwardMiniList
+                                awards={companyAwardsById[job.company_id] || []}
+                                size={42}
+                              />
+                            </span>
                             <div style={{ minWidth: 0 }}>
                               <b style={{ display: "block" }}>
                                 {invitation.companyName}
@@ -9248,10 +9257,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               {workdayDetailsTarget.companyReviews?.length > 0 && (
                 <div
                   style={{
-                    border: "1px solid #f0d1b2",
+                    border: "1px solid #e4ebf0",
                     borderRadius: 16,
                     padding: 14,
-                    background: "#fffaf5",
+                    background: "#f8fafb",
                   }}
                 >
                   <div
@@ -9270,7 +9279,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         key={review.id}
                         style={{
                           background: "#fff",
-                          border: "1px solid #eadfd5",
+                          border: "1px solid #e4ebf0",
                           borderRadius: 14,
                           padding: 11,
                         }}
@@ -9586,10 +9595,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                 <div
                   style={{
-                    border: "1px solid #f0d1b2",
+                    border: "1px solid #e4ebf0",
                     borderRadius: 16,
                     padding: 14,
-                    background: "#fffaf5",
+                    background: "#f8fafb",
                   }}
                 >
                   <div
@@ -9622,7 +9631,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           key={review.id}
                           style={{
                             background: "#fff",
-                            border: "1px solid #eadfd5",
+                            border: "1px solid #e4ebf0",
                             borderRadius: 14,
                             padding: 12,
                           }}
@@ -9647,7 +9656,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   : review.work_date || ""}
                               </span>
                             </div>
-                            <b style={{ color: "#b85f0e" }}>{review.score} / 10</b>
+                            <b style={{ color: "#102438" }}>{review.score} / 10</b>
                           </div>
 
                           {!!review.job_title && (
@@ -15634,7 +15643,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-current-job-description span{display:block;margin-bottom:5px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .ed-current-job-description div{color:#263b4d;font-size:13px;line-height:1.55;white-space:pre-wrap}
         #employer-open-job,.ed-current-job-overview,.ed-current-job-overview-head,.ed-current-job-grid{background:#fff!important}.ed-current-job-grid{border-bottom:0!important}
-        .ed-attendance-panel{margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
+        .ed-attendance-panel{margin-top:20px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
         .ed-next-step{margin-top:9px;padding:9px 11px;border-left:3px solid #d7e0e7;border-radius:0 9px 9px 0;background:#f7f9fb;color:#526374;font-size:11.5px;line-height:1.45}
