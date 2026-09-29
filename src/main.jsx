@@ -7777,6 +7777,202 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         <div className="wd-form">
+          <section className="wd-card" id="worker-invitations">
+            <h2>Darbo kvietimai</h2>
+            <p className="wd-card-sub">
+              Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
+            </p>
+
+            {invitations.length ? (
+              <>
+              <div className="wd-invites">
+                {invitations
+                  .slice(
+                    (workerInvitationPage - 1) * DASHBOARD_PAGE_SIZE,
+                    workerInvitationPage * DASHBOARD_PAGE_SIZE
+                  )
+                  .map((invitation) => {
+                  const job = invitation.job;
+                  if (!job) return null;
+
+                  const busy = respondingInvitation === invitation.id;
+                  const unreadNews = unreadWorkerNotifications(invitation.id);
+                  const unreadPrivateMessages = unreadNews.filter(
+                    (item) => item.event_type === "message"
+                  );
+                  const unreadStatusNews = unreadNews.filter(
+                    (item) => item.event_type !== "message"
+                  );
+                  const unreadPresentation = notificationPresentation(
+                    unreadStatusNews
+                  );
+                  const hasConflict = invitationHasConflict(invitation);
+                  const statusLabel =
+                    invitation.status === "accepted"
+                      ? "Priimta"
+                      : invitation.status === "declined"
+                      ? "Atmesta"
+                      : invitation.status === "cancelled"
+                      ? "Atšaukta"
+                      : invitation.status === "expired"
+                      ? "Nebegalioja"
+                      : "Laukia atsakymo";
+
+                  return (
+                    <div
+                      className={[
+                        "wd-invite",
+                        unreadPrivateMessages.length ? "has-unread" : "",
+                        hasConflict ? "has-conflict" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      key={invitation.id}
+                    >
+                      <div className="wd-invite-main">
+                        {unreadStatusNews.length > 0 && (
+                          <div>
+                            <span className={`rs-alert ${unreadPresentation.tone}`}>
+                              {unreadPresentation.label}
+                              {unreadStatusNews.length > 1
+                                ? ` · ${unreadStatusNews.length}`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                        <h3>{job.title}</h3>
+                        <div className="wd-invite-summary">
+                          <b>{invitation.companyName}</b>
+                          <span>
+                            {job.work_date} · {job.start_time?.slice(0, 5)}
+                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                          </span>
+                          <span>{job.city || "Miestas nenurodytas"}</span>
+                          <span>
+                            {job.pay_amount
+                              ? formatNetPay(job.pay_amount, job.pay_unit)
+                              : "Atlygis nenurodytas"}
+                          </span>
+                          <span>
+                            Patikimumas:{" "}
+                            <b
+                              style={{
+                                color: reliabilityScoreColor(
+                                  invitation.companyReliability
+                                ),
+                              }}
+                            >
+                              {Math.round(invitation.companyReliability)} / 100
+                            </b>
+                          </span>
+                        </div>
+
+                        {hasConflict && (
+                          <span className="wd-conflict">
+                            Laikas sutampa su jau priimtu darbu
+                          </span>
+                        )}
+
+                        {job.status === "cancelled" && (
+                          <div
+                            className="wd-note err"
+                            style={{ marginTop: 12 }}
+                          >
+                            <b>Darbdavys atšaukė šį darbą.</b>
+                            <div style={{ marginTop: 4 }}>
+                              Priežastis:{" "}
+                              {job.cancellation_reason || "Priežastis nenurodyta."}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="wd-invite-actions">
+                        <button
+                          className="wd-decline"
+                          type="button"
+                          onClick={() => openWorkdayDetails(invitation)}
+                        >
+                          Atidaryti
+                        </button>
+
+                        {invitation.status === "pending" ? (
+                          <>
+                            <button
+                              className="wd-accept"
+                              disabled={
+                                busy ||
+                                hasConflict ||
+                                (metrics.restrictedUntil &&
+                                  new Date(metrics.restrictedUntil) > new Date())
+                              }
+                              onClick={() => {
+                                setCommitmentChecked(false);
+                                setConfirmInvitation(invitation);
+                              }}
+                            >
+                              {busy
+                                ? "Prašome..."
+                                : hasConflict
+                                ? "Laikas užimtas"
+                                : "Priimti"}
+                            </button>
+                            <button
+                              className="wd-decline"
+                              disabled={busy}
+                              onClick={() =>
+                                respondToInvitation(invitation.id, "declined")
+                              }
+                            >
+                              Atmesti
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`wd-invite-status ${invitation.status}`}>
+                            {statusLabel}
+                          </span>
+                        )}
+
+                        <button
+                          className={`wd-decline wd-chat-btn ${
+                            unreadPrivateMessages.length ? "has-unread" : ""
+                          }`}
+                          onClick={() => {
+                            setConversation({
+                              invitationId: invitation.id,
+                              title: `${invitation.companyName} · ${job.title}`,
+                            });
+                          }}
+                        >
+                          Privati žinutė
+                          {unreadPrivateMessages.length > 0 && (
+                            <span className="wd-chat-count">
+                              {Math.min(9, unreadPrivateMessages.length)}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <DashboardPagination
+                page={workerInvitationPage}
+                totalItems={invitations.length}
+                onPageChange={setWorkerInvitationPage}
+              />
+              </>
+            ) : (
+              <div className="wd-empty-friendly">
+                <div className="wd-empty-friendly-icon">✓</div>
+                <div>
+                  <b>Naujų darbo kvietimų nėra</b>
+                  Kai darbdavys atsiųs jums tinkamą pasiūlymą, jis atsiras čia.
+                </div>
+              </div>
+            )}
+          </section>
+
           <section className="wd-card" id="worker-workdays">
             <h2>Mano darbai</h2>
             <p className="wd-card-sub">
@@ -8274,202 +8470,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div>
                   <b>Aktyvių darbų nėra</b>
                   Kai priimsite darbo kvietimą arba turėsite artėjantį darbą, jis bus rodomas čia.
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section className="wd-card" id="worker-invitations">
-            <h2>Darbo kvietimai</h2>
-            <p className="wd-card-sub">
-              Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
-            </p>
-
-            {invitations.length ? (
-              <>
-              <div className="wd-invites">
-                {invitations
-                  .slice(
-                    (workerInvitationPage - 1) * DASHBOARD_PAGE_SIZE,
-                    workerInvitationPage * DASHBOARD_PAGE_SIZE
-                  )
-                  .map((invitation) => {
-                  const job = invitation.job;
-                  if (!job) return null;
-
-                  const busy = respondingInvitation === invitation.id;
-                  const unreadNews = unreadWorkerNotifications(invitation.id);
-                  const unreadPrivateMessages = unreadNews.filter(
-                    (item) => item.event_type === "message"
-                  );
-                  const unreadStatusNews = unreadNews.filter(
-                    (item) => item.event_type !== "message"
-                  );
-                  const unreadPresentation = notificationPresentation(
-                    unreadStatusNews
-                  );
-                  const hasConflict = invitationHasConflict(invitation);
-                  const statusLabel =
-                    invitation.status === "accepted"
-                      ? "Priimta"
-                      : invitation.status === "declined"
-                      ? "Atmesta"
-                      : invitation.status === "cancelled"
-                      ? "Atšaukta"
-                      : invitation.status === "expired"
-                      ? "Nebegalioja"
-                      : "Laukia atsakymo";
-
-                  return (
-                    <div
-                      className={[
-                        "wd-invite",
-                        unreadPrivateMessages.length ? "has-unread" : "",
-                        hasConflict ? "has-conflict" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      key={invitation.id}
-                    >
-                      <div className="wd-invite-main">
-                        {unreadStatusNews.length > 0 && (
-                          <div>
-                            <span className={`rs-alert ${unreadPresentation.tone}`}>
-                              {unreadPresentation.label}
-                              {unreadStatusNews.length > 1
-                                ? ` · ${unreadStatusNews.length}`
-                                : ""}
-                            </span>
-                          </div>
-                        )}
-                        <h3>{job.title}</h3>
-                        <div className="wd-invite-summary">
-                          <b>{invitation.companyName}</b>
-                          <span>
-                            {job.work_date} · {job.start_time?.slice(0, 5)}
-                            {job.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
-                          </span>
-                          <span>{job.city || "Miestas nenurodytas"}</span>
-                          <span>
-                            {job.pay_amount
-                              ? formatNetPay(job.pay_amount, job.pay_unit)
-                              : "Atlygis nenurodytas"}
-                          </span>
-                          <span>
-                            Patikimumas:{" "}
-                            <b
-                              style={{
-                                color: reliabilityScoreColor(
-                                  invitation.companyReliability
-                                ),
-                              }}
-                            >
-                              {Math.round(invitation.companyReliability)} / 100
-                            </b>
-                          </span>
-                        </div>
-
-                        {hasConflict && (
-                          <span className="wd-conflict">
-                            Laikas sutampa su jau priimtu darbu
-                          </span>
-                        )}
-
-                        {job.status === "cancelled" && (
-                          <div
-                            className="wd-note err"
-                            style={{ marginTop: 12 }}
-                          >
-                            <b>Darbdavys atšaukė šį darbą.</b>
-                            <div style={{ marginTop: 4 }}>
-                              Priežastis:{" "}
-                              {job.cancellation_reason || "Priežastis nenurodyta."}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="wd-invite-actions">
-                        <button
-                          className="wd-decline"
-                          type="button"
-                          onClick={() => openWorkdayDetails(invitation)}
-                        >
-                          Atidaryti
-                        </button>
-
-                        {invitation.status === "pending" ? (
-                          <>
-                            <button
-                              className="wd-accept"
-                              disabled={
-                                busy ||
-                                hasConflict ||
-                                (metrics.restrictedUntil &&
-                                  new Date(metrics.restrictedUntil) > new Date())
-                              }
-                              onClick={() => {
-                                setCommitmentChecked(false);
-                                setConfirmInvitation(invitation);
-                              }}
-                            >
-                              {busy
-                                ? "Prašome..."
-                                : hasConflict
-                                ? "Laikas užimtas"
-                                : "Priimti"}
-                            </button>
-                            <button
-                              className="wd-decline"
-                              disabled={busy}
-                              onClick={() =>
-                                respondToInvitation(invitation.id, "declined")
-                              }
-                            >
-                              Atmesti
-                            </button>
-                          </>
-                        ) : (
-                          <span className={`wd-invite-status ${invitation.status}`}>
-                            {statusLabel}
-                          </span>
-                        )}
-
-                        <button
-                          className={`wd-decline wd-chat-btn ${
-                            unreadPrivateMessages.length ? "has-unread" : ""
-                          }`}
-                          onClick={() => {
-                            setConversation({
-                              invitationId: invitation.id,
-                              title: `${invitation.companyName} · ${job.title}`,
-                            });
-                          }}
-                        >
-                          Privati žinutė
-                          {unreadPrivateMessages.length > 0 && (
-                            <span className="wd-chat-count">
-                              {Math.min(9, unreadPrivateMessages.length)}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <DashboardPagination
-                page={workerInvitationPage}
-                totalItems={invitations.length}
-                onPageChange={setWorkerInvitationPage}
-              />
-              </>
-            ) : (
-              <div className="wd-empty-friendly">
-                <div className="wd-empty-friendly-icon">✓</div>
-                <div>
-                  <b>Naujų darbo kvietimų nėra</b>
-                  Kai darbdavys atsiųs jums tinkamą pasiūlymą, jis atsiras čia.
                 </div>
               </div>
             )}
