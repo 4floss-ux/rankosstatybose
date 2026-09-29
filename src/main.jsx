@@ -18364,8 +18364,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               {offer.schedule_type === "fixed"
                                 ? "Pastovus grafikas"
                                 : "Kintamas grafikas"}
-                              <br />
-                              Papildomų darbų matomumas pagal darbuotojo laisvumo grafiką
                             </div>
                             <div className="lt-existing-actions">
                               <button
