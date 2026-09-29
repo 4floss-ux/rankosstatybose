@@ -1461,24 +1461,26 @@ function AuthModal({
             <>
               <div style={twoColumns}>
                 <label style={labelStyle}>
-                  Vardas
+                  Vardas *
                   <input
                     style={inputStyle}
                     value={form.firstName}
                     onChange={setField("firstName")}
                     placeholder="Pvz. Tomas"
                     autoComplete="given-name"
+                    required
                   />
                 </label>
 
                 <label style={labelStyle}>
-                  Pavardė
+                  Pavardė *
                   <input
                     style={inputStyle}
                     value={form.lastName}
                     onChange={setField("lastName")}
                     placeholder="Pvz. Jonaitis"
                     autoComplete="family-name"
+                    required
                   />
                 </label>
               </div>
@@ -6988,22 +6990,24 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               <div className="wd-grid-2">
                 <label className="wd-label">
-                  Vardas
+                  Vardas *
                   <input
                     className="wd-input"
                     value={form.firstName}
                     onChange={(e) => updateField("firstName", e.target.value)}
                     autoComplete="given-name"
+                    required
                   />
                 </label>
 
                 <label className="wd-label">
-                  Pavardė
+                  Pavardė *
                   <input
                     className="wd-input"
                     value={form.lastName}
                     onChange={(e) => updateField("lastName", e.target.value)}
                     autoComplete="family-name"
+                    required
                   />
                 </label>
 
