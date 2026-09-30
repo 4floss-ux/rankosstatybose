@@ -1982,22 +1982,57 @@ function WorkersPanel({ onEmployerSignup }) {
 }
 
 
+function platformWallTime(date, time = "00:00") {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
+  const t = /^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/.exec(String(time || ""));
+  if (!d || !t || Number(t[1]) > 23 || Number(t[2]) > 59 || Number(t[3] || 0) > 59) return null;
+  const value = Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3]), Number(t[1]), Number(t[2]), Number(t[3] || 0));
+  const parsed = new Date(value);
+  return parsed.toISOString().slice(0, 10) === date ? value : null;
+}
+
+function platformDateTime(date, time = "00:00") {
+  const wall = platformWallTime(date, time);
+  if (wall === null) return null;
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Vilnius", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  });
+  const representedWall = (epoch) => {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(epoch)).map(({ type, value }) => [type, value]));
+    return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  };
+  const offsets = [...new Set([-86400000, 0, 86400000].map((shift) => representedWall(wall + shift) - (wall + shift)))];
+  const matching = offsets.map((offset) => wall - offset).filter((epoch) => representedWall(epoch) === wall);
+  // PostgreSQL selects standard time for an ambiguous or skipped DST wall time.
+  return new Date(matching.length ? Math.max(...matching) : wall - Math.min(...offsets));
+}
+
+function addPlatformDays(iso, days) {
+  const wall = platformWallTime(iso);
+  return wall === null ? "" : new Date(wall + days * 86400000).toISOString().slice(0, 10);
+}
+
+function jobStartMoment(job) {
+  return platformDateTime(job?.work_date, job?.start_time || "00:00");
+}
+
 function localDateISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Vilnius", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function nextSevenDays() {
+  const today = localDateISO(new Date());
   return Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setHours(12, 0, 0, 0);
-    date.setDate(date.getDate() + i);
+    const iso = addPlatformDays(today, i);
+    const date = platformDateTime(iso, "12:00");
     return {
-      iso: localDateISO(date),
-      weekday: new Intl.DateTimeFormat("lt-LT", { weekday: "short" }).format(date),
-      label: new Intl.DateTimeFormat("lt-LT", { day: "2-digit", month: "2-digit" }).format(date),
+      iso,
+      weekday: new Intl.DateTimeFormat("lt-LT", { weekday: "short", timeZone: "Europe/Vilnius" }).format(date),
+      label: new Intl.DateTimeFormat("lt-LT", { day: "2-digit", month: "2-digit", timeZone: "Europe/Vilnius" }).format(date),
     };
   });
 }
@@ -2023,10 +2058,12 @@ function formatWorkedMinutes(minutes) {
 }
 
 function jobEndMoment(job) {
-  if (!job?.work_date) return null;
-  const end = (job.end_time || job.start_time || "23:59").slice(0, 5);
-  const value = new Date(`${job.work_date}T${end}:00`);
-  return Number.isNaN(value.getTime()) ? null : value;
+  const start = jobStartMoment(job);
+  if (!start) return null;
+  if (!job.end_time) return new Date(start.getTime() + 12 * 60 * 60 * 1000);
+  const date = String(job.end_time) <= String(job.start_time || "00:00")
+    ? addPlatformDays(job.work_date, 1) : job.work_date;
+  return platformDateTime(date, job.end_time);
 }
 
 function jobHasEnded(job) {
@@ -2035,24 +2072,12 @@ function jobHasEnded(job) {
 }
 
 function jobCheckInWindowOpen(job) {
-  if (!job?.work_date || !job?.start_time) return false;
-
-  const start = new Date(
-    `${job.work_date}T${job.start_time.slice(0, 5)}:00`
-  );
-  if (Number.isNaN(start.getTime())) return false;
-
-  const opens = new Date(start.getTime() - 2 * 60 * 60 * 1000);
-  let end = job.end_time
-    ? new Date(`${job.work_date}T${job.end_time.slice(0, 5)}:00`)
-    : new Date(start.getTime() + 12 * 60 * 60 * 1000);
-
-  if (job.end_time && end <= start) {
-    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
-  }
-
+  if (!job?.start_time) return false;
+  const start = jobStartMoment(job);
+  const end = jobEndMoment(job);
+  if (!start || !end) return false;
   const now = new Date();
-  return now >= opens && now <= end;
+  return now.getTime() >= start.getTime() - 2 * 60 * 60 * 1000 && now <= end;
 }
 
 function attendanceOutcomeLabel(attendance) {
@@ -2066,12 +2091,18 @@ function attendanceOutcomeLabel(attendance) {
 
 
 function timeRangesOverlap(a, b) {
-  if (!a || !b || a.work_date !== b.work_date) return false;
-  const aStart = (a.start_time || "00:00").slice(0, 5);
-  const aEnd = (a.end_time || "23:59").slice(0, 5);
-  const bStart = (b.start_time || "00:00").slice(0, 5);
-  const bEnd = (b.end_time || "23:59").slice(0, 5);
-  return aStart < bEnd && aEnd > bStart;
+  const interval = (job) => {
+    if (!job?.work_date) return null;
+    const start = platformWallTime(job.work_date, job.start_time || "00:00");
+    let end = job.end_time ? platformWallTime(job.work_date, job.end_time) : start + 12 * 60 * 60 * 1000;
+    if (start === null || end === null) return null;
+    if (end <= start) end += 86400000;
+    return { start, end };
+  };
+  const first = interval(a), second = interval(b);
+  if (!first || !second) return false;
+  const buffer = 60 * 60 * 1000;
+  return first.start < second.end + buffer && first.end + buffer > second.start;
 }
 
 function normalizeCityKey(value) {
@@ -6759,9 +6790,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const workerRequiredActionCount =
     workerActionWorkdays.length + (needsAvailabilityConfirm ? 1 : 0);
 
-  const workerDashboardTomorrow = localDateISO(
-    new Date(Date.now() + 24 * 60 * 60 * 1000)
-  );
+  const workerDashboardTomorrow = addPlatformDays(workerDashboardToday, 1);
 
   const nextConfirmedJob = nextConfirmedWorkday?.job || null;
   const nextConfirmedWorkdayDateLabel = nextConfirmedJob?.work_date
@@ -8321,7 +8350,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   );
                   const ended = jobHasEnded(job);
                   const workStarts = job.work_date && job.start_time
-                    ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+                    ? jobStartMoment(job)
                     : null;
                   const hasStarted = workStarts && !Number.isNaN(workStarts.getTime())
                     && new Date() >= workStarts;
@@ -11085,10 +11114,7 @@ function companyTeamInviteLink(token) {
 
 
 function employerTomorrowISO() {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + 1);
-  return localDateISO(date);
+  return addPlatformDays(localDateISO(new Date()), 1);
 }
 
 function workerRecentActivityLabel(value) {
@@ -15313,7 +15339,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const isToday = job.work_date === employerDashboardToday;
     const startMoment =
       job.work_date && job.start_time
-        ? new Date(`${job.work_date}T${job.start_time.slice(0, 5)}:00`)
+        ? jobStartMoment(job)
         : null;
     const started =
       Boolean(startMoment) &&
