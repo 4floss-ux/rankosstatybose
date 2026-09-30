@@ -1514,9 +1514,7 @@ function AuthModal({
                 </label>
 
                 <label style={labelStyle}>
-                  {role === "worker" && !teamInvite
-                    ? "Telefonas *"
-                    : "Telefonas"}
+                  Telefonas *
                   <input
                     style={inputStyle}
                     value={form.phone}
@@ -1530,7 +1528,7 @@ function AuthModal({
                     placeholder="+37061234567"
                     autoComplete="tel"
                     inputMode="tel"
-                    required={role === "worker" && !teamInvite}
+                    required
                   />
                 </label>
               </div>
@@ -1538,12 +1536,13 @@ function AuthModal({
               {role === "employer" && !teamInvite && (
                 <div style={twoColumns}>
                   <label style={labelStyle}>
-                    Įmonės pavadinimas
+                    Įmonės pavadinimas *
                     <input
                       style={inputStyle}
                       value={form.companyName}
                       onChange={setField("companyName")}
                       placeholder="UAB Statyba"
+                      required
                     />
                   </label>
 
@@ -1571,6 +1570,7 @@ function AuthModal({
               placeholder="vardas@email.lt"
               autoComplete="email"
               readOnly={Boolean(teamInvite)}
+              required
             />
           </label>
 
@@ -1579,6 +1579,8 @@ function AuthModal({
             <input
               style={inputStyle}
               type="password"
+              required
+              minLength={mode === "signup" ? 8 : undefined}
               value={form.password}
               onChange={setField("password")}
               placeholder={
@@ -11704,6 +11706,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [urgentSearchResults, setUrgentSearchResults] = useState([]);
   const [urgentSearchPage, setUrgentSearchPage] = useState(1);
   const [urgentSearchLoading, setUrgentSearchLoading] = useState(false);
+  const [urgentSearchCompleted, setUrgentSearchCompleted] = useState(false);
+  const [urgentSearchError, setUrgentSearchError] = useState("");
   const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
   const [showSavedWorkers, setShowSavedWorkers] = useState(false);
   const [savedWorkers, setSavedWorkers] = useState([]);
@@ -11785,6 +11789,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
+  const jobOpenRequestRef = useRef(0);
+  const jobWorkersRequestRef = useRef(0);
+  const jobMatchesRequestRef = useRef(0);
   const [jobInfoTarget, setJobInfoTarget] = useState(null);
   const [jobInfoWorkers, setJobInfoWorkers] = useState([]);
   const [jobInfoWorkersLoading, setJobInfoWorkersLoading] = useState(false);
@@ -11795,11 +11802,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [employerNotifications, setEmployerNotifications] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [jobWorkers, setJobWorkers] = useState([]);
+  const [jobWorkersLoading, setJobWorkersLoading] = useState(false);
   const [attendanceTarget, setAttendanceTarget] = useState(null);
   const [attendanceMode, setAttendanceMode] = useState(null);
   const [attendanceEndTime, setAttendanceEndTime] = useState("");
   const [attendanceNote, setAttendanceNote] = useState("");
   const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
+  useEffect(() => {
+    setAttendanceError("");
+  }, [attendanceTarget?.bookingId, attendanceMode]);
   const [ratingTarget, setRatingTarget] = useState(null);
   const [ratingScore, setRatingScore] = useState(null);
   const [ratingComment, setRatingComment] = useState("");
@@ -13864,6 +13876,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function loadCurrentJobWorkers(jobId) {
+    const requestId = ++jobWorkersRequestRef.current;
     if (!jobId) {
       setJobWorkers([]);
       return;
@@ -13877,6 +13890,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       .eq("job_id", jobId)
       .order("confirmed_at", { ascending: true });
 
+    if (requestId !== jobWorkersRequestRef.current) return;
     if (bookingsResult.error) throw bookingsResult.error;
 
     const bookingRows = bookingsResult.data || [];
@@ -13922,6 +13936,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       ratingsResult,
     ].find((result) => result.error);
 
+    if (requestId !== jobWorkersRequestRef.current) return;
     if (failed?.error) throw failed.error;
 
     const profileMap = new Map(
@@ -13991,6 +14006,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       })
     );
 
+    if (requestId !== jobWorkersRequestRef.current) return;
     const publicStatsMap = new Map();
     for (const [workerId, stats] of publicStatsEntries) {
       publicStatsMap.set(workerId, stats);
@@ -14016,6 +14032,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           initials: workerInitials(profile.display_name),
           city: profile.city,
           yearsExperience: Number(worker.years_experience || 0),
+          completedJobs: Number(worker.completed_jobs || 0),
           attendanceRate:
             worker.attendance_rate === null ||
             worker.attendance_rate === undefined
@@ -14146,6 +14163,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (!target?.bookingId) return;
 
     setAttendanceSaving(true);
+    setAttendanceError("");
     setNotice("");
     setError("");
 
@@ -14183,7 +14201,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadEmployerNotifications(),
       ]);
     } catch (err) {
-      setError(err?.message || "Nepavyko uždaryti darbo dienos.");
+      setAttendanceError(err?.message || "Nepavyko uždaryti darbo dienos.");
     } finally {
       setAttendanceSaving(false);
     }
@@ -14251,6 +14269,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function findMatches(job) {
+    const requestId = ++jobMatchesRequestRef.current;
     const confirmedCount = Number(job?.confirmedCount || 0);
     const workersNeeded = Number(job?.workers_needed || 0);
     const searchClosed =
@@ -14274,6 +14293,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .eq("job_id", job.id),
       ]);
 
+      if (requestId !== jobMatchesRequestRef.current) return;
       if (candidateResult.error) throw candidateResult.error;
       if (invitationsResult.error) throw invitationsResult.error;
 
@@ -14326,6 +14346,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         (result) => result.error
       );
 
+      if (requestId !== jobMatchesRequestRef.current) return;
       if (failed?.error) throw failed.error;
 
       const profileMap = new Map(
@@ -14420,9 +14441,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setMatches(combined);
     } catch (err) {
-      setError(err?.message || "Nepavyko rasti darbuotojų.");
+      if (requestId === jobMatchesRequestRef.current) {
+        setError(err?.message || "Nepavyko rasti darbuotojų.");
+      }
     } finally {
-      setSearching(false);
+      if (requestId === jobMatchesRequestRef.current) setSearching(false);
     }
   }
 
@@ -14632,12 +14655,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openExistingJob(job) {
+    const requestId = ++jobOpenRequestRef.current;
     setNotice("");
     setError("");
     setWorkerSource("available");
     setEditingJobId(null);
     setEditingConfirmedCount(0);
     setShowJobForm(false);
+    setJobWorkers([]);
+    setJobWorkersLoading(true);
+    setInvitedIds([]);
+    setInvitationStatuses({});
+    setInvitationByWorker({});
     setCurrentJob(job);
 
     requestAnimationFrame(() => {
@@ -14675,8 +14704,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadCurrentJobWorkers(job.id),
       ]);
     } catch (err) {
-      setError(err?.message || "Nepavyko atidaryti poreikio.");
+      if (requestId === jobOpenRequestRef.current) {
+        setError(err?.message || "Nepavyko atidaryti poreikio.");
+      }
+    } finally {
+      if (requestId === jobOpenRequestRef.current) setJobWorkersLoading(false);
     }
+    return requestId === jobOpenRequestRef.current;
   }
 
   async function openSavedWorkerTeam() {
@@ -14812,6 +14846,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
+    setUrgentSearchCompleted(false);
+    setUrgentSearchError("");
     setUrgentSearchCity(company?.city || "");
     setUrgentSearchResults([]);
     setUrgentSearchPage(1);
@@ -14822,9 +14858,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   async function searchUrgentWorkers() {
     if (!company?.id) return;
 
+    setUrgentSearchError("");
+    setUrgentSearchCompleted(false);
+    setUrgentSearchResults([]);
     const city = urgentSearchCity.trim();
     if (!city) {
-      setError("Nurodykite miestą.");
+      setUrgentSearchError("Nurodykite miestą.");
       return;
     }
 
@@ -14833,6 +14872,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     try {
       const canonicalCity = await canonicalCityName(city);
+      if (!canonicalCity) throw new Error("Pasirinkite miestą iš sąrašo.");
 
       const result = await supabase.rpc("get_urgent_workers", {
         p_company_id: company.id,
@@ -14841,6 +14881,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (result.error) throw result.error;
 
+      setUrgentSearchCompleted(true);
       setUrgentSearchCity(canonicalCity);
       setUrgentSearchPage(1);
       setUrgentSearchResults(
@@ -14850,7 +14891,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         }))
       );
     } catch (err) {
-      setError(err?.message || "Nepavyko rasti skubiai laisvų darbuotojų.");
+      setUrgentSearchError(err?.message || "Nepavyko rasti skubiai laisvų darbuotojų.");
     } finally {
       setUrgentSearchLoading(false);
     }
@@ -14944,7 +14985,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function startEditJob(job) {
-    await openExistingJob(job);
+    if (!(await openExistingJob(job))) return;
     setShowJobForm(true);
     setEditingJobId(job.id);
     setEditingConfirmedCount(Number(job.confirmedCount || 0));
@@ -15033,6 +15074,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setNotice("Poreikis ištrintas.");
 
       if (currentJob?.id === job.id) {
+        ++jobOpenRequestRef.current;
+        ++jobWorkersRequestRef.current;
+        ++jobMatchesRequestRef.current;
+        setJobWorkers([]);
+        setJobWorkersLoading(false);
+        setSearching(false);
+        setMatches([]);
         setCurrentJob(null);
         setMatches([]);
       }
@@ -17063,7 +17111,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </p>
 
                 <div className="ed-attendance-list">
-                  {pagedAcceptedWorkers.map((worker) => {
+                  {jobWorkersLoading && (
+                    <div className="ed-empty">Kraunami šio darbo darbuotojai...</div>
+                  )}
+                  {!jobWorkersLoading && pagedAcceptedWorkers.map((worker) => {
                     const attendance = worker.attendance || {};
                     const ended = jobHasEnded(currentJob);
                     const checkInOpen = jobCheckInWindowOpen(currentJob);
@@ -17442,14 +17493,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     );
                   })}
                 </div>
-                {jobWorkers.length === 0 && (
+                {!jobWorkersLoading && jobWorkers.length === 0 && (
                   <div className="ed-empty">
                     Šiuo metu pasiūlymo dar nepriėmė nė vienas darbuotojas.
                   </div>
                 )}
                 <DashboardPagination
                   page={acceptedWorkersPage}
-                  totalItems={jobWorkers.length}
+                  totalItems={jobWorkersLoading ? 0 : jobWorkers.length}
                   pageSize={DASHBOARD_PAGE_SIZE}
                   onPageChange={setAcceptedWorkersPage}
                 />
@@ -17981,6 +18032,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               <button
                 className="ed-attendance-close"
+                aria-label="Uždaryti darbo dienos formą"
                 disabled={attendanceSaving}
                 onClick={() => {
                   setAttendanceTarget(null);
@@ -17992,6 +18044,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <CloseMark />
               </button>
             </div>
+
+            {attendanceError && (
+              <div className="ed-error" role="alert">{attendanceError}</div>
+            )}
 
             <div className="ed-attendance-person">
               <b>{attendanceTarget.name}</b>
@@ -19071,6 +19127,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 className="rs-close"
                 type="button"
                 disabled={urgentSearchLoading}
+                aria-label="Uždaryti skubią paiešką"
                 onClick={() => setShowUrgentSearch(false)}
               >
                 <CloseMark />
@@ -19091,7 +19148,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <CityAutocomplete
                   className="ed-input"
                   value={urgentSearchCity}
-                  onChange={setUrgentSearchCity}
+                  disabled={urgentSearchLoading}
+                  onChange={(city) => {
+                    setUrgentSearchCity(city);
+                    setUrgentSearchCompleted(false);
+                    setUrgentSearchError("");
+                    setUrgentSearchResults([]);
+                    setUrgentSearchPage(1);
+                  }}
                   placeholder="Pvz. Vilnius"
                 />
               </label>
@@ -19105,6 +19169,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {urgentSearchLoading ? "Ieškoma..." : "Filtruoti"}
               </button>
             </div>
+
+            {urgentSearchError && (
+              <div className="ed-error" role="alert">{urgentSearchError}</div>
+            )}
 
             {urgentSearchResults.length ? (
               <>
@@ -19169,6 +19237,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-urgent-empty">
                 {urgentSearchLoading
                   ? "Ieškome darbuotojų..."
+                  : urgentSearchCompleted
+                  ? "Šiame mieste šiuo metu laisvų ir aktyvių darbuotojų nerasta."
                   : "Pasirinkite miestą ir spauskite „Filtruoti“."}
               </div>
             )}
