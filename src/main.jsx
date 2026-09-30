@@ -1312,7 +1312,7 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
             </button>
           </>
         ) : completed ? (
-          <p role="status" style={{ lineHeight: 1.5 }}>Naujas slaptažodis išsaugotas. Galite tęsti darbą savo paskyroje.</p>
+          <p role="status" style={{ lineHeight: 1.5 }}>Naujas slaptažodis išsaugotas. Atidaroma jūsų paskyra...</p>
         ) : (
           <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
             <p style={{ margin: "0 0 4px", color: "#526374", lineHeight: 1.5 }}>
@@ -1334,10 +1334,6 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
             </button>
           </form>
         )}
-        <button className="btn ghost" type="button" disabled={loading || checking}
-          onClick={onDone} style={{ marginTop: 16 }}>
-          {completed ? "Tęsti į paskyrą" : "Grįžti į svetainę"}
-        </button>
       </section>
       <AuthModal open={requestOpen} onClose={() => setRequestOpen(false)} initialMode="forgot" />
     </main>
