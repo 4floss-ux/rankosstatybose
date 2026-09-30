@@ -19265,12 +19265,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <button
                 className="rs-close"
                 type="button"
+                aria-label="Uždaryti planų langą"
                 disabled={planActionBusy}
                 onClick={() => setShowPlans(false)}
               >
                 <CloseMark />
               </button>
             </div>
+
+            {error && (
+              <div className="ed-note err" role="alert">{error}</div>
+            )}
+            {notice && (
+              <div className="ed-note ok" role="status">{notice}</div>
+            )}
 
             {billingStatus && (
               <>
