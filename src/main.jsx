@@ -6129,6 +6129,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function copyPhoneNumber(phone) {
     if (!phone) return;
+    setError("");
+    setNotice("");
     try {
       await navigator.clipboard.writeText(phone);
       setNotice(`Telefono numeris nukopijuotas: ${phone}`);
@@ -6279,6 +6281,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function openArrivalHelp(item) {
     setError("");
+    setNotice("");
 
     try {
       const result = await supabase.rpc("get_job_contact", {
@@ -10058,7 +10061,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="rs-modal-card">
+          <div className="rs-modal-card" role="dialog" aria-modal="true" aria-label="Pagalba atvykus">
             <div className="rs-modal-head">
               <div>
                 <div className="eyebrow">PAGALBA ATVYKUS</div>
@@ -10066,11 +10069,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
               <button
                 className="rs-close"
+                type="button"
+                aria-label="Uždaryti atvykimo pagalbą"
                 onClick={() => setArrivalHelpTarget(null)}
               >
                 <CloseMark />
               </button>
             </div>
+
+            {error && <div className="wd-note err" role="alert">{error}</div>}
+            {notice && <div className="wd-note ok" role="status">{notice}</div>}
 
             <div
               style={{
@@ -13728,6 +13736,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         declinedInvitationCount: 0,
         employerWonDisputes: 0,
         workerWonDisputes: 0,
+        unclosedAttendanceCount: 0,
+        pendingAttendanceCount: 0,
+        disputedAttendanceCount: 0,
       }));
     }
 
@@ -13778,18 +13789,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     const disputeCounts = {};
+    const attendanceByBookingId = new Map();
     const bookingIds = bookingRows.map((booking) => booking.id);
 
     if (bookingIds.length) {
       const attendanceResult = await supabase
         .from("attendance")
-        .select("booking_id, dispute_status")
-        .in("booking_id", bookingIds)
-        .in("dispute_status", ["resolved_worker", "resolved_employer"]);
+        .select("booking_id, dispute_status, employer_outcome, finalized_at")
+        .in("booking_id", bookingIds);
 
       if (attendanceResult.error) throw attendanceResult.error;
 
       for (const attendance of attendanceResult.data || []) {
+        attendanceByBookingId.set(attendance.booking_id, attendance);
         const jobId = jobIdByBookingId.get(attendance.booking_id);
         if (!jobId) continue;
         if (!disputeCounts[jobId]) {
@@ -13803,6 +13815,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
     }
 
+    const attendanceCounts = {};
+    for (const booking of bookingRows) {
+      if (booking.status !== "confirmed") continue;
+      const attendance = attendanceByBookingId.get(booking.id);
+      if (attendance?.finalized_at) continue;
+      const summary = (attendanceCounts[booking.job_id] ||= {
+        unclosed: 0,
+        pending: 0,
+        disputed: 0,
+      });
+      if (attendance?.dispute_status === "disputed") {
+        summary.disputed += 1;
+      } else if (["no_show", "left_early_agreed", "left_early_unexcused"].includes(attendance?.employer_outcome)) {
+        summary.pending += 1;
+      } else if (!attendance?.employer_outcome) {
+        summary.unclosed += 1;
+      }
+    }
+
     return rows.map((job) => ({
       ...job,
       confirmedCount: counts[job.id] || 0,
@@ -13810,6 +13841,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       declinedInvitationCount: declinedInvitationCounts[job.id] || 0,
       employerWonDisputes: disputeCounts[job.id]?.employer || 0,
       workerWonDisputes: disputeCounts[job.id]?.worker || 0,
+      unclosedAttendanceCount: attendanceCounts[job.id]?.unclosed || 0,
+      pendingAttendanceCount: attendanceCounts[job.id]?.pending || 0,
+      disputedAttendanceCount: attendanceCounts[job.id]?.disputed || 0,
     }));
   }
 
@@ -15424,6 +15458,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (ended && confirmed > 0) {
+      const unclosed = Number(job.unclosedAttendanceCount ?? confirmed);
+      if (unclosed === 0 && Number(job.disputedAttendanceCount || 0) > 0) {
+        return {
+          key: "disputed",
+          tone: "action",
+          label: "Ginčas nagrinėjamas",
+          detail: "Laukiama administratoriaus sprendimo",
+          missing,
+        };
+      }
+      if (unclosed === 0 && Number(job.pendingAttendanceCount || 0) > 0) {
+        return {
+          key: "pending",
+          tone: "action",
+          label: "Laukiama darbuotojo atsakymo",
+          detail: "Darbo dienos rezultatas jau pateiktas",
+          missing,
+        };
+      }
       return {
         key: "action",
         tone: "danger",
@@ -17761,7 +17814,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         !["cancelled", "completed"].includes(job.status) && (
                           <div style={{ marginTop: 7 }}>
                             <span className="ed-attendance-badge orange">
-                              Neuždaryta darbo diena · patvirtinkite rezultatą
+                              {jobDashboardState.key === "action"
+                                ? "Neuždaryta darbo diena · patvirtinkite rezultatą"
+                                : jobDashboardState.label}
                             </span>
                           </div>
                         )}
@@ -22827,7 +22882,11 @@ function AdminDashboard({
                       </div>
                       <div className="admin-fact">
                         <span>Darbuotojo dienos pareiškimas</span>
-                        <b>{dispute.worker_workday_claim || "—"}</b>
+                        <b>{dispute.worker_workday_claim === "worked"
+                          ? "Dirbau šiame darbe"
+                          : dispute.worker_workday_claim === "no_show"
+                          ? "Neatvykau"
+                          : "—"}</b>
                       </div>
                     </div>
 
