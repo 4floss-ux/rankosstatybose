@@ -1276,6 +1276,7 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
       setPassword("");
       setConfirmation("");
       setCompleted(true);
+      onDone();
     } catch (err) {
       if (generation === requestGeneration.current) {
         setMessage(err?.message || "Nepavyko pakeisti slaptažodžio.");
