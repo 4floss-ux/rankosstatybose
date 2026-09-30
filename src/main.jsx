@@ -6,6 +6,8 @@ import "./styles.css";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Capture the recovery callback before Supabase removes auth tokens from the URL.
+const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const TERMS_VERSION = "2026-09-27-v1";
@@ -1136,6 +1138,211 @@ function PlatformPrivacyDialog({ open, onClose }) {
   );
 }
 
+function getPasswordRecoveryLocation(href) {
+  const url = new URL(href);
+  const hash = new URLSearchParams(url.hash.slice(1));
+  const requested =
+    url.searchParams.get("password_recovery") === "1" ||
+    hash.get("type") === "recovery";
+  const failed = hash.has("error") || url.searchParams.has("error");
+  return {
+    requested,
+    hasCallback: hash.has("access_token") || hash.has("refresh_token") || url.searchParams.has("code"),
+    error: requested && failed
+      ? "Atkūrimo nuoroda nebegalioja arba jau panaudota. Paprašykite naujos nuorodos."
+      : "",
+  };
+}
+
+function rememberPasswordRecoveryUser(userId) {
+  try {
+    window.sessionStorage.setItem("password-recovery-user", JSON.stringify({ userId, at: Date.now() }));
+  } catch { /* Recovery also works when browser storage is unavailable. */ }
+}
+
+function rememberedPasswordRecoveryUser() {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem("password-recovery-user") || "null");
+    return saved?.userId && Date.now() - saved.at < 60 * 60 * 1000 ? saved.userId : "";
+  } catch { return ""; }
+}
+
+function passwordRecoveryRedirectUrl() {
+  const url = new URL(window.location.pathname, window.location.origin);
+  url.searchParams.set("password_recovery", "1");
+  return url.href;
+}
+
+function clearPasswordRecoveryUrl() {
+  try { window.sessionStorage.removeItem("password-recovery-user"); } catch { /* Optional storage. */ }
+  const url = new URL(window.location.href);
+  url.searchParams.delete("password_recovery");
+  for (const name of ["error", "error_code", "error_description"]) {
+    url.searchParams.delete(name);
+  }
+  const hash = new URLSearchParams(url.hash.slice(1));
+  if (hash.has("access_token") || hash.has("refresh_token") ||
+      hash.get("type") === "recovery" || hash.has("error")) {
+    url.hash = "";
+  }
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function passwordRecoveryErrorMessage(error, fallback) {
+  const code = error?.code || "";
+  if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit" ||
+      error?.status === 429) {
+    return "Per daug bandymų. Palaukite kelias minutes ir bandykite dar kartą.";
+  }
+  if (code === "weak_password") {
+    return "Šis slaptažodis per silpnas arba aptiktas nutekintų slaptažodžių sąraše. Pasirinkite kitą, ilgesnį slaptažodį.";
+  }
+  if (code === "same_password") {
+    return "Naujas slaptažodis turi skirtis nuo dabartinio.";
+  }
+  if (["session_not_found", "session_expired", "bad_jwt", "otp_expired"].includes(code)) {
+    return "Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.";
+  }
+  return fallback;
+}
+
+async function sendPasswordRecoveryEmail(email) {
+  if (!supabase) throw new Error("Trūksta Supabase nustatymų Cloudflare aplinkoje.");
+  const cleanEmail = String(email || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new Error("Įveskite galiojantį el. pašto adresą.");
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: passwordRecoveryRedirectUrl(),
+  });
+  if (error) {
+    throw new Error(passwordRecoveryErrorMessage(error,
+      "Nepavyko išsiųsti atkūrimo laiško. Bandykite dar kartą."));
+  }
+  return "Jeigu šiuo el. paštu yra registruota paskyra, išsiuntėme slaptažodžio atkūrimo nuorodą. Patikrinkite gautuosius ir šlamšto aplanką.";
+}
+
+async function updateRecoveredPassword(password, confirmation, expectedUserId) {
+  if (!supabase) throw new Error("Trūksta Supabase nustatymų Cloudflare aplinkoje.");
+  if (!expectedUserId) throw new Error("Atidarykite el. paštu gautą atkūrimo nuorodą.");
+  if (password.length < 8) throw new Error("Slaptažodis turi būti bent 8 simbolių.");
+  if (password !== confirmation) throw new Error("Įvesti slaptažodžiai nesutampa.");
+  const { data, error: sessionError } = await supabase.auth.getUser();
+  if (sessionError || data?.user?.id !== expectedUserId) {
+    throw new Error("Atkūrimo sesija nebegalioja arba paskyra pasikeitė. Paprašykite naujos nuorodos.");
+  }
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    throw new Error(passwordRecoveryErrorMessage(error,
+      "Nepavyko pakeisti slaptažodžio. Bandykite dar kartą."));
+  }
+}
+
+function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const submitting = useRef(false);
+  const requestGeneration = useRef(0);
+
+  useEffect(() => {
+    requestGeneration.current += 1;
+    submitting.current = false;
+    setPassword("");
+    setConfirmation("");
+    setMessage("");
+    setLoading(false);
+    setCompleted(false);
+    return () => { requestGeneration.current += 1; };
+  }, [user?.id]);
+
+  const unavailable = error || (!checking && (!user || !authorized)
+    ? "Atkūrimo nuoroda nebegalioja arba jau panaudota. Paprašykite naujos nuorodos."
+    : "");
+
+  async function submit(event) {
+    event.preventDefault();
+    if (checking || unavailable || completed || submitting.current) return;
+    submitting.current = true;
+    const generation = requestGeneration.current;
+    setMessage("");
+    setLoading(true);
+    try {
+      await updateRecoveredPassword(password, confirmation, user?.id);
+      if (generation !== requestGeneration.current) return;
+      setPassword("");
+      setConfirmation("");
+      setCompleted(true);
+    } catch (err) {
+      if (generation === requestGeneration.current) {
+        setMessage(err?.message || "Nepavyko pakeisti slaptažodžio.");
+      }
+    } finally {
+      if (generation === requestGeneration.current) {
+        submitting.current = false;
+        setLoading(false);
+      }
+    }
+  }
+
+  const inputStyle = { width: "100%", border: "1px solid #dfe7ed", borderRadius: 10,
+    padding: "12px 13px", font: "inherit" };
+  const labelStyle = { display: "grid", gap: 6, fontSize: 14, fontWeight: 700 };
+
+  return (
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center",
+      padding: 20, background: "#f3f6f8" }}>
+      <section aria-labelledby="password-recovery-title" style={{ width: "min(480px, 100%)",
+        padding: 28, borderRadius: 20, background: "#fff", boxShadow: "0 16px 60px rgba(16,36,56,.12)" }}>
+        <div className="eyebrow">SLAPTAŽODŽIO ATKŪRIMAS</div>
+        <h1 id="password-recovery-title" style={{ fontSize: 28, margin: "8px 0 18px" }}>
+          {completed ? "Slaptažodis pakeistas" : "Nustatykite naują slaptažodį"}
+        </h1>
+        {checking ? (
+          <p role="status">Tikrinama atkūrimo nuoroda...</p>
+        ) : unavailable ? (
+          <>
+            <p role="alert" style={{ color: "#a14425", lineHeight: 1.5 }}>{unavailable}</p>
+            <button className="btn primary" type="button" onClick={() => setRequestOpen(true)}>
+              Gauti naują nuorodą
+            </button>
+          </>
+        ) : completed ? (
+          <p role="status" style={{ lineHeight: 1.5 }}>Naujas slaptažodis išsaugotas. Galite tęsti darbą savo paskyroje.</p>
+        ) : (
+          <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
+            <p style={{ margin: "0 0 4px", color: "#526374", lineHeight: 1.5 }}>
+              Pasirinkite bent 8 simbolių slaptažodį ir įveskite jį dar kartą.
+            </p>
+            <label style={labelStyle}>Naujas slaptažodis
+              <input style={inputStyle} type="password" autoComplete="new-password"
+                required minLength={8} value={password} disabled={loading}
+                onChange={(event) => setPassword(event.target.value)} />
+            </label>
+            <label style={labelStyle}>Pakartokite slaptažodį
+              <input style={inputStyle} type="password" autoComplete="new-password"
+                required minLength={8} value={confirmation} disabled={loading}
+                onChange={(event) => setConfirmation(event.target.value)} />
+            </label>
+            {message && <p role="alert" style={{ margin: 0, color: "#a14425", lineHeight: 1.5 }}>{message}</p>}
+            <button className="btn primary" type="submit" disabled={loading}>
+              {loading ? "Išsaugoma..." : "Išsaugoti naują slaptažodį"}
+            </button>
+          </form>
+        )}
+        <button className="btn ghost" type="button" disabled={loading || checking}
+          onClick={onDone} style={{ marginTop: 16 }}>
+          {completed ? "Tęsti į paskyrą" : "Grįžti į svetainę"}
+        </button>
+      </section>
+      <AuthModal open={requestOpen} onClose={() => setRequestOpen(false)} initialMode="forgot" />
+    </main>
+  );
+}
+
 function AuthModal({
   open,
   onClose,
@@ -1164,6 +1371,7 @@ function AuthModal({
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [signupPlan, setSignupPlan] = useState(selectedPlanKey);
+  const submitting = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -1194,6 +1402,7 @@ function AuthModal({
 
   async function submit(e) {
     e.preventDefault();
+    if (submitting.current) return;
     setMessage("");
     setSuccess(false);
 
@@ -1202,15 +1411,20 @@ function AuthModal({
       return;
     }
 
-    if (!form.email.trim() || !form.password) {
-      setMessage("Įveskite el. paštą ir slaptažodį.");
+    if (!form.email.trim() || (mode !== "forgot" && !form.password)) {
+      setMessage(mode === "forgot" ? "Įveskite el. pašto adresą." : "Įveskite el. paštą ir slaptažodį.");
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
 
     try {
-      if (mode === "login") {
+      if (mode === "forgot") {
+        const result = await sendPasswordRecoveryEmail(form.email);
+        setSuccess(true);
+        setMessage(result);
+      } else if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim(),
           password: form.password,
@@ -1310,6 +1524,7 @@ function AuthModal({
     } catch (error) {
       setMessage(error?.message || "Nepavyko. Bandykite dar kartą.");
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   }
@@ -1370,10 +1585,10 @@ function AuthModal({
     <div
       style={overlay}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !loading) onClose();
       }}
     >
-      <div style={card}>
+      <div style={card} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
         <div
           style={{
             display: "flex",
@@ -1385,16 +1600,17 @@ function AuthModal({
         >
           <div>
             <div className="eyebrow">
-              {mode === "login" ? "PRISIJUNGIMAS" : "REGISTRACIJA"}
+              {mode === "forgot" ? "SLAPTAŽODŽIO ATKŪRIMAS" : mode === "login" ? "PRISIJUNGIMAS" : "REGISTRACIJA"}
             </div>
-            <h2 style={{ margin: "6px 0 0", fontSize: 30 }}>
-              {mode === "login" ? "Sveiki sugrįžę" : "Sukurkite paskyrą"}
+            <h2 id="auth-modal-title" style={{ margin: "6px 0 0", fontSize: 30 }}>
+              {mode === "forgot" ? "Pamiršote slaptažodį?" : mode === "login" ? "Sveiki sugrįžę" : "Sukurkite paskyrą"}
             </h2>
           </div>
 
           <button
             type="button"
             onClick={onClose}
+            disabled={loading}
             aria-label="Uždaryti"
             style={{
               border: 0,
@@ -1414,9 +1630,11 @@ function AuthModal({
           <button
             type="button"
             style={tabStyle(mode === "login")}
+            disabled={loading}
             onClick={() => {
               setMode("login");
               setMessage("");
+              setSuccess(false);
             }}
           >
             Prisijungti
@@ -1424,9 +1642,11 @@ function AuthModal({
           <button
             type="button"
             style={tabStyle(mode === "signup")}
+            disabled={loading}
             onClick={() => {
               setMode("signup");
               setMessage("");
+              setSuccess(false);
             }}
           >
             Registruotis
@@ -1560,6 +1780,12 @@ function AuthModal({
             </>
           )}
 
+          {mode === "forgot" && (
+            <p style={{ margin: 0, color: "#526374", lineHeight: 1.5 }}>
+              Įveskite paskyros el. paštą. Atsiųsime nuorodą naujam slaptažodžiui nustatyti.
+            </p>
+          )}
+
           <label style={labelStyle}>
             El. paštas
             <input
@@ -1569,12 +1795,13 @@ function AuthModal({
               onChange={setField("email")}
               placeholder="vardas@email.lt"
               autoComplete="email"
-              readOnly={Boolean(teamInvite)}
+              readOnly={Boolean(teamInvite) && mode !== "forgot"}
+              disabled={loading}
               required
             />
           </label>
 
-          <label style={labelStyle}>
+          {mode !== "forgot" && <label style={labelStyle}>
             Slaptažodis
             <input
               style={inputStyle}
@@ -1590,7 +1817,21 @@ function AuthModal({
                 mode === "signup" ? "new-password" : "current-password"
               }
             />
-          </label>
+          </label>}
+
+          {mode === "login" && (
+            <button type="button" disabled={loading}
+              onClick={() => {
+                setMode("forgot");
+                setForm((current) => ({ ...current, password: "" }));
+                setMessage("");
+                setSuccess(false);
+              }}
+              style={{ border: 0, padding: 0, background: "none", color: "#b85f0e",
+                font: "inherit", fontWeight: 750, cursor: "pointer", textAlign: "right" }}>
+              Pamiršau slaptažodį
+            </button>
+          )}
 
           {mode === "signup" && (
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, color: "#405264", fontSize: 13, lineHeight: 1.5 }}>
@@ -1615,6 +1856,7 @@ function AuthModal({
 
           {message && (
             <div
+              role={success ? "status" : "alert"}
               style={{
                 padding: "11px 12px",
                 borderRadius: 10,
@@ -1641,6 +1883,8 @@ function AuthModal({
           >
             {loading
               ? "Prašome palaukti..."
+              : mode === "forgot"
+              ? "Siųsti atkūrimo nuorodą"
               : mode === "login"
               ? "Prisijungti"
               : "Sukurti paskyrą"}
@@ -24867,6 +25111,13 @@ function PublicLandingPage({
 
 function App() {
   const [user, setUser] = useState(null);
+  const [authSessionChecked, setAuthSessionChecked] = useState(!supabase);
+  const [passwordRecovery, setPasswordRecovery] = useState(initialPasswordRecovery.requested);
+  const [recoveryError, setRecoveryError] = useState(initialPasswordRecovery.error);
+  const [recoveryUserId, setRecoveryUserId] = useState(() =>
+    initialPasswordRecovery.requested && !initialPasswordRecovery.error && !initialPasswordRecovery.hasCallback
+      ? rememberedPasswordRecoveryUser() : ""
+  );
   const [accountRole, setAccountRole] = useState(null);
   const [accountStatus, setAccountStatus] = useState({
     isActive: true,
@@ -24892,11 +25143,31 @@ function App() {
 
     supabase.auth
       .getSession()
-      .then(({ data }) => setUser(data.session?.user ?? null));
+      .then(({ data, error }) => {
+        setUser(data?.session?.user ?? null);
+        if (error && initialPasswordRecovery.requested) {
+          setRecoveryError("Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.");
+        }
+        setAuthSessionChecked(true);
+      })
+      .catch(() => {
+        if (initialPasswordRecovery.requested) {
+          setRecoveryError("Nepavyko patikrinti atkūrimo nuorodos. Bandykite atidaryti ją dar kartą.");
+        }
+        setAuthSessionChecked(true);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setUser(session?.user ?? null);
+        if (event === "PASSWORD_RECOVERY" && session?.user?.id) {
+          rememberPasswordRecoveryUser(session.user.id);
+          setRecoveryUserId(session.user.id);
+          setRecoveryError("");
+          setPasswordRecovery(true);
+          setAuthOpen(false);
+          setAuthSessionChecked(true);
+        }
       }
     );
 
@@ -25062,6 +25333,25 @@ function App() {
   const logout = async () => {
     if (supabase) await supabase.auth.signOut();
   };
+
+  const finishPasswordRecovery = () => {
+    clearPasswordRecoveryUrl();
+    setRecoveryUserId("");
+    setRecoveryError("");
+    setPasswordRecovery(false);
+  };
+
+  if (passwordRecovery) {
+    return (
+      <PasswordRecoveryPage
+        user={user}
+        checking={!authSessionChecked}
+        authorized={Boolean(user?.id && recoveryUserId === user.id)}
+        error={recoveryError}
+        onDone={finishPasswordRecovery}
+      />
+    );
+  }
 
   const accountIsSuspended =
     accountRole !== "admin" &&
