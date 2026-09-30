@@ -21637,6 +21637,7 @@ function AdminDashboard({
   const [actionReason, setActionReason] = useState("");
   const [actionConfirm, setActionConfirm] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resolvingId, setResolvingId] = useState(null);
@@ -22214,6 +22215,8 @@ function AdminDashboard({
   }
 
   function openAccountAction(type, record, role) {
+    setActionError("");
+    setError("");
     const userId = role === "worker" ? record.user_id : record.owner_id;
     const name =
       role === "worker"
@@ -22238,6 +22241,8 @@ function AdminDashboard({
   }
 
   function openJobDelete(job) {
+    setActionError("");
+    setError("");
     setActionDialog({
       type: "deleteJob",
       jobId: job.job_id,
@@ -22273,6 +22278,7 @@ function AdminDashboard({
 
   async function performAdminAction() {
     if (!actionDialog) return;
+    setActionError("");
 
     const destructive =
       actionDialog.type === "deleteAccount" ||
@@ -22285,7 +22291,7 @@ function AdminDashboard({
       const days = Number(actionDays);
 
       if (!Number.isInteger(days) || days < 1 || days > 3650) {
-        setError("Suspendavimo trukmė turi būti nuo 1 iki 3650 dienų.");
+        setActionError("Suspendavimo trukmė turi būti nuo 1 iki 3650 dienų.");
         return;
       }
     }
@@ -22295,12 +22301,12 @@ function AdminDashboard({
       actionDialog.type !== "unsuspendWorkerMode" &&
       actionReason.trim().length < 5
     ) {
-      setError("Įrašykite aiškią priežastį (bent 5 simboliai).");
+      setActionError("Įrašykite aiškią priežastį (bent 5 simboliai).");
       return;
     }
 
     if (destructive && actionConfirm.trim().toUpperCase() !== "ISTRINTI") {
-      setError('Norėdami patvirtinti trynimą, įrašykite „ISTRINTI“.');
+      setActionError('Norėdami patvirtinti trynimą, įrašykite „ISTRINTI“.');
       return;
     }
 
@@ -22403,7 +22409,7 @@ function AdminDashboard({
       setActionConfirm("");
       await loadAdminData(true);
     } catch (err) {
-      setError(err?.message || "Administratoriaus veiksmo atlikti nepavyko.");
+      setActionError(err?.message || "Administratoriaus veiksmo atlikti nepavyko.");
     } finally {
       setActionBusy(false);
     }
@@ -24293,12 +24299,17 @@ function AdminDashboard({
 
               <button
                 className="rs-close"
+                aria-label="Uždaryti administratoriaus veiksmą"
                 disabled={actionBusy}
                 onClick={() => setActionDialog(null)}
               >
                 <CloseMark />
               </button>
             </div>
+
+            {actionError && (
+              <div className="admin-toast err" role="alert" style={{ marginBottom: 14 }}>{actionError}</div>
+            )}
 
             {(actionDialog.type === "suspend" ||
               actionDialog.type === "suspendWorkerMode") && (
