@@ -12326,6 +12326,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [attendanceNote, setAttendanceNote] = useState("");
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [attendanceError, setAttendanceError] = useState("");
+  const [attendanceScore, setAttendanceScore] = useState(null);
+  const [attendanceRatingComment, setAttendanceRatingComment] = useState("");
+  useEffect(() => {
+    setAttendanceScore(null);
+    setAttendanceRatingComment("");
+  }, [attendanceTarget?.bookingId]);
   useEffect(() => {
     setAttendanceError("");
   }, [attendanceTarget?.bookingId, attendanceMode]);
@@ -13372,6 +13378,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     );
     setLongTermCandidates(candidates);
     setCompanyLongTermOffers(offers);
+    setEmployerStats((current) => ({
+      ...current,
+      activeLongTermEmployees: offers.filter((offer) => offer.status === "active").length,
+    }));
     setLongTermUnreadByOffer(unreadMap);
     return { candidates, offers };
   }
@@ -14708,6 +14718,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   ) {
     if (!target?.bookingId) return;
     const job = currentJob;
+    const needsRating = outcome !== "no_show";
+    const score = Number(attendanceScore);
+    if (needsRating && (!Number.isInteger(score) || score < 1 || score > 10)) {
+      setAttendanceError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
+      return;
+    }
 
     setAttendanceSaving(true);
     setAttendanceError("");
@@ -14715,11 +14731,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
-      const result = await supabase.rpc("employer_record_attendance", {
+      const result = await supabase.rpc(needsRating ? "employer_record_and_rate_workday" : "employer_record_attendance", {
         p_booking_id: target.bookingId,
         p_outcome: outcome,
         p_actual_end_time: actualEndTime || null,
         p_note: note.trim() || null,
+        ...(needsRating ? { p_score: score, p_comment: attendanceRatingComment.trim() || null } : {}),
       });
 
       if (result.error) throw result.error;
@@ -14730,9 +14747,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setNotice(
         outcome === "full_day"
-          ? "Darbo diena uždaryta."
+          ? "Darbo diena uždaryta, darbuotojo įvertinimas išsaugotas."
           : returnedAttendance?.dispute_status === "disputed"
           ? "Sistema aptiko nesutapimą ir automatiškai sukūrė ginčą. Darbuotojo reitingas nekeičiamas iki sprendimo."
+          : needsRating
+          ? "Rezultatas ir įvertinimas išsaugoti. Įvertinimas bus įskaitytas, kai darbuotojas patvirtins rezultatą arba bus išspręstas ginčas."
           : "Darbo dienos rezultatas perduotas darbuotojui patvirtinti. Kol darbuotojas nepatvirtino arba ginčas neišspręstas, galutinis rezultatas nefiksuojamas."
       );
 
@@ -14747,6 +14766,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             ? {
                 ...worker,
                 attendance: returnedAttendance,
+                rating: needsRating && returnedAttendance.finalized_at
+                  ? { score, comment: attendanceRatingComment.trim() || null } : worker.rating,
                 bookingStatus: returnedAttendance.finalized_at
                   ? returnedAttendance.final_outcome === "no_show" ? "no_show" : "completed"
                   : worker.bookingStatus,
@@ -14773,7 +14794,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function openWorkerRating(target, job = currentJob) {
     const responsibleUserId = job?.responsible_user_id || job?.created_by;
-    if (!target?.bookingId || !job?.id || !canViewWorkerMetrics || responsibleUserId !== user.id) return;
+    if (!target?.bookingId || !job?.id || responsibleUserId !== user.id) return;
     setRatingTarget({
       ...target,
       jobId: job.id,
@@ -14788,13 +14809,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function submitWorkerRating() {
     if (!ratingTarget?.bookingId) return;
-
-    if (!canViewWorkerMetrics) {
-      setRatingError(
-        "Darbuotojų vertinimai prieinami tik Business ir Business Pro planuose."
-      );
-      return;
-    }
 
     const responsibleUserId =
       ratingTarget.responsibleUserId || null;
@@ -15351,6 +15365,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     setSavedWorkerBusy(worker.id);
     setError("");
+    setNotice("");
 
     try {
       const result = await supabase.rpc("save_worker_to_company_team", {
@@ -15360,7 +15375,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       if (result.error) throw result.error;
 
-      await loadSavedWorkers(company.id, planSummary);
+      const saved = await loadSavedWorkers(company.id, planSummary);
+      if (!saved.some((item) => item.id === worker.id)) {
+        setError("Darbuotojas išsaugotas, bet jo nėra gautame favoritų sąraše. Atnaujinkite puslapį.");
+        return;
+      }
       setNotice(`${worker.name || "Darbuotojas"} pridėtas į darbuotojų favoritus.`);
     } catch (err) {
       setError(err?.message || "Nepavyko pridėti darbuotojo į komandą.");
@@ -15877,7 +15896,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   );
 
   const canRateCurrentJob =
-    canViewWorkerMetrics &&
     Boolean(currentJobResponsibleUserId) &&
     currentJobResponsibleUserId === user.id;
 
@@ -16623,11 +16641,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               {companyMemberRole === "owner" && (
                 <div className="ed-profile-summary-card">
                   <span>Įdarbinti darbuotojai</span>
-                  <b>
-                    {companyLongTermOffers.filter(
-                      (offer) => offer.status === "active"
-                    ).length}
-                  </b>
+                  <b>{employerStats.activeLongTermEmployees}</b>
                   <button
                     className="ed-link-btn"
                     type="button"
@@ -18121,7 +18135,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               </span>
                             )}
 
-                          {canViewWorkerMetrics && worker.rating && (
+                          {worker.rating && (
                             <span className="ed-attendance-badge green">
                               Įvertinta {worker.rating.score}/10
                             </span>
@@ -18672,6 +18686,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <h2>
                   {attendanceMode === "choose"
                     ? "Kaip baigėsi darbuotojo darbo diena?"
+                    : attendanceMode === "full_day"
+                    ? "Įvertinkite darbuotoją ir uždarykite dieną"
                     : attendanceMode === "no_show"
                     ? "Pažymėti, kad darbuotojas neatvyko?"
                     : "Darbuotojas išėjo anksčiau"}
@@ -18708,20 +18724,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-attendance-choice">
                 <button
                   className="ed-primary"
-                  disabled={attendanceSaving}
-                  onClick={() =>
-                    recordEmployerAttendance(
-                      attendanceTarget,
-                      "full_day"
-                    )
-                  }
+                  disabled={attendanceSaving || !canRateCurrentJob}
+                  onClick={() => setAttendanceMode("full_day")}
                 >
                   Išdirbo visą dieną
                 </button>
 
                 <button
                   className="ed-secondary"
-                  disabled={attendanceSaving}
+                  disabled={attendanceSaving || !canRateCurrentJob}
                   onClick={() => {
                     setAttendanceMode("left_early_agreed");
                     setAttendanceEndTime("");
@@ -18747,8 +18758,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             )}
 
-            {attendanceMode !== "choose" &&
-              attendanceMode !== "no_show" && (
+            {["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && (
                 <>
                   <div className="ed-label" style={{ marginBottom: 14 }}>
                     Ankstyvo išėjimo tipas *
@@ -18774,6 +18784,33 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {attendanceMode !== "choose" && (
               <>
+                {attendanceMode !== "no_show" && (
+                  <>
+                    <div className="ed-label">Darbuotojo įvertinimas *</div>
+                    <div className="ed-rating-scores" style={{ marginBottom: 16 }}>
+                      {[1,2,3,4,5,6,7,8,9,10].map((score) => (
+                        <button
+                          key={score}
+                          type="button"
+                          className={Number(attendanceScore) === score ? "ed-primary" : "ed-secondary"}
+                          disabled={attendanceSaving}
+                          aria-pressed={Number(attendanceScore) === score}
+                          onClick={() => setAttendanceScore(score)}
+                        >{score}</button>
+                      ))}
+                    </div>
+                    <label className="ed-label" style={{ marginBottom: 14 }}>
+                      Komentaras apie darbuotoją
+                      <textarea className="ed-textarea" maxLength={1000}
+                        value={attendanceRatingComment}
+                        disabled={attendanceSaving}
+                        onChange={(e) => setAttendanceRatingComment(e.target.value)}
+                        placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." />
+                    </label>
+                    <ReviewConductNotice />
+                  </>
+                )}
+                {attendanceMode !== "full_day" && (
                 <label className="ed-label">
                   {attendanceMode === "left_early_agreed"
                     ? "Pastaba"
@@ -18792,6 +18829,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }
                   />
                 </label>
+                )}
 
                 {["no_show", "left_early_unexcused"].includes(
                   attendanceMode
@@ -18841,7 +18879,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }
                     disabled={
                       attendanceSaving ||
-                      (attendanceMode !== "no_show" && !attendanceEndTime) ||
+                      (attendanceMode !== "no_show" && !attendanceScore) ||
+                      (["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && !attendanceEndTime) ||
                       (["no_show", "left_early_unexcused"].includes(
                         attendanceMode
                       ) &&
@@ -18858,6 +18897,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   >
                     {attendanceSaving
                       ? "Saugoma..."
+                      : attendanceMode === "full_day"
+                      ? "Išsaugoti įvertinimą ir uždaryti dieną"
                       : "Patvirtinti rezultatą"}
                   </button>
                 </div>
@@ -18867,7 +18908,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
-      {ratingTarget && canViewWorkerMetrics && (
+      {ratingTarget && (
         <div
           className="ed-rating-overlay"
           style={{
