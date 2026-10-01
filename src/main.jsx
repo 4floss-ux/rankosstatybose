@@ -1402,6 +1402,8 @@ function SmsCaptcha({ siteKey, resetKey, onToken, onError }) {
 function usePhoneVerification({ active, purpose, phone, email = "", userId = "" }) {
   const [config, setConfig] = useState(null);
   const [configError, setConfigError] = useState("");
+  const [availability, setAvailability] = useState(null);
+  const [availabilityRetry, setAvailabilityRetry] = useState(0);
   const [challenge, setChallenge] = useState(null);
   const [proof, setProof] = useState(null);
   const [code, setCode] = useState("");
@@ -1414,6 +1416,7 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
   const normalizedPhone = normalizeLithuanianMobilePhone(phone);
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const identity = JSON.stringify([active, purpose, normalizedPhone, normalizedEmail, userId]);
+  const availabilityIdentity = JSON.stringify([active, purpose, normalizedPhone, userId]);
   const requestState = useRef({ identity, version: 0, busy: false });
   if (requestState.current.identity !== identity) {
     requestState.current = { identity, version: requestState.current.version + 1, busy: false };
@@ -1441,12 +1444,35 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
     return () => window.clearInterval(timer);
   }, [active, challenge, proof]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!active || !normalizedPhone || !config || (purpose === "change" && normalizedPhone === config.current_phone)) return;
+    setAvailability({ identity: availabilityIdentity, status: "checking" });
+    const timer = window.setTimeout(() => {
+      invokePhoneVerification({ action: "availability", purpose, phone: normalizedPhone }).then((value) => {
+        if (cancelled) return;
+        if (typeof value?.available !== "boolean") throw new Error("Nepavyko patikrinti numerio. Bandykite dar kartą.");
+        setAvailability({ identity: availabilityIdentity, status: value.available ? "available" : "used" });
+      }).catch((error) => {
+        if (!cancelled) setAvailability({ identity: availabilityIdentity, status: "error", message: error.message });
+      });
+    }, 450);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [availabilityIdentity, config?.current_phone, Boolean(config), availabilityRetry]);
+  const availabilityStatus = !active || !normalizedPhone || (purpose === "change" && normalizedPhone === config?.current_phone)
+    ? "not-required" : availability?.identity === availabilityIdentity ? availability.status : "checking";
+  const availabilityError = availabilityStatus === "used" ? "Numeris jau naudojamas."
+    : availabilityStatus === "error" ? availability.message || "Nepavyko patikrinti numerio. Bandykite dar kartą." : "";
+  const checkingNumber = availabilityStatus === "checking";
+
   const required = Boolean(config?.enabled && (purpose === "signup" || normalizedPhone !== config.current_phone));
   const verified = Boolean(proof && proof.identity === identity && proof.expiresAt > clock);
   const retrySeconds = challenge?.identity === identity ? Math.max(0, Math.ceil((challenge.retryAt - clock) / 1000)) : 0;
   function requireProof() {
     if (configError) throw new Error(configError);
     if (!config) throw new Error("Palaukite, kol bus patikrinti telefono nustatymai.");
+    if (availabilityError) throw new Error(availabilityError);
+    if (checkingNumber) throw new Error("Palaukite, kol bus patikrintas numeris.");
     if (!required) return "";
     if (!proof || proof.identity !== identity || proof.expiresAt <= Date.now()) {
       throw new Error("Patvirtinkite telefono numerį SMS kodu.");
@@ -1461,6 +1487,8 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
     try {
       if (!config?.enabled || !config.ready) throw new Error("SMS patvirtinimas dar neparuoštas. Bandykite vėliau.");
       if (!normalizedPhone) throw new Error("Įveskite galiojantį Lietuvos mobiliojo telefono numerį.");
+      if (availabilityError) throw new Error(availabilityError);
+      if (checkingNumber) throw new Error("Palaukite, kol bus patikrintas numeris.");
       if (purpose === "signup" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) throw new Error("Prieš siųsdami kodą įveskite el. paštą.");
       if (action === "send" && retrySeconds) throw new Error("Palaukite prieš siųsdami kodą dar kartą.");
       if (action === "send" && purpose === "signup" && !captchaToken) throw new Error("Atlikite patikrą prieš siųsdami SMS.");
@@ -1499,10 +1527,19 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
     setProof(null); setChallenge(null);
   }
   return { active, purpose, config, configError, required, verified, code, setCode, busy, message, error,
+    availabilityError, checkingNumber, availabilityStatus, retryAvailability: () => { setAvailability(null); setAvailabilityRetry((v) => v + 1); },
     retrySeconds, captchaToken, setCaptchaToken, captchaReset, setError, challenge,
     send: () => act("send"), verify: () => act("verify"), requireProof, saveChange,
-    unavailable: active && (!config || Boolean(configError)),
+    unavailable: active && (!config || Boolean(configError) || checkingNumber || Boolean(availabilityError)),
   };
+}
+
+function PhoneAvailabilityHint({ verification: v }) {
+  if (!v.active || (!v.checkingNumber && !v.availabilityError)) return null;
+  return <span role={v.availabilityError ? "alert" : "status"} style={{ display: "block", marginTop: 5, fontSize: 13,
+    color: v.availabilityError ? "#ad381f" : "#526374" }}>
+    {v.availabilityError || "Tikrinamas numeris..."}
+  </span>;
 }
 
 function PhoneVerificationFields({ verification: v }) {
@@ -1512,13 +1549,16 @@ function PhoneVerificationFields({ verification: v }) {
   const signup = v.purpose === "signup";
   if (v.configError) return <div style={style} role="alert">{v.configError} Atnaujinkite puslapį ir bandykite dar kartą.</div>;
   if (!v.config) return <div style={style} role="status">Ruošiamas patvirtinimas...</div>;
-  if (!v.required) return null;
+  if (v.availabilityStatus === "error") return <div style={style}>
+    <button type="button" className="btn ghost" onClick={v.retryAvailability}>Tikrinti numerį dar kartą</button>
+  </div>;
+  if (!v.required || v.availabilityError) return null;
   if (!v.config.ready) return <div style={style} role="alert">SMS patvirtinimas šiuo metu nepasiekiamas. Bandykite vėliau.</div>;
   if (v.verified) return <div style={style} role="status">
     <b>{signup ? "Registracijos kodas patvirtintas" : "Telefono numeris patvirtintas"}</b>
     <p style={{ margin: "4px 0 0", color: "#526374" }}>{signup ? "Galite užbaigti registraciją." : "Išsaugokite pakeitimus."}</p>
   </div>;
-  const canRequest = !v.busy && v.retrySeconds === 0 && (!signup || Boolean(v.captchaToken));
+  const canRequest = !v.checkingNumber && !v.availabilityError && !v.busy && v.retrySeconds === 0 && (!signup || Boolean(v.captchaToken));
   return (
     <div style={style}>
       <b style={{ color: "#142f46", fontSize: 15 }}>{v.challenge
@@ -1541,14 +1581,14 @@ function PhoneVerificationFields({ verification: v }) {
         </button>
         </div>
         <div style={{ marginTop: 12 }}>
-          {signup && v.retrySeconds === 0 && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
+          {signup && !v.checkingNumber && v.retrySeconds === 0 && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
             onToken={v.setCaptchaToken} onError={v.setError} />}
           <button type="button" className="btn ghost" disabled={!canRequest} onClick={v.send} style={{ fontSize: 13 }}>
             {v.retrySeconds ? `Siųsti dar kartą po ${v.retrySeconds} s` : "Siųsti kodą dar kartą"}
           </button>
         </div>
       </> : <>
-        {signup && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
+        {signup && !v.checkingNumber && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
           onToken={v.setCaptchaToken} onError={v.setError} />}
         <button type="button" className="btn primary" disabled={!canRequest} onClick={v.send}>
           {v.busy ? "Siunčiama..." : "Gauti SMS kodą"}
@@ -1948,6 +1988,7 @@ function AuthModal({
                     inputMode="tel"
                     required
                   />
+                  <PhoneAvailabilityHint verification={phoneVerification} />
                 </label>
               </div>
 
@@ -8013,6 +8054,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     autoComplete="tel"
                     required
                   />
+                  <PhoneAvailabilityHint verification={phoneVerification} />
                 </label>
 
                 <PhoneVerificationFields verification={phoneVerification} />
@@ -16573,6 +16615,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }
                   placeholder="+370..."
                 />
+                  <PhoneAvailabilityHint verification={companyPhoneVerification} />
               </label>
 
               {companyMemberRole === "owner" && <PhoneVerificationFields verification={companyPhoneVerification} />}
