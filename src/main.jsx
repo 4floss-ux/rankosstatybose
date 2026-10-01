@@ -12209,6 +12209,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
   const [planActionBusy, setPlanActionBusy] = useState(false);
+  const planActionInFlightRef = useRef(false);
   const billingReturnHandledRef = useRef(false);
   const [planBillingCycle, setPlanBillingCycle] = useState(
     preferredPlanKey !== "basic" && user?.user_metadata?.preferred_billing_interval === "yearly"
@@ -12517,24 +12518,28 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     let stopped = false;
     let attempts = 0;
+    let retryTimer;
 
     setShowPlans(false);
     setError("");
     setNotice(
-      "Apmokėjimas užbaigtas. Laukiame Stripe patvirtinimo ir aktyvuojame planą..."
+      "Laukiame Stripe mokėjimo patvirtinimo ir aktyvuojame planą..."
     );
 
     const refreshPaidPlan = async () => {
+      if (stopped) return;
       attempts += 1;
 
       try {
         const summary = await loadCompanyPlan(company.id);
 
+        const freshBilling = await loadCompanyBillingStatus(company.id);
+        if (stopped) return;
         if (
+          freshBilling?.has_stripe_subscription &&
           summary?.plan_key !== "basic" &&
-          ["active", "trialing", "past_due"].includes(summary?.subscription_status)
+          ["active", "trialing"].includes(summary?.subscription_status)
         ) {
-          const freshBilling = await loadCompanyBillingStatus(company.id);
           setPlanBillingCycle(
             freshBilling?.billing_interval === "yearly" ? "yearly" : "monthly"
           );
@@ -12549,10 +12554,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       if (!stopped && attempts < 10) {
-        window.setTimeout(refreshPaidPlan, 1500);
+        retryTimer = window.setTimeout(refreshPaidPlan, 1500);
       } else if (!stopped) {
         setNotice(
-          "Apmokėjimas gautas. Stripe patvirtinimas dar apdorojamas — planas įsijungs automatiškai vos tik gausime patvirtinimą."
+          "Stripe mokėjimo patvirtinimo dar negavome. Planas bus aktyvuotas gavus patvirtinimą. Jei būsena nesikeičia, kreipkitės į administratorių."
         );
         clearBillingParam();
       }
@@ -12562,6 +12567,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     return () => {
       stopped = true;
+      window.clearTimeout(retryTimer);
     };
   }, [company?.id]);
 
@@ -13099,13 +13105,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openBillingPortal() {
-    if (!company?.id) return;
+    if (!company?.id || planActionInFlightRef.current) return;
 
     if (companyMemberRole !== "owner") {
       setError("Prenumeratą gali valdyti tik įmonės savininkas.");
       return;
     }
 
+    planActionInFlightRef.current = true;
     setPlanActionBusy(true);
     setError("");
     setNotice("");
@@ -13132,10 +13139,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )
       );
       setPlanActionBusy(false);
+      planActionInFlightRef.current = false;
     }
   }
 
   async function requestPaidPlan(planKey) {
+    if (planActionInFlightRef.current) return;
     const plan = EMPLOYER_PLANS.find((item) => item.key === planKey);
     if (!plan || !company?.id) return;
 
@@ -13147,7 +13156,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     const hasPaidSubscription =
-      billingStatus?.effective_plan_key !== "basic" &&
+      Boolean(billingStatus?.has_stripe_subscription) &&
       ["active", "trialing", "past_due"].includes(
         billingStatus?.subscription_status
       );
@@ -13176,21 +13185,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     const billingInterval = planBillingCycle;
 
+    planActionInFlightRef.current = true;
     setPlanActionBusy(true);
     setError("");
     setNotice("");
 
     try {
-      const billingResult = await supabase.rpc(
-        "set_company_billing_preference",
-        {
-          p_company_id: company.id,
-          p_billing_interval: billingInterval,
-        }
-      );
-
-      if (billingResult.error) throw billingResult.error;
-
       const preferenceResult = await supabase.auth.updateUser({
         data: {
           preferred_plan: planKey,
@@ -13199,12 +13199,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       });
 
       if (preferenceResult.error) throw preferenceResult.error;
-
-      setCompany((current) =>
-        current
-          ? { ...current, billing_interval: billingInterval }
-          : current
-      );
 
       const { data, error: checkoutError } = await supabase.functions.invoke(
         "stripe-create-checkout",
@@ -13231,6 +13225,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )
       );
       setPlanActionBusy(false);
+      planActionInFlightRef.current = false;
     }
   }
 
@@ -20061,7 +20056,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
 
                 {companyMemberRole === "owner" &&
-                  billingStatus.effective_plan_key !== "basic" &&
+                  billingStatus.has_stripe_customer &&
                   !onAdminReturn && (
                     <div className="ed-billing-actions">
                       <button
@@ -20246,7 +20241,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       ))}
                     </ul>
 
-                    {current ? (
+                    {current && (plan.price === 0 || onAdminReturn || billingStatus?.has_stripe_subscription) ? (
                       plan.price > 0 && !onAdminReturn ? (
                         <button
                           className="ed-secondary"
@@ -20289,7 +20284,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           ? "Atidaroma..."
                           : plan.price === 0
                           ? "Pasirinkti Basic"
-                          : samePlan
+                          : samePlan && billingStatus?.has_stripe_subscription
                           ? planBillingCycle === "yearly"
                             ? "Keisti į metinį atsiskaitymą"
                             : "Keisti į mėnesinį atsiskaitymą"
