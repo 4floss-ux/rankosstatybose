@@ -11,7 +11,7 @@ const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const TERMS_VERSION = "2026-09-27-v1";
-const PRIVACY_VERSION = "2026-09-27-draft-v1";
+const PRIVACY_VERSION = "2026-10-01-draft-v2";
 const PRIVACY_CONTROLLER_NAME = "[ĮRAŠYTI PLATFORMOS VALDYTOJO JURIDINĮ PAVADINIMĄ]";
 const PRIVACY_CONTACT_EMAIL = "[ĮRAŠYTI PRIVATUMO KONTAKTINĮ EL. PAŠTĄ]";
 
@@ -1119,6 +1119,8 @@ function PlatformPrivacyDialog({ open, onClose }) {
         <p><b>Tvarkymo pagrindai.</b> Duomenis tvarkome tiek, kiek tai būtina paslaugai suteikti ir sutartiniams veiksmams atlikti, teisėtiems platformos bei jos naudotojų interesams užtikrinti (pvz., saugumui, sukčiavimo ir piktnaudžiavimo prevencijai, ginčų ir patikimumo istorijai), taip pat kai tvarkyti duomenis reikalauja teisės aktai. Jei konkrečiai funkcijai būtų reikalingas sutikimas, jis būtų prašomas atskirai ir galėtų būti atšauktas.</p>
 
         <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
+
+        <p><b>Apsauga nuo automatinių užklausų.</b> Registracijos ir SMS užklausų apsaugai naudojama Cloudflare Turnstile patikra, kuri gali veikti nematomai naršyklėje. Daugiau informacijos pateikiama <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Cloudflare Turnstile privatumo pranešime</a>.</p>
 
         <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
 
