@@ -2567,6 +2567,15 @@ function jobCheckInWindowOpen(job) {
   return now.getTime() >= start.getTime() - 2 * 60 * 60 * 1000 && now <= end;
 }
 
+function workerCheckInWindowOpen(job) {
+  if (!job?.start_time) return false;
+  const start = jobStartMoment(job);
+  const end = jobEndMoment(job);
+  if (!start || !end) return false;
+  const now = new Date();
+  return now >= start && now <= end;
+}
+
 function attendanceOutcomeLabel(attendance) {
   const outcome = attendance?.final_outcome || attendance?.employer_outcome;
   if (outcome === "full_day") return "Išdirbo visą dieną";
@@ -7259,7 +7268,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       attendance.worker_workday_claim !== "worked";
 
     const canCheckIn =
-      jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+      workerCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
 
     return pendingNegative || needsClose || canCheckIn;
   });
@@ -7321,7 +7330,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   const firstCanCheckIn = workerActionWorkdays.find((item) => {
     const attendance = item.attendance || {};
-    return jobCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
+    return workerCheckInWindowOpen(item.job) && !attendance.worker_check_in_at;
   });
 
   const workerPrimaryFocus = needsAvailabilityConfirm
@@ -8867,7 +8876,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     : hasStarted
                     ? { label: "Vyksta šiandien", tone: "today" }
                     : { label: "Laukiamas darbas", tone: "upcoming" };
-                  const checkInOpen = jobCheckInWindowOpen(job);
+                  const checkInOpen = workerCheckInWindowOpen(job);
                   const isConfirmed = item.status === "confirmed";
                   const pendingNegative =
                     !attendance.finalized_at &&
@@ -8952,8 +8961,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             ? "Darbdavys taip pat patvirtino jūsų atvykimą. Po darbo pabaigos reikės uždaryti dieną."
                             : "Jūsų atvykimas sistemoje užfiksuotas. Darbdavys gali jį papildomai patvirtinti.",
                         }
-                      : hasStarted
-                      ? null
+                      : isConfirmed && !hasStarted
+                      ? {
+                          tone: "",
+                          title: "Laukiama darbo pradžios",
+                          text: "„Atvykau“ galėsite paspausti tik prasidėjus darbui.",
+                        }
                       : null;
 
                   if (!recentOrActive) return null;
@@ -12320,6 +12333,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [ratingScore, setRatingScore] = useState(null);
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSaving, setRatingSaving] = useState(false);
+  const [ratingError, setRatingError] = useState("");
   const [conversation, setConversation] = useState(null);
   const [groupConversation, setGroupConversation] = useState(null);
   const [disputeConversation, setDisputeConversation] = useState(null);
@@ -14693,6 +14707,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     note = ""
   ) {
     if (!target?.bookingId) return;
+    const job = currentJob;
 
     setAttendanceSaving(true);
     setAttendanceError("");
@@ -14726,12 +14741,29 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setAttendanceEndTime("");
       setAttendanceNote("");
 
-      await Promise.all([
-        loadCurrentJobWorkers(currentJob?.id),
+      if (returnedAttendance) {
+        setJobWorkers((workers) => workers.map((worker) =>
+          worker.bookingId === target.bookingId
+            ? {
+                ...worker,
+                attendance: returnedAttendance,
+                bookingStatus: returnedAttendance.finalized_at
+                  ? returnedAttendance.final_outcome === "no_show" ? "no_show" : "completed"
+                  : worker.bookingStatus,
+              }
+            : worker
+        ));
+      }
+
+      const refreshResults = await Promise.allSettled([
+        loadCurrentJobWorkers(job?.id),
         reloadJobs(company?.id),
         loadEmployerStats(company?.id),
         loadEmployerNotifications(),
       ]);
+      if (refreshResults.some((result) => result.status === "rejected")) {
+        setError("Darbo dienos rezultatas išsaugotas, bet nepavyko atnaujinti visų duomenų. Atnaujinkite puslapį.");
+      }
     } catch (err) {
       setAttendanceError(err?.message || "Nepavyko uždaryti darbo dienos.");
     } finally {
@@ -14739,21 +14771,36 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  function openWorkerRating(target, job = currentJob) {
+    const responsibleUserId = job?.responsible_user_id || job?.created_by;
+    if (!target?.bookingId || !job?.id || !canViewWorkerMetrics || responsibleUserId !== user.id) return;
+    setRatingTarget({
+      ...target,
+      jobId: job.id,
+      jobTitle: job.title,
+      workDate: job.work_date,
+      responsibleUserId,
+    });
+    setRatingScore(null);
+    setRatingComment("");
+    setRatingError("");
+  }
+
   async function submitWorkerRating() {
     if (!ratingTarget?.bookingId) return;
 
     if (!canViewWorkerMetrics) {
-      setError(
+      setRatingError(
         "Darbuotojų vertinimai prieinami tik Business ir Business Pro planuose."
       );
       return;
     }
 
     const responsibleUserId =
-      currentJob?.responsible_user_id || currentJob?.created_by || null;
+      ratingTarget.responsibleUserId || null;
 
     if (!responsibleUserId || responsibleUserId !== user.id) {
-      setError(
+      setRatingError(
         "Darbuotoją už šį darbą gali įvertinti ir atsiliepimą palikti tik atsakingas žmogus, kuris kuravo darbą."
       );
       return;
@@ -14761,11 +14808,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     const numericScore = Number(ratingScore);
     if (!Number.isInteger(numericScore) || numericScore < 1 || numericScore > 10) {
-      setError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
+      setRatingError("Pasirinkite darbuotojo įvertinimą nuo 1 iki 10.");
       return;
     }
 
     setRatingSaving(true);
+    setRatingError("");
     setNotice("");
     setError("");
 
@@ -14783,11 +14831,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setRatingScore(null);
       setRatingComment("");
 
-      await loadCurrentJobWorkers(currentJob?.id);
+      try {
+        await loadCurrentJobWorkers(currentJob?.id);
+      } catch {
+        setError("Įvertinimas išsaugotas, bet nepavyko atnaujinti darbuotojų sąrašo. Atnaujinkite puslapį.");
+      }
     } catch (err) {
       const message = String(err?.message || "").toLowerCase();
 
-      setError(
+      setRatingError(
         message.includes("duplicate")
           ? "Šis darbuotojas už šį darbą jau įvertintas."
           : message.includes("row-level security") ||
@@ -15184,6 +15236,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function closeCurrentJob() {
+    if (attendanceSaving || ratingSaving) return;
+    jobOpenRequestRef.current += 1;
+    jobWorkersRequestRef.current += 1;
+    jobMatchesRequestRef.current += 1;
+    setCurrentJob(null);
+    setJobWorkers([]);
+    setJobWorkersLoading(false);
+    setMatches([]);
+    setSearching(false);
+    setInvitedIds([]);
+    setInvitationStatuses({});
+    setInvitationByWorker({});
+    setAttendanceTarget(null);
+    setAttendanceMode(null);
+    setRatingTarget(null);
+    setRatingScore(null);
+    setRatingComment("");
+    setRatingError("");
   }
 
   async function openExistingJob(job) {
@@ -17325,7 +17398,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         </section>
 
 
-        {currentJob && currentJob.status !== "completed" && (
+        {currentJob && (
           <section
             className="ed-card"
             id="employer-open-job"
@@ -17357,6 +17430,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     )}
                   </div>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <span
                   className={`ed-current-job-status ${
                     currentJob.status === "cancelled"
@@ -17368,10 +17442,22 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 >
                   {currentJob.status === "cancelled"
                     ? "Atšauktas"
+                    : currentJob.status === "completed"
+                    ? "Užbaigtas"
                     : currentJob.status === "filled"
                     ? "Komanda suformuota"
                     : "Aktyvus"}
                 </span>
+                <button
+                  className="ed-secondary"
+                  type="button"
+                  disabled={attendanceSaving || ratingSaving}
+                  onClick={closeCurrentJob}
+                  aria-label="Uždaryti darbo kortelę"
+                >
+                  Uždaryti kortelę
+                </button>
+                </div>
               </div>
 
               <div className="ed-current-job-grid">
@@ -17393,9 +17479,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   ],
                   [
                     "Darbuotojai",
-                    `${Number(currentJob.confirmedCount || 0)}/${Number(
-                      currentJob.workers_needed || 0
-                    )} patvirtinti`,
+                    currentJob.status === "completed"
+                      ? `${jobWorkers.length} darbuotojų`
+                      : `${Number(currentJob.confirmedCount || 0)}/${Number(
+                          currentJob.workers_needed || 0
+                        )} patvirtinti`,
                     "",
                   ],
                   [
@@ -17991,11 +18079,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             canRateCurrentJob && (
                               <button
                                 className="ed-primary lt-existing-primary-wide"
-                                onClick={() => {
-                                  setRatingTarget(worker);
-                                  setRatingScore(null);
-                                  setRatingComment("");
-                                }}
+                                onClick={() => openWorkerRating(worker)}
                               >
                                 Įvertinti
                               </button>
@@ -18506,13 +18590,21 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       )}
                     </div>
 
-                    <div className="ed-job-actions single">
+                    <div className={`ed-job-actions ${job.status === "completed" ? "" : "single"}`}>
                       <button
                         type="button"
                         onClick={() => openJobInformation(job)}
                       >
                         Darbo informacija
                       </button>
+                      {job.status === "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => openExistingJob(job)}
+                        >
+                          Darbuotojai ir įvertinimai
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -18813,6 +18905,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
                 <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
                 <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
+                  {ratingTarget.jobTitle} · {ratingTarget.workDate}
+                </div>
+                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
                   Pasirinkite bendrą įvertinimą nuo 1 iki 10. Vertinimą ir
                   komentarą paliekate kaip už šį darbą atsakingas žmogus.
                 </div>
@@ -18829,6 +18924,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <CloseMark />
               </button>
             </div>
+
+            {ratingError && <div className="ed-error" role="alert">{ratingError}</div>}
 
             <ReviewConductNotice />
 
