@@ -1384,6 +1384,7 @@ function SmsCaptcha({ siteKey, resetKey, onToken, onError }) {
       if (cancelled || !container.current) return;
       widget = api.render(container.current, {
         sitekey: siteKey, action: "signup_phone", language: "lt", theme: "light",
+        appearance: "interaction-only", size: "compact",
         callback: (token) => { if (!cancelled) callbacks.current.onToken(token); },
         "expired-callback": () => { if (!cancelled) callbacks.current.onToken(""); },
         "error-callback": () => {
@@ -1393,7 +1394,7 @@ function SmsCaptcha({ siteKey, resetKey, onToken, onError }) {
     }).catch((error) => { if (!cancelled) callbacks.current.onError(error.message); });
     return () => { cancelled = true; if (widget !== null) window.turnstile?.remove(widget); };
   }, [siteKey, resetKey]);
-  return <div ref={container} style={{ minHeight: 65, maxWidth: "100%", overflow: "hidden" }} />;
+  return <div ref={container} style={{ maxWidth: "100%" }} />;
 }
 
 function usePhoneVerification({ active, purpose, phone, email = "", userId = "" }) {
@@ -1472,12 +1473,10 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
       if (action === "send") {
         if (!value?.challenge_id) throw new Error("Nepavyko išsiųsti SMS kodo.");
         setChallenge({ id: value.challenge_id, identity, retryAt: now + Number(value.retry_after || 60) * 1000 });
-        setMessage("SMS kodas išsiųstas. Įveskite gautą 6 skaitmenų kodą. Kodas galioja 10 minučių.");
       } else {
         const expiresAt = new Date(value?.expires_at).getTime();
         if (!value?.proof || value.phone !== normalizedPhone || !Number.isFinite(expiresAt) || expiresAt <= now) throw new Error("Patvirtinimas nebegalioja. Paprašykite naujo kodo.");
         setProof({ token: value.proof, identity, expiresAt }); setCode("");
-        setMessage("Telefono numeris patvirtintas.");
       }
     } catch (error) {
       if (requestState.current.version === version) setError(error.message || "Nepavyko patikrinti telefono.");
@@ -1506,37 +1505,57 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
 
 function PhoneVerificationFields({ verification: v }) {
   if (!v.active) return null;
-  const style = { gridColumn: "1 / -1", padding: 12, border: "1px solid #dfe7ed", borderRadius: 10,
-    background: "#f7f9fb", fontSize: 13, lineHeight: 1.5 };
+  const style = { gridColumn: "1 / -1", padding: 16, border: "1px solid #e2e8ee", borderRadius: 12,
+    background: "#fff", fontSize: 14, lineHeight: 1.5 };
+  const signup = v.purpose === "signup";
   if (v.configError) return <div style={style} role="alert">{v.configError} Atnaujinkite puslapį ir bandykite dar kartą.</div>;
-  if (!v.config) return <div style={style} role="status">Tikrinami telefono nustatymai...</div>;
+  if (!v.config) return <div style={style} role="status">Ruošiamas patvirtinimas...</div>;
   if (!v.required) return null;
   if (!v.config.ready) return <div style={style} role="alert">SMS patvirtinimas šiuo metu nepasiekiamas. Bandykite vėliau.</div>;
-  if (v.verified) return <div style={{ ...style, background: "#edf8f3" }} role="status">✓ Telefono numeris patvirtintas.</div>;
+  if (v.verified) return <div style={style} role="status">
+    <b>{signup ? "Registracijos kodas patvirtintas" : "Telefono numeris patvirtintas"}</b>
+    <p style={{ margin: "4px 0 0", color: "#526374" }}>{signup ? "Galite užbaigti registraciją." : "Išsaugokite pakeitimus."}</p>
+  </div>;
+  const canRequest = !v.busy && v.retrySeconds === 0 && (!signup || Boolean(v.captchaToken));
   return (
     <div style={style}>
-      <b>Patvirtinkite telefono numerį</b>
-      <p style={{ margin: "5px 0 10px", color: "#526374" }}>SMS kodas reikalingas tik registruojantis arba keičiant numerį.</p>
-      {v.purpose === "signup" && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
-        onToken={v.setCaptchaToken} onError={v.setError} />}
-      <button type="button" className="btn ghost" disabled={v.busy || v.retrySeconds > 0 || (v.purpose === "signup" && !v.captchaToken)} onClick={v.send}>
-        {v.busy ? "Palaukite..." : v.retrySeconds ? `Siųsti dar kartą po ${v.retrySeconds} s` : v.challenge ? "Siųsti kodą dar kartą" : "Gauti SMS kodą"}
-      </button>
-      {v.challenge && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-        <label style={{ flex: "1 1 130px", minWidth: 0 }}>SMS kodas
+      <b style={{ color: "#142f46", fontSize: 15 }}>{v.challenge
+        ? signup ? "Registracijai patvirtinti įveskite kodą" : "Telefono numeriui patvirtinti įveskite kodą"
+        : signup ? "Registracijos patvirtinimas" : "Naujo telefono numerio patvirtinimas"}</b>
+      <p style={{ margin: "5px 0 12px", color: "#526374" }}>{v.challenge
+        ? "Įveskite į jūsų telefoną atsiųstą 6 skaitmenų kodą."
+        : "Į jūsų telefoną atsiųsime 6 skaitmenų patvirtinimo kodą."}</p>
+      {v.challenge ? <>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "end" }}>
+        <label style={{ flex: "1 1 150px", minWidth: 0, color: "#142f46", fontSize: 13 }}>Patvirtinimo kodas
           <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
-            aria-label="6 skaitmenų SMS kodas" placeholder="000000" value={v.code} disabled={v.busy}
+            aria-label="6 skaitmenų SMS kodas" placeholder="000000" value={v.code} disabled={v.busy} autoFocus
             onChange={(event) => v.setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-            style={{ width: "100%", boxSizing: "border-box", marginTop: 4, padding: 10, border: "1px solid #cad6df", borderRadius: 8, font: "inherit" }} />
+            style={{ width: "100%", boxSizing: "border-box", marginTop: 5, padding: "11px 12px", border: "1px solid #cad6df", borderRadius: 8,
+              fontFamily: "inherit", fontSize: 20, lineHeight: 1.2, letterSpacing: "0.2em" }} />
         </label>
-        <button type="button" className="btn primary" disabled={v.busy || v.code.length !== 6} onClick={v.verify} style={{ alignSelf: "end" }}>Patvirtinti numerį</button>
-      </div>}
-      {v.message && <p role="status" style={{ margin: "10px 0 0" }}>{v.message}</p>}
+        <button type="button" className="btn primary" disabled={v.busy || v.code.length !== 6} onClick={v.verify}>
+          {v.busy ? "Patvirtinama..." : "Patvirtinti kodą"}
+        </button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {signup && v.retrySeconds === 0 && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
+            onToken={v.setCaptchaToken} onError={v.setError} />}
+          <button type="button" className="btn ghost" disabled={!canRequest} onClick={v.send} style={{ fontSize: 13 }}>
+            {v.retrySeconds ? `Siųsti dar kartą po ${v.retrySeconds} s` : "Siųsti kodą dar kartą"}
+          </button>
+        </div>
+      </> : <>
+        {signup && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
+          onToken={v.setCaptchaToken} onError={v.setError} />}
+        <button type="button" className="btn primary" disabled={!canRequest} onClick={v.send}>
+          {v.busy ? "Siunčiama..." : "Gauti SMS kodą"}
+        </button>
+      </>}
       {v.error && <p role="alert" style={{ margin: "10px 0 0", color: "#ad381f" }}>{v.error}</p>}
     </div>
   );
 }
-
 
 function AuthModal({
   open,
