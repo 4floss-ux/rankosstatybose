@@ -1118,7 +1118,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Tvarkymo pagrindai.</b> Duomenis tvarkome tiek, kiek tai būtina paslaugai suteikti ir sutartiniams veiksmams atlikti, teisėtiems platformos bei jos naudotojų interesams užtikrinti (pvz., saugumui, sukčiavimo ir piktnaudžiavimo prevencijai, ginčų ir patikimumo istorijai), taip pat kai tvarkyti duomenis reikalauja teisės aktai. Jei konkrečiai funkcijai būtų reikalingas sutikimas, jis būtų prašomas atskirai ir galėtų būti atšauktas.</p>
 
-        <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas ir infrastruktūra) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
+        <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
 
         <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
 
@@ -1340,6 +1340,204 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
   );
 }
 
+async function invokePhoneVerification(body) {
+  if (!supabase) throw new Error("Trūksta svetainės nustatymų.");
+  const { data, error } = await supabase.functions.invoke("phone-verification", { body });
+  if (error) {
+    let message = "Nepavyko patikrinti telefono. Bandykite vėliau.";
+    try {
+      const response = error.context?.clone?.() || error.context;
+      const details = await response?.json?.();
+      if (typeof details?.error === "string") message = details.error;
+    } catch {}
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+function loadSmsTurnstile() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (window.statybos24SmsTurnstile) return window.statybos24SmsTurnstile;
+  window.statybos24SmsTurnstile = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = () => window.turnstile ? resolve(window.turnstile) : reject(new Error("Patikra nepasiekiama."));
+    script.onerror = () => {
+      delete window.statybos24SmsTurnstile;
+      script.remove();
+      reject(new Error("Nepavyko įkelti patikros. Atnaujinkite puslapį."));
+    };
+    document.head.appendChild(script);
+  });
+  return window.statybos24SmsTurnstile;
+}
+
+function SmsCaptcha({ siteKey, resetKey, onToken, onError }) {
+  const container = useRef(null);
+  const callbacks = useRef({ onToken, onError });
+  callbacks.current = { onToken, onError };
+  useEffect(() => {
+    let cancelled = false, widget = null;
+    loadSmsTurnstile().then((api) => {
+      if (cancelled || !container.current) return;
+      widget = api.render(container.current, {
+        sitekey: siteKey, action: "signup_phone", language: "lt", theme: "light",
+        callback: (token) => { if (!cancelled) callbacks.current.onToken(token); },
+        "expired-callback": () => { if (!cancelled) callbacks.current.onToken(""); },
+        "error-callback": () => {
+          if (!cancelled) { callbacks.current.onToken(""); callbacks.current.onError("Patikra nepavyko. Atnaujinkite puslapį ir bandykite dar kartą."); }
+        },
+      });
+    }).catch((error) => { if (!cancelled) callbacks.current.onError(error.message); });
+    return () => { cancelled = true; if (widget !== null) window.turnstile?.remove(widget); };
+  }, [siteKey, resetKey]);
+  return <div ref={container} style={{ minHeight: 65, maxWidth: "100%", overflow: "hidden" }} />;
+}
+
+function usePhoneVerification({ active, purpose, phone, email = "", userId = "" }) {
+  const [config, setConfig] = useState(null);
+  const [configError, setConfigError] = useState("");
+  const [challenge, setChallenge] = useState(null);
+  const [proof, setProof] = useState(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  const normalizedPhone = normalizeLithuanianMobilePhone(phone);
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const identity = JSON.stringify([active, purpose, normalizedPhone, normalizedEmail, userId]);
+  const requestState = useRef({ identity, version: 0, busy: false });
+  if (requestState.current.identity !== identity) {
+    requestState.current = { identity, version: requestState.current.version + 1, busy: false };
+  }
+
+  useEffect(() => {
+    setChallenge(null); setProof(null); setCode(""); setMessage(""); setError("");
+    setBusy(false); setCaptchaToken(""); setCaptchaReset((v) => v + 1);
+  }, [identity]);
+  useEffect(() => {
+    let cancelled = false;
+    setConfig(null); setConfigError("");
+    if (!active) return;
+    invokePhoneVerification({ action: "status", purpose }).then((value) => {
+      if (!cancelled) {
+        if (typeof value?.enabled !== "boolean") throw new Error("Nepavyko patikrinti telefono nustatymų.");
+        setConfig(value);
+      }
+    }).catch((error) => { if (!cancelled) setConfigError(error.message); });
+    return () => { cancelled = true; };
+  }, [active, purpose, userId]);
+  useEffect(() => {
+    if (!active || (!challenge && !proof)) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [active, challenge, proof]);
+
+  const required = Boolean(config?.enabled && (purpose === "signup" || normalizedPhone !== config.current_phone));
+  const verified = Boolean(proof && proof.identity === identity && proof.expiresAt > clock);
+  const retrySeconds = challenge?.identity === identity ? Math.max(0, Math.ceil((challenge.retryAt - clock) / 1000)) : 0;
+  function requireProof() {
+    if (configError) throw new Error(configError);
+    if (!config) throw new Error("Palaukite, kol bus patikrinti telefono nustatymai.");
+    if (!required) return "";
+    if (!proof || proof.identity !== identity || proof.expiresAt <= Date.now()) {
+      throw new Error("Patvirtinkite telefono numerį SMS kodu.");
+    }
+    return proof.token;
+  }
+  async function act(action) {
+    if (requestState.current.busy) return;
+    const version = requestState.current.version;
+    requestState.current.busy = true;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      if (!config?.enabled || !config.ready) throw new Error("SMS patvirtinimas dar neparuoštas. Bandykite vėliau.");
+      if (!normalizedPhone) throw new Error("Įveskite galiojantį Lietuvos mobiliojo telefono numerį.");
+      if (purpose === "signup" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) throw new Error("Prieš siųsdami kodą įveskite el. paštą.");
+      if (action === "send" && retrySeconds) throw new Error("Palaukite prieš siųsdami kodą dar kartą.");
+      if (action === "send" && purpose === "signup" && !captchaToken) throw new Error("Atlikite patikrą prieš siųsdami SMS.");
+      if (action === "verify" && (!challenge || challenge.identity !== identity || !/^\d{6}$/.test(code))) throw new Error("Įveskite gautą 6 skaitmenų SMS kodą.");
+      if (action === "send") { setProof(null); setChallenge(null); setCode(""); }
+      const value = await invokePhoneVerification({ action, purpose, phone: normalizedPhone, email: normalizedEmail,
+        captcha_token: action === "send" ? captchaToken : undefined,
+        challenge_id: action === "verify" ? challenge.id : undefined,
+        code: action === "verify" ? code : undefined });
+      if (requestState.current.version !== version) return;
+      const now = Date.now(); setClock(now);
+      if (action === "send") {
+        if (!value?.challenge_id) throw new Error("Nepavyko išsiųsti SMS kodo.");
+        setChallenge({ id: value.challenge_id, identity, retryAt: now + Number(value.retry_after || 60) * 1000 });
+        setMessage("SMS kodas išsiųstas. Įveskite gautą 6 skaitmenų kodą. Kodas galioja 10 minučių.");
+      } else {
+        const expiresAt = new Date(value?.expires_at).getTime();
+        if (!value?.proof || value.phone !== normalizedPhone || !Number.isFinite(expiresAt) || expiresAt <= now) throw new Error("Patvirtinimas nebegalioja. Paprašykite naujo kodo.");
+        setProof({ token: value.proof, identity, expiresAt }); setCode("");
+        setMessage("Telefono numeris patvirtintas.");
+      }
+    } catch (error) {
+      if (requestState.current.version === version) setError(error.message || "Nepavyko patikrinti telefono.");
+    } finally {
+      if (requestState.current.version === version) {
+        requestState.current.busy = false; setBusy(false);
+        if (action === "send") { setCaptchaToken(""); setCaptchaReset((v) => v + 1); }
+      }
+    }
+  }
+  async function saveChange() {
+    const token = requireProof();
+    if (!token) return;
+    const { data, error } = await supabase.rpc("sms_apply_phone_change", { p_proof: token });
+    if (error) throw new Error(error.message || "Nepavyko išsaugoti patvirtinto numerio.");
+    if (data?.phone !== normalizedPhone) throw new Error("Nepavyko išsaugoti patvirtinto numerio.");
+    setConfig((current) => ({ ...current, current_phone: normalizedPhone }));
+    setProof(null); setChallenge(null);
+  }
+  return { active, purpose, config, configError, required, verified, code, setCode, busy, message, error,
+    retrySeconds, captchaToken, setCaptchaToken, captchaReset, setError, challenge,
+    send: () => act("send"), verify: () => act("verify"), requireProof, saveChange,
+    unavailable: active && (!config || Boolean(configError)),
+  };
+}
+
+function PhoneVerificationFields({ verification: v }) {
+  if (!v.active) return null;
+  const style = { gridColumn: "1 / -1", padding: 12, border: "1px solid #dfe7ed", borderRadius: 10,
+    background: "#f7f9fb", fontSize: 13, lineHeight: 1.5 };
+  if (v.configError) return <div style={style} role="alert">{v.configError} Atnaujinkite puslapį ir bandykite dar kartą.</div>;
+  if (!v.config) return <div style={style} role="status">Tikrinami telefono nustatymai...</div>;
+  if (!v.required) return null;
+  if (!v.config.ready) return <div style={style} role="alert">SMS patvirtinimas šiuo metu nepasiekiamas. Bandykite vėliau.</div>;
+  if (v.verified) return <div style={{ ...style, background: "#edf8f3" }} role="status">✓ Telefono numeris patvirtintas.</div>;
+  return (
+    <div style={style}>
+      <b>Patvirtinkite telefono numerį</b>
+      <p style={{ margin: "5px 0 10px", color: "#526374" }}>SMS kodas reikalingas tik registruojantis arba keičiant numerį.</p>
+      {v.purpose === "signup" && <SmsCaptcha siteKey={v.config.site_key} resetKey={v.captchaReset}
+        onToken={v.setCaptchaToken} onError={v.setError} />}
+      <button type="button" className="btn ghost" disabled={v.busy || v.retrySeconds > 0 || (v.purpose === "signup" && !v.captchaToken)} onClick={v.send}>
+        {v.busy ? "Palaukite..." : v.retrySeconds ? `Siųsti dar kartą po ${v.retrySeconds} s` : v.challenge ? "Siųsti kodą dar kartą" : "Gauti SMS kodą"}
+      </button>
+      {v.challenge && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+        <label style={{ flex: "1 1 130px", minWidth: 0 }}>SMS kodas
+          <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+            aria-label="6 skaitmenų SMS kodas" placeholder="000000" value={v.code} disabled={v.busy}
+            onChange={(event) => v.setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            style={{ width: "100%", boxSizing: "border-box", marginTop: 4, padding: 10, border: "1px solid #cad6df", borderRadius: 8, font: "inherit" }} />
+        </label>
+        <button type="button" className="btn primary" disabled={v.busy || v.code.length !== 6} onClick={v.verify} style={{ alignSelf: "end" }}>Patvirtinti numerį</button>
+      </div>}
+      {v.message && <p role="status" style={{ margin: "10px 0 0" }}>{v.message}</p>}
+      {v.error && <p role="alert" style={{ margin: "10px 0 0", color: "#ad381f" }}>{v.error}</p>}
+    </div>
+  );
+}
+
+
 function AuthModal({
   open,
   onClose,
@@ -1366,6 +1564,9 @@ function AuthModal({
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const submitting = useRef(false);
+  const phoneVerification = usePhoneVerification({
+    active: open && mode === "signup", purpose: "signup", phone: form.phone, email: form.email,
+  });
 
   useEffect(() => {
     if (open) {
@@ -1461,6 +1662,7 @@ function AuthModal({
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
+        const phoneProof = phoneVerification.requireProof();
         const canonicalCity = await canonicalCityName(form.city);
         if (!canonicalCity) {
           throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
@@ -1485,6 +1687,7 @@ function AuthModal({
               legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
               phone: normalizedPhone,
+              ...(phoneProof ? { phone_verification_proof: phoneProof } : {}),
               company_name:
                 role === "employer" && !teamInvite
                   ? form.companyName.trim()
@@ -1793,6 +1996,8 @@ function AuthModal({
             />
           </label>}
 
+          {mode === "signup" && <PhoneVerificationFields verification={phoneVerification} />}
+
           {mode === "login" && (
             <button type="button" disabled={loading}
               onClick={() => {
@@ -1847,7 +2052,7 @@ function AuthModal({
           <button
             className="btn primary"
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === "signup" && (phoneVerification.busy || phoneVerification.unavailable || (phoneVerification.required && !phoneVerification.verified)))}
             style={{
               width: "100%",
               justifyContent: "center",
@@ -1861,7 +2066,7 @@ function AuthModal({
               ? "Siųsti atkūrimo nuorodą"
               : mode === "login"
               ? "Prisijungti"
-              : "Sukurti paskyrą"}
+              : phoneVerification.config?.enabled ? "Užbaigti registraciją" : "Sukurti paskyrą"}
           </button>
         </form>
         <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
@@ -4992,6 +5197,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     shortBio: "",
     avatarPath: "",
   });
+  const phoneVerification = usePhoneVerification({
+    active: true, purpose: "change", phone: form.phone, email: user.email, userId: user.id,
+  });
   const [metrics, setMetrics] = useState({
     attendanceRate: 100,
     completedJobs: 0,
@@ -6748,6 +6956,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setAvailabilityConflictDates([]);
 
+      await phoneVerification.saveChange();
+
       const profileUpdate = await supabase
         .from("profiles")
         .update({
@@ -7783,6 +7993,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     required
                   />
                 </label>
+
+                <PhoneVerificationFields verification={phoneVerification} />
 
                 <label className="wd-label">
                   Kiek km galite nuvykti?
@@ -11994,6 +12206,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     description: "",
     avatarPath: "",
   });
+  const companyPhoneVerification = usePhoneVerification({
+    active: true, purpose: "change", phone: companyForm.phone, email: user.email, userId: user.id,
+  });
   const [skills, setSkills] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [employerStats, setEmployerStats] = useState({
@@ -13638,6 +13853,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (!city) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
+
+      await companyPhoneVerification.saveChange();
 
       let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
         ? ""
@@ -16336,6 +16553,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   placeholder="+370..."
                 />
               </label>
+
+              {companyMemberRole === "owner" && <PhoneVerificationFields verification={companyPhoneVerification} />}
 
               <label className="ed-label ed-company-editor-wide">
                 Trumpai apie įmonę
