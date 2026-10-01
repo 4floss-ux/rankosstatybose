@@ -11,9 +11,9 @@ const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const TERMS_VERSION = "2026-09-27-v1";
-const PRIVACY_VERSION = "2026-10-01-draft-v2";
-const PRIVACY_CONTROLLER_NAME = "[ĮRAŠYTI PLATFORMOS VALDYTOJO JURIDINĮ PAVADINIMĄ]";
-const PRIVACY_CONTACT_EMAIL = "[ĮRAŠYTI PRIVATUMO KONTAKTINĮ EL. PAŠTĄ]";
+const PRIVACY_VERSION = "2026-10-02-v3";
+const PRIVACY_CONTROLLER_NAME = "Alanas Staponas";
+const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 
 const BRAND_NAME = "statybos24";
 const BRAND_DOMAIN = "statybos24.lt";
@@ -1132,7 +1132,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Slapukai ir techninė saugykla.</b> Platforma gali naudoti techniškai būtinus autentifikavimo, sesijos ir saugumo identifikatorius, kad vartotojas galėtų prisijungti ir naudotis sistema. Atskiros reklaminės ar rinkodaros sekimo priemonės šiame privatumo pranešime nenumatytos; jei jos būtų įdiegtos, informacija ir pasirinkimai būtų pateikti atskirai.</p>
 
-        <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas. Prieš viešą paleidimą būtina pakeisti du skliaustuose pažymėtus valdytojo rekvizitus tikrais duomenimis.</p>
+        <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
 
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
       </section>
