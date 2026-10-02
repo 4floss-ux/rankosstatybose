@@ -25725,9 +25725,9 @@ function PublicLandingPage({
       text: "Atvykimai, užbaigti darbai ir įvertinimai padeda matyti realią darbo eigą.",
     },
     {
-      icon: "▣",
-      title: "Ilgalaikis įdarbinimas",
-      text: "Pateikite įdarbinimo pasiūlymą, apsikeiskite sutartimis ir valdykite procesą sistemoje.",
+      icon: "★",
+      title: "Patikimumo ir reputacijos auginimas",
+      text: "Atvykimų istorija, užbaigti darbai ir įvertinimai padeda abiem pusėms auginti patikimumą ir reputaciją.",
     },
   ];
 
