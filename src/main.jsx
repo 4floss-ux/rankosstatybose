@@ -7216,11 +7216,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (item) => !workerWorkdayIsHistory(item)
   );
   const workerWorkHistory = workdays.filter(workerWorkdayIsHistory);
-  const totalWorkedMinutes = workerWorkHistory.reduce((sum, item) => {
-    const attendance = item?.attendance || {};
-    if (!attendance.finalized_at) return sum;
-    return sum + Math.max(0, Number(attendance.worked_minutes) || 0);
-  }, 0);
   const pagedActiveWorkerWorkdays = activeWorkerWorkdays.slice(
     (workerActivePage - 1) * DASHBOARD_PAGE_SIZE,
     workerActivePage * DASHBOARD_PAGE_SIZE
@@ -8385,11 +8380,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           {showWorkerStats && (
             <div className="wd-kpis">
               <div className="wd-kpi">
-                <span>Išdirbta iš viso</span>
-                <b>{formatWorkedMinutes(totalWorkedMinutes)}</b>
-                <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
-                  Šį mėnesį: {workerStats.monthWorkedDays} d. / {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
-                </small>
+                <span>Šį mėnesį išdirbta</span>
+                <b>{formatWorkedMinutes(workerStats.monthWorkedMinutes)}</b>
               </div>
               <div className="wd-kpi">
                 <span>Užbaigti darbai</span>
