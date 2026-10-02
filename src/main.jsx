@@ -16537,7 +16537,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           border-radius:4px;
         }
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:25px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:10px!important}
-        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}
+        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.ed-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.ed-active-jobs-section:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#1c9b67}.ed-active-jobs-section>div:first-child h2{color:#167a54}.ed-active-jobs-section .ed-job{background:#fff}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
         .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
@@ -18526,7 +18526,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        <section className="ed-card">
+        <section className="ed-card ed-active-jobs-section">
           <div
             style={{
               display: "flex",
