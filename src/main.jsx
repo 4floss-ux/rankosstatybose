@@ -8140,7 +8140,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
         .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:#fff;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}.wd-invite.is-pending{border-color:#f2c18f;background:#fff;box-shadow:inset 5px 0 0 #f08a28,0 8px 22px rgba(240,138,40,.08)}.wd-invite.is-pending .wd-invite-main h3{color:#9f5211}.wd-invite.has-unread{box-shadow:inset 5px 0 0 #f08a28,0 8px 22px rgba(240,138,40,.08)}.wd-invite.has-conflict{border-color:#efc7bb;background:#fffafa;box-shadow:inset 5px 0 0 #d96b4d}
         .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
-        .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
+        .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary>span{position:relative}.wd-invite-summary>span+span:before{content:"·";margin-right:14px;color:#a4afb8}
         .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
         .wd-invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.wd-chat-btn{position:relative}.wd-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.wd-chat-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}.wd-conflict{display:inline-flex;margin-top:10px;border-radius:999px;padding:6px 9px;background:#fff0ec;color:#b64d2a;font-size:11px;font-weight:900}
         .wd-accept,.wd-decline{border-radius:9px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer}
@@ -9162,15 +9162,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   className="wd-long-term-offer-card"
                 >
                   <div className="wd-long-term-offer-info" style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                    <MonthlyAwardMiniList
+                      awards={companyAwardsById[offer.company_id] || []}
+                      size={46}
+                    />
                     <CompanyBadge
                       name={offer.company_name}
                       avatarPath={offer.company_avatar_path}
                       size={46}
                       fontSize={16}
-                    />
-                    <MonthlyAwardMiniList
-                      awards={companyAwardsById[offer.company_id] || []}
-                      size={46}
                     />
                     <div style={{ minWidth: 0 }}>
                       <b style={{ display: "block", fontSize: 16 }}>
@@ -9333,15 +9333,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 flex: "0 0 auto",
                               }}
                             >
+                              <MonthlyAwardMiniList
+                                awards={companyAwardsById[job.company_id] || []}
+                                size={42}
+                              />
                               <CompanyBadge
                                 name={invitation.companyName}
                                 avatarPath={invitation.companyAvatarPath}
                                 size={42}
                                 fontSize={12}
-                              />
-                              <MonthlyAwardMiniList
-                                awards={companyAwardsById[job.company_id] || []}
-                                size={42}
                               />
                             </span>
                             <div style={{ minWidth: 0 }}>
@@ -9359,18 +9359,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             {job.pay_amount
                               ? formatNetPay(job.pay_amount, job.pay_unit)
                               : "Atlygis nenurodytas"}
-                          </span>
-                          <span>
-                            Patikimumas:{" "}
-                            <b
-                              style={{
-                                color: reliabilityScoreColor(
-                                  invitation.companyReliability
-                                ),
-                              }}
-                            >
-                              {Math.round(invitation.companyReliability)} / 100
-                            </b>
                           </span>
                         </div>
 
@@ -9628,15 +9616,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     >
                       <div>
                         <div className="wd-workday-head">
+                          <MonthlyAwardMiniList
+                            awards={companyAwardsById[job.company_id] || []}
+                            size={52}
+                          />
                           <CompanyBadge
                             name={item.companyName}
                             avatarPath={item.companyAvatarPath}
                             size={52}
                             fontSize={18}
-                          />
-                          <MonthlyAwardMiniList
-                            awards={companyAwardsById[job.company_id] || []}
-                            size={52}
                           />
                           <div className="wd-workday-head-main">
                             <div className="wd-workday-title"><h3>{formatJobTitle(job.title)}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
@@ -10162,17 +10150,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     marginTop: 6,
                   }}
                 >
-                  <CompanyBadge
-                    name={workdayDetailsTarget.companyName || "Darbdavys"}
-                    avatarPath={workdayDetailsTarget.companyAvatarPath}
-                    size={42}
-                    fontSize={15}
-                  />
                   <MonthlyAwardMiniList
                     awards={
                       companyAwardsById[workdayDetailsTarget.job?.company_id] || []
                     }
                     size={42}
+                  />
+                  <CompanyBadge
+                    name={workdayDetailsTarget.companyName || "Darbdavys"}
+                    avatarPath={workdayDetailsTarget.companyAvatarPath}
+                    size={42}
+                    fontSize={15}
                   />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <b style={{ display: "block", fontSize: 17 }}>
@@ -10752,15 +10740,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       flexWrap: "wrap",
                     }}
                   >
+                    <MonthlyAwardMiniList
+                      awards={workerCompanyProfileTarget.awards || []}
+                      size={54}
+                    />
                     <CompanyBadge
                       name={workerCompanyProfileTarget.name || "Darbdavys"}
                       avatarPath={workerCompanyProfileTarget.avatarPath}
                       size={54}
                       fontSize={18}
-                    />
-                    <MonthlyAwardMiniList
-                      awards={workerCompanyProfileTarget.awards || []}
-                      size={54}
                     />
                     <div style={{ minWidth: 0 }}>
                       <b style={{ display: "block", fontSize: 19 }}>
@@ -11669,15 +11657,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="lt-worker-offer-scroll">
             <div className="rs-modal-head">
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <MonthlyAwardMiniList
+                  awards={companyAwardsById[longTermOfferTarget.company_id] || []}
+                  size={50}
+                />
                 <CompanyBadge
                   name={longTermOfferTarget.company_name}
                   avatarPath={longTermOfferTarget.company_avatar_path}
                   size={50}
                   fontSize={17}
-                />
-                <MonthlyAwardMiniList
-                  awards={companyAwardsById[longTermOfferTarget.company_id] || []}
-                  size={50}
                 />
                 <div>
                   <div className="eyebrow">
