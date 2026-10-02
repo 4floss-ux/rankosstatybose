@@ -7310,9 +7310,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             : Number(result.data.search_location_accuracy_m),
         updatedAt: result.data?.search_location_updated_at || updatedAt,
       });
-      setSearchLocationNotice(
-        "Lokacija atnaujinta. Darbdaviams rodome tik apytikslį atstumą iki darbo, ne jūsų koordinates."
-      );
+      setSearchLocationNotice("");
     } catch (err) {
       setSearchLocationError(browserLocationErrorMessage(err));
     } finally {
@@ -7984,6 +7982,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
         .wd-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-avatar-upload input{display:none}.wd-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
+        .wd-location-card{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 12px;border:1px solid #dfe7ed;border-radius:12px;background:#f8fafb}
+        .wd-location-copy{min-width:0;display:grid;gap:3px}.wd-location-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.wd-location-head>b{font-size:13px;color:#102438}.wd-location-status{display:inline-flex;align-items:center;min-height:22px;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:850;line-height:1}.wd-location-status.on{background:#e9f7f0;color:#167a54}.wd-location-status.off{background:#edf1f4;color:#607180}.wd-location-help{color:#607180;font-size:11.5px;line-height:1.4}.wd-location-meta{color:#7a8895;font-size:10.5px;line-height:1.35}.wd-location-message{font-size:10.5px;font-weight:750;line-height:1.35}.wd-location-message.ok{color:#27744d}.wd-location-message.err{color:#c9362b}
+        .wd-location-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex:0 0 auto}.wd-location-update,.wd-location-disable{min-height:34px;border-radius:9px;padding:7px 10px;font:inherit;font-size:11.5px;font-weight:850;line-height:1;cursor:pointer;white-space:nowrap;transition:background .15s ease,border-color .15s ease,transform .15s ease}.wd-location-update{border:0;background:#f08a28;color:#fff;box-shadow:0 5px 12px rgba(240,138,40,.16)}.wd-location-update:hover:not(:disabled){background:#df7819}.wd-location-disable{border:1px solid #dbe4ea;background:#fff;color:#526374}.wd-location-disable:hover:not(:disabled){border-color:#c6d2da;background:#f4f7f9;color:#102438}.wd-location-update:active:not(:disabled),.wd-location-disable:active:not(:disabled){transform:translateY(1px)}.wd-location-update:disabled,.wd-location-disable:disabled{opacity:.55;cursor:wait;box-shadow:none}
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
@@ -8026,6 +8027,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-heading-actions{width:100%}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
+          .wd-location-card{align-items:stretch;flex-direction:column;gap:8px}.wd-location-actions{justify-content:flex-start}.wd-location-update,.wd-location-disable{min-height:36px}
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}.wd-day-occupied-note{grid-column:1/-1}
           .wd-availability-choice{grid-column:1/-1}
@@ -8499,73 +8501,65 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   />
                 </label>
 
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    border: "1px solid #dfe7ed",
-                    borderRadius: 14,
-                    padding: 14,
-                    background: "#f8fafb",
-                    display: "grid",
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <b style={{ display: "block", color: "#102438", marginBottom: 4 }}>
-                      Tikslesnis atstumas iki darbų
-                    </b>
-                    <span style={{ color: "#607180", fontSize: 12, lineHeight: 1.5 }}>
-                      Pasirinktinai galite leisti naršyklei nustatyti jūsų dabartinę vietą.
-                      Ji naudojama tik atstumui iki darbo apskaičiuoti. Darbdaviai nemato
-                      jūsų GPS koordinačių ar namų adreso.
+                <div className="wd-location-card">
+                  <div className="wd-location-copy">
+                    <div className="wd-location-head">
+                      <b>Tikslesnis atstumas</b>
+                      <span className={`wd-location-status ${searchLocation.enabled ? "on" : "off"}`}>
+                        {searchLocation.enabled ? "Lokacija įjungta" : "Lokacija neįjungta"}
+                      </span>
+                    </div>
+                    <span className="wd-location-help">
+                      Naudojama tik atstumui iki darbo. Darbdaviai jūsų GPS koordinačių nemato.
                     </span>
+                    {searchLocation.enabled && (searchLocation.updatedAt || Number.isFinite(searchLocation.accuracyM)) && (
+                      <span className="wd-location-meta">
+                        {searchLocation.updatedAt
+                          ? `Atnaujinta ${new Date(searchLocation.updatedAt).toLocaleString("lt-LT", { dateStyle: "short", timeStyle: "short" })}`
+                          : ""}
+                        {searchLocation.updatedAt && Number.isFinite(searchLocation.accuracyM) ? " · " : ""}
+                        {Number.isFinite(searchLocation.accuracyM)
+                          ? `tikslumas ~${Math.max(1, Math.round(searchLocation.accuracyM))} m`
+                          : ""}
+                      </span>
+                    )}
+                    {!searchLocation.enabled && (
+                      <span className="wd-location-meta">Atstumas bus vertinamas pagal miestą.</span>
+                    )}
+                    {searchLocationNotice && (
+                      <span className="wd-location-message ok">{searchLocationNotice}</span>
+                    )}
+                    {searchLocationError && (
+                      <span className="wd-location-message err">{searchLocationError}</span>
+                    )}
                   </div>
 
-                  <div style={{ color: searchLocation.enabled ? "#27744d" : "#607180", fontSize: 12, fontWeight: 750 }}>
-                    {searchLocation.enabled
-                      ? `Lokacija įjungta${
-                          searchLocation.updatedAt
-                            ? ` · atnaujinta ${new Date(searchLocation.updatedAt).toLocaleString("lt-LT", { dateStyle: "short", timeStyle: "short" })}`
-                            : ""
-                        }${
-                          Number.isFinite(searchLocation.accuracyM)
-                            ? ` · tikslumas ~${Math.max(1, Math.round(searchLocation.accuracyM))} m`
-                            : ""
-                        }`
-                      : "Lokacija neįjungta — atstumas bus vertinamas pagal miestą."}
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div className="wd-location-actions">
                     <button
-                      className="wd-primary"
+                      className="wd-location-update"
                       type="button"
                       disabled={searchLocationBusy}
                       onClick={updateSearchLocationFromBrowser}
                     >
-                      {searchLocationBusy ? "Nustatoma..." : searchLocation.enabled ? "Atnaujinti mano vietą" : "Naudoti mano buvimo vietą"}
+                      {searchLocationBusy
+                        ? "Nustatoma..."
+                        : searchLocation.enabled
+                        ? "Atnaujinti vietą"
+                        : "Naudoti mano vietą"}
                     </button>
                     {searchLocation.enabled && (
                       <button
-                        className="wd-secondary"
+                        className="wd-location-disable"
                         type="button"
                         disabled={searchLocationBusy}
                         onClick={disableSearchLocation}
+                        aria-label="Išjungti ir ištrinti lokaciją"
+                        title="Išjungti ir ištrinti lokaciją"
                       >
-                        Išjungti ir ištrinti lokaciją
+                        Išjungti
                       </button>
                     )}
                   </div>
-
-                  {searchLocationNotice && (
-                    <span style={{ color: "#27744d", fontSize: 12, fontWeight: 700 }}>
-                      {searchLocationNotice}
-                    </span>
-                  )}
-                  {searchLocationError && (
-                    <span style={{ color: "#c9362b", fontSize: 12, fontWeight: 700 }}>
-                      {searchLocationError}
-                    </span>
-                  )}
                 </div>
 
                 <label className="wd-label">
