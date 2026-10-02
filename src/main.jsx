@@ -2843,6 +2843,83 @@ function distanceKmBetweenPoints(a, b) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+function requestBrowserLocation() {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject(new Error("Ši naršyklė nepalaiko vietos nustatymo."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    });
+  });
+}
+
+function browserLocationErrorMessage(error) {
+  if (error?.code === 1) {
+    return "Vietos leidimas nesuteiktas. Naršyklėje leiskite vietos nustatymą ir bandykite dar kartą.";
+  }
+  if (error?.code === 2) {
+    return "Nepavyko nustatyti jūsų buvimo vietos. Patikrinkite įrenginio vietos nustatymus ir bandykite dar kartą.";
+  }
+  if (error?.code === 3) {
+    return "Vietos nustatymas užtruko per ilgai. Bandykite dar kartą.";
+  }
+  return error?.message || "Nepavyko nustatyti jūsų buvimo vietos.";
+}
+
+async function geocodeJobAddress(address, city) {
+  const cleanAddress = String(address || "").trim();
+  const cleanCity = String(city || "").trim();
+
+  if (!supabase || !cleanAddress || !cleanCity) {
+    return { found: false, latitude: null, longitude: null };
+  }
+
+  const { data, error } = await supabase.functions.invoke("geocode-address", {
+    body: { address: cleanAddress, city: cleanCity },
+  });
+
+  if (error) throw error;
+
+  const latitude = Number(data?.latitude);
+  const longitude = Number(data?.longitude);
+  const validCoordinates =
+    Boolean(data?.found) &&
+    Number.isFinite(latitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    Number.isFinite(longitude) &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  return {
+    found: validCoordinates,
+    latitude: validCoordinates ? latitude : null,
+    longitude: validCoordinates ? longitude : null,
+  };
+}
+
+function workerDistanceLabel(worker) {
+  if (worker?.distanceKm === null || worker?.distanceKm === undefined) return "";
+
+  const distance = Number(worker.distanceKm);
+  if (!Number.isFinite(distance)) return "";
+
+  if (worker.distanceSource === "location") {
+    return `~${distance} km nuo darbo`;
+  }
+
+  if (worker.distanceSource === "city") {
+    return distance === 0 ? "Tas pats miestas" : `~${distance} km pagal miestą`;
+  }
+
+  return `~${distance} km nuo darbo`;
+}
+
 function notificationPresentation(events = []) {
   const types = events.map((event) => event.event_type);
 
@@ -4625,7 +4702,7 @@ const DASHBOARD_PAGE_SIZE = 5;
 
 const EMPLOYER_JOBS_BATCH_SIZE = 500;
 const EMPLOYER_JOB_SELECT =
-  "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id";
+  "id, title, city, address_text, location_latitude, location_longitude, location_geocoded_at, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id";
 
 const RELIABILITY_MODAL_STYLES = `
   .reliability-modal-overlay{
@@ -5464,6 +5541,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [avatarPreview, setAvatarPreview] = useState("");
   const [avatarMarkedForRemoval, setAvatarMarkedForRemoval] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [searchLocation, setSearchLocation] = useState({
+    enabled: false,
+    accuracyM: null,
+    updatedAt: null,
+  });
+  const [searchLocationBusy, setSearchLocationBusy] = useState(false);
+  const [searchLocationError, setSearchLocationError] = useState("");
+  const [searchLocationNotice, setSearchLocationNotice] = useState("");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -5866,7 +5951,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, has_individual_activity, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at"
+            "travel_radius_km, has_driving_license_b, has_individual_activity, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at, search_location_enabled, search_location_accuracy_m, search_location_updated_at"
           )
           .eq("user_id", user.id)
           .single(),
@@ -5947,6 +6032,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setAvatarFile(null);
       setAvatarPreview("");
       setAvatarMarkedForRemoval(false);
+      setSearchLocation({
+        enabled: Boolean(worker?.search_location_enabled),
+        accuracyM:
+          worker?.search_location_accuracy_m === null ||
+          worker?.search_location_accuracy_m === undefined
+            ? null
+            : Number(worker.search_location_accuracy_m),
+        updatedAt: worker?.search_location_updated_at || null,
+      });
+      setSearchLocationError("");
+      setSearchLocationNotice("");
 
       setUrgentAvailability({
         city: worker?.urgent_city || "",
@@ -7159,6 +7255,101 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  async function updateSearchLocationFromBrowser() {
+    if (searchLocationBusy) return;
+
+    setSearchLocationBusy(true);
+    setSearchLocationError("");
+    setSearchLocationNotice("");
+
+    try {
+      const position = await requestBrowserLocation();
+      const latitude = Number(position?.coords?.latitude);
+      const longitude = Number(position?.coords?.longitude);
+      const accuracy = Number(position?.coords?.accuracy);
+
+      if (
+        !Number.isFinite(latitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        !Number.isFinite(longitude) ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        throw new Error("Naršyklė grąžino netinkamą vietos informaciją.");
+      }
+
+      const updatedAt = new Date().toISOString();
+      const accuracyM = Number.isFinite(accuracy) && accuracy >= 0
+        ? Math.round(accuracy)
+        : null;
+
+      const result = await supabase
+        .from("worker_profiles")
+        .update({
+          search_location_enabled: true,
+          search_latitude: latitude,
+          search_longitude: longitude,
+          search_location_accuracy_m: accuracyM,
+          search_location_updated_at: updatedAt,
+        })
+        .eq("user_id", user.id)
+        .select(
+          "search_location_enabled, search_location_accuracy_m, search_location_updated_at"
+        )
+        .single();
+
+      if (result.error) throw result.error;
+
+      setSearchLocation({
+        enabled: Boolean(result.data?.search_location_enabled),
+        accuracyM:
+          result.data?.search_location_accuracy_m === null ||
+          result.data?.search_location_accuracy_m === undefined
+            ? null
+            : Number(result.data.search_location_accuracy_m),
+        updatedAt: result.data?.search_location_updated_at || updatedAt,
+      });
+      setSearchLocationNotice(
+        "Lokacija atnaujinta. Darbdaviams rodome tik apytikslį atstumą iki darbo, ne jūsų koordinates."
+      );
+    } catch (err) {
+      setSearchLocationError(browserLocationErrorMessage(err));
+    } finally {
+      setSearchLocationBusy(false);
+    }
+  }
+
+  async function disableSearchLocation() {
+    if (searchLocationBusy) return;
+
+    setSearchLocationBusy(true);
+    setSearchLocationError("");
+    setSearchLocationNotice("");
+
+    try {
+      const result = await supabase
+        .from("worker_profiles")
+        .update({
+          search_location_enabled: false,
+          search_latitude: null,
+          search_longitude: null,
+          search_location_accuracy_m: null,
+          search_location_updated_at: null,
+        })
+        .eq("user_id", user.id);
+
+      if (result.error) throw result.error;
+
+      setSearchLocation({ enabled: false, accuracyM: null, updatedAt: null });
+      setSearchLocationNotice("Lokacija išjungta ir ištrinta iš darbuotojo profilio.");
+    } catch (err) {
+      setSearchLocationError(err?.message || "Nepavyko išjungti lokacijos.");
+    } finally {
+      setSearchLocationBusy(false);
+    }
+  }
+
   async function saveEverything() {
     setSaving(true);
     setNotice("");
@@ -8307,6 +8498,75 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     }
                   />
                 </label>
+
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    border: "1px solid #dfe7ed",
+                    borderRadius: 14,
+                    padding: 14,
+                    background: "#f8fafb",
+                    display: "grid",
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <b style={{ display: "block", color: "#102438", marginBottom: 4 }}>
+                      Tikslesnis atstumas iki darbų
+                    </b>
+                    <span style={{ color: "#607180", fontSize: 12, lineHeight: 1.5 }}>
+                      Pasirinktinai galite leisti naršyklei nustatyti jūsų dabartinę vietą.
+                      Ji naudojama tik atstumui iki darbo apskaičiuoti. Darbdaviai nemato
+                      jūsų GPS koordinačių ar namų adreso.
+                    </span>
+                  </div>
+
+                  <div style={{ color: searchLocation.enabled ? "#27744d" : "#607180", fontSize: 12, fontWeight: 750 }}>
+                    {searchLocation.enabled
+                      ? `Lokacija įjungta${
+                          searchLocation.updatedAt
+                            ? ` · atnaujinta ${new Date(searchLocation.updatedAt).toLocaleString("lt-LT", { dateStyle: "short", timeStyle: "short" })}`
+                            : ""
+                        }${
+                          Number.isFinite(searchLocation.accuracyM)
+                            ? ` · tikslumas ~${Math.max(1, Math.round(searchLocation.accuracyM))} m`
+                            : ""
+                        }`
+                      : "Lokacija neįjungta — atstumas bus vertinamas pagal miestą."}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      className="wd-primary"
+                      type="button"
+                      disabled={searchLocationBusy}
+                      onClick={updateSearchLocationFromBrowser}
+                    >
+                      {searchLocationBusy ? "Nustatoma..." : searchLocation.enabled ? "Atnaujinti mano vietą" : "Naudoti mano buvimo vietą"}
+                    </button>
+                    {searchLocation.enabled && (
+                      <button
+                        className="wd-secondary"
+                        type="button"
+                        disabled={searchLocationBusy}
+                        onClick={disableSearchLocation}
+                      >
+                        Išjungti ir ištrinti lokaciją
+                      </button>
+                    )}
+                  </div>
+
+                  {searchLocationNotice && (
+                    <span style={{ color: "#27744d", fontSize: 12, fontWeight: 700 }}>
+                      {searchLocationNotice}
+                    </span>
+                  )}
+                  {searchLocationError && (
+                    <span style={{ color: "#c9362b", fontSize: 12, fontWeight: 700 }}>
+                      {searchLocationError}
+                    </span>
+                  )}
+                </div>
 
                 <label className="wd-label">
                   Patirtis statybose (metais)
@@ -12851,7 +13111,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             supabase
               .from("jobs")
               .select(
-                "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+                "id, title, city, address_text, location_latitude, location_longitude, location_geocoded_at, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
               )
               .eq("id", currentJob.id)
               .single(),
@@ -15148,7 +15408,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const [candidateResult, invitationsResult] = await Promise.all([
         searchClosed
           ? Promise.resolve({ data: [], error: null })
-          : supabase.rpc("get_job_match_candidates", {
+          : supabase.rpc("get_job_match_candidates_v2", {
               p_job_id: job.id,
             }),
         supabase
@@ -15269,6 +15529,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               slot?.distance_km === null || slot?.distance_km === undefined
                 ? null
                 : Number(slot.distance_km),
+            distanceSource: slot?.distance_source || null,
             noShowCount: Number(worker.no_show_count || 0),
             lastActiveAt: worker.last_active_at,
             activityLabel: workerRecentActivityLabel(worker.last_active_at),
@@ -15431,9 +15692,38 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
+      const cleanAddress = form.address.trim();
+      const shouldGeocode =
+        !editingJobId ||
+        canonicalCity !== String(currentJob?.city || "").trim() ||
+        cleanAddress !== String(currentJob?.address_text || "").trim();
+      let geocodeFallback = false;
+      let geocodeFields = {};
+
+      if (shouldGeocode) {
+        try {
+          const geocode = await geocodeJobAddress(cleanAddress, canonicalCity);
+          geocodeFallback = !geocode.found;
+          geocodeFields = {
+            location_latitude: geocode.found ? geocode.latitude : null,
+            location_longitude: geocode.found ? geocode.longitude : null,
+            location_geocoded_at: geocode.found ? new Date().toISOString() : null,
+          };
+        } catch (geocodeError) {
+          console.error("Job geocoding failed", geocodeError);
+          geocodeFallback = true;
+          geocodeFields = {
+            location_latitude: null,
+            location_longitude: null,
+            location_geocoded_at: null,
+          };
+        }
+      }
+
       const payload = {
         city: canonicalCity,
-        address_text: form.address.trim(),
+        ...geocodeFields,
+        address_text: cleanAddress,
         work_date: form.workDate,
         start_time: form.startTime,
         end_time: form.endTime || null,
@@ -15459,7 +15749,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .update(payload)
           .eq("id", editingJobId)
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+            "id, title, city, address_text, location_latitude, location_longitude, location_geocoded_at, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
           )
           .single();
 
@@ -15467,7 +15757,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         job = updateResult.data;
 
 
-        setNotice("Poreikis atnaujintas.");
+        setNotice(
+          geocodeFallback
+            ? "Poreikis atnaujintas. Adreso vietos nepavyko nustatyti tiksliai, todėl atstumas skaičiuojamas pagal miestą."
+            : "Poreikis atnaujintas."
+        );
       } else {
         const insertResult = await supabase
           .from("jobs")
@@ -15480,14 +15774,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             platform_scope_version: JOB_SCOPE_ACK_VERSION,
           })
           .select(
-            "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
+            "id, title, city, address_text, location_latitude, location_longitude, location_geocoded_at, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
           )
           .single();
 
         if (insertResult.error) throw insertResult.error;
         job = insertResult.data;
 
-        setNotice("Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai.");
+        setNotice(
+          geocodeFallback
+            ? "Darbo pasiūlymas sukurtas. Adreso vietos nepavyko nustatyti tiksliai, todėl atstumas skaičiuojamas pagal miestą."
+            : "Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai."
+        );
       }
 
       setForm((current) => ({ ...current, city: canonicalCity }));
@@ -17304,6 +17602,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   {jobFormErrors.address}
                 </span>
               )}
+              <span style={{ color: "#7a8996", fontSize: 11, fontWeight: 500, marginTop: 5 }}>
+                Darbo vietos adresas naudojamas atstumui apskaičiuoti. Geokodavimo duomenys: © OpenStreetMap contributors.
+              </span>
             </label>
 
 <div className="ed-label ed-span-2">
@@ -17973,8 +18274,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           <b>{worker.name}</b>
                           <span>
                             {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            {worker.distanceKm !== null
-                              ? ` · ${worker.distanceKm} km nuo darbo`
+                            {workerDistanceLabel(worker)
+                              ? ` · ${workerDistanceLabel(worker)}`
                               : ""}
                           </span>
                           {!canViewWorkerMetrics && worker.activityLabel && !worker.declinedInvitation && (
@@ -18505,8 +18806,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           <b>{worker.name}</b>
                           <span>
                             {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            {worker.distanceKm !== null
-                              ? ` · ${worker.distanceKm} km nuo darbo`
+                            {workerDistanceLabel(worker)
+                              ? ` · ${workerDistanceLabel(worker)}`
                               : ""}
                           </span>
                         </div>
