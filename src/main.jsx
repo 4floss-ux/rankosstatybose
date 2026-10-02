@@ -24167,9 +24167,8 @@ function AdminDashboard({
 
   if (loading) {
     return (
-      <div className="ed-loading">
+      <div className="ed-loading" aria-label="Kraunama">
         <div className="ed-spinner" />
-        <b>Kraunamas administratoriaus skydelis...</b>
       </div>
     );
   }
