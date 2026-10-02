@@ -7976,7 +7976,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
         .wd-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-avatar-upload input{display:none}.wd-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
-        .wd-location-card{grid-column:1/-1;display:flex;align-items:center;gap:9px;min-height:36px}
+        .wd-location-card{grid-column:1/-1;display:flex;align-items:center;gap:10px;min-height:36px}.wd-location-hint{color:#6c7a88;font-size:11px;line-height:1.4;font-weight:650;max-width:560px}
         .wd-location-toggle{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 11px;border:1px solid #dbe4ea;border-radius:10px;background:#f5f7f9;color:#526374;font:inherit;font-size:12px;font-weight:850;line-height:1;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease,box-shadow .15s ease}.wd-location-toggle:hover:not(:disabled){border-color:#c6d2da;background:#eef3f6;color:#102438}.wd-location-toggle.on{border-color:#b9dfcd;background:#eaf7f1;color:#167a54;box-shadow:0 3px 10px rgba(22,122,84,.08)}.wd-location-toggle.on:hover:not(:disabled){border-color:#9fd2ba;background:#e2f3eb}.wd-location-toggle:active:not(:disabled){transform:translateY(1px)}.wd-location-toggle:disabled{opacity:.58;cursor:wait}.wd-location-toggle-dot{width:9px;height:9px;border-radius:999px;background:#9aa7b2;box-shadow:0 0 0 3px rgba(154,167,178,.13)}.wd-location-toggle.on .wd-location-toggle-dot{background:#1c9a67;box-shadow:0 0 0 3px rgba(28,154,103,.14)}.wd-location-toggle-state{font-size:10.5px;font-weight:800;opacity:.82}.wd-location-message.err{color:#c9362b;font-size:10.5px;font-weight:750;line-height:1.35}
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
@@ -8524,6 +8524,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         : "Išjungta"}
                     </span>
                   </button>
+                  <span className="wd-location-hint">
+                    Įjunkite, kad darbai būtų atrenkami pagal tikslesnį atstumą. Tiksli jūsų vieta darbdaviui nerodoma.
+                  </span>
                   {searchLocationError && (
                     <span className="wd-location-message err">{searchLocationError}</span>
                   )}
