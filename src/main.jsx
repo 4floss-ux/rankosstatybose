@@ -1414,11 +1414,6 @@ function AddressAutocomplete({
         </div>
       )}
 
-      {selectedAddress?.label === cleanValue && (
-        <div style={{ marginTop: 5, color: "#16835a", fontSize: 11, fontWeight: 750 }}>
-          ✓ Adresas patvirtintas
-        </div>
-      )}
     </div>
   );
 }
@@ -17752,9 +17747,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   {jobFormErrors.address}
                 </span>
               )}
-              <span style={{ color: "#7a8996", fontSize: 11, fontWeight: 500, marginTop: 5 }}>
-                Pradėkite rašyti gatvę ir namo numerį, tada pasirinkite tikslų adresą iš sąrašo. Adresas naudojamas atstumui apskaičiuoti. © OpenStreetMap contributors.
-              </span>
             </label>
 
 <div className="ed-label ed-span-2">
