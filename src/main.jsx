@@ -7216,6 +7216,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (item) => !workerWorkdayIsHistory(item)
   );
   const workerWorkHistory = workdays.filter(workerWorkdayIsHistory);
+  const totalWorkedMinutes = workerWorkHistory.reduce((sum, item) => {
+    const attendance = item?.attendance || {};
+    if (!attendance.finalized_at) return sum;
+    return sum + Math.max(0, Number(attendance.worked_minutes) || 0);
+  }, 0);
   const pagedActiveWorkerWorkdays = activeWorkerWorkdays.slice(
     (workerActivePage - 1) * DASHBOARD_PAGE_SIZE,
     workerActivePage * DASHBOARD_PAGE_SIZE
@@ -8380,11 +8385,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           {showWorkerStats && (
             <div className="wd-kpis">
               <div className="wd-kpi">
-                <span>Dirbta šį mėnesį</span>
-                <b>
-                  {workerStats.monthWorkedDays} d. /{" "}
-                  {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
-                </b>
+                <span>Išdirbta iš viso</span>
+                <b>{formatWorkedMinutes(totalWorkedMinutes)}</b>
+                <small style={{ display: "block", marginTop: 5, color: "#8a98a6" }}>
+                  Šį mėnesį: {workerStats.monthWorkedDays} d. / {formatWorkedMinutes(workerStats.monthWorkedMinutes)}
+                </small>
               </div>
               <div className="wd-kpi">
                 <span>Užbaigti darbai</span>
@@ -9361,17 +9366,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   return (
                     <div className="wd-workday" key={`history-${item.id}`}>
                       <div>
-                        <div className="wd-workday-head">
-                          <CompanyBadge
-                            name={item.companyName}
-                            avatarPath={item.companyAvatarPath}
-                            size={52}
-                            fontSize={18}
-                          />
-                          <MonthlyAwardMiniList
-                            awards={companyAwardsById[job.company_id] || []}
-                            size={52}
-                          />
+                        <div className="wd-workday-head history">
                           <div className="wd-workday-head-main">
                             <div className="wd-workday-title">
                               <h3>{job.title}</h3>
@@ -9392,11 +9387,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   }`}
                                 >
                                   {attendanceOutcomeLabel(attendance)}
-                                  {attendance.worked_minutes > 0
-                                    ? ` · ${formatWorkedMinutes(
-                                        attendance.worked_minutes
-                                      )}`
-                                    : ""}
                                 </span>
                               )}
                               {attendance.dispute_status === "resolved_worker" && (
@@ -26221,6 +26211,14 @@ const mobileResponsiveFixStyles = `
     .wd-workday-head-main {
       grid-column: 1 / -1 !important;
       grid-row: 2 !important;
+      width: 100% !important;
+    }
+
+    .wd-workday-head.history {
+      display: block !important;
+    }
+
+    .wd-workday-head.history .wd-workday-head-main {
       width: 100% !important;
     }
 
