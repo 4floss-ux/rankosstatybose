@@ -26624,9 +26624,42 @@ function PublicLandingPage({
   );
 }
 
+function AppBootLoader() {
+  return (
+    <div
+      role="status"
+      aria-label="Kraunama"
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#f7f9fb",
+      }}
+    >
+      <div style={{ display: "grid", justifyItems: "center", gap: 18 }}>
+        <BrandImage height={52} />
+        <span
+          aria-hidden="true"
+          style={{
+            width: 28,
+            height: 28,
+            border: "3px solid #dfe7ed",
+            borderTopColor: "#f08a28",
+            borderRadius: "50%",
+            animation: "app-boot-spin .75s linear infinite",
+          }}
+        />
+        <style>{`@keyframes app-boot-spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
+  const authUserIdRef = useRef(null);
   const [authSessionChecked, setAuthSessionChecked] = useState(!supabase);
+  const [accountStatusChecked, setAccountStatusChecked] = useState(!supabase);
   const [passwordRecovery, setPasswordRecovery] = useState(initialPasswordRecovery.requested);
   const [recoveryError, setRecoveryError] = useState(initialPasswordRecovery.error);
   const [recoveryUserId, setRecoveryUserId] = useState(() =>
@@ -26658,13 +26691,17 @@ function App() {
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
-        setUser(data?.session?.user ?? null);
+        const nextUser = data?.session?.user ?? null;
+        authUserIdRef.current = nextUser?.id || null;
+        setAccountStatusChecked(!nextUser);
+        setUser(nextUser);
         if (error && initialPasswordRecovery.requested) {
           setRecoveryError("Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.");
         }
         setAuthSessionChecked(true);
       })
       .catch(() => {
+        setAccountStatusChecked(true);
         if (initialPasswordRecovery.requested) {
           setRecoveryError("Nepavyko patikrinti atkūrimo nuorodos. Bandykite atidaryti ją dar kartą.");
         }
@@ -26673,7 +26710,13 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setUser(session?.user ?? null);
+        const nextUser = session?.user ?? null;
+        const nextUserId = nextUser?.id || null;
+        if (authUserIdRef.current !== nextUserId) {
+          setAccountStatusChecked(!nextUser);
+          authUserIdRef.current = nextUserId;
+        }
+        setUser(nextUser);
         if (event === "PASSWORD_RECOVERY" && session?.user?.id) {
           rememberPasswordRecoveryUser(session.user.id);
           setRecoveryUserId(session.user.id);
@@ -26732,10 +26775,12 @@ function App() {
         suspendedUntil: null,
         suspensionReason: null,
       });
+      setAccountStatusChecked(true);
       return;
     }
 
     let cancelled = false;
+    setAccountStatusChecked(false);
 
     supabase
       .rpc("get_my_account_status")
@@ -26753,6 +26798,14 @@ function App() {
               suspensionReason: status?.suspension_reason || null,
             });
           }
+          setAccountStatusChecked(true);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error(error);
+          setAccountRole(null);
+          setAccountStatusChecked(true);
         }
       });
 
@@ -26851,6 +26904,10 @@ function App() {
     setRecoveryError("");
     setPasswordRecovery(false);
   };
+
+  if (!authSessionChecked || (user && !accountStatusChecked)) {
+    return <AppBootLoader />;
+  }
 
   if (passwordRecovery) {
     return (
