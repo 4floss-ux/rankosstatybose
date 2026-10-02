@@ -26125,6 +26125,287 @@ const mobileResponsiveFixStyles = `
       max-width: 100% !important;
       overflow-wrap: anywhere;
     }
+
+
+    /* Mobile worker dashboard: keep cards readable even when monthly awards are shown. */
+    .wd-page {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    .wd-topbar {
+      height: auto !important;
+      min-height: 72px;
+    }
+
+    .wd-topbar-inner {
+      width: calc(100% - 24px) !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+      padding: 10px 0 !important;
+    }
+
+    .wd-topbar-inner > .brand {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex: 0 1 auto !important;
+    }
+
+    .wd-topbar-inner > .brand img {
+      width: auto !important;
+      height: auto !important;
+      max-width: min(210px, 58vw) !important;
+      max-height: 42px !important;
+    }
+
+    .wd-topbar-inner > div:last-child {
+      display: flex !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+    }
+
+    .wd-topbar-inner > div:last-child > .btn {
+      flex: 1 1 140px !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      min-height: 42px;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .wd-shell,
+    .wd-card,
+    .wd-workdays,
+    .wd-workday,
+    .wd-workday > *,
+    .wd-workday-head,
+    .wd-workday-head > *,
+    .wd-workday-head-main,
+    .wd-workday-title,
+    .wd-workday-meta,
+    .wd-company-meta-line {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .wd-card {
+      padding: 16px !important;
+      overflow: hidden !important;
+    }
+
+    .wd-workday {
+      width: 100% !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 14px !important;
+      overflow: hidden !important;
+    }
+
+    .wd-workday-head {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) !important;
+      align-items: center !important;
+      gap: 10px 12px !important;
+      width: 100% !important;
+    }
+
+    .wd-workday-head > .wd-company-badge {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      align-self: center !important;
+    }
+
+    .wd-workday-head > span[aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"] {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      justify-self: start !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      gap: 6px !important;
+    }
+
+    .wd-workday-head .monthly-award-hover,
+    .wd-workday-head .monthly-award-hover > img {
+      width: 42px !important;
+      height: 42px !important;
+    }
+
+    .wd-workday-head-main {
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+      width: 100% !important;
+    }
+
+    .wd-workday-title {
+      width: 100% !important;
+      align-items: flex-start !important;
+    }
+
+    .wd-workday-title h3 {
+      flex: 1 1 100% !important;
+      width: 100% !important;
+      font-size: 17px !important;
+      line-height: 1.3 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .wd-workday-phase,
+    .wd-workday-status,
+    .wd-workday-meta,
+    .wd-company-meta-line,
+    .wd-next-step,
+    .wd-next-step b {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .wd-workday-actions {
+      width: 100% !important;
+      max-width: none !important;
+      min-width: 0 !important;
+    }
+
+    .wd-workday-actions > button {
+      width: 100% !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    /* Employer worker cards: awards must not steal the text column. */
+    .ed-attendance-panel,
+    .ed-attendance-list,
+    .ed-attendance-row,
+    .ed-attendance-row > *,
+    .ed-results,
+    .ed-worker,
+    .ed-worker > *,
+    .ed-worker-id,
+    .ed-worker-id > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .ed-attendance-panel {
+      padding: 14px !important;
+      overflow: hidden !important;
+    }
+
+    .ed-worker-id {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      gap: 9px !important;
+      width: 100% !important;
+    }
+
+    .ed-worker-id > div:last-child,
+    .ed-worker-id > .ed-worker-main {
+      flex: 1 1 170px !important;
+      width: auto !important;
+      min-width: 0 !important;
+    }
+
+    .ed-worker-id b,
+    .ed-worker-id span,
+    .ed-worker-main,
+    .ed-worker-main b,
+    .ed-worker-main span {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .ed-worker-id > span[aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"] {
+      max-width: 100% !important;
+      flex-wrap: wrap !important;
+    }
+
+    /* Admin lists/files: long filenames and labels wrap instead of being clipped. */
+    .admin-page {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    .admin-shell,
+    .admin-section,
+    .admin-list,
+    .admin-row,
+    .admin-row > *,
+    .admin-row-title,
+    .admin-cell,
+    .admin-row-actions {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .admin-row {
+      width: 100% !important;
+      overflow: hidden !important;
+    }
+
+    .admin-row-title b,
+    .admin-row-title span,
+    .admin-cell b,
+    .admin-cell span,
+    .admin-file-link,
+    .admin-note {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .admin-row > .admin-small-btn,
+    .admin-row-actions .admin-small-btn {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      text-align: center !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .admin-top-actions {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex-wrap: wrap !important;
+    }
+
+    .admin-top-actions > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex: 1 1 145px !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    /* Notes inside chats/modals must wrap on narrow screens. */
+    .rs-modal-card [role="note"],
+    .lt-chat-card [role="note"],
+    .rs-modal-card [role="note"] > span,
+    .lt-chat-card [role="note"] > span {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
   }
 
   @media (max-width: 760px) {
