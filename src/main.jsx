@@ -820,7 +820,7 @@ function ArrivalTimeDialog({
           }}
         >
           {scheduledTime ? <>Numatyta darbo pradžia: <b style={{ color: "#102438" }}>{scheduledTime}</b>. </> : null}
-          Pasirinkite laiką, kuriuo žmogus faktiškai atvyko. Ateities laiko pasirinkti negalima.
+          Atvykimo laikas negali būti ankstesnis už darbo pradžią ar vėlesnis nei dabar.
         </div>
         <label style={{ display: "grid", gap: 7, fontSize: 12, fontWeight: 850 }}>
           Atvykimo laikas
@@ -2941,7 +2941,7 @@ function jobCheckInWindowOpen(job) {
   const end = jobEndMoment(job);
   if (!start || !end) return false;
   const now = new Date();
-  return now.getTime() >= start.getTime() - 2 * 60 * 60 * 1000 && now <= end;
+  return now >= start && now <= end;
 }
 
 function workerCheckInWindowOpen(job) {
@@ -15407,6 +15407,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function openEmployerCheckIn(worker) {
     if (!worker?.bookingId) return;
+    if (!currentJob || !jobCheckInWindowOpen(currentJob)) {
+      setError("Atvykimą galima patvirtinti tik nuo darbo pradžios iki darbo pabaigos.");
+      return;
+    }
     setEmployerCheckInTarget(worker);
     setEmployerCheckInTime(currentVilniusTimeRounded5());
     setError("");
