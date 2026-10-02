@@ -25860,6 +25860,332 @@ function App() {
   );
 }
 
+const mobileResponsiveFixStyles = `
+  @media (max-width: 620px) {
+    html, body, #root {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .ed-page {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .ed-topbar {
+      height: auto !important;
+      min-height: 72px;
+    }
+
+    .ed-topbar-inner {
+      width: calc(100% - 24px) !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+      padding: 10px 0 !important;
+    }
+
+    .ed-topbar-inner > .brand {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex: 0 1 auto !important;
+    }
+
+    .ed-topbar-inner > .brand img {
+      width: auto !important;
+      height: auto !important;
+      max-width: min(210px, 58vw) !important;
+      max-height: 42px !important;
+    }
+
+    .ed-topbar-inner > div:last-child {
+      display: flex !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex-wrap: wrap !important;
+      justify-content: flex-start !important;
+      gap: 8px !important;
+    }
+
+    .ed-topbar-inner > div:last-child > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .ed-topbar-inner > div:last-child .btn,
+    .ed-topbar-inner > div:last-child .ed-plan-badge {
+      flex: 1 1 110px !important;
+      width: auto !important;
+      min-height: 42px;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+    }
+
+    .ed-shell {
+      width: calc(100% - 24px) !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      overflow-x: hidden;
+    }
+
+    .ed-shell > *,
+    .ed-heading,
+    .ed-heading > *,
+    .ed-card,
+    .ed-stats-section,
+    .ed-results,
+    .ed-jobs,
+    .ed-job,
+    .ed-current-job-overview {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .ed-heading h1 {
+      font-size: 28px !important;
+      overflow-wrap: anywhere;
+    }
+
+    .ed-saved-overlay {
+      padding: 10px !important;
+      overflow-x: hidden !important;
+    }
+
+    .ed-saved-modal {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      padding: 17px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      border-radius: 16px !important;
+      margin: 0 !important;
+    }
+
+    .ed-saved-head {
+      gap: 10px !important;
+    }
+
+    .ed-saved-head > div,
+    .ed-saved-row,
+    .ed-saved-row > *,
+    .ed-saved-main,
+    .ed-saved-main > *,
+    .ed-saved-meta,
+    .ed-saved-actions {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .ed-saved-head h2 {
+      font-size: 21px !important;
+      line-height: 1.22 !important;
+      overflow-wrap: anywhere;
+    }
+
+    .ed-saved-head p,
+    .ed-saved-main b,
+    .ed-saved-main span,
+    .ed-saved-meta b,
+    .ed-saved-meta span {
+      overflow-wrap: anywhere;
+    }
+
+    .ed-saved-main {
+      flex-wrap: wrap !important;
+      align-items: flex-start !important;
+    }
+
+    .ed-saved-main > div:last-child {
+      flex: 1 1 150px;
+    }
+
+    .rs-modal-overlay {
+      padding: 10px !important;
+      overflow-x: hidden !important;
+    }
+
+    .rs-modal-card,
+    .worker-profile-modal {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      overflow-x: hidden !important;
+    }
+
+    .rs-modal-head,
+    .rs-modal-head > div,
+    .rs-messages,
+    .rs-message,
+    .rs-msg-form {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .rs-modal-head h2,
+    .rs-modal-head p,
+    .rs-message,
+    .rs-message b,
+    .rs-message p {
+      overflow-wrap: anywhere;
+    }
+
+    .rs-message {
+      max-width: 92% !important;
+    }
+
+    .rs-msg-form {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .rs-msg-form textarea,
+    .rs-msg-form button {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .lt-chat-overlay {
+      padding: 10px !important;
+      overflow-x: hidden !important;
+    }
+
+    .lt-chat-card {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      overflow-x: hidden !important;
+    }
+
+    .lt-chat-head,
+    .lt-chat-head > div,
+    .lt-chat-body,
+    .lt-chat-message,
+    .lt-chat-message-head,
+    .lt-chat-message-sender,
+    .lt-chat-form {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .lt-chat-head h2,
+    .lt-chat-head p,
+    .lt-chat-message,
+    .lt-chat-message p {
+      overflow-wrap: anywhere;
+    }
+
+    .lt-chat-message {
+      width: auto !important;
+      max-width: 92% !important;
+    }
+
+    .lt-chat-message-head {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 4px !important;
+    }
+
+    .lt-chat-message-sender {
+      width: 100% !important;
+      flex-wrap: wrap !important;
+    }
+
+    .lt-chat-message-sender b {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .lt-chat-form {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .lt-chat-form textarea,
+    .lt-chat-form button {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .chat-conduct-inline [role="note"],
+    .chat-conduct-inline [role="note"] > span:last-child {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .lt-employment-overlay {
+      padding: 10px !important;
+      overflow-x: hidden !important;
+    }
+
+    .lt-employment-modal {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+    }
+
+    .lt-employment-modal .rs-modal-head,
+    .lt-employment-modal .rs-modal-head > div,
+    .lt-employed-table,
+    .lt-employed-row,
+    .lt-employed-row > *,
+    .lt-existing-actions,
+    .lt-employed-row .lt-existing-actions {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .lt-employment-modal .rs-modal-head h2,
+    .lt-employment-modal .rs-modal-head p,
+    .lt-employed-row b,
+    .lt-employed-meta {
+      overflow-wrap: anywhere;
+    }
+
+    .lt-employed-row {
+      grid-template-columns: minmax(0, 1fr) !important;
+      overflow: hidden !important;
+    }
+
+    .lt-employed-row .lt-existing-actions {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      width: 100% !important;
+      max-width: none !important;
+      justify-content: stretch !important;
+    }
+
+    .lt-employed-row .lt-existing-actions > button,
+    .lt-existing-actions > button {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+      box-sizing: border-box !important;
+    }
+  }
+`;
+
 applyBrandFavicon();
 
-createRoot(document.getElementById("root")).render(<><style>{unifiedCloseStyles}</style><App /></>);
+createRoot(document.getElementById("root")).render(<><style>{unifiedCloseStyles}</style><style>{mobileResponsiveFixStyles}</style><App /></>);
