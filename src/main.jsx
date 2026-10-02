@@ -2930,6 +2930,11 @@ function jobHasEnded(job) {
   return end ? new Date() >= end : false;
 }
 
+function jobHasStarted(job) {
+  const start = jobStartMoment(job);
+  return start ? new Date() >= start : false;
+}
+
 function jobCheckInWindowOpen(job) {
   if (!job?.start_time) return false;
   const start = jobStartMoment(job);
@@ -13047,11 +13052,42 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, [user.id]);
 
   useEffect(() => {
+    const cleanCity = String(form.city || "").trim();
+    const cleanAddress = String(form.address || "").trim();
+
+    const selectedAddressMatches =
+      selectedJobAddress?.label === cleanAddress &&
+      Number.isFinite(Number(selectedJobAddress?.latitude)) &&
+      Number.isFinite(Number(selectedJobAddress?.longitude));
+
+    const currentAddressMatches =
+      Boolean(editingJobId) &&
+      currentJob?.id === editingJobId &&
+      cleanCity === String(currentJob?.city || "").trim() &&
+      cleanAddress === String(currentJob?.address_text || "").trim() &&
+      Number.isFinite(Number(currentJob?.location_latitude)) &&
+      Number.isFinite(Number(currentJob?.location_longitude));
+
+    const previewLatitude = selectedAddressMatches
+      ? Number(selectedJobAddress.latitude)
+      : currentAddressMatches
+      ? Number(currentJob.location_latitude)
+      : null;
+    const previewLongitude = selectedAddressMatches
+      ? Number(selectedJobAddress.longitude)
+      : currentAddressMatches
+      ? Number(currentJob.location_longitude)
+      : null;
+
     if (
       !showJobForm ||
       !company?.id ||
-      !String(form.city || "").trim() ||
-      !form.workDate
+      !cleanCity ||
+      !form.workDate ||
+      !form.startTime ||
+      !form.endTime ||
+      !Number.isFinite(previewLatitude) ||
+      !Number.isFinite(previewLongitude)
     ) {
       setCityWorkerSignal(null);
       setCityWorkerSignalLoading(false);
@@ -13062,12 +13098,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const timer = window.setTimeout(async () => {
       setCityWorkerSignalLoading(true);
 
-      const result = await supabase.rpc("get_employer_city_worker_signal_v2", {
+      const result = await supabase.rpc("get_employer_job_worker_signal_v3", {
         p_company_id: company.id,
-        p_city: String(form.city || "").trim(),
+        p_city: cleanCity,
         p_work_date: form.workDate,
         p_start_time: form.startTime || null,
         p_end_time: form.endTime || null,
+        p_location_latitude: previewLatitude,
+        p_location_longitude: previewLongitude,
       });
 
       if (cancelled) return;
@@ -13102,9 +13140,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     showJobForm,
     company?.id,
     form.city,
+    form.address,
     form.workDate,
     form.startTime,
     form.endTime,
+    editingJobId,
+    currentJob?.id,
+    currentJob?.city,
+    currentJob?.address_text,
+    currentJob?.location_latitude,
+    currentJob?.location_longitude,
+    selectedJobAddress?.label,
+    selectedJobAddress?.latitude,
+    selectedJobAddress?.longitude,
     planSummary?.plan_key,
   ]);
 
@@ -16516,6 +16564,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setNotice("");
 
     try {
+      if (jobHasStarted(currentJob)) {
+        throw new Error("Šis darbas jau prasidėjo. Naujo kvietimo siųsti nebegalima.");
+      }
+
       if (
         currentJob.status !== "open" ||
         Number(currentJob.confirmedCount || 0) >= Number(currentJob.workers_needed || 0)
@@ -16605,6 +16657,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const currentJobWorkerSearchOpen = Boolean(
     currentJob?.id &&
       currentJob.status === "open" &&
+      !jobHasStarted(currentJob) &&
       Number(currentJob.confirmedCount || 0) <
         Number(currentJob.workers_needed || 0)
   );
@@ -16673,6 +16726,46 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setWorkerSource("available");
   }, [currentJob?.id, currentJobWorkerSearchOpen]);
 
+  useEffect(() => {
+    if (
+      !currentJob?.id ||
+      currentJob.status !== "open" ||
+      Number(currentJob.confirmedCount || 0) > 0
+    ) {
+      return;
+    }
+
+    const start = jobStartMoment(currentJob);
+    if (!start || Number.isNaN(start.getTime())) return;
+
+    const closeExpiredEmptyJob = () => {
+      setCurrentJob((existing) =>
+        existing?.id === currentJob.id ? null : existing
+      );
+      setMatches([]);
+      setInvitedIds([]);
+      setInvitationStatuses({});
+      setInvitationByWorker({});
+      if (company?.id) reloadJobs(company.id);
+    };
+
+    const delay = start.getTime() - Date.now();
+    if (delay <= 0) {
+      closeExpiredEmptyJob();
+      return;
+    }
+
+    const timer = window.setTimeout(closeExpiredEmptyJob, delay + 250);
+    return () => window.clearTimeout(timer);
+  }, [
+    currentJob?.id,
+    currentJob?.status,
+    currentJob?.confirmedCount,
+    currentJob?.work_date,
+    currentJob?.start_time,
+    company?.id,
+  ]);
+
   const myEmployerJobs = jobs.filter((job) => {
     const responsibleUserId = job.responsible_user_id || null;
 
@@ -16686,9 +16779,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const visibleJobs =
     jobScope === "all" && canSeeAllCompanyJobs ? jobs : myEmployerJobs;
 
-  const activeVisibleJobs = visibleJobs.filter(
-    (job) => !["completed", "cancelled"].includes(job.status)
-  );
+  const activeVisibleJobs = visibleJobs.filter((job) => {
+    if (["completed", "cancelled"].includes(job.status)) return false;
+
+    const startedEmptyJob =
+      ["draft", "open"].includes(job.status) &&
+      Number(job.confirmedCount || 0) === 0 &&
+      jobHasStarted(job);
+
+    return !startedEmptyJob;
+  });
 
   const employerJobHistory = visibleJobs.filter((job) =>
     ["completed", "cancelled"].includes(job.status)
@@ -17983,8 +18083,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {cityWorkerSignalLoading
                         ? "Skaičiuojama..."
                         : cityWorkerSignal
-                        ? `${cityWorkerSignal.availableWorkers} tinkamų pagal dieną`
-                        : "Pasiūla tikrinama"}
+                        ? `${cityWorkerSignal.availableWorkers} tinkamų pagal vietą ir laiką`
+                        : selectedJobAddress
+                        ? "Pasiūla tikrinama"
+                        : "Pasirinkite adresą"}
                     </span>
 
                     {planSummary?.plan_key === "business_pro" &&
