@@ -5826,9 +5826,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
 
     try {
-      const activityResult = await supabase.rpc("worker_touch_activity");
-      if (activityResult.error) throw activityResult.error;
-
       const start = days[0].iso;
       const end = days[days.length - 1].iso;
 
@@ -5995,17 +5992,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )
       );
 
-      await Promise.all([
+      setLoading(false);
+
+      void Promise.allSettled([
+        supabase.rpc("worker_touch_activity"),
         loadInvitations(),
         loadWorkerStats(),
-        loadRecentEmployerRatings(),
+        loadRecentEmployerRatings({ background: true }),
         loadEmployerReviewOpportunities(),
         loadLongTermOffers(),
         loadLongTermEndNotice(),
       ]);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti profilio.");
-    } finally {
       setLoading(false);
     }
   }
@@ -13942,43 +13941,29 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         skillsResult,
         jobsResult,
         planResult,
-        companyAwardsResult,
-        activeWorkerAwardsResult,
       ] = await Promise.all([
-          supabase
-            .from("companies")
-            .select(
-              "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
-            )
-            .eq("id", companyId)
-            .single(),
-          supabase
-            .from("user_private")
-            .select("phone")
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("skills")
-            .select("id, name")
-            .eq("is_active", true)
-            .order("name"),
-          loadAllCompanyJobs(companyId),
-          supabase.rpc("get_company_plan_summary", {
-            p_company_id: companyId,
-          }),
-          supabase
-            .from("monthly_awards")
-            .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
-            .eq("recipient_type", "company")
-            .eq("recipient_id", companyId)
-            .order("award_month", { ascending: false })
-            .limit(120),
-          supabase
-            .from("monthly_awards")
-            .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
-            .eq("recipient_type", "worker")
-            .eq("award_month", monthlyAwardPreviousMonthISO()),
-        ]);
+        supabase
+          .from("companies")
+          .select(
+            "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+          )
+          .eq("id", companyId)
+          .single(),
+        supabase
+          .from("user_private")
+          .select("phone")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("skills")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name"),
+        loadAllCompanyJobs(companyId),
+        supabase.rpc("get_company_plan_summary", {
+          p_company_id: companyId,
+        }),
+      ]);
 
       const failed = [
         companyResult,
@@ -13986,30 +13971,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         skillsResult,
         jobsResult,
         planResult,
-        companyAwardsResult,
-        activeWorkerAwardsResult,
       ].find((result) => result.error);
       if (failed?.error) throw failed.error;
 
+      const loadedPlan = planResult.data?.[0] || null;
+
       setCompany(companyResult.data);
-      setCompanyMonthlyAwards(companyAwardsResult.data || []);
-      const nextWorkerAwardsById = {};
-      for (const award of activeWorkerAwardsResult.data || []) {
-        if (!nextWorkerAwardsById[award.recipient_id]) {
-          nextWorkerAwardsById[award.recipient_id] = [];
-        }
-        nextWorkerAwardsById[award.recipient_id].push(award);
-      }
-      setWorkerAwardsById(nextWorkerAwardsById);
-      const loadedBilling = await loadCompanyBillingStatus(companyId);
-      setPlanBillingCycle(
-        loadedBilling?.billing_interval === "yearly"
-          ? "yearly"
-          : preferredPlanKey !== "basic" &&
-            user?.user_metadata?.preferred_billing_interval === "yearly"
-          ? "yearly"
-          : "monthly"
-      );
       setCompanyForm({
         name: companyResult.data?.name || "",
         companyCode: companyResult.data?.company_code || "",
@@ -14021,15 +13988,58 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setCompanyAvatarFile(null);
       setCompanyAvatarPreview("");
       setCompanyAvatarMarkedForRemoval(false);
-      setJobs(await addConfirmedCounts(jobsResult.data || []));
+      setJobs(jobsResult.data || []);
       setSkills(skillsResult.data || []);
-      const loadedPlan = planResult.data?.[0] || null;
       setPlanSummary(loadedPlan);
+      setForm((current) => ({
+        ...current,
+        city: companyResult.data?.city || current.city,
+      }));
 
-      await Promise.all([
+      setLoading(false);
+
+      const backgroundTasks = [
+        addConfirmedCounts(jobsResult.data || []).then((rows) => setJobs(rows)),
+        loadCompanyBillingStatus(companyId).then((loadedBilling) => {
+          setPlanBillingCycle(
+            loadedBilling?.billing_interval === "yearly"
+              ? "yearly"
+              : preferredPlanKey !== "basic" &&
+                user?.user_metadata?.preferred_billing_interval === "yearly"
+              ? "yearly"
+              : "monthly"
+          );
+        }),
+        supabase
+          .from("monthly_awards")
+          .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
+          .eq("recipient_type", "company")
+          .eq("recipient_id", companyId)
+          .order("award_month", { ascending: false })
+          .limit(120)
+          .then(({ data, error }) => {
+            if (error) throw error;
+            setCompanyMonthlyAwards(data || []);
+          }),
+        supabase
+          .from("monthly_awards")
+          .select("id, award_month, recipient_type, recipient_id, award_type, metric_value, metric_count, metric_detail, created_at")
+          .eq("recipient_type", "worker")
+          .eq("award_month", monthlyAwardPreviousMonthISO())
+          .then(({ data, error }) => {
+            if (error) throw error;
+            const nextWorkerAwardsById = {};
+            for (const award of data || []) {
+              if (!nextWorkerAwardsById[award.recipient_id]) {
+                nextWorkerAwardsById[award.recipient_id] = [];
+              }
+              nextWorkerAwardsById[award.recipient_id].push(award);
+            }
+            setWorkerAwardsById(nextWorkerAwardsById);
+          }),
         loadPendingPlanChange(companyId),
         loadEmployerNotifications(),
-        loadEmployerStats(companyId, loadedMemberRole),
+        loadEmployerStats(companyId, loadedMemberRole, loadedPlan),
         loadCompanyWorkerReviews(companyId),
         loadedPlan?.can_saved_workers
           ? loadSavedWorkers(companyId, loadedPlan)
@@ -14043,15 +14053,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         loadedMemberRole === "owner"
           ? loadCompanyLongTermUnreadCounts(companyId, loadedMemberRole)
           : Promise.resolve(),
-      ]);
+      ];
 
-      setForm((current) => ({
-        ...current,
-        city: companyResult.data?.city || current.city,
-      }));
+      void Promise.allSettled(backgroundTasks);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti darbdavio paskyros.");
-    } finally {
       setLoading(false);
     }
   }
@@ -14240,7 +14246,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   async function loadEmployerStats(
     companyId = company?.id,
-    memberRole = companyMemberRole
+    memberRole = companyMemberRole,
+    plan = planSummary
   ) {
     if (!companyId) return;
 
@@ -14273,7 +14280,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     const allJobRows = jobsResult.data || [];
     const jobRows =
-      planSummary?.can_team_management && memberRole === "recruiter"
+      plan?.can_team_management && memberRole === "recruiter"
         ? allJobRows.filter(
             (job) =>
               job.created_by === user.id ||
