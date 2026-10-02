@@ -7708,9 +7708,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   if (loading) {
     return (
-      <div className="wd-loading">
+      <div className="wd-loading" aria-label="Kraunama">
         <div className="wd-spinner" />
-        <b>Kraunamas darbuotojo profilis...</b>
       </div>
     );
   }
@@ -13937,8 +13936,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const [
         companyResult,
-        privateResult,
-        skillsResult,
         jobsResult,
         planResult,
       ] = await Promise.all([
@@ -13949,16 +13946,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )
           .eq("id", companyId)
           .single(),
-        supabase
-          .from("user_private")
-          .select("phone")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("skills")
-          .select("id, name")
-          .eq("is_active", true)
-          .order("name"),
         loadAllCompanyJobs(companyId),
         supabase.rpc("get_company_plan_summary", {
           p_company_id: companyId,
@@ -13967,8 +13954,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       const failed = [
         companyResult,
-        privateResult,
-        skillsResult,
         jobsResult,
         planResult,
       ].find((result) => result.error);
@@ -13977,19 +13962,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const loadedPlan = planResult.data?.[0] || null;
 
       setCompany(companyResult.data);
-      setCompanyForm({
+      setCompanyForm((current) => ({
+        ...current,
         name: companyResult.data?.name || "",
         companyCode: companyResult.data?.company_code || "",
         city: companyResult.data?.city || "",
-        phone: privateResult.data?.phone || "",
         description: companyResult.data?.description || "",
         avatarPath: companyResult.data?.avatar_path || "",
-      });
+      }));
       setCompanyAvatarFile(null);
       setCompanyAvatarPreview("");
       setCompanyAvatarMarkedForRemoval(false);
       setJobs(jobsResult.data || []);
-      setSkills(skillsResult.data || []);
       setPlanSummary(loadedPlan);
       setForm((current) => ({
         ...current,
@@ -13999,6 +13983,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       setLoading(false);
 
       const backgroundTasks = [
+        supabase
+          .from("user_private")
+          .select("phone")
+          .eq("user_id", user.id)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) throw error;
+            setCompanyForm((current) => ({
+              ...current,
+              phone: data?.phone || "",
+            }));
+          }),
+        supabase
+          .from("skills")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name")
+          .then(({ data, error }) => {
+            if (error) throw error;
+            setSkills(data || []);
+          }),
         addConfirmedCounts(jobsResult.data || []).then((rows) => setJobs(rows)),
         loadCompanyBillingStatus(companyId).then((loadedBilling) => {
           setPlanBillingCycle(
@@ -16380,9 +16385,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   if (loading) {
     return (
-      <div className="ed-loading">
+      <div className="ed-loading" aria-label="Kraunama">
         <div className="ed-spinner" />
-        <b>Kraunamas darbdavio darbo skydelis...</b>
       </div>
     );
   }
