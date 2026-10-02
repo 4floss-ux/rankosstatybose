@@ -4384,9 +4384,6 @@ function WorkerProfileModal({
 
         <div className="rs-profile-section">
           <b>Paskutiniai darbdavių įvertinimai</b>
-          <p style={{ margin: "5px 0 0", color: "#7a8996", fontSize: 12 }}>
-            Rodomi iki 3 naujausių darbdavių įvertinimų.
-          </p>
 
           {ratingReviewsLoading ? (
             <div style={{ marginTop: 10, color: "#6c7a88" }}>
@@ -8511,11 +8508,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           >
             <div>
               <h2 style={{ marginBottom: 6 }}>Įdarbinimo pasiūlymai</h2>
-              <p className="wd-card-sub" style={{ marginBottom: 0 }}>
-                Čia rodomi įmonių ilgalaikio darbo pasiūlymai ir darbo sutartys.
-                Įdarbinimas aktyvuojamas tik tada, kai jūs įkeliate pasirašytą sutartį,
-                o darbdavys patvirtina, kad ją gavo.
-              </p>
             </div>
             <span className="wd-workday-status orange" style={{ marginTop: 0 }}>
               Nauji pasiūlymai · {pendingLongTermOffers.length}
@@ -8623,9 +8615,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         <div className="wd-form">
           <section className="wd-card" id="worker-invitations">
             <h2>Darbo kvietimai</h2>
-            <p className="wd-card-sub">
-              Čia matote darbdavių pasiūlymus. Atlygis visada rodomas prieš priimant darbą.
-            </p>
 
             {invitations.length ? (
               <>
@@ -8851,10 +8840,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           <section className="wd-card" id="worker-workdays">
             <h2>Mano darbai</h2>
-            <p className="wd-card-sub">
-              Čia rodomi tik laukiami, vykstantys arba dar neuždaryti darbai.
-              Užbaigti darbai automatiškai perkeliami į „Darbų istoriją“.
-            </p>
 
             {activeWorkerWorkdays.length ? (
               <>
@@ -9361,10 +9346,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           <section className="wd-card" id="worker-job-history">
             <h2>Darbų istorija</h2>
-            <p className="wd-card-sub">
-              Čia saugomi užbaigti ir atšaukti darbai. Užbaigus darbą privatus
-              susirašinėjimas ir darbo pokalbis uždaromi — lieka tik darbo informacija.
-            </p>
 
             {workerWorkHistory.length ? (
               <>
@@ -9927,6 +9908,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div
+              className="wd-job-info-actions"
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
@@ -17574,10 +17556,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     ? "Kviesti darbuotojus iš favoritų"
                     : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
                 </h2>
-                <p>
-                  Rodomi tik per paskutines 24 val. aktyvūs, savo grafiką
-                  patvirtinę ir šiam darbui tinkami darbuotojai.
-                </p>
 
                 <div className="ed-worker-source">
                   <button
@@ -26600,6 +26578,206 @@ const mobileResponsiveFixStyles = `
       white-space: normal !important;
       overflow-wrap: anywhere;
       box-sizing: border-box !important;
+    }
+  }
+
+  /* Final compact mobile polish: no squeezed headers, clipped text or uneven action buttons. */
+  @media (max-width: 620px) {
+    .worker-profile-modal .rs-modal-head {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      align-items: start !important;
+      gap: 10px !important;
+    }
+
+    .worker-profile-modal .rs-modal-head > div:first-child {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) !important;
+      align-items: center !important;
+      gap: 8px 12px !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .worker-profile-modal .rs-modal-head > div:first-child > div:first-child {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      width: 46px !important;
+      height: 46px !important;
+      flex-basis: 46px !important;
+    }
+
+    .worker-profile-modal .rs-modal-head > div:first-child > span[aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"] {
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      max-width: 100% !important;
+    }
+
+    .worker-profile-modal .rs-modal-head .monthly-award-hover,
+    .worker-profile-modal .rs-modal-head .monthly-award-hover > img {
+      width: 36px !important;
+      height: 36px !important;
+    }
+
+    .worker-profile-modal .rs-modal-head > div:first-child > div:last-child {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .worker-profile-modal .rs-modal-head h2 {
+      font-size: 20px !important;
+      line-height: 1.2 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .worker-profile-modal .eyebrow {
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .wd-kpi {
+      min-width: 0 !important;
+      padding: 14px 10px !important;
+    }
+
+    .wd-kpi > span,
+    .wd-kpi small,
+    .wd-kpi b {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .wd-kpi small {
+      line-height: 1.35 !important;
+    }
+
+    .wd-job-info-actions {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .wd-job-info-actions > button {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      min-height: 44px !important;
+      margin: 0 !important;
+      justify-content: center !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      text-align: center !important;
+      line-height: 1.2 !important;
+      box-sizing: border-box !important;
+    }
+
+    .ed-results-head {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .ed-results-head > div {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      text-align: left !important;
+    }
+
+    .ed-results-head h2,
+    .ed-results-head p {
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .ed-worker-source {
+      width: 100% !important;
+      max-width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      overflow: hidden !important;
+    }
+
+    .ed-worker-source button {
+      min-width: 0 !important;
+      width: 100% !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      line-height: 1.2 !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      align-items: start !important;
+      gap: 10px !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head > div:first-child {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) !important;
+      align-items: center !important;
+      gap: 8px 12px !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head > div:first-child > .wd-company-badge {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      width: 46px !important;
+      height: 46px !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head > div:first-child > span[aria-label="Šį mėnesį galiojantys mėnesio apdovanojimai"] {
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      max-width: 100% !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head .monthly-award-hover,
+    .lt-worker-offer-modal .rs-modal-head .monthly-award-hover > img {
+      width: 36px !important;
+      height: 36px !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head > div:first-child > div:last-child {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head h2,
+    .lt-worker-offer-modal .rs-modal-head .eyebrow,
+    .lt-worker-offer-modal .rs-modal-head > div:first-child > div:last-child > div {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head h2 {
+      font-size: 20px !important;
+      line-height: 1.2 !important;
     }
   }
 `;
