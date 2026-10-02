@@ -4,11 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#102438" />
-    <meta name="description" content="rankosstatybose.lt – statybų pagalbiniai tada, kai jų reikia." />
-    <title>rankosstatybose.lt</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <meta
+      name="description"
+      content="statybos24.lt – darbuotojų paieška ir statybų darbų organizavimas vienoje vietoje."
+    />
+    <title>statybos24.lt</title>
+
+    <!--
+      Sąmoningai nekrauname Google Fonts per renderį blokuojantį stylesheet.
+      Esamas CSS jau turi system-ui / Segoe UI fallback'us, todėl puslapis gali
+      pradėti pieštis iš karto, nelaukdamas fonts.googleapis.com / gstatic.com.
+    -->
+    <style>
+      /* Žemiau pirmo ekrano esančių blokų layout/paint atidedamas iki priartėjimo. */
+      #kaip,
+      #nauda,
+      #planai,
+      #duk,
+      .home-cta,
+      .home-footer {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 760px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
