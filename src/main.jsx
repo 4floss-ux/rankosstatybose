@@ -5131,6 +5131,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showWorkTimeLoginReminder, setShowWorkTimeLoginReminder] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
+  const [workerProfileEditorTarget, setWorkerProfileEditorTarget] = useState("profile");
   const workerProfileEditorRef = useRef(null);
 
   useEffect(() => {
@@ -5216,7 +5217,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setProfileSaved(false);
 
     const timer = window.setTimeout(() => {
-      const node = workerProfileEditorRef.current;
+      const node =
+        workerProfileEditorTarget === "availability"
+          ? document.getElementById("worker-availability-editor")
+          : workerProfileEditorRef.current;
       if (!node) return;
 
       const top =
@@ -5226,10 +5230,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         top: Math.max(0, top),
         behavior: "smooth",
       });
-    }, 60);
+    }, 80);
 
     return () => window.clearTimeout(timer);
-  }, [showProfileEditor]);
+  }, [showProfileEditor, workerProfileEditorTarget]);
   const [needsAvailabilityConfirm, setNeedsAvailabilityConfirm] = useState(false);
   const [confirmingAvailability, setConfirmingAvailability] = useState(false);
   const [workerAttendanceTarget, setWorkerAttendanceTarget] = useState(null);
@@ -7452,22 +7456,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     openWorkdayDetails(nextConfirmedWorkday);
   }
 
+  function openWorkerProfileEditor(target = "profile") {
+    setWorkerProfileEditorTarget(target);
+    setShowProfileEditor(true);
+  }
+
   function openWorkerWorkTimeEditor() {
     setShowWorkTimeLoginReminder(false);
-    setShowProfileEditor(true);
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        document
-          .getElementById("worker-availability-editor")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
+    openWorkerProfileEditor("availability");
   }
 
   function openWorkerDashboardTarget(target) {
     if (target === "profile") {
-      setShowProfileEditor(true);
+      openWorkerProfileEditor("profile");
       return;
     }
 
@@ -7475,7 +7476,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (needsAvailabilityConfirm) {
         confirmCurrentAvailability();
       } else {
-        setShowProfileEditor(true);
+        openWorkerProfileEditor("availability");
       }
       return;
     }
@@ -7675,8 +7676,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="wd-secondary" type="button" onClick={() => setShowProfileEditor(true)}>Profilis</button>
-                  <button className="wd-primary" type="button" onClick={() => setShowProfileEditor(true)}>Nustatyti grafiką</button>
+                  <button className="wd-secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
+                  <button className="wd-primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
                 </div>
               </div>
               <div className="wd-onboarding-steps">
@@ -7763,7 +7764,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <button
               className="wd-edit-profile"
               type="button"
-              onClick={() => setShowProfileEditor((current) => !current)}
+              onClick={() => {
+                if (showProfileEditor) {
+                  setShowProfileEditor(false);
+                } else {
+                  openWorkerProfileEditor("profile");
+                }
+              }}
             >
               {showProfileEditor
                 ? "Uždaryti redagavimą"
@@ -8341,7 +8348,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 className="wd-profile-editor-cancel"
                 type="button"
                 disabled={confirmingAvailability}
-                onClick={() => setShowProfileEditor(true)}
+                onClick={() => openWorkerProfileEditor("availability")}
               >
                 Keisti grafiką
               </button>
@@ -19609,6 +19616,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     return (
                       <div
                         key={`${jobInfoTarget.id}-${worker.bookingId}`}
+                        className="ed-job-info-worker-row"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "auto auto minmax(0,1fr) auto",
@@ -19644,18 +19652,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             worker.initials
                           )}
                         </div>
-                        <MonthlyAwardMiniList
-                          awards={workerAwardsById[worker.id] || []}
-                          size={38}
-                        />
-                        <div style={{ minWidth: 0 }}>
+                        <div className="ed-job-info-worker-awards">
+                          <MonthlyAwardMiniList
+                            awards={workerAwardsById[worker.id] || []}
+                            size={38}
+                          />
+                        </div>
+                        <div className="ed-job-info-worker-copy" style={{ minWidth: 0 }}>
                           <b style={{ display: "block" }}>{worker.name}</b>
                           <span style={{ display: "block", marginTop: 2, color: "#6c7a88", fontSize: 12 }}>
                             {worker.city || "Miestas nenurodytas"}
                           </span>
                         </div>
                         <span
-                          className={`ed-attendance-badge ${
+                          className={`ed-attendance-badge ed-job-info-worker-status ${
                             jobInfoTarget.status === "cancelled"
                               ? "red"
                               : worker.attendance?.final_outcome === "no_show" ||
@@ -26393,6 +26403,133 @@ const mobileResponsiveFixStyles = `
       flex: 1 1 145px !important;
       white-space: normal !important;
       overflow-wrap: anywhere !important;
+    }
+
+    /* Public header stays inside the phone viewport. */
+    .home-nav {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      align-items: center !important;
+      gap: 8px !important;
+    }
+
+    .home-brand {
+      min-width: 0 !important;
+      max-width: min(130px, 36vw) !important;
+      overflow: hidden !important;
+    }
+
+    .home-brand img {
+      width: auto !important;
+      height: auto !important;
+      max-width: 100% !important;
+      max-height: 40px !important;
+    }
+
+    .home-actions {
+      min-width: 0 !important;
+      margin-left: 0 !important;
+      gap: 6px !important;
+    }
+
+    .home-login,
+    .home-actions > .home-btn {
+      min-width: 0 !important;
+      padding: 8px 8px !important;
+      font-size: 11px !important;
+      white-space: nowrap !important;
+    }
+
+    /* Billing overview is 2x2 on phones instead of four squeezed columns. */
+    .ed-plan-overlay {
+      padding: 10px !important;
+      overflow-x: hidden !important;
+    }
+
+    .ed-plan-modal {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: 0 !important;
+      padding: 16px !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
+    }
+
+    .ed-billing-overview {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .ed-billing-card {
+      min-width: 0 !important;
+      padding: 11px !important;
+    }
+
+    .ed-billing-card b,
+    .ed-billing-card small,
+    .ed-billing-card span {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    /* Job-info team row: awards/status get their own rows on mobile. */
+    .ed-job-info-modal {
+      padding: 0 !important;
+    }
+
+    .ed-job-info-scroll {
+      padding: 16px !important;
+      overflow-x: hidden !important;
+    }
+
+    .ed-job-info-worker-row {
+      grid-template-columns: 44px minmax(0, 1fr) !important;
+      gap: 9px 11px !important;
+      align-items: center !important;
+      overflow: hidden !important;
+    }
+
+    .ed-job-info-worker-copy {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .ed-job-info-worker-copy b,
+    .ed-job-info-worker-copy span {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .ed-job-info-worker-awards {
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: flex-start !important;
+    }
+
+    .ed-job-info-worker-awards .monthly-award-hover,
+    .ed-job-info-worker-awards .monthly-award-hover > img {
+      width: 34px !important;
+      height: 34px !important;
+    }
+
+    .ed-job-info-worker-status {
+      grid-column: 1 / -1 !important;
+      grid-row: 3 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      justify-content: center !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      border-radius: 10px !important;
+      padding: 8px 10px !important;
+      box-sizing: border-box !important;
     }
 
     /* Notes inside chats/modals must wrap on narrow screens. */
