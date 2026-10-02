@@ -73,7 +73,7 @@ const FAVICON_SRC = "/favicon.png";
 function applyBrandFavicon() {
   if (typeof document === "undefined") return;
 
-  document.title = BRAND_DOMAIN;
+  document.title = "Statybos24.lt - rankos tavo darbuose";
 
   let favicon = document.querySelector('link[rel="icon"]');
   if (!favicon) {
@@ -2347,7 +2347,7 @@ function TeamInvitePage({
           padding: 28,
         }}
       >
-        <BrandLogo href="/" className="brand" height={42} style={{ marginBottom: 26 }} />
+        <BrandLogo href="/" className="brand" height={46} style={{ marginBottom: 26 }} />
 
         <div className="eyebrow">ĮMONĖS KOMANDOS KVIETIMAS</div>
 
@@ -2494,7 +2494,7 @@ function Header({ onLogin, onEmployerSignup, user, onLogout }) {
   return (
     <header className="header">
       <div className="container nav">
-        <BrandLogo className="brand" href="#" height={42} />
+        <BrandLogo className="brand" href="#" height={46} />
 
         <nav className="navlinks">
           <a href="#kaip">Kaip tai veikia</a>
@@ -7836,7 +7836,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <header className="wd-topbar">
         <div className="wd-topbar-inner">
-          <BrandLogo className="brand" href="#" height={42} />
+          <BrandLogo className="brand" href="#" height={46} />
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             {onAdminReturn && (
               <button
@@ -16671,7 +16671,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <header className="ed-topbar">
         <div className="ed-topbar-inner">
-          <BrandLogo className="brand" href="#" height={42} />
+          <BrandLogo className="brand" href="#" height={46} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {company && planSummary && (
@@ -23581,7 +23581,7 @@ function AdminDashboard({
 
       <header className="admin-topbar">
         <div className="admin-topbar-inner">
-          <BrandLogo className="brand" href="#" height={42} />
+          <BrandLogo className="brand" href="#" height={46} />
 
           <div className="admin-top-actions">
             <button
@@ -25754,7 +25754,7 @@ function PublicLandingPage({
 
       <header className="home-header">
         <div className="home-wrap home-nav">
-          <BrandLogo className="home-brand" href="#pradzia" height={52} />
+          <BrandLogo className="home-brand" href="#pradzia" height={60} />
           <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
             <a href="#paslaugos">Paslaugos</a>
             <a href="#kam-skirta">Kam skirta</a>
@@ -25932,7 +25932,7 @@ function PublicLandingPage({
 
       <footer className="home-footer">
         <div className="home-wrap home-footer-inner">
-          <BrandLogo className="home-brand" href="#pradzia" height={38} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} />
+          <BrandLogo className="home-brand" href="#pradzia" height={42} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} />
           <div className="home-legal-links">
             <button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button>
             <button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>
