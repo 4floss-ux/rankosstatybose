@@ -6593,6 +6593,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 ?.latest_review_comment || "",
           };
         })
+        .filter((invitation) => {
+          const job = invitation.job;
+          if (!job || job.status !== "open") return false;
+          const startsAt = jobStartMoment(job);
+          return Boolean(startsAt && new Date() < startsAt);
+        })
     );
 
     setConfirmedJobs(
@@ -11047,13 +11053,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             }
           }}
         >
-          <div className="rs-modal-card">
+          <div className="rs-modal-card worker-accept-modal">
             <style>{`
               .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
               .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
               .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
               .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
+              .worker-accept-modal{width:min(620px,100%)!important;max-height:calc(100vh - 40px)!important;padding:0!important;overflow:hidden!important;border-radius:18px!important;box-sizing:border-box}
+              .worker-accept-modal-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:22px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}
+              .worker-accept-modal-scroll::-webkit-scrollbar{width:8px}.worker-accept-modal-scroll::-webkit-scrollbar-track{background:transparent}.worker-accept-modal-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
+              .worker-accept-modal *{box-sizing:border-box}
+              @media(max-width:620px){.rs-modal-overlay{padding:10px}.worker-accept-modal{max-height:calc(100vh - 20px)!important;border-radius:18px!important}.worker-accept-modal-scroll{max-height:calc(100vh - 20px);padding:18px}}
             `}</style>
+            <div className="worker-accept-modal-scroll">
             <div className="rs-modal-head">
               <div>
                 <div className="eyebrow">DARBO PATVIRTINIMAS</div>
@@ -11185,6 +11197,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   ? "Patvirtinama..."
                   : "Taip, įsipareigoju atvykti"}
               </button>
+            </div>
             </div>
           </div>
         </div>
