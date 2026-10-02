@@ -4252,7 +4252,6 @@ function WorkerProfileModal({
                 worker.initials
               )}
             </div>
-            <MonthlyAwardMiniList awards={monthlyAwards} size={50} />
             <div>
               <div className="eyebrow">DARBUOTOJO PROFILIS</div>
               <h2>{worker.name}</h2>
@@ -7984,7 +7983,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     initials || "D"
                   )}
                 </div>
-                <MonthlyAwardMiniList awards={monthlyAwards} size={76} />
 
                 <div className="wd-avatar-editor-copy">
                   <b>Profilio nuotrauka</b>
@@ -16550,7 +16548,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     .join("") || "Į"
                 )}
               </div>
-              <MonthlyAwardMiniList awards={companyMonthlyAwards} size={76} />
               <div className="ed-company-avatar-copy">
                 <b>Įmonės logotipas</b>
                 <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
@@ -18509,12 +18506,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         <section className="ed-card">
           <div>
             <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
-            <p className="ed-sub">
-              Čia rodomi užbaigti ir atšaukti
-              {planSummary?.can_team_management && jobScope === "all"
-                ? " įmonės"
-                : " tik jūsų atsakomybės"} darbai.
-            </p>
           </div>
 
           {employerJobHistory.length ? (
@@ -18524,7 +18515,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 const jobDashboardState = employerJobDashboardState(job);
 
                 return (
-                  <div className="ed-job" key={`history-${job.id}`}>
+                  <div className="ed-job ed-job-history" key={`history-${job.id}`}>
                     <b className="ed-job-date">{job.work_date}</b>
                     <div>
                       <div
@@ -26780,6 +26771,106 @@ const mobileResponsiveFixStyles = `
       line-height: 1.2 !important;
     }
   }
+
+  /* Compact employer history cards on phones. */
+  @media (max-width: 620px) {
+    .ed-jobs .ed-job.ed-job-history {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      gap: 6px 10px !important;
+      align-items: start !important;
+      padding: 11px 12px !important;
+      min-height: 0 !important;
+    }
+
+    .ed-job-history > .ed-job-date {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      justify-self: end !important;
+      align-self: start !important;
+      margin: 1px 0 0 !important;
+      color: #7a8996 !important;
+      font-size: 11px !important;
+      line-height: 1.25 !important;
+      font-weight: 750 !important;
+      white-space: nowrap !important;
+    }
+
+    .ed-job-history > div:nth-child(2) {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      min-width: 0 !important;
+      padding-right: 4px !important;
+    }
+
+    .ed-job-history > div:nth-child(2) > div:first-child b {
+      font-size: 15px !important;
+      line-height: 1.2 !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .ed-job-history > div:nth-child(2) > div:last-child {
+      margin-top: 2px !important;
+      color: #6c7a88 !important;
+      font-size: 11px !important;
+      line-height: 1.25 !important;
+    }
+
+    .ed-job-history > .ed-progress {
+      display: block !important;
+      grid-column: 1 !important;
+      grid-row: 2 !important;
+      align-self: center !important;
+      min-width: 0 !important;
+      color: #526374 !important;
+      font-size: 11px !important;
+      line-height: 1.3 !important;
+      font-weight: 750 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .ed-job-history > .ed-job-state-cell {
+      grid-column: 2 !important;
+      grid-row: 2 !important;
+      justify-self: end !important;
+      align-self: center !important;
+      min-width: 0 !important;
+      max-width: 150px !important;
+      text-align: right !important;
+    }
+
+    .ed-job-history .ed-job-state {
+      padding: 4px 7px !important;
+      font-size: 10px !important;
+      line-height: 1.2 !important;
+      white-space: normal !important;
+    }
+
+    .ed-job-history .ed-job-state-detail {
+      margin-top: 3px !important;
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .ed-job-history > .ed-job-actions {
+      grid-column: 1 / -1 !important;
+      grid-row: 3 !important;
+      margin-top: 3px !important;
+      gap: 6px !important;
+    }
+
+    .ed-job-history > .ed-job-actions button {
+      min-height: 38px !important;
+      padding: 7px 9px !important;
+      font-size: 11.5px !important;
+      line-height: 1.2 !important;
+      white-space: normal !important;
+    }
+  }
+
 `;
 
 applyBrandFavicon();
