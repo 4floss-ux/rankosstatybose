@@ -17391,7 +17391,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 aria-invalid={Boolean(jobFormErrors.description)}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Aprašykite darbus iki smulkmenų: ką reikės daryti, darbo sąlygas, įrankius, aprangą ir apsaugos priemones. Jei reikia konkrečių dokumentų, pažymėjimų, leidimų ar kvalifikacijos – būtinai juos aiškiai nurodykite čia."
+                placeholder="Pvz. Pagalbiniai mūro darbai. Įrankiai suteikiami, reikalinga darbo avalynė."
                 style={jobFormErrors.description ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
               />
               {jobFormErrors.description && (
