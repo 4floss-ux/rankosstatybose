@@ -7550,7 +7550,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .wd-skill.on{background:#102438;color:#fff;border-color:#102438}
-        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:#fff}.wd-invite.has-unread{border-left:4px solid #f08a28}.wd-invite.has-conflict{border-color:#efc7bb;background:#fffafa}
+        .wd-invites{display:grid;gap:12px}.wd-invite{border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:#fff;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}.wd-invite.is-pending{border-color:#f2c18f;background:linear-gradient(180deg,#fff7ee 0%,#fffdfb 42%,#fff 100%);box-shadow:inset 5px 0 0 #f08a28,0 8px 22px rgba(240,138,40,.08)}.wd-invite.is-pending .wd-invite-main h3{color:#9f5211}.wd-invite.has-unread{box-shadow:inset 5px 0 0 #f08a28,0 8px 22px rgba(240,138,40,.08)}.wd-invite.has-conflict{border-color:#efc7bb;background:#fffafa;box-shadow:inset 5px 0 0 #d96b4d}
         .wd-invite-main h3{margin:0 0 8px;font-size:18px}.wd-invite-meta{color:#6c7a88;font-size:14px;line-height:1.55}.wd-invite-company{font-weight:800;color:#102438}
         .wd-invite-summary{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;color:#6c7a88;font-size:13px}.wd-invite-summary b{color:#102438;font-size:14px}.wd-invite-summary span{position:relative}.wd-invite-summary span+span:before{content:"·";margin-right:14px;color:#a4afb8}
         .wd-pay{display:inline-block;margin-top:10px;background:#fff3e7;color:#b85f0e;border-radius:9px;padding:8px 10px;font-weight:800}
@@ -8655,6 +8655,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <div
                       className={[
                         "wd-invite",
+                        invitation.status === "pending" ? "is-pending" : "",
                         unreadPrivateMessages.length ? "has-unread" : "",
                         hasConflict ? "has-conflict" : "",
                       ]
