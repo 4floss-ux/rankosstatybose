@@ -2,7 +2,57 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/react";
 import "./styles.css";
+
+const SENTRY_DSN =
+  "https://eb5281a0e8cff473a77d220ecacb2a9c@o4512187961376768.ingest.de.sentry.io/4512187977760848";
+
+function sanitizeSentryUrl(value) {
+  if (!value) return value;
+  try {
+    const url = new URL(value, window.location.origin);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return undefined;
+  }
+}
+
+Sentry.init({
+  dsn: SENTRY_DSN,
+  enabled: import.meta.env.PROD,
+  environment: import.meta.env.PROD ? "production" : "development",
+  sendDefaultPii: false,
+  attachStacktrace: true,
+  maxBreadcrumbs: 30,
+  beforeBreadcrumb(breadcrumb) {
+    if (["console", "ui.click", "ui.input"].includes(breadcrumb?.category)) {
+      return null;
+    }
+
+    if (breadcrumb?.data?.url) {
+      breadcrumb.data.url = sanitizeSentryUrl(breadcrumb.data.url);
+    }
+
+    return breadcrumb;
+  },
+  beforeSend(event) {
+    event.user = undefined;
+
+    if (event.request) {
+      event.request = {
+        ...event.request,
+        url: sanitizeSentryUrl(event.request.url),
+        cookies: undefined,
+        headers: undefined,
+        data: undefined,
+        query_string: undefined,
+      };
+    }
+
+    return event;
+  },
+});
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -26869,6 +26919,62 @@ const mobileResponsiveFixStyles = `
 
 `;
 
+function FatalAppError() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+        background: "#f4f7f9",
+        color: "#102438",
+        fontFamily: "Inter, system-ui, sans-serif",
+      }}
+    >
+      <section
+        style={{
+          width: "min(100%, 520px)",
+          padding: 28,
+          borderRadius: 18,
+          background: "#fff",
+          border: "1px solid #e4ebf0",
+          textAlign: "center",
+        }}
+      >
+        <h1 style={{ margin: "0 0 10px", fontSize: 24 }}>Nepavyko parodyti puslapio</h1>
+        <p style={{ margin: "0 0 20px", color: "#607080", lineHeight: 1.55 }}>
+          Techninė klaida užregistruota. Perkraukite puslapį ir bandykite dar kartą.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{
+            minHeight: 44,
+            padding: "10px 18px",
+            border: 0,
+            borderRadius: 10,
+            background: "#f0b429",
+            color: "#102438",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          Perkrauti puslapį
+        </button>
+      </section>
+    </main>
+  );
+}
+
 applyBrandFavicon();
 
-createRoot(document.getElementById("root")).render(<><style>{unifiedCloseStyles}</style><style>{mobileResponsiveFixStyles}</style><App /></>);
+createRoot(document.getElementById("root")).render(
+  <Sentry.ErrorBoundary fallback={<FatalAppError />}>
+    <>
+      <style>{unifiedCloseStyles}</style>
+      <style>{mobileResponsiveFixStyles}</style>
+      <App />
+    </>
+  </Sentry.ErrorBoundary>
+);
