@@ -119,7 +119,21 @@ function BrandLogo({ href = "#", className = "brand", height = 38, style, imgSty
       href={href}
       onClick={(event) => {
         event.preventDefault();
-        window.location.reload();
+
+        if (href === "/") {
+          window.location.assign("/");
+          return;
+        }
+
+        const target =
+          href && href !== "#" ? document.querySelector(href) : null;
+
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }}
       style={{ display: "inline-flex", alignItems: "center", ...style }}
     >
