@@ -1253,6 +1253,176 @@ function CityAutocomplete({
   );
 }
 
+
+function AddressAutocomplete({
+  value,
+  city,
+  onChange,
+  onSelect,
+  selectedAddress = null,
+  inputRef = null,
+  className = "ed-input",
+  disabled = false,
+  placeholder = "Pradėkite rašyti gatvę ir namo numerį",
+  invalid = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searchError, setSearchError] = useState("");
+  const requestRef = useRef(0);
+  const cleanValue = String(value || "").trim();
+  const cleanCity = String(city || "").trim();
+
+  useEffect(() => {
+    if (disabled || cleanValue.length < 3 || !cleanCity) {
+      setSuggestions([]);
+      setLoading(false);
+      setSearchError("");
+      return;
+    }
+
+    if (selectedAddress?.label === cleanValue) {
+      setSuggestions([]);
+      setLoading(false);
+      setSearchError("");
+      return;
+    }
+
+    const requestId = ++requestRef.current;
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setSearchError("");
+
+      try {
+        const { data, error } = await supabase.functions.invoke("geocode-address", {
+          body: { mode: "suggest", query: cleanValue, city: cleanCity },
+        });
+
+        if (requestId !== requestRef.current) return;
+        if (error) throw error;
+
+        const rows = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        setSuggestions(
+          rows.filter((row) =>
+            row &&
+            String(row.label || "").trim() &&
+            Number.isFinite(Number(row.latitude)) &&
+            Number.isFinite(Number(row.longitude))
+          )
+        );
+      } catch (error) {
+        if (requestId !== requestRef.current) return;
+        console.error("Address suggestions failed", error);
+        setSuggestions([]);
+        setSearchError("Adreso paieška šiuo metu nepasiekiama.");
+      } finally {
+        if (requestId === requestRef.current) setLoading(false);
+      }
+    }, 320);
+
+    return () => window.clearTimeout(timer);
+  }, [cleanValue, cleanCity, disabled, selectedAddress?.label]);
+
+  return (
+    <div style={{ position: "relative", width: "100%", zIndex: open ? 8100 : "auto" }}>
+      <input
+        ref={inputRef}
+        className={className}
+        value={value}
+        disabled={disabled}
+        autoComplete="off"
+        required
+        aria-invalid={invalid}
+        placeholder={placeholder}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 180);
+        }}
+        style={invalid ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
+      />
+
+      {open && !disabled && cleanValue.length >= 3 && selectedAddress?.label !== cleanValue && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            zIndex: 8101,
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            maxHeight: 280,
+            overflowY: "auto",
+            background: "#fff",
+            border: "1px solid #dfe7ed",
+            borderRadius: 12,
+            boxShadow: "0 14px 35px rgba(16,36,56,.16)",
+            padding: 5,
+          }}
+        >
+          {loading ? (
+            <div style={{ padding: "10px 11px", color: "#6c7a88", fontSize: 13 }}>
+              Ieškoma adreso…
+            </div>
+          ) : suggestions.length ? (
+            suggestions.map((row) => (
+              <button
+                key={`${row.label}-${row.latitude}-${row.longitude}`}
+                type="button"
+                role="option"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onSelect({
+                    label: String(row.label || "").trim(),
+                    latitude: Number(row.latitude),
+                    longitude: Number(row.longitude),
+                  });
+                  setOpen(false);
+                  setSuggestions([]);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  border: 0,
+                  background: "#fff",
+                  color: "#102438",
+                  textAlign: "left",
+                  borderRadius: 8,
+                  padding: "10px 11px",
+                  font: "inherit",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                }}
+              >
+                {row.label}
+              </button>
+            ))
+          ) : (
+            <div style={{ padding: "10px 11px", color: searchError ? "#b4472a" : "#6c7a88", fontSize: 13 }}>
+              {searchError || "Adreso nerasta. Patikrinkite gatvę ir namo numerį."}
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedAddress?.label === cleanValue && (
+        <div style={{ marginTop: 5, color: "#16835a", fontSize: 11, fontWeight: 750 }}>
+          ✓ Adresas patvirtintas
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlatformTermsDialog({ open, onClose }) {
   if (!open) return null;
 
@@ -7976,8 +8146,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar-editor-copy b{display:block;margin-bottom:4px}.wd-avatar-editor-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}
         .wd-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.wd-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-avatar-upload input{display:none}.wd-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .wd-profile-editor-check{align-content:end;min-height:44px;padding-bottom:9px}
-        .wd-location-card{grid-column:1/-1;display:flex;align-items:center;gap:10px;min-height:36px}.wd-location-hint{color:#6c7a88;font-size:11px;line-height:1.4;font-weight:650;max-width:560px}
-        .wd-location-toggle{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 11px;border:1px solid #dbe4ea;border-radius:10px;background:#f5f7f9;color:#526374;font:inherit;font-size:12px;font-weight:850;line-height:1;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease,box-shadow .15s ease}.wd-location-toggle:hover:not(:disabled){border-color:#c6d2da;background:#eef3f6;color:#102438}.wd-location-toggle.on{border-color:#b9dfcd;background:#eaf7f1;color:#167a54;box-shadow:0 3px 10px rgba(22,122,84,.08)}.wd-location-toggle.on:hover:not(:disabled){border-color:#9fd2ba;background:#e2f3eb}.wd-location-toggle:active:not(:disabled){transform:translateY(1px)}.wd-location-toggle:disabled{opacity:.58;cursor:wait}.wd-location-toggle-dot{width:9px;height:9px;border-radius:999px;background:#9aa7b2;box-shadow:0 0 0 3px rgba(154,167,178,.13)}.wd-location-toggle.on .wd-location-toggle-dot{background:#1c9a67;box-shadow:0 0 0 3px rgba(28,154,103,.14)}.wd-location-toggle-state{font-size:10.5px;font-weight:800;opacity:.82}.wd-location-message.err{color:#c9362b;font-size:10.5px;font-weight:750;line-height:1.35}
+        .wd-location-card{grid-column:1/-1;display:flex;align-items:center;gap:12px;min-height:54px;padding:8px 10px;border:1px solid #e3eaee;border-radius:13px;background:#fbfcfd}.wd-location-copy{min-width:0;display:grid;gap:2px}.wd-location-copy-title{color:#263b4c;font-size:11.5px;line-height:1.3;font-weight:850}.wd-location-copy-text{color:#748390;font-size:10.5px;line-height:1.35;font-weight:600}.wd-location-toggle{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 11px;border:1px solid #dbe4ea;border-radius:10px;background:#f5f7f9;color:#526374;font:inherit;font-size:12px;font-weight:850;line-height:1;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease,box-shadow .15s ease}.wd-location-toggle:hover:not(:disabled){border-color:#c6d2da;background:#eef3f6;color:#102438}.wd-location-toggle.on{border-color:#b9dfcd;background:#eaf7f1;color:#167a54;box-shadow:0 3px 10px rgba(22,122,84,.08)}.wd-location-toggle.on:hover:not(:disabled){border-color:#9fd2ba;background:#e2f3eb}.wd-location-toggle:active:not(:disabled){transform:translateY(1px)}.wd-location-toggle:disabled{opacity:.58;cursor:wait}.wd-location-toggle-dot{width:9px;height:9px;border-radius:999px;background:#9aa7b2;box-shadow:0 0 0 3px rgba(154,167,178,.13)}.wd-location-toggle.on .wd-location-toggle-dot{background:#1c9a67;box-shadow:0 0 0 3px rgba(28,154,103,.14)}.wd-location-toggle-state{font-size:10.5px;font-weight:800;opacity:.82}.wd-location-message.err{margin-left:auto;color:#c9362b;font-size:10.5px;font-weight:750;line-height:1.35}
         .wd-profile-editor-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
         .wd-profile-editor-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
         .wd-profile-editor-cancel:disabled,.wd-profile-editor-close:disabled{opacity:.55;cursor:wait}
@@ -8020,7 +8189,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-heading-actions{width:100%}
           .wd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
           .wd-grid-2{grid-template-columns:1fr}
-          .wd-location-card{align-items:flex-start;flex-direction:column;gap:6px}
+          .wd-location-card{align-items:flex-start;flex-wrap:wrap;gap:8px}.wd-location-copy{flex:1 1 190px}
           .wd-day{grid-template-columns:1fr 1fr}
           .wd-day-date{grid-column:1/-1}.wd-day-occupied-note{grid-column:1/-1}
           .wd-availability-choice{grid-column:1/-1}
@@ -8524,8 +8693,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         : "Išjungta"}
                     </span>
                   </button>
-                  <span className="wd-location-hint">
-                    Įjunkite, kad darbai būtų atrenkami pagal tikslesnį atstumą. Tiksli jūsų vieta darbdaviui nerodoma.
+                  <span className="wd-location-copy">
+                    <span className="wd-location-copy-title">Raskite arčiau esančius darbus</span>
+                    <span className="wd-location-copy-text">Vietą naudojame tik atstumui apskaičiuoti — darbdaviui jos nerodome.</span>
                   </span>
                   {searchLocationError && (
                     <span className="wd-location-message err">{searchLocationError}</span>
@@ -12855,6 +13025,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobScopeAcknowledged, setJobScopeAcknowledged] = useState(false);
   const jobScopeAckRef = useRef(null);
   const addressInputRef = useRef(null);
+  const [selectedJobAddress, setSelectedJobAddress] = useState(null);
   const breakStartInputRef = useRef(null);
   const breakEndInputRef = useRef(null);
   const payAmountInputRef = useRef(null);
@@ -14512,6 +14683,12 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+    if (key === "address") {
+      setSelectedJobAddress(null);
+    }
+    if (key === "city") {
+      setSelectedJobAddress(null);
+    }
     if (key === "address" || key === "payAmount" || key === "description") {
       setJobFormErrors((current) => ({ ...current, [key]: "" }));
     }
@@ -15657,32 +15834,35 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       }
 
       const cleanAddress = form.address.trim();
-      const shouldGeocode =
-        !editingJobId ||
-        canonicalCity !== String(currentJob?.city || "").trim() ||
-        cleanAddress !== String(currentJob?.address_text || "").trim();
-      let geocodeFallback = false;
-      let geocodeFields = {};
+      const currentAddressHasCoordinates =
+        Number.isFinite(Number(currentJob?.location_latitude)) &&
+        Number.isFinite(Number(currentJob?.location_longitude));
+      const addressUnchanged =
+        Boolean(editingJobId) &&
+        canonicalCity === String(currentJob?.city || "").trim() &&
+        cleanAddress === String(currentJob?.address_text || "").trim();
+      const selectedAddressMatches =
+        selectedJobAddress?.label === cleanAddress &&
+        Number.isFinite(Number(selectedJobAddress?.latitude)) &&
+        Number.isFinite(Number(selectedJobAddress?.longitude));
 
-      if (shouldGeocode) {
-        try {
-          const geocode = await geocodeJobAddress(cleanAddress, canonicalCity);
-          geocodeFallback = !geocode.found;
-          geocodeFields = {
-            location_latitude: geocode.found ? geocode.latitude : null,
-            location_longitude: geocode.found ? geocode.longitude : null,
-            location_geocoded_at: geocode.found ? new Date().toISOString() : null,
-          };
-        } catch (geocodeError) {
-          console.error("Job geocoding failed", geocodeError);
-          geocodeFallback = true;
-          geocodeFields = {
-            location_latitude: null,
-            location_longitude: null,
-            location_geocoded_at: null,
-          };
-        }
+      if (!selectedAddressMatches && !(addressUnchanged && currentAddressHasCoordinates)) {
+        const message = "Pasirinkite tikslų adresą iš pasiūlymų sąrašo.";
+        setJobFormErrors((current) => ({ ...current, address: message }));
+        requestAnimationFrame(() => {
+          addressInputRef.current?.focus();
+          addressInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        return;
       }
+
+      const geocodeFields = selectedAddressMatches
+        ? {
+            location_latitude: Number(selectedJobAddress.latitude),
+            location_longitude: Number(selectedJobAddress.longitude),
+            location_geocoded_at: new Date().toISOString(),
+          }
+        : {};
 
       const payload = {
         city: canonicalCity,
@@ -15721,11 +15901,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         job = updateResult.data;
 
 
-        setNotice(
-          geocodeFallback
-            ? "Poreikis atnaujintas. Adreso vietos nepavyko nustatyti tiksliai, todėl atstumas skaičiuojamas pagal miestą."
-            : "Poreikis atnaujintas."
-        );
+        setNotice("Poreikis atnaujintas.");
       } else {
         const insertResult = await supabase
           .from("jobs")
@@ -15745,11 +15921,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         if (insertResult.error) throw insertResult.error;
         job = insertResult.data;
 
-        setNotice(
-          geocodeFallback
-            ? "Darbo pasiūlymas sukurtas. Adreso vietos nepavyko nustatyti tiksliai, todėl atstumas skaičiuojamas pagal miestą."
-            : "Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai."
-        );
+        setNotice("Darbo pasiūlymas sukurtas. Žemiau rodomi tinkami darbuotojai.");
       }
 
       setForm((current) => ({ ...current, city: canonicalCity }));
@@ -16119,6 +16291,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setEditingJobId(null);
     setEditingConfirmedCount(0);
     setJobFormErrors({});
+    setSelectedJobAddress(null);
     setJobScopeAcknowledged(false);
     setNotice("");
     setError("");
@@ -16154,6 +16327,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setShowJobForm(true);
     setEditingJobId(job.id);
     setEditingConfirmedCount(Number(job.confirmedCount || 0));
+    setSelectedJobAddress(
+      Number.isFinite(Number(job.location_latitude)) && Number.isFinite(Number(job.location_longitude))
+        ? {
+            label: String(job.address_text || "").trim(),
+            latitude: Number(job.location_latitude),
+            longitude: Number(job.location_longitude),
+          }
+        : null
+    );
     setNotice(
       job.confirmedCount > 0
         ? "Poreikis jau turi patvirtintų darbuotojų. Esminės sąlygos užrakintos."
@@ -17550,16 +17732,20 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <label className="ed-label ed-span-2">
               Atvykti adresu *
-              <input
-                ref={addressInputRef}
-                className="ed-input"
+              <AddressAutocomplete
+                inputRef={addressInputRef}
                 value={form.address}
-                required
-                aria-invalid={Boolean(jobFormErrors.address)}
+                city={form.city}
                 disabled={editingConfirmedCount > 0}
-                onChange={(e) => updateField("address", e.target.value)}
-                placeholder="Pvz. Žalgirio g. 10, Vilnius"
-                style={jobFormErrors.address ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
+                invalid={Boolean(jobFormErrors.address)}
+                selectedAddress={selectedJobAddress}
+                onChange={(value) => updateField("address", value)}
+                onSelect={(address) => {
+                  setSelectedJobAddress(address);
+                  setForm((current) => ({ ...current, address: address.label }));
+                  setJobFormErrors((current) => ({ ...current, address: "" }));
+                }}
+                placeholder="Pvz. Gedimino pr. 1"
               />
               {jobFormErrors.address && (
                 <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
@@ -17567,7 +17753,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </span>
               )}
               <span style={{ color: "#7a8996", fontSize: 11, fontWeight: 500, marginTop: 5 }}>
-                Darbo vietos adresas naudojamas atstumui apskaičiuoti. Geokodavimo duomenys: © OpenStreetMap contributors.
+                Pradėkite rašyti gatvę ir namo numerį, tada pasirinkite tikslų adresą iš sąrašo. Adresas naudojamas atstumui apskaičiuoti. © OpenStreetMap contributors.
               </span>
             </label>
 
