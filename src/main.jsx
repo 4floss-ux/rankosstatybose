@@ -25444,80 +25444,244 @@ function PublicLandingPage({
   const plans = EMPLOYER_PLANS;
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  const serviceItems = [
+    {
+      icon: "⌕",
+      title: "Darbuotojų paieška",
+      text: "Ieškokite žmonių pagal miestą, datą, laiką ir realų prieinamumą.",
+    },
+    {
+      icon: "↗",
+      title: "Darbo kvietimai",
+      text: "Siųskite aiškius pasiūlymus su darbo vieta, laiku ir atlygiu.",
+    },
+    {
+      icon: "◷",
+      title: "Grafikų valdymas",
+      text: "Darbuotojai nurodo, kada gali dirbti, o sistema padeda išvengti persidengimų.",
+    },
+    {
+      icon: "✉",
+      title: "Pokalbiai",
+      text: "Darbo ir privatūs pokalbiai lieka vienoje vietoje kartu su darbo informacija.",
+    },
+    {
+      icon: "✓",
+      title: "Darbo istorija",
+      text: "Atvykimai, užbaigti darbai ir įvertinimai padeda matyti realią darbo eigą.",
+    },
+    {
+      icon: "▣",
+      title: "Ilgalaikis įdarbinimas",
+      text: "Pateikite įdarbinimo pasiūlymą, apsikeiskite sutartimis ir valdykite procesą sistemoje.",
+    },
+  ];
+
   return (
     <div className="home-page">
       <a className="home-skip-link" href="#pradzia">Pereiti prie pagrindinio turinio</a>
       <style>{`
-        .home-page{--navy:#102438;--orange:#f08a28;--muted:#607180;--line:#e2e9ee;color:var(--navy);background:#fff;font-family:Inter,system-ui,sans-serif;line-height:1.5}
-        .home-page *{box-sizing:border-box}.home-wrap{width:min(1120px,calc(100% - 40px));margin:auto}.home-page button{font:inherit;cursor:pointer}.home-skip-link{position:fixed;left:14px;top:12px;z-index:30000;transform:translateY(-160%);padding:10px 14px;border-radius:9px;background:#102438;color:#fff;font-size:13px;font-weight:850;text-decoration:none;box-shadow:0 8px 24px rgba(16,36,56,.2)}.home-skip-link:focus{transform:translateY(0)}.home-page a:focus-visible,.home-page button:focus-visible,.home-page summary:focus-visible{outline:3px solid #102438;outline-offset:3px}.home-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-        .home-nav{min-height:72px;display:flex;align-items:center;gap:30px}.home-brand{color:var(--navy);font:900 18px Manrope,Inter,sans-serif;text-decoration:none;white-space:nowrap}.home-brand b{color:var(--orange)}.home-brand-mark{display:inline-grid;place-items:center;width:34px;height:34px;margin-right:9px;background:var(--orange);border-radius:10px;color:#fff}
-        .home-navlinks{display:flex;align-items:center;gap:24px;margin-left:22px}.home-navlinks a{color:#526374;text-decoration:none;font-size:12px;font-weight:800}.home-navlinks a:hover{color:#d87319}
-        .home-login{border:0;background:none;color:#405264;font-size:13px;font-weight:750}.home-login:hover{color:#d87319}.home-actions{display:flex;align-items:center;gap:14px;margin-left:auto}
-        .home-btn{border:1px solid var(--orange);border-radius:10px;background:var(--orange);color:#fff;padding:12px 18px;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.home-btn:hover{background:#dd761b}.home-btn.outline{border-color:#cdd8df;background:#fff;color:var(--navy)}.home-btn.outline:hover{background:#f4f7f9}.home-btn.dark{background:var(--navy);border-color:var(--navy)}
-        .home-hero{position:relative;overflow:hidden;background:radial-gradient(circle at 80% 10%,#fff1e4 0%,transparent 34%),linear-gradient(125deg,#f4f8fb 0%,#fff 68%);border-bottom:1px solid var(--line)}.home-hero:before{content:"";position:absolute;right:-220px;bottom:-360px;width:750px;height:750px;border:1px solid #f0e1d2;border-radius:50%;pointer-events:none}.home-hero-grid{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center;padding:106px 0 100px}.home-kicker{font-size:11px;font-weight:900;letter-spacing:.13em;color:#b85f0e;text-transform:uppercase}.home-hero h1{font:900 clamp(38px,4.5vw,57px)/1.08 Manrope,Inter,sans-serif;letter-spacing:-.045em;margin:16px 0 20px}.home-hero h1 em{color:var(--orange);font-style:normal}.home-lead{font-size:18px;line-height:1.65;color:var(--muted);max-width:580px;margin:0}.home-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin:30px 0 18px}.home-micro{font-size:12px;color:#667988}
-        .home-flow{position:relative;background:#fff;color:var(--navy);border:1px solid #dce5eb;border-radius:24px;padding:30px;box-shadow:0 25px 65px rgba(16,36,56,.12)}.home-flow:before{content:"";position:absolute;top:-12px;right:26px;width:34%;height:12px;background:#f08a28;border-radius:9px 9px 0 0}.home-flow-label{display:inline-block;color:#ac5a10;background:#fff1e4;padding:7px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.12em;margin-bottom:16px}.home-flow-title{font:850 18px Manrope,Inter,sans-serif;margin:0 0 6px}.home-flow-intro{font-size:12px;color:var(--muted);margin:0 0 18px}.home-flow-row{display:flex;gap:15px;align-items:flex-start;border-top:1px solid var(--line);padding:21px 0}.home-flow-row:last-child{padding-bottom:0}.home-flow-number{flex:none;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:#c56a18;background:#fff0e1;font-size:14px;font-weight:900}.home-flow-row b{display:block;font-size:15px}.home-flow-row span:not(.home-flow-number){display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.55}.home-flow-row .home-flow-number{display:grid;place-items:center;margin:0;color:#c56a18;line-height:1}.home-flow-number svg{width:20px;height:20px;display:block}
-        .home-section{padding:82px 0}.home-section.soft{background:#f7f9fb}.home-section h2,.home-cta h2{font:850 clamp(29px,3.2vw,40px)/1.16 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 12px}.home-intro{color:var(--muted);max-width:680px;margin:0 0 32px}
-        .home-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.home-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:25px}.home-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#fff1e5;color:#bb661c;font-size:20px;font-weight:900}.home-card h3{font:850 18px Manrope,Inter,sans-serif;margin:18px 0 8px}.home-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
-        .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:18px}.home-audience{border:1px solid var(--line);border-radius:18px;padding:30px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff)}.home-audience h3{font:850 25px Manrope,Inter,sans-serif;margin:10px 0}.home-audience p{color:var(--muted);font-size:14px;line-height:1.6}.home-audience ul,.home-plan ul{list-style:none;padding:0;display:grid;gap:12px;margin:24px 0}.home-audience li,.home-plan li{font-size:13px;padding-left:24px;position:relative}.home-audience li:before,.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-audience .home-btn{margin-top:10px}
-        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px}.home-toggle{display:flex;background:#eaf0f4;border-radius:10px;padding:4px}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:12px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px #10243818}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:17px;padding:24px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 18px 42px #f08a2827;margin-top:-8px;padding:30px 26px}.home-plan-badge{position:absolute;right:20px;top:-13px;background:var(--orange);color:#fff;padding:5px 11px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 22px Manrope,Inter,sans-serif;margin:0}.home-plan>p{min-height:62px;color:var(--muted);font-size:13px;margin:12px 0 14px}.home-amount{font:900 36px Manrope,Inter,sans-serif}.home-amount small{font:700 12px Inter,sans-serif;color:var(--muted)}.home-year-note{min-height:26px;color:#167a54;font-size:11px;font-weight:750;margin-top:5px}.home-plan ul{flex:1;align-content:start;grid-auto-rows:max-content;gap:9px;margin:14px 0 22px}.home-plan .home-btn{width:100%}
-        .home-faq{max-width:810px;margin:auto}.home-faq details{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:9px;padding:0 18px}.home-faq summary{cursor:pointer;padding:17px 0;font-weight:800;font-size:14px}.home-faq details p{color:var(--muted);font-size:13px;margin:0 0 17px}.home-cta{background:#fff3e8;color:var(--navy);padding:76px 0;border-top:1px solid #f3dcc9}.home-cta-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}.home-cta-inner>div:first-child{width:100%;display:flex;flex-direction:column;align-items:center}.home-cta h2{max-width:none;margin:0 0 10px;text-align:center;font-size:clamp(26px,3vw,38px)}@media(min-width:850px){.home-cta h2{white-space:nowrap}}.home-cta p{color:var(--muted);max-width:none;margin:0 auto;text-align:center}@media(min-width:850px){.home-cta p{white-space:nowrap;font-size:clamp(14px,1.4vw,18px)}}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}.home-cta .home-btn{font-size:16px;min-height:56px;padding:14px 28px}.home-footer{padding:28px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:12px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-        @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{gap:30px}.home-benefits{grid-template-columns:1fr 1fr}.home-prices{gap:9px}}
-        @media(max-width:700px){.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:68px;justify-content:space-between}.home-actions>.home-btn{font-size:11px;padding:8px 10px;min-height:40px}.home-login{font-size:11px;min-height:40px;padding:8px 4px}.home-hero-grid{grid-template-columns:1fr;padding:58px 0}.home-hero h1{font-size:40px}.home-flow{max-width:540px}.home-section{padding:60px 0}.home-benefits,.home-audiences,.home-prices{grid-template-columns:1fr}.home-price-head{align-items:start;flex-direction:column}.home-cta-inner{align-items:center;flex-direction:column}.home-cta-buttons{width:100%}.home-footer-inner{flex-direction:column;align-items:start}.home-plan>p{min-height:0}.home-plan.featured{margin-top:0}}
-        @media(max-width:420px){.home-brand{font-size:13px}.home-brand-mark{display:none}.home-actions{gap:5px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}}
-        @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important}}
+        .home-page{--navy:#102438;--navy2:#17364f;--orange:#f08a28;--orange-dark:#d87319;--cream:#fff7ee;--soft:#f5f8fa;--muted:#607180;--line:#e2e9ee;color:var(--navy);background:#fff;font-family:Inter,system-ui,sans-serif;line-height:1.5}
+        .home-page *{box-sizing:border-box}.home-wrap{width:min(1120px,calc(100% - 40px));margin:auto}.home-page button{font:inherit;cursor:pointer}.home-skip-link{position:fixed;left:14px;top:12px;z-index:30000;transform:translateY(-160%);padding:10px 14px;border-radius:9px;background:var(--navy);color:#fff;font-size:13px;font-weight:850;text-decoration:none;box-shadow:0 8px 24px rgba(16,36,56,.2)}.home-skip-link:focus{transform:translateY(0)}.home-page a:focus-visible,.home-page button:focus-visible{outline:3px solid var(--navy);outline-offset:3px}
+        .home-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(226,233,238,.92)}.home-nav{min-height:72px;display:flex;align-items:center;gap:28px}.home-brand{color:var(--navy);font:900 18px Manrope,Inter,sans-serif;text-decoration:none;white-space:nowrap}.home-navlinks{display:flex;align-items:center;gap:24px;margin-left:18px}.home-navlinks a{color:#526374;text-decoration:none;font-size:12px;font-weight:800}.home-navlinks a:hover{color:var(--orange-dark)}.home-actions{display:flex;align-items:center;gap:12px;margin-left:auto}.home-login{border:0;background:none;color:#405264;font-size:13px;font-weight:800;padding:10px 5px}.home-login:hover{color:var(--orange-dark)}
+        .home-btn{border:1px solid var(--orange);border-radius:11px;background:var(--orange);color:#fff;padding:12px 18px;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;min-height:46px;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}.home-btn:hover{background:var(--orange-dark);transform:translateY(-1px);box-shadow:0 8px 22px rgba(240,138,40,.2)}.home-btn.outline{border-color:#cbd7df;background:#fff;color:var(--navy)}.home-btn.outline:hover{background:#f7f9fb;box-shadow:0 8px 20px rgba(16,36,56,.08)}.home-btn.dark{background:var(--navy);border-color:var(--navy)}.home-btn.dark:hover{background:var(--navy2);box-shadow:0 8px 22px rgba(16,36,56,.18)}
+        .home-hero{position:relative;overflow:hidden;background:radial-gradient(circle at 84% 18%,rgba(240,138,40,.17) 0%,rgba(240,138,40,0) 29%),linear-gradient(125deg,#f4f8fb 0%,#fff 62%);border-bottom:1px solid var(--line)}.home-hero:before{content:"";position:absolute;right:-220px;bottom:-420px;width:760px;height:760px;border:1px solid #f0dfcf;border-radius:50%;pointer-events:none}.home-hero-grid{position:relative;display:grid;grid-template-columns:minmax(0,1.07fr) minmax(360px,.93fr);gap:64px;align-items:center;padding:88px 0 84px}.home-kicker{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;color:#b85f0e;text-transform:uppercase}.home-kicker:before{content:"";width:24px;height:2px;border-radius:999px;background:var(--orange)}.home-hero h1{font:900 clamp(40px,5vw,62px)/1.04 Manrope,Inter,sans-serif;letter-spacing:-.05em;margin:17px 0 20px;max-width:690px}.home-hero h1 em{color:var(--orange);font-style:normal}.home-lead{font-size:18px;line-height:1.65;color:var(--muted);max-width:660px;margin:0}.home-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 20px}.home-proof{display:flex;flex-wrap:wrap;gap:8px}.home-proof span{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5eb;border-radius:999px;background:rgba(255,255,255,.72);color:#526374;font-size:11px;font-weight:750}.home-proof span:before{content:"✓";color:#16845b;font-weight:950}
+        .home-summary{position:relative;background:var(--navy);color:#fff;border-radius:24px;padding:28px;box-shadow:0 28px 70px rgba(16,36,56,.22);overflow:hidden}.home-summary:after{content:"";position:absolute;right:-70px;top:-70px;width:190px;height:190px;border-radius:50%;background:rgba(240,138,40,.13)}.home-summary-top{position:relative;z-index:1}.home-summary-label{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(240,138,40,.16);color:#ffc184;font-size:10px;font-weight:900;letter-spacing:.12em}.home-summary h2{font:850 25px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-summary>div>p{color:#bfd0dc;font-size:13px;line-height:1.6;margin:0}.home-summary-list{position:relative;z-index:1;display:grid;gap:10px;margin-top:23px}.home-summary-row{display:grid;grid-template-columns:40px minmax(0,1fr);gap:13px;align-items:start;padding:14px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.055)}.home-summary-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--orange);color:#fff;font-weight:900}.home-summary-row b{display:block;font-size:14px}.home-summary-row span:last-child{display:block;margin-top:3px;color:#bfd0dc;font-size:11.5px;line-height:1.5}
+        .home-section{padding:70px 0}.home-section.soft{background:var(--soft)}.home-section-head{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:28px}.home-section h2,.home-cta h2{font:850 clamp(28px,3.2vw,40px)/1.15 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 0}.home-intro{color:var(--muted);max-width:610px;margin:0;font-size:14px;line-height:1.65}.home-services{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-service{background:#fff;border:1px solid var(--line);border-radius:16px;padding:21px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.home-service:hover{transform:translateY(-2px);border-color:#f0c79e;box-shadow:0 14px 34px rgba(16,36,56,.07)}.home-service-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--cream);color:#ba6418;font-size:18px;font-weight:900}.home-service h3{font:850 16px Manrope,Inter,sans-serif;margin:15px 0 7px}.home-service p{font-size:12.5px;line-height:1.58;color:var(--muted);margin:0}
+        .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:16px}.home-audience{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:28px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff 58%)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff 58%)}.home-audience-tag{display:inline-flex;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.home-audience h3{font:850 24px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-audience p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}.home-audience ul{list-style:none;padding:0;display:grid;gap:9px;margin:20px 0 22px}.home-audience li{font-size:12.5px;padding-left:22px;position:relative}.home-audience li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}
+        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:620px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
+        .home-cta{padding:64px 0;background:linear-gradient(135deg,#102438,#17364f);color:#fff}.home-cta-inner{display:flex;align-items:center;justify-content:space-between;gap:30px}.home-cta h2{margin:0 0 8px;color:#fff}.home-cta p{margin:0;color:#bfd0dc;max-width:650px;font-size:13.5px}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;flex:none}.home-cta .home-btn.outline{border-color:rgba(255,255,255,.32);background:transparent;color:#fff}.home-cta .home-btn.outline:hover{background:rgba(255,255,255,.08)}
+        .home-footer{padding:24px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:11.5px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+        @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{grid-template-columns:1fr;gap:34px;padding:64px 0}.home-summary{max-width:650px}.home-services{grid-template-columns:repeat(2,1fr)}.home-prices{gap:9px}.home-plan{padding:18px}.home-cta-inner{align-items:flex-start;flex-direction:column}.home-cta-buttons{justify-content:flex-start}}
+        @media(max-width:700px){.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:68px;justify-content:space-between;gap:8px}.home-actions{gap:5px}.home-actions>.home-btn{font-size:11px;padding:8px 10px;min-height:40px}.home-login{font-size:11px;min-height:40px;padding:8px 4px}.home-hero-grid{padding:48px 0}.home-hero h1{font-size:clamp(37px,11vw,48px)}.home-lead{font-size:16px}.home-proof{gap:6px}.home-proof span{font-size:10px}.home-summary{padding:20px;border-radius:18px}.home-summary h2{font-size:22px}.home-section{padding:52px 0}.home-section-head,.home-price-head{align-items:flex-start;flex-direction:column}.home-services,.home-audiences,.home-prices{grid-template-columns:1fr}.home-service{padding:18px}.home-toggle{width:100%}.home-toggle button{flex:1}.home-plan-sub{min-height:0}.home-cta{padding:50px 0}.home-cta-buttons{width:100%}.home-cta .home-btn{flex:1}.home-footer-inner{flex-direction:column;align-items:flex-start}}
+        @media(max-width:420px){.home-brand{font-size:13px}.home-actions{margin-left:0}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}.home-cta-buttons{display:grid}.home-cta .home-btn{width:100%}.home-summary-row{grid-template-columns:36px minmax(0,1fr);padding:12px}.home-summary-icon{width:36px;height:36px}}
+        @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important;transition:none!important}}
       `}</style>
 
-      <header className="home-header"><div className="home-wrap home-nav">
-        <BrandLogo className="home-brand" href="#pradzia" height={52} />
-        <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
-          <a href="#kaip">Kaip tai veikia</a>
-          <a href="#nauda">Nauda</a>
-          <a href="#planai">Planai</a>
-          <a href="#duk">DUK</a>
-        </nav>
-        <div className="home-actions"><button className="home-login" type="button" onClick={onLogin}>Prisijungti</button><button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Registruotis</button></div>
-      </div></header>
+      <header className="home-header">
+        <div className="home-wrap home-nav">
+          <BrandLogo className="home-brand" href="#pradzia" height={52} />
+          <nav className="home-navlinks" aria-label="Pagrindinė navigacija">
+            <a href="#paslaugos">Paslaugos</a>
+            <a href="#kam-skirta">Kam skirta</a>
+            <a href="#planai">Planai</a>
+          </nav>
+          <div className="home-actions">
+            <button className="home-login" type="button" onClick={onLogin}>Prisijungti</button>
+            <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Registruotis</button>
+          </div>
+        </div>
+      </header>
 
       <main id="pradzia" tabIndex={-1}>
-        <section className="home-hero" id="kaip"><div className="home-wrap home-hero-grid"><div>
-          <div className="home-kicker">Darbuotojų paieška statyboms</div>
-          <h1>Objektui reikia žmonių? <em>Ieškokite pagal realų prieinamumą.</em></h1>
-          <p className="home-lead">statybos24.lt sujungia statybų darbdavius su žmonėmis, kurie konkrečią dieną gali dirbti. Nurodote miestą, datą, laiką ir kiek žmonių reikia – sistema padeda atrinkti realiai tinkamus kandidatus.</p>
-          <div className="home-hero-actions"><button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Ieškau darbuotojų →</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button></div>
-          <div className="home-micro">✓ Paieška pagal prieinamumą &nbsp; ✓ Aiškus atlygis &nbsp; ✓ Darbo eiga vienoje vietoje</div>
-        </div><div className="home-flow" aria-label="Darbo organizavimo eiga">
-          <div className="home-flow-label">KODĖL MES</div><h2 className="home-flow-title">Ne CV skelbimų lenta – reali darbuotojų paieška</h2><p className="home-flow-intro">Padedame ieškoti žmogaus čia ir dabar pagal patvirtintą prieinamumą. Nuo pirmo kvietimo iki darbo dienos rezultato.</p>
-          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span><div><b>Žmonės pagal realų prieinamumą</b><span>Paieška atsižvelgia į patvirtintą grafiką, aktyvumą, vietą ir esamus darbus.</span></div></div>
-          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span><div><b>Aiškus pasiūlymas abiem pusėms</b><span>Darbuotojas mato darbo vietą, laiką ir atlygį dar prieš priimdamas kvietimą.</span></div></div>
-          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg></span><div><b>Patikimumas iš tikrų darbo dienų</b><span>Atvykimo ir darbo uždarymo įrašai padeda vertinti būsimą bendradarbiavimą.</span></div></div>
-          <div className="home-flow-row"><span className="home-flow-number"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h4"/></svg></span><div><b>Patogus ir lengvas sistemos valdymas</b><span>Darbus, kvietimus ir darbo dienų eigą valdote vienoje vietoje.</span></div></div>
-          
-        </div></div></section>
+        <section className="home-hero">
+          <div className="home-wrap home-hero-grid">
+            <div>
+              <div className="home-kicker">Statybų darbo platforma</div>
+              <h1>Darbuotojai ir statybų darbai – <em>vienoje vietoje.</em></h1>
+              <p className="home-lead">
+                statybos24.lt padeda darbdaviams rasti žmones pagal realų prieinamumą,
+                o darbuotojams – gauti aiškius darbo pasiūlymus su vieta, laiku ir atlygiu.
+              </p>
+              <div className="home-hero-actions">
+                <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Ieškau darbuotojų</button>
+                <button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button>
+              </div>
+              <div className="home-proof" aria-label="Pagrindinės platformos galimybės">
+                <span>Paieška pagal prieinamumą</span>
+                <span>Aiškūs darbo kvietimai</span>
+                <span>Visa eiga vienoje sistemoje</span>
+              </div>
+            </div>
 
-        <section className="home-section soft" id="nauda"><div className="home-wrap"><div className="home-kicker">Sukurta darbdavio darbo ritmui</div><h2>Nuo skubaus poreikio iki kito sėkmingo kvietimo.</h2><p className="home-intro">Paskelbkite konkretų darbą, pakvieskite tinkamus žmones ir sekite jo eigą. Kiekvienas žingsnis padeda taupyti organizavimo laiką ir priimti pagrįstesnius sprendimus.</p>
-          <div className="home-benefits"><article className="home-card"><span className="home-icon" aria-hidden="true">⌕</span><h3>Ne vien profilis, o prieinamumas</h3><p>Darbdavio paieškoje atsižvelgiama į patvirtintą grafiką, aktyvumą ir galimybę atvykti. Taip kviečiate žmones pagal konkretų darbą.</p></article><article className="home-card"><span className="home-icon" aria-hidden="true">↗</span><h3>Sąlygos aiškios prieš sutikimą</h3><p>Darbo vieta, laikas, aprašymas ir atlygis pateikiami kvietime. Darbo pokalbiai leidžia patikslinti detales neišeinant iš platformos.</p></article><article className="home-card"><span className="home-icon" aria-hidden="true">✓</span><h3>Patikimumas, paremtas darbu</h3><p>Atvykimas ir uždaryta darbo diena kuria istoriją. Patikimumo duomenys padeda vertinti ankstesnę darbo eigą, o gerai dirbusius žmones galima pakviesti dar kartą.</p></article><article className="home-card"><span className="home-icon" aria-hidden="true">↺</span><h3>Favoritai kitam objektui</h3><p>Išsaugokite pasiteisinusius darbuotojus ir pakvieskite juos į naują darbą, kai jų grafikas vėl tinka.</p></article><article className="home-card"><span className="home-icon" aria-hidden="true">ϟ</span><h3>Skubus poreikis</h3><p>Skubiai prireikus raskite darbuotojus, kurie patys įjungė „Laisvas dabar“ režimą pasirinktame mieste.</p></article><article className="home-card"><span className="home-icon" aria-hidden="true">◉</span><h3>Vieninga komandos eiga</h3><p>Paskirstykite darbus įmonės nariams ir aptarkite organizacinius klausimus vidiniame pokalbyje.</p></article></div>
-        </div></section>
+            <aside className="home-summary" aria-label="Kaip veikia statybos24">
+              <div className="home-summary-top">
+                <span className="home-summary-label">KAIP VEIKIA</span>
+                <h2>Nuo poreikio iki darbo dienos</h2>
+                <p>Trumpesnis kelias tarp žmogaus, kuriam reikia darbuotojo, ir žmogaus, kuris gali dirbti.</p>
+              </div>
+              <div className="home-summary-list">
+                <div className="home-summary-row">
+                  <span className="home-summary-icon">1</span>
+                  <div><b>Nurodykite poreikį arba prieinamumą</b><span>Darbdavys sukuria darbą, darbuotojas pažymi, kada gali dirbti.</span></div>
+                </div>
+                <div className="home-summary-row">
+                  <span className="home-summary-icon">2</span>
+                  <div><b>Susiraskite tinkamą žmogų arba darbą</b><span>Matomos svarbiausios sąlygos prieš priimant sprendimą.</span></div>
+                </div>
+                <div className="home-summary-row">
+                  <span className="home-summary-icon">3</span>
+                  <div><b>Valdykite visą darbo eigą</b><span>Kvietimai, pokalbiai, darbo diena ir istorija lieka vienoje vietoje.</span></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
 
-        <section className="home-section"><div className="home-wrap"><div className="home-kicker">Nauda abiem pusėms</div><h2>Ką platforma duoda kasdienėje darbo eigoje.</h2><div className="home-audiences">
-          <article className="home-audience employer"><div className="home-kicker">Darbdaviui</div><h3>Mažiau chaoso, daugiau aiškumo kiekvienam objektui.</h3><p>Visa darbuotojų paieškos ir darbo organizavimo eiga vienoje vietoje – nuo pirmo kvietimo iki uždarytos darbo dienos.</p><ul><li>Greičiau randate žmones konkrečiai dienai, laikui ir miestui</li><li>Matote, kas priėmė kvietimą, kas neatvyko ir kaip užsibaigė darbo diena</li><li>Mažiau skambučių ir susirašinėjimo skirtinguose kanaluose – viskas vienoje sistemoje</li><li>Lengviau pakartotinai kviesti pasiteisinusius žmones į kitą objektą</li><li>Aiškesnė darbo istorija padeda priimti sprendimus remiantis realia patirtimi, o ne pažadais</li><li>Greičiau reaguojate į pasikeitimus, kai žmogaus reikia skubiai ar paskutinei minutei</li></ul></article>
-          <article className="home-audience worker"><div className="home-kicker">Darbuotojui</div><h3>Daugiau aiškumo prieš sutinkant ir mažiau neaiškumų darbo dieną.</h3><p>Darbo pasiūlymus gaunate su svarbiausia informacija iš anksto, todėl lengviau atsirinkti tai, kas jums iš tikro tinka.</p><ul><li>Prieš atsakydami matote darbo vietą, laiką, atlygį ir aprašymą</li><li>Galite rodyti savo prieinamumą ir gauti kvietimus tada, kai realiai galite dirbti</li><li>Visi kvietimai, žinutės ir darbo eigos žingsniai laikomi vienoje vietoje</li><li>Mažiau painiavos dėl to, kur atvykti, kada pradėti ir su kuo susisiekti</li><li>Patikimumo istorija padeda parodyti, kad esate atsakingas ir verta jus kviesti dar kartą</li><li>Registracija, profilio sukūrimas ir darbo kvietimų gavimas darbuotojui nieko nekainuoja</li></ul></article>
-        </div></div></section>
+        <section className="home-section soft" id="paslaugos">
+          <div className="home-wrap">
+            <div className="home-section-head">
+              <div>
+                <div className="home-kicker">Paslaugos</div>
+                <h2>Ką galite daryti su statybos24.lt?</h2>
+              </div>
+              <p className="home-intro">Ne skelbimų lenta, o praktinis įrankis darbuotojų paieškai, darbo pasiūlymams ir kasdienei darbų eigai.</p>
+            </div>
+            <div className="home-services">
+              {serviceItems.map((item) => (
+                <article className="home-service" key={item.title}>
+                  <span className="home-service-icon" aria-hidden="true">{item.icon}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <section className="home-section soft" id="planai"><div className="home-wrap"><div className="home-price-head"><div><div className="home-kicker">Darbdavių planai</div><h2>Planai pagal jūsų darbų apimtį.</h2><p className="home-intro" style={{ marginBottom: 0 }}>Pradėkite nemokamai. Planą galėsite pakeisti savo paskyroje.</p></div><div className="home-toggle" aria-label="Mokėjimo laikotarpis"><button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button><button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button></div></div>
-          <div className="home-prices">{plans.map((item) => { const plan = item; const paid = item.key !== "basic"; const yearly = pricingBillingCycle === "yearly"; return <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>{item.key === "business" && <span className="home-plan-badge">REKOMENDUOJAMAS</span>}{item.key === "business_pro" && <span className="home-plan-badge">DIDŽIAUSIA NAUDA</span>}<h3>{item.name}</h3><p>{plan.description}</p><div className="home-amount">{paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(plan)) : formatPlanPrice(plan.price) : "0"} € <small>/ {paid && yearly ? "metus" : "mėn."}</small></div><div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(plan))} € per metus` : ""}</div><ul>{plan.features.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul><button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={() => onEmployerSignup()}>{item.key === "basic" ? "Pradėti nemokamai" : "Registruotis nemokamai"}</button></article>; })}</div>
-          
-        </div></section>
+        <section className="home-section" id="kam-skirta">
+          <div className="home-wrap">
+            <div className="home-section-head">
+              <div>
+                <div className="home-kicker">Kam skirta</div>
+                <h2>Viena platforma abiem darbo pusėms.</h2>
+              </div>
+              <p className="home-intro">Darbdavys greičiau randa tinkamus žmones, darbuotojas iš anksto mato, į kokį darbą yra kviečiamas.</p>
+            </div>
+            <div className="home-audiences">
+              <article className="home-audience employer">
+                <span className="home-audience-tag">Darbdaviams</span>
+                <h3>Raskite žmones konkrečiam darbui.</h3>
+                <p>Sukurkite darbą, atrinkite tinkamus darbuotojus ir valdykite visą eigą vienoje sistemoje.</p>
+                <ul>
+                  <li>Paieška pagal miestą, laiką ir prieinamumą</li>
+                  <li>Kvietimai, pokalbiai ir darbo dienos valdymas</li>
+                  <li>Favoritai, istorija, įvertinimai ir komandos funkcijos</li>
+                </ul>
+                <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Registruotis darbdaviui</button>
+              </article>
 
-        <section className="home-section" id="duk"><div className="home-wrap home-faq"><div className="home-kicker">Dažniausi klausimai</div><h2>Prieš pradedant</h2>
-          <details><summary>Kaip atrenkami darbuotojai?</summary><p>Paieškoje vertinamas patvirtintas grafikas, darbo laikas, vieta, atvykimo galimybė, aktyvumas ir kiti tinkamumo kriterijai.</p></details>
-          <details><summary>Ar darbuotojas mato atlygį prieš priimdamas?</summary><p>Taip. Kvietime matomas siūlomas atlygis ir išsami darbo informacija.</p></details>
-          <details><summary>Kuo skiriasi Business ir Business Pro?</summary><p>Business suteikia patikimumo duomenis, favoritus ir darbo pokalbius. Business Pro papildomai suteikia „Skubiai!“, daugiau komandos vartotojų ir neribotą darbų skaičių.</p></details>
-          <details><summary>Ar darbuotojui platforma mokama?</summary><p>Ne. Darbuotojo registracija ir kvietimų gavimas nemokami.</p></details>
-          <details><summary>Kas vyksta kilus ginčui?</summary><p>Darbo dienos žymėjimą galima ginčyti pateikiant paaiškinimą. Sprendimą priima administratorius, o jo istorija lieka sistemoje.</p></details>
-        </div></section>
-        <section className="home-cta"><div className="home-wrap home-cta-inner"><div><h2>Pradėkite ieškoti tinkamo žmogaus arba darbo.</h2><p>Darbdaviui – žmonių paieška pagal konkretų poreikį. Darbuotojui – pasiūlymai su iš anksto matomomis sąlygomis.</p></div><div className="home-cta-buttons"><button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Registruotis darbdaviui</button><button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button></div></div></section>
+              <article className="home-audience worker">
+                <span className="home-audience-tag">Darbuotojams</span>
+                <h3>Gaukite aiškius darbo pasiūlymus.</h3>
+                <p>Pažymėkite, kada galite dirbti, ir vienoje vietoje valdykite kvietimus, žinutes bei darbo istoriją.</p>
+                <ul>
+                  <li>Darbo vieta, laikas ir atlygis matomi prieš sutinkant</li>
+                  <li>Prieinamumo grafikas ir „Laisvas dabar“ galimybė</li>
+                  <li>Registracija ir darbo kvietimų gavimas – nemokamai</li>
+                </ul>
+                <button className="home-btn outline" type="button" onClick={onWorkerSignup}>Registruotis darbuotojui</button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="home-section soft" id="planai">
+          <div className="home-wrap">
+            <div className="home-price-head">
+              <div className="home-price-copy">
+                <div className="home-kicker">Darbdavių planai</div>
+                <h2>Pradėkite nemokamai. Augant poreikiui – rinkitės daugiau galimybių.</h2>
+                <span className="home-free-worker">Darbuotojams platforma nemokama</span>
+              </div>
+              <div className="home-toggle" aria-label="Mokėjimo laikotarpis">
+                <button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button>
+                <button className={pricingBillingCycle === "yearly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "yearly"} onClick={() => setPricingBillingCycle("yearly")}>Už metus −20 %</button>
+              </div>
+            </div>
+
+            <div className="home-prices">
+              {plans.map((item) => {
+                const paid = item.key !== "basic";
+                const yearly = pricingBillingCycle === "yearly";
+                const visibleFeatures = item.features.slice(0, 4);
+                return (
+                  <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>
+                    {item.key === "business" && <span className="home-plan-badge">POPULIARIAUSIAS</span>}
+                    <h3>{item.name}</h3>
+                    <p className="home-plan-sub">{item.description}</p>
+                    <div className="home-amount">
+                      {paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(item)) : formatPlanPrice(item.price) : "0"} €
+                      <small> / {paid && yearly ? "metus" : "mėn."}</small>
+                    </div>
+                    <div className="home-year-note">{paid && yearly ? `Sutaupote ${formatPlanPrice(employerPlanAnnualSavings(item))} € per metus` : ""}</div>
+                    <ul>{visibleFeatures.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul>
+                    <button className={`home-btn ${item.key === "business" ? "" : "outline"}`} type="button" onClick={() => onEmployerSignup()}>
+                      {item.key === "basic" ? "Pradėti nemokamai" : "Registruotis"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="home-cta">
+          <div className="home-wrap home-cta-inner">
+            <div>
+              <h2>Raskite žmogų darbui arba darbą sau.</h2>
+              <p>Registracija užtrunka kelias minutes. Pasirinkite savo pusę ir pradėkite naudotis platforma.</p>
+            </div>
+            <div className="home-cta-buttons">
+              <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Ieškau darbuotojų</button>
+              <button className="home-btn outline" type="button" onClick={onWorkerSignup}>Ieškau darbo</button>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="home-footer"><div className="home-wrap home-footer-inner"><BrandLogo className="home-brand" href="#pradzia" height={38} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} /><div className="home-legal-links"><button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button><button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button></div><span>© 2026 statybos24.lt</span></div></footer>
+
+      <footer className="home-footer">
+        <div className="home-wrap home-footer-inner">
+          <BrandLogo className="home-brand" href="#pradzia" height={38} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} />
+          <div className="home-legal-links">
+            <button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button>
+            <button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>
+          </div>
+          <span>© 2026 statybos24.lt</span>
+        </div>
+      </footer>
+
       <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
       <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
