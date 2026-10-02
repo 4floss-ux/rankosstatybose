@@ -2547,6 +2547,11 @@ function formatWorkedMinutes(minutes) {
   return `${hours} val. ${mins} min.`;
 }
 
+function formatJobTitle(value, fallback = "Darbas") {
+  const text = String(value || fallback || "").trim();
+  return text ? text.toLocaleUpperCase("lt-LT") : "";
+}
+
 function jobEndMoment(job) {
   const start = jobStartMoment(job);
   if (!start) return null;
@@ -6082,7 +6087,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         locked.push({
           start: base + start - 60,
           end: endAbs + 60,
-          label: `${job?.title || "Patvirtintas darbas"} · ${String(job?.start_time || "").slice(0, 5)}–${String(job?.end_time || "").slice(0, 5)}`,
+          label: `${formatJobTitle(job?.title, "Patvirtintas darbas")} · ${String(job?.start_time || "").slice(0, 5)}–${String(job?.end_time || "").slice(0, 5)}`,
         });
       }
 
@@ -7362,7 +7367,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? {
         tone: "danger",
         title: "Reikia atsakyti į darbdavio pažymėtą rezultatą",
-        text: `${firstPendingReview.job?.title || "Darbo diena"} · pasirinkite „Patvirtinti“ arba „Ginčyti“.`,
+        text: `${formatJobTitle(firstPendingReview.job?.title, "Darbo diena")} · pasirinkite „Patvirtinti“ arba „Ginčyti“.`,
         action: "Peržiūrėti",
         target: "workdays",
       }
@@ -7370,7 +7375,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? {
         tone: "action",
         title: "Reikia uždaryti darbo dieną",
-        text: `${firstNeedsClose.job?.title || "Darbas"} jau pasibaigė. Užfiksuokite, ar dirbote.`,
+        text: `${formatJobTitle(firstNeedsClose.job?.title, "Darbas")} jau pasibaigė. Užfiksuokite, ar dirbote.`,
         action: "Uždaryti dieną",
         target: "workdays",
       }
@@ -7378,7 +7383,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? {
         tone: "live",
         title: "Galite pažymėti atvykimą",
-        text: `${firstCanCheckIn.job?.title || "Darbas"} · atvykimo langas jau atidarytas.`,
+        text: `${formatJobTitle(firstCanCheckIn.job?.title, "Darbas")} · atvykimo langas jau atidarytas.`,
         action: "Atidaryti darbą",
         target: "workdays",
       }
@@ -7406,7 +7411,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? {
         tone: "danger",
         title: "Ginčas nagrinėjamas",
-        text: `${firstOpenDispute.job?.title || "Darbo diena"} · laukiamas administratoriaus sprendimas. Kol vyksta nagrinėjimas, reitingas nekeičiamas.`,
+        text: `${formatJobTitle(firstOpenDispute.job?.title, "Darbo diena")} · laukiamas administratoriaus sprendimas. Kol vyksta nagrinėjimas, reitingas nekeičiamas.`,
         action: "Peržiūrėti ginčą",
         target: "workdays",
       }
@@ -7414,7 +7419,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? {
         tone: "live",
         title: "Artimiausias patvirtintas darbas",
-        text: `${nextConfirmedWorkday.job?.title || "Darbas"} · ${
+        text: `${formatJobTitle(nextConfirmedWorkday.job?.title, "Darbas")} · ${
           nextConfirmedWorkday.job?.work_date || ""
         } · ${nextConfirmedWorkday.job?.start_time?.slice(0, 5) || ""}`,
         action: "Peržiūrėti",
@@ -8277,7 +8282,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                               {occupiedJobs.map((job, index) => (
                                 <span key={job.id || `${day.iso}-${index}`}>
                                   {index > 0 ? " • " : ""}
-                                  Dirbate įmonėje <b>{job.companyName || "Darbdavys"}</b> · {job?.title || "Patvirtintas darbas"} · {job?.start_time?.slice(0, 5) || ""}{job?.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
+                                  Dirbate įmonėje <b>{job.companyName || "Darbdavys"}</b> · {formatJobTitle(job?.title, "Patvirtintas darbas")} · {job?.start_time?.slice(0, 5) || ""}{job?.end_time ? `–${job.end_time.slice(0, 5)}` : ""}
                                 </span>
                               ))}
                             </div>
@@ -8473,7 +8478,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         marginTop: 4,
                       }}
                     >
-                      {opportunity.job_title} · {opportunity.work_date}
+                      {formatJobTitle(opportunity.job_title)} · {opportunity.work_date}
                     </div>
                   </div>
 
@@ -8668,7 +8673,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             </span>
                           </div>
                         )}
-                        <h3>{job.title}</h3>
+                        <h3>{formatJobTitle(job.title)}</h3>
                         <div className="wd-invite-summary">
                           <div
                             style={{
@@ -8800,7 +8805,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                           onClick={() => {
                             setConversation({
                               invitationId: invitation.id,
-                              title: `${invitation.companyName} · ${job.title}`,
+                              title: `${invitation.companyName} · ${formatJobTitle(job.title)}`,
                             });
                           }}
                         >
@@ -8980,7 +8985,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             size={52}
                           />
                           <div className="wd-workday-head-main">
-                            <div className="wd-workday-title"><h3>{job.title}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
+                            <div className="wd-workday-title"><h3>{formatJobTitle(job.title)}</h3><span className={`wd-workday-phase ${workdayPhase.tone}`}>{workdayPhase.label}</span></div>
                             <div className="wd-workday-meta">
                               <div className="wd-company-meta-line">
                                 <b>{item.companyName}</b>
@@ -9152,7 +9157,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             onClick={() =>
                               setConversation({
                                 invitationId: item.invitation_id,
-                                title: `${item.companyName} · ${job.title}`,
+                                title: `${item.companyName} · ${formatJobTitle(job.title)}`,
                               })
                             }
                           >
@@ -9279,7 +9284,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                   onClick={() =>
                                     setDisputeConversation({
                                       attendanceId: attendance.id,
-                                      title: `${job.title} · Ginčo aptarimas`,
+                                      title: `${formatJobTitle(job.title)} · Ginčo aptarimas`,
                                       workerName: form.displayName || "Darbuotojas",
                                       companyName: item.companyName || "Darbdavys",
                                     })
@@ -9361,7 +9366,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         <div className="wd-workday-head history">
                           <div className="wd-workday-head-main">
                             <div className="wd-workday-title">
-                              <h3>{job.title}</h3>
+                              <h3>{formatJobTitle(job.title)}</h3>
                               <span
                                 className={`wd-workday-phase ${
                                   cancelled ? "cancelled" : "done"
@@ -9465,7 +9470,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="wd-job-info-head">
               <div>
                 <div className="eyebrow">DARBO INFORMACIJA</div>
-                <h2>{workdayDetailsTarget.job?.title || "Darbas"}</h2>
+                <h2>{formatJobTitle(workdayDetailsTarget.job?.title)}</h2>
               </div>
               <button
                 className="wd-job-info-close"
@@ -9870,7 +9875,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             marginBottom: 5,
                           }}
                         >
-                          {review.job_title}
+                          {formatJobTitle(review.job_title)}
                         </div>
                         <div
                           style={{
@@ -9952,7 +9957,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       setWorkdayDetailsTarget(null);
                       setConversation({
                         invitationId: target.invitation_id,
-                        title: `${target.companyName} · ${target.job?.title || "Darbas"}`,
+                        title: `${target.companyName} · ${formatJobTitle(target.job?.title)}`,
                       });
                     }}
                   >
@@ -10228,7 +10233,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 marginBottom: 6,
                               }}
                             >
-                              Darbas: {review.job_title}
+                              Darbas: {formatJobTitle(review.job_title)}
                             </div>
                           )}
 
@@ -10426,7 +10431,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             >
               <b>{employerReviewTarget.company_name}</b>
               <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                {employerReviewTarget.job_title} ·{" "}
+                {formatJobTitle(employerReviewTarget.job_title)} ·{" "}
                 {employerReviewTarget.work_date}
               </div>
               <div style={{ marginTop: 8, color: "#526374" }}>
@@ -10568,7 +10573,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             >
               <b>{arrivalHelpTarget.companyName}</b>
               <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                {arrivalHelpTarget.job?.title} · {arrivalHelpTarget.job?.work_date}
+                {formatJobTitle(arrivalHelpTarget.job?.title)} · {arrivalHelpTarget.job?.work_date}
               </div>
               <div style={{ color: "#6c7a88", marginTop: 4 }}>
                 Atvykti adresu: {arrivalHelpTarget.job?.address_text || "Atvykimo adresas nenurodytas"}
@@ -10588,7 +10593,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   setArrivalHelpTarget(null);
                   setConversation({
                     invitationId: arrivalHelpTarget.invitation_id,
-                    title: `${arrivalHelpTarget.companyName} · ${arrivalHelpTarget.job?.title}`,
+                    title: `${arrivalHelpTarget.companyName} · ${formatJobTitle(arrivalHelpTarget.job?.title)}`,
                   });
                 }}
               >
@@ -10839,7 +10844,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div style={{ background: "#f6f8fa", borderRadius: 12, padding: 15 }}>
-              <b>{confirmInvitation.job?.title}</b>
+              <b>{formatJobTitle(confirmInvitation.job?.title)}</b>
               <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
                 {confirmInvitation.companyName} · {confirmInvitation.job?.city}
                 <br />
@@ -16725,7 +16730,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               {review.worker_name || "Darbuotojas"} · {review.score} / 10
                             </b>
                             <div className="ed-company-review-meta">
-                              {review.job_title}
+                              {formatJobTitle(review.job_title)}
                               {review.work_date ? ` · ${review.work_date}` : ""}
                             </div>
                           </div>
@@ -17392,7 +17397,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-current-job-overview-head">
                 <div className="ed-current-job-heading-copy">
                   <div className="eyebrow">ATIDARYTAS DARBAS</div>
-                  <h2>{currentJob.title || "Darbas"}</h2>
+                  <h2>{formatJobTitle(currentJob.title)}</h2>
                   <div className="ed-current-job-head-meta">
                     <span>{currentJob.city || "Miestas nenurodytas"}</span>
                     <i>•</i>
@@ -17687,7 +17692,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             onClick={() =>
                               openEmployerPrivateConversation(
                                 invitationByWorker[worker.id].id,
-                                `${worker.name} · ${currentJob.title}`
+                                `${worker.name} · ${formatJobTitle(currentJob.title)}`
                               )
                             }
                           >
@@ -17983,7 +17988,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 onClick={() =>
                                   setDisputeConversation({
                                     attendanceId: attendance.id,
-                                    title: `${currentJob.title} · Ginčo aptarimas`,
+                                    title: `${formatJobTitle(currentJob.title)} · Ginčo aptarimas`,
                                     workerName: worker.name || "Darbuotojas",
                                     companyName: company?.name || "Darbdavys",
                                   })
@@ -17999,7 +18004,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               onClick={() =>
                                 openEmployerPrivateConversation(
                                   worker.invitationId,
-                                  `${worker.name} · ${currentJob.title}`
+                                  `${worker.name} · ${formatJobTitle(currentJob.title)}`
                                 )
                               }
                             >
@@ -18328,7 +18333,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           flexWrap: "wrap",
                         }}
                       >
-                        <b>{job.title}</b>
+                        <b>{formatJobTitle(job.title)}</b>
                         {currentJob?.id === job.id && (
                           <span className="ed-opened-badge">Atidarytas</span>
                         )}
@@ -18508,7 +18513,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           flexWrap: "wrap",
                         }}
                       >
-                        <b>{job.title}</b>
+                        <b>{formatJobTitle(job.title)}</b>
                       </div>
                       {(planSummary?.can_team_management ||
                         Number(job.employerWonDisputes || 0) > 0 ||
@@ -19714,7 +19719,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <div className="ed-saved-meta">
                       <span>Paskutinis darbas su jumis</span>
                       <b>
-                        {worker.last_job_title || "Įvykdytas darbas"}
+                        {formatJobTitle(worker.last_job_title, "Įvykdytas darbas")}
                         {worker.last_work_date
                           ? ` · ${worker.last_work_date}`
                           : ""}
@@ -21044,7 +21049,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 {worker.city || "Miestas nenurodytas"} · kartu užbaigta darbo dienų: {worker.completed_days}
                               </small>
                               <small>
-                                Paskutinis darbas: {worker.last_job_title || "—"}
+                                Paskutinis darbas: {worker.last_job_title ? formatJobTitle(worker.last_job_title) : "—"}
                                 {worker.last_work_date ? ` · ${worker.last_work_date}` : ""}
                               </small>
                             </div>
@@ -21958,7 +21963,7 @@ function AdminJobChatModal({ job, user, onClose }) {
         <div className="admin-chat-head">
           <div>
             <div className="eyebrow">ADMINISTRATORIUS · DARBO POKALBIS</div>
-            <h2>{job.title || "Darbo pokalbis"}</h2>
+            <h2>{job.title ? formatJobTitle(job.title) : "Darbo pokalbis"}</h2>
             <div className="admin-chat-meta">
               {job.company_name || "Įmonė"} · {job.city || "—"} ·{" "}
               {job.work_date || "—"}
@@ -23446,7 +23451,7 @@ function AdminDashboard({
                     <div className="admin-dispute-head">
                       <div>
                         <div className="eyebrow">GINČAS</div>
-                        <h2>{dispute.job_title}</h2>
+                        <h2>{formatJobTitle(dispute.job_title)}</h2>
                         <div className="admin-muted">
                           {dispute.work_date} · {dispute.start_time?.slice(0, 5)}
                           {dispute.end_time
@@ -23558,7 +23563,7 @@ function AdminDashboard({
                             onClick={() =>
                               setAdminDisputeConversation({
                                 attendanceId: dispute.attendance_id,
-                                title: `${dispute.job_title} · Ginčo aptarimas`,
+                                title: `${formatJobTitle(dispute.job_title)} · Ginčo aptarimas`,
                                 workerName: dispute.worker_name,
                                 companyName: dispute.company_name,
                               })
@@ -23991,7 +23996,7 @@ function AdminDashboard({
                 {adminPageSlice(jobs).map((job) => (
                   <div className="admin-row" key={job.job_id}>
                     <div className="admin-row-title">
-                      <b>{job.title}</b>
+                      <b>{formatJobTitle(job.title)}</b>
                       <span>
                         {job.company_name} · {job.city} · {job.work_date}
                       </span>
@@ -24218,7 +24223,7 @@ function AdminDashboard({
                         {rating.worker_name} · {rating.score} / 10
                       </b>
                       <span>
-                        {rating.company_name} · {rating.job_title}
+                        {rating.company_name} · {formatJobTitle(rating.job_title)}
                       </span>
                       {rating.comment && (
                         <span style={{ color: "#405264", marginTop: 7 }}>
@@ -24236,7 +24241,7 @@ function AdminDashboard({
                     </div>
                     <div className="admin-cell">
                       <span>Darbas</span>
-                      <b>{rating.job_title}</b>
+                      <b>{formatJobTitle(rating.job_title)}</b>
                     </div>
                     <button
                       className="admin-small-btn danger"
@@ -24291,7 +24296,7 @@ function AdminDashboard({
                     </div>
                     <div className="admin-cell">
                       <span>Susijęs darbas</span>
-                      <b>{file.job_title || "—"}</b>
+                      <b>{file.job_title ? formatJobTitle(file.job_title) : "—"}</b>
                     </div>
                     {file.signedUrl ? (
                       <a
