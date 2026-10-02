@@ -60,7 +60,8 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-const TERMS_VERSION = "2026-09-27-v1";
+const TERMS_VERSION = "2026-10-02-v2";
+const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
 const PRIVACY_VERSION = "2026-10-02-v3";
 const PRIVACY_CONTROLLER_NAME = "Alanas Staponas";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
@@ -739,6 +740,125 @@ function RoundedTimeSelect({ value, disabled, onChange, ariaLabel, align = "left
   );
 }
 
+
+function ArrivalTimeDialog({
+  open,
+  title,
+  subject,
+  scheduledTime,
+  value,
+  onChange,
+  onClose,
+  onConfirm,
+  busy = false,
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose?.();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 14000,
+        background: "rgba(16,36,56,.68)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || "Atvykimo laikas"}
+        style={{
+          width: "min(430px,100%)",
+          background: "#fff",
+          borderRadius: 18,
+          padding: 22,
+          color: "#102438",
+          boxShadow: "0 24px 80px rgba(16,36,56,.28)",
+        }}
+      >
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", color: "#b85f0e" }}>
+          FAKTINIS ATVYKIMAS
+        </div>
+        <h2 style={{ margin: "6px 0 8px", font: "850 22px/1.25 Manrope,Inter,sans-serif" }}>
+          {title || "Nurodykite atvykimo laiką"}
+        </h2>
+        {subject && (
+          <p style={{ margin: "0 0 12px", color: "#526374", fontSize: 13, lineHeight: 1.55 }}>
+            {subject}
+          </p>
+        )}
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "10px 12px",
+            borderRadius: 11,
+            background: "#f7f9fb",
+            color: "#607180",
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          {scheduledTime ? <>Numatyta darbo pradžia: <b style={{ color: "#102438" }}>{scheduledTime}</b>. </> : null}
+          Pasirinkite laiką, kuriuo žmogus faktiškai atvyko. Ateities laiko pasirinkti negalima.
+        </div>
+        <label style={{ display: "grid", gap: 7, fontSize: 12, fontWeight: 850 }}>
+          Atvykimo laikas
+          <RoundedTimeSelect
+            ariaLabel="Faktinis atvykimo laikas"
+            value={value}
+            disabled={busy}
+            onChange={onChange}
+          />
+        </label>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 20, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            style={{
+              border: "1px solid #d7e0e6",
+              background: "#fff",
+              color: "#102438",
+              borderRadius: 10,
+              padding: "10px 14px",
+              font: "inherit",
+              fontWeight: 800,
+              cursor: busy ? "not-allowed" : "pointer",
+            }}
+          >
+            Atšaukti
+          </button>
+          <button
+            type="button"
+            disabled={busy || !value}
+            onClick={onConfirm}
+            style={{
+              border: 0,
+              background: "#f08a28",
+              color: "#fff",
+              borderRadius: 10,
+              padding: "10px 15px",
+              font: "inherit",
+              fontWeight: 850,
+              cursor: busy || !value ? "not-allowed" : "pointer",
+              opacity: busy || !value ? .58 : 1,
+            }}
+          >
+            {busy ? "Saugoma..." : "Patvirtinti atvykimą"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 const unifiedCloseStyles = `
   button.rs-close, button.ctc-close, button.wd-profile-editor-close,
   button.reliability-modal-close, button.admin-setup-close,
@@ -1133,8 +1253,9 @@ function PlatformTermsDialog({ open, onClose }) {
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
           <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
         </div>
-        <p><b>Platformos vaidmuo.</b> statybos24.lt suteikia skaitmeninę erdvę, kurioje darbdaviai skelbia darbus, o darbuotojai žymi prieinamumą, gauna kvietimus ir bendrauja dėl darbo. Platforma suveda šalis ir padeda administruoti darbo eigą. Ji pati nesamdo darbuotojų atlikti paskelbtų darbų ir nėra darbo užmokesčio mokėtoja.</p>
-        <p><b>Darbo sąlygos ir atsiskaitymas.</b> Darbdavys ir darbuotojas tarpusavyje susitaria dėl darbo pobūdžio, atlygio, atsiskaitymo, teisėto darbo įforminimo ir kitų sąlygų. Darbdavys atsako už savo paskelbtos informacijos tikslumą ir sutartą apmokėjimą; darbuotojas – už pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą. Platforma nepriima ir neperveda atlygio už atliktą darbą.</p>
+        <p><b>Platformos vaidmuo.</b> statybos24.lt yra darbuotojų ir darbdavių suvedimo bei darbo organizavimo platforma. Padedame rasti vieniems kitus, perduoti darbo pasiūlymo informaciją, bendrauti ir fiksuoti darbo eigą. Vien naudojimasis platforma nepadaro statybos24.lt konkretaus darbo darbdaviu, rangovu ar darbo užmokesčio mokėtoju, o atlygio už paskelbtą darbą platforma nepriima ir neperveda.</p>
+        <p><b>Darbdavio pareigos ir darbo reikalavimai.</b> Darbdavys atsako už savo paskelbtos informacijos tikslumą, sutarto atlygio sumokėjimą, teisėtą darbo organizavimą, saugias darbo sąlygas, privalomą instruktavimą ir konkrečiam darbui taikomų teisės aktų laikymąsi. Jei darbui reikalinga konkreti kvalifikacija, pažymėjimas, leidimas, dokumentai, speciali apranga, asmeninės apsaugos priemonės, įrankiai ar kiti reikalavimai, darbdavys turi juos aiškiai ir išsamiai nurodyti darbo aprašyme prieš siųsdamas kvietimus.</p>
+        <p><b>Darbuotojo sprendimas.</b> Darbuotojas prieš priimdamas kvietimą turi įvertinti darbo vietą, laiką, atlygį, aprašymą ir visus nurodytus reikalavimus. Priimdamas darbą darbuotojas patvirtina, kad pateikta informacija jam suprantama ir jis pats sprendžia, ar pasiūlymas bei reikalavimai jam tinka. Darbuotojas atsako už savo pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą.</p>
         <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
         <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
         <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
@@ -2562,6 +2683,20 @@ function localDateISO(date) {
     timeZone: "Europe/Vilnius", year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(date).map(({ type, value }) => [type, value]));
   return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function currentVilniusTimeRounded5() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Vilnius",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date()).map(({ type, value }) => [type, value])
+  );
+  const hour = String(parts.hour || "00").padStart(2, "0");
+  const minute = Math.floor(Number(parts.minute || 0) / 5) * 5;
+  return `${hour}:${String(minute).padStart(2, "0")}`;
 }
 
 function nextSevenDays() {
@@ -5292,6 +5427,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerAttendanceNote, setWorkerAttendanceNote] = useState("");
   const [workerEvidenceFile, setWorkerEvidenceFile] = useState(null);
   const [arrivalHelpTarget, setArrivalHelpTarget] = useState(null);
+  const [workerCheckInTarget, setWorkerCheckInTarget] = useState(null);
+  const [workerCheckInTime, setWorkerCheckInTime] = useState("");
   const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
   const [workerCompanyProfileTarget, setWorkerCompanyProfileTarget] = useState(null);
   const [workerCompanyProfileLoading, setWorkerCompanyProfileLoading] = useState(false);
@@ -6664,16 +6801,27 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  async function workerCheckIn(bookingId) {
+  function openWorkerCheckIn(item) {
+    if (!item?.id) return;
+    setWorkerCheckInTarget(item);
+    setWorkerCheckInTime(currentVilniusTimeRounded5());
+    setError("");
+  }
+
+  async function workerCheckIn(bookingId, arrivalTime) {
+    if (!bookingId || !arrivalTime) return;
     setAttendanceBusy(true);
     setNotice("");
     setError("");
     try {
-      const result = await supabase.rpc("worker_check_in", {
+      const result = await supabase.rpc("worker_check_in_at_time", {
         p_booking_id: bookingId,
+        p_arrival_time: arrivalTime,
       });
       if (result.error) throw result.error;
-      setNotice("Atvykimas pažymėtas. Darbdavys matys, kad atvykote.");
+      setWorkerCheckInTarget(null);
+      setWorkerCheckInTime("");
+      setNotice(`Atvykimas pažymėtas ${arrivalTime}. Darbdavys matys jūsų nurodytą faktinį laiką.`);
       await Promise.all([loadInvitations(), loadWorkerStats()]);
     } catch (err) {
       setError(err?.message || "Nepavyko pažymėti atvykimo.");
@@ -9263,7 +9411,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                             <button
                               className="wd-accept"
                               disabled={attendanceBusy}
-                              onClick={() => workerCheckIn(item.id)}
+                              onClick={() => openWorkerCheckIn(item)}
                             >
                               Atvykau
                             </button>
@@ -10950,6 +11098,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <b>Priimdami darbą prisiimate realų įsipareigojimą.</b>
               <ul style={{ lineHeight: 1.65, color: "#425466", paddingLeft: 22 }}>
                 <li>
+                  Prieš priimdami perskaitykite visą darbo aprašymą ir patikrinkite,
+                  ar atitinkate jame nurodytus dokumentų, kvalifikacijos, aprangos,
+                  apsaugos priemonių ar kitus reikalavimus.
+                </li>
+                <li>
                   Jei atsiranda problema dėl atvykimo, kuo greičiau parašykite
                   darbdaviui žinutę šiame darbo pokalbyje.
                 </li>
@@ -10978,7 +11131,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 onChange={(e) => setCommitmentChecked(e.target.checked)}
                 style={{ marginTop: 3 }}
               />
-              Suprantu sąlygas ir patvirtinu, kad planuoju atvykti laiku.
+              Perskaičiau darbo aprašymą ir visus nurodytus reikalavimus, jie man tinka, todėl patvirtinu, kad planuoju atvykti.
             </label>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 9 }}>
@@ -11007,6 +11160,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
       )}
+
+      <ArrivalTimeDialog
+        open={Boolean(workerCheckInTarget)}
+        title="Kada faktiškai atvykote?"
+        subject={workerCheckInTarget?.job ? `${formatJobTitle(workerCheckInTarget.job.title)} · ${workerCheckInTarget.job.work_date}` : ""}
+        scheduledTime={workerCheckInTarget?.job?.start_time?.slice(0, 5) || ""}
+        value={workerCheckInTime}
+        onChange={setWorkerCheckInTime}
+        busy={attendanceBusy}
+        onClose={() => {
+          if (attendanceBusy) return;
+          setWorkerCheckInTarget(null);
+          setWorkerCheckInTime("");
+        }}
+        onConfirm={() => workerCheckIn(workerCheckInTarget?.id, workerCheckInTime)}
+      />
 
       {longTermOfferTarget && (
         <div
@@ -11591,7 +11760,7 @@ const EMPLOYER_PLANS = [
     name: "Business Pro",
     price: 59,
     description:
-      "Business planas + pilnas darbų paskirstymas keliems įmonės žmonėms.",
+      "Komandai, kuri nori neribotų darbų, aiškaus atsakomybių paskirstymo ir pilno valdymo vienoje sistemoje.",
     features: [
       "Viskas, kas yra Business plane",
       "Neribotas darbo pasiūlymų skaičius",
@@ -12355,6 +12524,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobWorkersLoading, setJobWorkersLoading] = useState(false);
   const [attendanceTarget, setAttendanceTarget] = useState(null);
   const [attendanceMode, setAttendanceMode] = useState(null);
+  const [employerCheckInTarget, setEmployerCheckInTarget] = useState(null);
+  const [employerCheckInTime, setEmployerCheckInTime] = useState("");
   const [attendanceEndTime, setAttendanceEndTime] = useState("");
   const [attendanceNote, setAttendanceNote] = useState("");
   const [attendanceSaving, setAttendanceSaving] = useState(false);
@@ -12415,6 +12586,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [jobFormErrors, setJobFormErrors] = useState({});
+  const [jobScopeAcknowledged, setJobScopeAcknowledged] = useState(false);
+  const jobScopeAckRef = useRef(null);
   const addressInputRef = useRef(null);
   const breakStartInputRef = useRef(null);
   const breakEndInputRef = useRef(null);
@@ -14708,22 +14881,32 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  async function employerCheckInWorker(target) {
-    if (!target?.bookingId) return;
+  function openEmployerCheckIn(worker) {
+    if (!worker?.bookingId) return;
+    setEmployerCheckInTarget(worker);
+    setEmployerCheckInTime(currentVilniusTimeRounded5());
+    setError("");
+  }
+
+  async function employerCheckInWorker(target, arrivalTime) {
+    if (!target?.bookingId || !arrivalTime) return;
 
     setAttendanceSaving(true);
     setNotice("");
     setError("");
 
     try {
-      const result = await supabase.rpc("employer_check_in_worker", {
+      const result = await supabase.rpc("employer_check_in_worker_at_time", {
         p_booking_id: target.bookingId,
+        p_arrival_time: arrivalTime,
       });
 
       if (result.error) throw result.error;
 
+      setEmployerCheckInTarget(null);
+      setEmployerCheckInTime("");
       setNotice(
-        `Patvirtinote, kad ${target.name} atvyko į darbą. Darbo dieną vis tiek reikės uždaryti pasibaigus darbo laikui.`
+        `Patvirtinote, kad ${target.name} atvyko ${arrivalTime}. Darbo dieną vis tiek reikės uždaryti pasibaigus darbo laikui.`
       );
 
       await Promise.all([
@@ -15174,6 +15357,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
 
+    if (!editingJobId && !jobScopeAcknowledged) {
+      const message = "Prieš paskelbdami darbą patvirtinkite darbdavio atsakomybių ir platformos vaidmens informaciją.";
+      setJobFormErrors({ scopeAcknowledgement: message });
+      requestAnimationFrame(() => {
+        jobScopeAckRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        jobScopeAckRef.current?.focus?.();
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -15227,6 +15420,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             company_id: company.id,
             created_by: user.id,
             status: "open",
+            platform_scope_acknowledged_at: new Date().toISOString(),
+            platform_scope_version: JOB_SCOPE_ACK_VERSION,
           })
           .select(
             "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, workers_needed, pay_amount, pay_unit, status, transport_mode, description, cancellation_reason, cancelled_at, created_at, created_by, responsible_user_id"
@@ -15606,6 +15801,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setEditingJobId(null);
     setEditingConfirmedCount(0);
     setJobFormErrors({});
+    setJobScopeAcknowledged(false);
     setNotice("");
     setError("");
     setForm({
@@ -17195,7 +17391,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 aria-invalid={Boolean(jobFormErrors.description)}
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Aprašykite, ką reikės daryti, darbo sąlygas, ar suteikiami įrankiai, kokia apranga reikalinga ir kitą svarbią informaciją."
+                placeholder="Aprašykite darbus iki smulkmenų: ką reikės daryti, darbo sąlygas, įrankius, aprangą ir apsaugos priemones. Jei reikia konkrečių dokumentų, pažymėjimų, leidimų ar kvalifikacijos – būtinai juos aiškiai nurodykite čia."
                 style={jobFormErrors.description ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
               />
               {jobFormErrors.description && (
@@ -17204,6 +17400,47 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </span>
               )}
             </label>
+
+            {!editingJobId && (
+              <div
+                ref={jobScopeAckRef}
+                tabIndex={-1}
+                className="ed-span-4"
+                style={{
+                  border: jobFormErrors.scopeAcknowledgement ? "1px solid #d94a3a" : "1px solid #efc18f",
+                  borderRadius: 13,
+                  padding: "14px 15px",
+                  background: "#fff8f1",
+                  outline: "none",
+                }}
+              >
+                <b style={{ display: "block", color: "#8a4b12", fontSize: 13, marginBottom: 6 }}>
+                  Prieš paskelbiant darbą
+                </b>
+                <div style={{ color: "#5c6874", fontSize: 12, lineHeight: 1.55 }}>
+                  Padedame suvesti darbdavį ir darbuotoją bei valdyti darbo eigą, tačiau atlygio už šį darbą nemokame. Darbdavys atsako už sutartą apmokėjimą, teisėtą ir saugų darbo organizavimą, instruktavimą bei konkrečiam darbui taikomus reikalavimus. Jei reikalingi dokumentai, pažymėjimai, leidimai, kvalifikacija, speciali apranga, apsaugos priemonės ar kitos sąlygos, jos turi būti aiškiai nurodytos darbo aprašyme prieš siunčiant kvietimus.
+                </div>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11, color: "#102438", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={jobScopeAcknowledged}
+                    onChange={(e) => {
+                      setJobScopeAcknowledged(e.target.checked);
+                      if (e.target.checked) {
+                        setJobFormErrors((current) => ({ ...current, scopeAcknowledgement: "" }));
+                      }
+                    }}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span>Patvirtinu, kad suprantu savo atsakomybę dėl apmokėjimo, saugos ir teisėto darbo organizavimo, o darbo aprašyme nurodžiau visus darbuotojui būtinus reikalavimus.</span>
+                </label>
+                {jobFormErrors.scopeAcknowledgement && (
+                  <div style={{ marginTop: 7, color: "#c9362b", fontSize: 11, fontWeight: 800 }}>
+                    {jobFormErrors.scopeAcknowledgement}
+                  </div>
+                )}
+              </div>
+            )}
 
             {!editingJobId && (
               <div
@@ -18087,7 +18324,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               <button
                                 className="ed-secondary"
                                 disabled={attendanceSaving}
-                                onClick={() => employerCheckInWorker(worker)}
+                                onClick={() => openEmployerCheckIn(worker)}
                               >
                                 Patvirtinti atvykimą
                               </button>
@@ -18657,6 +18894,22 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
         </section>
       </main>
+
+      <ArrivalTimeDialog
+        open={Boolean(employerCheckInTarget)}
+        title="Kada darbuotojas faktiškai atvyko?"
+        subject={employerCheckInTarget ? `${employerCheckInTarget.name} · ${formatJobTitle(currentJob?.title || "Darbas")}` : ""}
+        scheduledTime={currentJob?.start_time?.slice(0, 5) || ""}
+        value={employerCheckInTime}
+        onChange={setEmployerCheckInTime}
+        busy={attendanceSaving}
+        onClose={() => {
+          if (attendanceSaving) return;
+          setEmployerCheckInTarget(null);
+          setEmployerCheckInTime("");
+        }}
+        onConfirm={() => employerCheckInWorker(employerCheckInTarget, employerCheckInTime)}
+      />
 
       {attendanceTarget && attendanceMode && (
         <div
@@ -25458,8 +25711,8 @@ function PublicLandingPage({
     },
     {
       icon: "◷",
-      title: "Grafikų valdymas",
-      text: "Darbuotojai nurodo, kada gali dirbti, o sistema padeda išvengti persidengimų.",
+      title: "Lengvai valdoma sistema",
+      text: "Darbus, kvietimus, grafiką, atvykimus ir darbo istoriją valdote aiškiai vienoje vietoje.",
     },
     {
       icon: "✉",
@@ -25490,7 +25743,7 @@ function PublicLandingPage({
         .home-summary{position:relative;background:var(--navy);color:#fff;border-radius:24px;padding:28px;box-shadow:0 28px 70px rgba(16,36,56,.22);overflow:hidden}.home-summary:after{content:"";position:absolute;right:-70px;top:-70px;width:190px;height:190px;border-radius:50%;background:rgba(240,138,40,.13)}.home-summary-top{position:relative;z-index:1}.home-summary-label{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(240,138,40,.16);color:#ffc184;font-size:10px;font-weight:900;letter-spacing:.12em}.home-summary h2{font:850 25px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-summary>div>p{color:#bfd0dc;font-size:13px;line-height:1.6;margin:0}.home-summary-list{position:relative;z-index:1;display:grid;gap:10px;margin-top:23px}.home-summary-row{display:grid;grid-template-columns:40px minmax(0,1fr);gap:13px;align-items:start;padding:14px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.055)}.home-summary-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--orange);color:#fff;font-weight:900}.home-summary-row b{display:block;font-size:14px}.home-summary-row span:last-child{display:block;margin-top:3px;color:#bfd0dc;font-size:11.5px;line-height:1.5}
         .home-section{padding:70px 0}.home-section.soft{background:var(--soft)}.home-section-head{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:28px}.home-section h2,.home-cta h2{font:850 clamp(28px,3.2vw,40px)/1.15 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 0}.home-intro{color:var(--muted);max-width:610px;margin:0;font-size:14px;line-height:1.65}.home-services{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-service{background:#fff;border:1px solid var(--line);border-radius:16px;padding:21px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.home-service:hover{transform:translateY(-2px);border-color:#f0c79e;box-shadow:0 14px 34px rgba(16,36,56,.07)}.home-service-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--cream);color:#ba6418;font-size:18px;font-weight:900}.home-service h3{font:850 16px Manrope,Inter,sans-serif;margin:15px 0 7px}.home-service p{font-size:12.5px;line-height:1.58;color:var(--muted);margin:0}
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:16px}.home-audience{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:28px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff 58%)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff 58%)}.home-audience-tag{display:inline-flex;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.home-audience h3{font:850 24px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-audience p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}.home-audience ul{list-style:none;padding:0;display:grid;gap:9px;margin:20px 0 22px}.home-audience li{font-size:12.5px;padding-left:22px;position:relative}.home-audience li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}
-        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:620px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
+        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:620px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan-badge.pro{background:var(--navy)}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
         .home-cta{padding:64px 0;background:linear-gradient(135deg,#102438,#17364f);color:#fff}.home-cta-inner{display:flex;align-items:center;justify-content:space-between;gap:30px}.home-cta h2{margin:0 0 8px;color:#fff}.home-cta p{margin:0;color:#bfd0dc;max-width:650px;font-size:13.5px}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;flex:none}.home-cta .home-btn.outline{border-color:rgba(255,255,255,.32);background:transparent;color:#fff}.home-cta .home-btn.outline:hover{background:rgba(255,255,255,.08)}
         .home-footer{padding:24px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:11.5px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{grid-template-columns:1fr;gap:34px;padding:64px 0}.home-summary{max-width:650px}.home-services{grid-template-columns:repeat(2,1fr)}.home-prices{gap:9px}.home-plan{padding:18px}.home-cta-inner{align-items:flex-start;flex-direction:column}.home-cta-buttons{justify-content:flex-start}}
@@ -25521,7 +25774,7 @@ function PublicLandingPage({
               <div className="home-kicker">Statybų darbo platforma</div>
               <h1>Darbuotojai ir statybų darbai – <em>vienoje vietoje.</em></h1>
               <p className="home-lead">
-                statybos24.lt padeda darbdaviams rasti žmones pagal realų prieinamumą,
+                Padedame darbdaviams rasti žmones pagal realų prieinamumą,
                 o darbuotojams – gauti aiškius darbo pasiūlymus su vieta, laiku ir atlygiu.
               </p>
               <div className="home-hero-actions">
@@ -25531,7 +25784,7 @@ function PublicLandingPage({
               <div className="home-proof" aria-label="Pagrindinės platformos galimybės">
                 <span>Paieška pagal prieinamumą</span>
                 <span>Aiškūs darbo kvietimai</span>
-                <span>Visa eiga vienoje sistemoje</span>
+                <span>Lengvai valdoma sistema</span>
               </div>
             </div>
 
@@ -25564,7 +25817,7 @@ function PublicLandingPage({
             <div className="home-section-head">
               <div>
                 <div className="home-kicker">Paslaugos</div>
-                <h2>Ką galite daryti su statybos24.lt?</h2>
+                <h2>Ką padedame atlikti vienoje sistemoje?</h2>
               </div>
               <p className="home-intro">Ne skelbimų lenta, o praktinis įrankis darbuotojų paieškai, darbo pasiūlymams ir kasdienei darbų eigai.</p>
             </div>
@@ -25635,10 +25888,16 @@ function PublicLandingPage({
               {plans.map((item) => {
                 const paid = item.key !== "basic";
                 const yearly = pricingBillingCycle === "yearly";
-                const visibleFeatures = item.features.slice(0, 4);
+                const visibleFeatures =
+                  item.key === "business_pro"
+                    ? item.features
+                    : item.key === "business"
+                    ? item.features.slice(0, 6)
+                    : item.features;
                 return (
                   <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>
                     {item.key === "business" && <span className="home-plan-badge">POPULIARIAUSIAS</span>}
+                    {item.key === "business_pro" && <span className="home-plan-badge pro">PILNAS VALDYMAS</span>}
                     <h3>{item.name}</h3>
                     <p className="home-plan-sub">{item.description}</p>
                     <div className="home-amount">
