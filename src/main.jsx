@@ -3013,6 +3013,14 @@ function distanceKmBetweenPoints(a, b) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+const SEARCH_LOCATION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isSearchLocationFresh(updatedAt) {
+  if (!updatedAt) return false;
+  const updatedMs = new Date(updatedAt).getTime();
+  return Number.isFinite(updatedMs) && Date.now() - updatedMs <= SEARCH_LOCATION_MAX_AGE_MS;
+}
+
 function requestBrowserLocation() {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -5718,6 +5726,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   });
   const [searchLocationBusy, setSearchLocationBusy] = useState(false);
   const [searchLocationError, setSearchLocationError] = useState("");
+  const searchLocationFresh = Boolean(
+    searchLocation.enabled && isSearchLocationFresh(searchLocation.updatedAt)
+  );
+  const searchLocationNeedsRefresh = Boolean(
+    searchLocation.enabled && !searchLocationFresh
+  );
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -7543,6 +7557,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
+      const travelRadius = Number(form.travelRadius);
+      if (!Number.isFinite(travelRadius) || travelRadius < 5 || travelRadius > 50) {
+        throw new Error("Kelionės spindulys turi būti nuo 5 iki 50 km.");
+      }
+
       const invalidAvailabilityDays = [];
       const conflictingAvailabilityDays = [];
       const availabilityRows = days.map((day) => {
@@ -7655,7 +7674,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const workerUpdate = await supabase
         .from("worker_profiles")
         .update({
-          travel_radius_km: Number(form.travelRadius),
+          travel_radius_km: travelRadius,
           has_driving_license_b: form.hasDrivingLicenseB,
           has_individual_activity: form.hasIndividualActivity,
           years_experience: Number(form.yearsExperience) || 0,
@@ -8654,8 +8673,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <input
                     className="wd-input"
                     type="number"
-                    min="0"
-                    max="300"
+                    min="5"
+                    max="50"
                     value={form.travelRadius}
                     onChange={(e) =>
                       updateField("travelRadius", e.target.value)
@@ -8665,18 +8684,26 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                 <div className="wd-location-card">
                   <button
-                    className={`wd-location-toggle ${searchLocation.enabled ? "on" : "off"}`}
+                    className={`wd-location-toggle ${searchLocationFresh ? "on" : "off"}`}
                     type="button"
                     disabled={searchLocationBusy}
-                    aria-pressed={searchLocation.enabled}
-                    aria-label={searchLocation.enabled ? "Išjungti lokaciją" : "Įjungti lokaciją"}
+                    aria-pressed={searchLocationFresh}
+                    aria-label={
+                      searchLocationNeedsRefresh
+                        ? "Atnaujinti lokaciją"
+                        : searchLocationFresh
+                        ? "Išjungti lokaciją"
+                        : "Įjungti lokaciją"
+                    }
                     title={
-                      searchLocation.enabled
+                      searchLocationNeedsRefresh
+                        ? "Lokacija senesnė nei 7 dienos. Paspauskite, kad atnaujintumėte."
+                        : searchLocationFresh
                         ? "Paspauskite, kad išjungtumėte lokaciją ir ištrintumėte išsaugotas koordinates."
                         : "Paspauskite, kad įjungtumėte lokaciją tikslesniam atstumo iki darbo skaičiavimui."
                     }
                     onClick={
-                      searchLocation.enabled
+                      searchLocationFresh
                         ? disableSearchLocation
                         : updateSearchLocationFromBrowser
                     }
@@ -8685,10 +8712,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <span>Lokacija</span>
                     <span className="wd-location-toggle-state">
                       {searchLocationBusy
-                        ? searchLocation.enabled
+                        ? searchLocationFresh
                           ? "Išjungiama..."
                           : "Nustatoma..."
-                        : searchLocation.enabled
+                        : searchLocationNeedsRefresh
+                        ? "Atnaujinti"
+                        : searchLocationFresh
                         ? "Įjungta"
                         : "Išjungta"}
                     </span>
@@ -22378,11 +22407,16 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
+      const travelRadius = Number(form.travelRadius);
+      if (!Number.isFinite(travelRadius) || travelRadius < 5 || travelRadius > 50) {
+        throw new Error("Kelionės spindulys turi būti nuo 5 iki 50 km.");
+      }
+
       const result = await supabase.rpc("admin_register_worker_mode", {
         p_display_name: form.displayName.trim(),
         p_city: city,
         p_phone: form.phone.trim() || null,
-        p_travel_radius_km: Number(form.travelRadius) || 0,
+        p_travel_radius_km: travelRadius,
         p_has_driving_license_b: Boolean(form.hasDrivingLicenseB),
         p_years_experience: Number(form.yearsExperience) || 0,
         p_short_bio: form.shortBio.trim() || null,
@@ -22464,8 +22498,8 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
           <input
             className="admin-setup-input"
             type="number"
-            min="0"
-            max="300"
+            min="5"
+            max="50"
             value={form.travelRadius}
             onChange={(e) =>
               setForm((current) => ({ ...current, travelRadius: e.target.value }))
@@ -23638,13 +23672,22 @@ function AdminDashboard({
         const city = await canonicalCityName(editorForm.city);
         if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
 
+        const travelRadiusKm = Number(editorForm.travelRadiusKm);
+        if (
+          !Number.isFinite(travelRadiusKm) ||
+          travelRadiusKm < 5 ||
+          travelRadiusKm > 50
+        ) {
+          throw new Error("Kelionės spindulys turi būti nuo 5 iki 50 km.");
+        }
+
         const [profileResult, contactResult] = await Promise.all([
           supabase.rpc("admin_update_worker", {
             p_user_id: editor.id,
             p_display_name: editorForm.displayName.trim(),
             p_city: city,
             p_is_active: Boolean(editorForm.isActive),
-            p_travel_radius_km: Number(editorForm.travelRadiusKm) || 0,
+            p_travel_radius_km: travelRadiusKm,
             p_has_driving_license_b: Boolean(
               editorForm.hasDrivingLicenseB
             ),
@@ -25469,8 +25512,8 @@ function AdminDashboard({
                   <input
                     className="admin-input"
                     type="number"
-                    min="0"
-                    max="300"
+                    min="5"
+                    max="50"
                     value={editorForm.travelRadiusKm}
                     onChange={(e) =>
                       updateEditorField("travelRadiusKm", e.target.value)
