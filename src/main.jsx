@@ -10021,17 +10021,22 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 >
                   <div
                     style={{
-                      color: "#b64d2a",
-                      fontSize: 12,
                       fontWeight: 800,
+                      color: "#b64d2a",
+                      marginBottom: 8,
                     }}
                   >
-                    ATŠAUKIMO PRIEŽASTIS
+                    Atšaukimo priežastis
                   </div>
+
                   <div
                     style={{
-                      marginTop: 6,
-                      lineHeight: 1.55,
+                      background: "#fff",
+                      border: "1px solid #efc0b5",
+                      borderRadius: 14,
+                      padding: 11,
+                      color: "#102438",
+                      lineHeight: 1.5,
                       whiteSpace: "pre-wrap",
                     }}
                   >
