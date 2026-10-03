@@ -17115,6 +17115,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
         .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
         .ed-plan-modal > .ed-note{margin:0 0 16px}
+        .ed-plan-modal > .ed-note.ok{margin-bottom:24px}
         .ed-plan-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:26px}.ed-plan-head p{margin:0;color:#6c7a88}
         .ed-billing-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:12px 14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}
         .ed-billing-row>span{font-size:12px;color:#526374;font-weight:800}
