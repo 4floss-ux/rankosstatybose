@@ -150,6 +150,37 @@ function CloseMark() {
   );
 }
 
+function SilentLoader({ size = 20, minHeight = 44, fullscreen = false }) {
+  const spinnerSize = Math.max(12, Number(size) || 20);
+  return (
+    <span
+      role="status"
+      aria-label="Kraunama"
+      style={{
+        display: "grid",
+        placeItems: "center",
+        width: "100%",
+        minHeight: fullscreen ? "100vh" : minHeight,
+        background: fullscreen ? "#f6f8fa" : "transparent",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: spinnerSize,
+          height: spinnerSize,
+          border: `${Math.max(2, Math.round(spinnerSize / 9))}px solid #dfe7ed`,
+          borderTopColor: "#f08a28",
+          borderRadius: "50%",
+          animation: "silent-loader-spin .75s linear infinite",
+          boxSizing: "border-box",
+        }}
+      />
+      <style>{`@keyframes silent-loader-spin{to{transform:rotate(360deg)}}`}</style>
+    </span>
+  );
+}
+
 function ChatConductNotice() {
   return (
     <div
@@ -1406,9 +1437,7 @@ function AddressAutocomplete({
           }}
         >
           {loading ? (
-            <div style={{ padding: "10px 11px", color: "#6c7a88", fontSize: 13 }}>
-              Ieškoma adreso…
-            </div>
+            <SilentLoader size={16} minHeight={38} />
           ) : suggestions.length ? (
             suggestions.map((row) => (
               <button
@@ -1694,7 +1723,7 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
           {completed ? "Slaptažodis pakeistas" : "Nustatykite naują slaptažodį"}
         </h1>
         {checking ? (
-          <p role="status">Tikrinama atkūrimo nuoroda...</p>
+          <SilentLoader size={20} minHeight={42} />
         ) : unavailable ? (
           <>
             <p role="alert" style={{ color: "#a14425", lineHeight: 1.5 }}>{unavailable}</p>
@@ -1925,10 +1954,14 @@ function usePhoneVerification({ active, purpose, phone, email = "", userId = "" 
 
 function PhoneAvailabilityHint({ verification: v }) {
   if (!v.active || (!v.checkingNumber && !v.availabilityError)) return null;
-  return <span role={v.availabilityError ? "alert" : "status"} style={{ display: "block", marginTop: 5, fontSize: 13,
-    color: v.availabilityError ? "#ad381f" : "#526374" }}>
-    {v.availabilityError || "Tikrinamas numeris..."}
-  </span>;
+  if (!v.availabilityError) {
+    return <SilentLoader size={14} minHeight={22} />;
+  }
+  return (
+    <span role="alert" style={{ display: "block", marginTop: 5, fontSize: 13, color: "#ad381f" }}>
+      {v.availabilityError}
+    </span>
+  );
 }
 
 function PhoneVerificationFields({ verification: v }) {
@@ -2512,7 +2545,7 @@ function AuthModal({
             }}
           >
             {loading
-              ? "Prašome palaukti..."
+              ? <SilentLoader size={16} minHeight={18} />
               : mode === "forgot"
               ? "Siųsti atkūrimo nuorodą"
               : mode === "login"
@@ -2567,9 +2600,7 @@ function TeamInvitePage({
         <div className="eyebrow">ĮMONĖS KOMANDOS KVIETIMAS</div>
 
         {loading ? (
-          <div style={{ padding: "28px 0", color: "#6c7a88" }}>
-            Tikrinamas kvietimas...
-          </div>
+          <SilentLoader size={22} minHeight={72} />
         ) : error || !invite ? (
           <>
             <h1 style={{ margin: "6px 0 10px", fontSize: 30 }}>
@@ -3372,7 +3403,7 @@ function ConversationModal({
 
         <div className="rs-messages" ref={messagesRef}>
           {loading ? (
-            <div className="lt-chat-empty">Kraunama...</div>
+            <div className="lt-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -3614,7 +3645,7 @@ function DisputeConversationModal({
 
         <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="rs-empty">Kraunama...</div>
+            <div className="rs-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => {
               const mine = message.sender_id === user?.id;
@@ -3865,7 +3896,7 @@ function GroupConversationModal({
 
         <div className="rs-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="rs-empty">Kraunama...</div>
+            <div className="rs-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -4267,7 +4298,7 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
           {error && <div className="lt-chat-error">{error}</div>}
           <div className="chat-conduct-inline"><ChatConductNotice /></div>
           {loading && !messages.length ? (
-            <div className="lt-chat-empty">Kraunama...</div>
+            <div className="lt-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => {
               const mine = message.sender_id === user?.id;
@@ -4474,7 +4505,7 @@ function CompanyTeamChatModal({
 
         <div className="ctc-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="ctc-empty">Kraunamas vadovų pokalbis...</div>
+            <div className="ctc-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -4764,7 +4795,7 @@ function WorkerProfileModal({
           <div className="rs-profile-stat">
             <span>Telefonas</span>
             {contactLoading ? (
-              <b>...</b>
+              <SilentLoader size={14} minHeight={20} />
             ) : contactPhone ? (
               <div className="rs-profile-phone">
                 <b>{contactPhone}</b>
@@ -4880,9 +4911,7 @@ function WorkerProfileModal({
           <b>Paskutiniai darbdavių įvertinimai</b>
 
           {ratingReviewsLoading ? (
-            <div style={{ marginTop: 10, color: "#6c7a88" }}>
-              Kraunami įvertinimai...
-            </div>
+            <SilentLoader size={18} minHeight={42} />
           ) : ratingReviews.length ? (
             <div className="rs-review-list">
               {ratingReviews.map((review) => (
@@ -8135,11 +8164,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       : null;
 
   if (loading) {
-    return (
-      <div className="wd-loading" aria-label="Kraunama">
-        <div className="wd-spinner" />
-      </div>
-    );
+    return <SilentLoader fullscreen size={28} />;
   }
 
   return (
@@ -8164,7 +8189,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;min-height:138px;box-sizing:border-box}
         .wd-kpi>span{display:flex;align-items:flex-start;justify-content:center;width:100%;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1.08;margin-top:8px;min-height:54px;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums}.wd-kpi small{min-height:15px}.wd-kpi-info-btn{display:flex;align-items:flex-start;justify-content:center;width:100%;max-width:100%;min-height:36px;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-label{min-height:0!important}.wd-kpi-info-btn:hover{color:#102438;text-decoration:underline;text-underline-offset:3px}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
         .wd-form{display:grid;gap:18px}
-        .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.wd-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.wd-active-jobs-section:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#1c9b67}.wd-active-jobs-section>h2{color:#167a54}.wd-active-jobs-section .wd-workday{background:#fff}.wd-evidence-reminder{display:flex;align-items:center;gap:11px;margin:10px 0 16px;padding:12px 13px;border:1px solid #efc89f;border-radius:12px;background:#fff8f1;color:#5d6873;font-size:12px;line-height:1.48}.wd-evidence-reminder-icon{width:32px;height:32px;flex:0 0 32px;display:flex;align-items:center;justify-content:center;align-self:center;border:1px solid #f2d0ad;border-radius:9px;background:#fff3e7;color:#a7550d;line-height:0}.wd-evidence-reminder-icon svg{width:17px;height:17px;display:block;flex:0 0 auto}.wd-evidence-reminder b{display:block;margin-bottom:3px;color:#8a4b12;font-size:12.5px}.wd-evidence-reminder span{display:block}.wd-invitations-section{background:#fff7ee;border-color:#f2c18f;box-shadow:0 8px 28px rgba(240,138,40,.08)}.wd-invitations-section>h2{color:#9f5211}.wd-invitations-section .wd-empty-friendly{background:#fff;border-color:#f0d5ba}
+        .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.wd-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.wd-active-jobs-section:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#1c9b67}.wd-active-jobs-section>h2{color:#167a54}.wd-active-jobs-section .wd-workday{background:#fff}.wd-evidence-reminder{display:flex;align-items:center;gap:11px;margin:10px 0 16px;padding:12px 13px;border:1px solid #efc89f;border-radius:12px;background:#fff8f1;color:#5d6873;font-size:12px;line-height:1.48}.wd-evidence-reminder-icon{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;align-self:center;border:0;border-radius:50%;background:rgba(240,138,40,.11);color:#b85f0e;line-height:0}.wd-evidence-reminder-icon svg{width:16px;height:16px;display:block;flex:0 0 auto}.wd-evidence-reminder b{display:block;margin-bottom:3px;color:#8a4b12;font-size:12.5px}.wd-evidence-reminder span{display:block}.wd-invitations-section{background:#fff7ee;border-color:#f2c18f;box-shadow:0 8px 28px rgba(240,138,40,.08)}.wd-invitations-section>h2{color:#9f5211}.wd-invitations-section .wd-empty-friendly{background:#fff;border-color:#f0d5ba}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-card>.eyebrow{margin-bottom:14px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
         .wd-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
@@ -8821,7 +8846,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
 
               {recentEmployerRatingsLoading ? (
-                <div style={{ color: "#6c7a88" }}>Kraunami įvertinimai...</div>
+                <SilentLoader size={18} minHeight={36} />
               ) : recentEmployerRatings.length ? (
                 <div className="wd-recent-ratings-list">
                   {recentEmployerRatings.map((review) => (
@@ -16996,11 +17021,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     : companyAvatarPreview || companyAvatarUrl(companyForm.avatarPath);
 
   if (loading) {
-    return (
-      <div className="ed-loading" aria-label="Kraunama">
-        <div className="ed-spinner" />
-      </div>
-    );
+    return <SilentLoader fullscreen size={28} />;
   }
 
   return (
@@ -18109,13 +18130,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         fontWeight: 900,
                       }}
                     >
-                      {cityWorkerSignalLoading
-                        ? "Skaičiuojama..."
-                        : cityWorkerSignal
-                        ? `${cityWorkerSignal.availableWorkers} tinkamų pagal vietą ir laiką`
-                        : selectedJobAddress
-                        ? "Pasiūla tikrinama"
-                        : "Pasirinkite adresą"}
+                      {cityWorkerSignalLoading || (selectedJobAddress && !cityWorkerSignal) ? (
+                        <SilentLoader size={13} minHeight={15} />
+                      ) : cityWorkerSignal ? (
+                        `${cityWorkerSignal.availableWorkers} tinkamų pagal vietą ir laiką`
+                      ) : (
+                        "Pasirinkite adresą"
+                      )}
                     </span>
 
                     {planSummary?.plan_key === "business_pro" &&
@@ -18517,7 +18538,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             {searching ? (
-              <div className="ed-empty">Ieškome tinkamų darbuotojų...</div>
+              <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
             ) : visibleCandidateWorkers.length ? (
               <div className="ed-results">
                 {visibleCandidateWorkers.map((worker) => {
@@ -18656,7 +18677,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                 <div className="ed-attendance-list">
                   {jobWorkersLoading && (
-                    <div className="ed-empty">Kraunami šio darbo darbuotojai...</div>
+                    <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
                   )}
                   {!jobWorkersLoading && pagedAcceptedWorkers.map((worker) => {
                     const attendance = worker.attendance || {};
@@ -19965,7 +19986,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </p>
 
                 {teamLoading ? (
-                  <div className="ed-empty compact">Kraunama komanda...</div>
+                  <div className="ed-empty compact"><SilentLoader size={18} minHeight={38} /></div>
                 ) : activeTeamMembers.length ? (
                   <div className="ed-team-list">
                     {activeTeamMembers.map((member) => (
@@ -20494,9 +20515,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               {jobInfoWorkersLoading ? (
-                <div style={{ marginTop: 12, color: "#6c7a88", fontSize: 12 }}>
-                  Kraunami darbuotojai...
-                </div>
+                <div style={{ marginTop: 12 }}><SilentLoader size={18} minHeight={38} /></div>
               ) : jobInfoWorkers.length ? (
                 <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                   {jobInfoWorkers.map((worker) => {
@@ -20622,7 +20641,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             {savedWorkersLoading ? (
-              <div className="ed-empty">Kraunami darbuotojai favoritai...</div>
+              <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
             ) : savedWorkers.length ? (
               <div className="ed-saved-list">
                 {savedWorkers.map((worker) => (
@@ -20761,7 +20780,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 disabled={urgentSearchLoading}
                 onClick={searchUrgentWorkers}
               >
-                {urgentSearchLoading ? "Ieškoma..." : "Filtruoti"}
+                {urgentSearchLoading ? <SilentLoader size={15} minHeight={18} /> : "Filtruoti"}
               </button>
             </div>
 
@@ -20830,11 +20849,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </>
             ) : (
               <div className="ed-urgent-empty">
-                {urgentSearchLoading
-                  ? "Ieškome darbuotojų..."
-                  : urgentSearchCompleted
-                  ? "Šiame mieste šiuo metu laisvų ir aktyvių darbuotojų nerasta."
-                  : "Pasirinkite miestą ir spauskite „Filtruoti“."}
+                {urgentSearchLoading ? (
+                  <SilentLoader size={20} minHeight={44} />
+                ) : urgentSearchCompleted ? (
+                  "Šiame mieste šiuo metu laisvų ir aktyvių darbuotojų nerasta."
+                ) : (
+                  "Pasirinkite miestą ir spauskite „Filtruoti“."
+                )}
               </div>
             )}
           </div>
@@ -21604,7 +21625,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                   {longTermCommitmentLoading && (
                     <div className="lt-wide lt-commitment-note">
-                      Tikrinami darbuotojo jau suplanuoti statybos24 darbai...
+                      <SilentLoader size={18} minHeight={34} />
                     </div>
                   )}
 
@@ -21949,7 +21970,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {longTermModalMode !== "employees" && (
                   <>
                 {longTermBusy && !longTermCandidates.length ? (
-                  <div className="ed-empty">Kraunami darbuotojai...</div>
+                  <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
                 ) : longTermCandidates.some(
                     (worker) => !["offered", "active"].includes(worker.current_offer_status)
                   ) ? (
@@ -22432,12 +22453,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
   }
 
   if (checking) {
-    return (
-      <div className="ed-loading">
-        <div className="ed-spinner" />
-        <b>Tikrinamas darbuotojo režimas...</b>
-      </div>
-    );
+    return <SilentLoader fullscreen size={28} />;
   }
 
   if (ready) {
@@ -22668,12 +22684,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
   }
 
   if (checking) {
-    return (
-      <div className="ed-loading">
-        <div className="ed-spinner" />
-        <b>Tikrinamas darbdavio režimas...</b>
-      </div>
-    );
+    return <SilentLoader fullscreen size={28} />;
   }
 
   if (ready) {
@@ -22934,7 +22945,7 @@ function AdminJobChatModal({ job, user, onClose }) {
 
         <div className="admin-chat-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="admin-chat-empty">Kraunamas pokalbis...</div>
+            <div className="admin-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => {
               const mine = message.sender_id === user?.id;
@@ -23158,7 +23169,7 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
 
         <div className="admin-team-chat-messages" ref={messagesRef}>
           {loading && !messages.length ? (
-            <div className="admin-team-chat-empty">Kraunamas pokalbis...</div>
+            <div className="admin-team-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
           ) : messages.length ? (
             messages.map((message) => (
               <div
@@ -24132,11 +24143,7 @@ function AdminDashboard({
   }).length;
 
   if (loading) {
-    return (
-      <div className="ed-loading" aria-label="Kraunama">
-        <div className="ed-spinner" />
-      </div>
-    );
+    return <SilentLoader fullscreen size={28} />;
   }
 
   return (
