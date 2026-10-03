@@ -819,6 +819,7 @@ function ArrivalTimeDialog({
         role="dialog"
         aria-modal="true"
         aria-label={title || "Atvykimo laikas"}
+        className="arrival-time-dialog"
         style={{
           width: "min(430px,100%)",
           background: "#fff",
@@ -955,9 +956,19 @@ const unifiedCloseStyles = `
   .wd-time-compact-grid button:active:not(:disabled){transform:translateY(1px)!important}
   .wd-time-compact-grid button:disabled{opacity:.3!important;cursor:not-allowed!important;background:#f5f7f8!important;color:#95a1ab!important;border-color:#edf1f3!important}
   @media (max-width:520px){
-    .wd-time-popover,.wd-time-popover-compact{width:min(330px,calc(100vw - 28px))!important;padding:10px!important;gap:10px!important}
-    .wd-time-compact-grid{gap:4px!important}
-    .wd-time-compact-grid button{min-height:34px!important;font-size:11.5px!important}
+    .arrival-time-dialog{
+      width:calc(100vw - 24px)!important;max-width:430px!important;max-height:calc(100dvh - 24px)!important;
+      overflow-y:auto!important;box-sizing:border-box!important;padding:18px!important;border-radius:16px!important;
+    }
+    .wd-time-popover,.wd-time-popover-compact{
+      position:fixed!important;left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;
+      width:auto!important;max-width:none!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;
+      padding:14px!important;gap:12px!important;border-radius:16px!important;
+      box-shadow:0 22px 60px rgba(16,36,56,.28)!important;overscroll-behavior:contain!important;
+    }
+    .wd-time-compact-grid{gap:5px!important}
+    .wd-time-compact-grid button{min-height:40px!important;padding:7px 2px!important;font-size:12px!important;border-radius:10px!important}
+    .wd-time-compact-section>b{margin-bottom:8px!important}
   }
   .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
 
