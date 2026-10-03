@@ -955,9 +955,25 @@ const unifiedCloseStyles = `
   .wd-time-compact-grid button:active:not(:disabled){transform:translateY(1px)!important}
   .wd-time-compact-grid button:disabled{opacity:.3!important;cursor:not-allowed!important;background:#f5f7f8!important;color:#95a1ab!important;border-color:#edf1f3!important}
   @media (max-width:520px){
-    .wd-time-popover,.wd-time-popover-compact{width:min(330px,calc(100vw - 28px))!important;padding:10px!important;gap:10px!important}
-    .wd-time-compact-grid{gap:4px!important}
-    .wd-time-compact-grid button{min-height:34px!important;font-size:11.5px!important}
+    .wd-time-popover,.wd-time-popover-compact{
+      position:fixed!important;
+      left:50%!important;right:auto!important;top:auto!important;
+      bottom:max(10px,env(safe-area-inset-bottom))!important;
+      transform:translateX(-50%)!important;
+      width:min(430px,calc(100vw - 20px))!important;
+      max-width:calc(100vw - 20px)!important;
+      max-height:min(68dvh,520px)!important;
+      overflow-y:auto!important;overflow-x:hidden!important;
+      z-index:20000!important;
+      padding:14px!important;gap:12px!important;
+      border-radius:18px!important;
+      border:1px solid #dfe7ed!important;
+      box-shadow:0 -10px 34px rgba(16,36,56,.18),0 0 0 100vmax rgba(16,36,56,.16)!important;
+      overscroll-behavior:contain!important;
+    }
+    .wd-time-compact-grid{gap:6px!important}
+    .wd-time-compact-grid button{min-height:42px!important;padding:8px 2px!important;font-size:12.5px!important;border-radius:10px!important}
+    .wd-time-compact-section>b{margin-bottom:8px!important;font-size:11px!important}
   }
   .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
 
@@ -24231,7 +24247,7 @@ function AdminDashboard({
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(max-width:900px){.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-awards-grid{grid-template-columns:1fr}.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-top-actions{justify-content:flex-start}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
+        @media(max-width:620px){.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-top-actions>*:last-child{grid-column:1/-1}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
       `}</style>
 
       <header className="admin-topbar">
@@ -27540,19 +27556,35 @@ const mobileResponsiveFixStyles = `
       overflow-wrap: anywhere !important;
     }
 
+    .admin-topbar-inner {
+      padding-top: 14px !important;
+      padding-bottom: 16px !important;
+      gap: 14px !important;
+    }
+
     .admin-top-actions {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
       width: 100% !important;
       min-width: 0 !important;
       max-width: 100% !important;
-      flex-wrap: wrap !important;
     }
 
     .admin-top-actions > * {
+      width: 100% !important;
       min-width: 0 !important;
       max-width: 100% !important;
-      flex: 1 1 145px !important;
+      min-height: 46px !important;
+      flex: none !important;
       white-space: normal !important;
       overflow-wrap: anywhere !important;
+      box-sizing: border-box !important;
+    }
+
+    .admin-top-actions > *:last-child {
+      grid-column: 1 / -1 !important;
+      margin-bottom: 2px !important;
     }
 
     /* Public header stays inside the phone viewport. */
