@@ -60,14 +60,13 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-const TERMS_VERSION = "2026-10-03-v3";
+const TERMS_VERSION = "2026-10-04-v4";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-03-v4";
-const PRIVACY_CONTROLLER_NAME = "Alanas Staponas";
+const PRIVACY_VERSION = "2026-10-04-v5";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
-const PUBLIC_BUSINESS_ADDRESS = "Naujoji g. 60-2, LT-62383 Alytus, Lietuva";
+const PUBLIC_BUSINESS_NUMBER = "1521110";
 
 const BRAND_NAME = "statybos24";
 const BRAND_DOMAIN = "statybos24.lt";
@@ -1511,7 +1510,7 @@ function PlatformTermsDialog({ open, onClose }) {
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
           <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
         </div>
-        <p><b>Paslaugos teikėjas.</b> {PRIVACY_CONTROLLER_NAME}, {PUBLIC_BUSINESS_ACTIVITY}, veiklos pavadinimas <b>{PUBLIC_BUSINESS_NAME}</b>. Adresas: <b>{PUBLIC_BUSINESS_ADDRESS}</b>. Kontaktinis el. paštas: <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
+        <p><b>Paslaugos teikėjas.</b> {PUBLIC_BUSINESS_ACTIVITY}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>, veiklos pavadinimas <b>{PUBLIC_BUSINESS_NAME}</b>. Kontaktinis el. paštas: <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
         <p><b>Platformos vaidmuo.</b> statybos24.lt yra darbuotojų ir darbdavių suvedimo bei darbo organizavimo platforma. Padedame rasti vieniems kitus, perduoti darbo pasiūlymo informaciją, bendrauti ir fiksuoti darbo eigą. Vien naudojimasis platforma nepadaro statybos24.lt konkretaus darbo darbdaviu, rangovu ar darbo užmokesčio mokėtoju, o atlygio už paskelbtą darbą platforma nepriima ir neperveda.</p>
         <p><b>Darbdavio pareigos ir darbo reikalavimai.</b> Darbdavys atsako už savo paskelbtos informacijos tikslumą, sutarto atlygio sumokėjimą, teisėtą darbo organizavimą, saugias darbo sąlygas, privalomą instruktavimą ir konkrečiam darbui taikomų teisės aktų laikymąsi. Jei darbui reikalinga konkreti kvalifikacija, pažymėjimas, leidimas, dokumentai, speciali apranga, asmeninės apsaugos priemonės, įrankiai ar kiti reikalavimai, darbdavys turi juos aiškiai ir išsamiai nurodyti darbo aprašyme prieš siųsdamas kvietimus.</p>
         <p><b>Darbuotojo sprendimas.</b> Darbuotojas prieš priimdamas kvietimą turi įvertinti darbo vietą, laiką, atlygį, aprašymą ir visus nurodytus reikalavimus. Priimdamas darbą darbuotojas patvirtina, kad pateikta informacija jam suprantama ir jis pats sprendžia, ar pasiūlymas bei reikalavimai jam tinka. Darbuotojas atsako už savo pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą.</p>
@@ -1542,15 +1541,12 @@ function PlatformBusinessDetailsDialog({ open, onClose }) {
         </div>
 
         <div style={{ display: "grid", gap: 10, fontSize: 14 }}>
-          <div><b>Paslaugos teikėjas:</b> {PRIVACY_CONTROLLER_NAME}</div>
           <div><b>Veiklos forma:</b> {PUBLIC_BUSINESS_ACTIVITY}</div>
+          <div><b>Individualios veiklos Nr.:</b> {PUBLIC_BUSINESS_NUMBER}</div>
           <div><b>Veiklos pavadinimas:</b> {PUBLIC_BUSINESS_NAME}</div>
-          <div><b>Adresas:</b> {PUBLIC_BUSINESS_ADDRESS}</div>
           <div><b>El. paštas:</b> <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e", fontWeight: 800 }}>{PRIVACY_CONTACT_EMAIL}</a></div>
           <div><b>Svetainė:</b> statybos24.lt</div>
         </div>
-
-        <p style={{ margin: "18px 0 0", color: "#607180", fontSize: 12.5 }}>Asmens kodas, mokesčių mokėtojo identifikacinis numeris ir kiti nevieši asmens duomenys svetainėje neskelbiami.</p>
 
         <button type="button" onClick={onClose} style={{ marginTop: 20, border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
       </section>
@@ -1574,7 +1570,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
           <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
         </div>
 
-        <p><b>Duomenų valdytojas.</b> statybos24.lt platformos asmens duomenų valdytojas: <b>{PRIVACY_CONTROLLER_NAME}</b>, {PUBLIC_BUSINESS_ACTIVITY}. Adresas: <b>{PUBLIC_BUSINESS_ADDRESS}</b>. Dėl privatumo ir duomenų subjektų teisių galima kreiptis el. paštu <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
+        <p><b>Duomenų valdytojas.</b> statybos24.lt platformos duomenų valdytojo veiklos rekvizitas: {PUBLIC_BUSINESS_ACTIVITY}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>. Dėl privatumo ir duomenų subjektų teisių galima kreiptis el. paštu <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
 
         <p><b>Kokius duomenis tvarkome.</b> Priklausomai nuo naudojimosi platforma, tvarkome paskyros ir kontaktinius duomenis (pvz., vardą, el. paštą, telefono numerį, miestą), darbuotojo profesinę informaciją ir įgūdžius, prieinamumo grafiką bei aktyvumo būseną, darbdavio ir įmonės duomenis, darbų skelbimų informaciją, kvietimus, rezervacijas, atvykimo ir darbo dienos užbaigimo įrašus, reitingus, patikimumo rodiklius, favoritus, ginčų informaciją, darbo ir komandos pokalbių turinį bei techninius ir saugumo įrašus.</p>
 
