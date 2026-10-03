@@ -819,7 +819,6 @@ function ArrivalTimeDialog({
         role="dialog"
         aria-modal="true"
         aria-label={title || "Atvykimo laikas"}
-        className="arrival-time-dialog"
         style={{
           width: "min(430px,100%)",
           background: "#fff",
@@ -956,19 +955,9 @@ const unifiedCloseStyles = `
   .wd-time-compact-grid button:active:not(:disabled){transform:translateY(1px)!important}
   .wd-time-compact-grid button:disabled{opacity:.3!important;cursor:not-allowed!important;background:#f5f7f8!important;color:#95a1ab!important;border-color:#edf1f3!important}
   @media (max-width:520px){
-    .arrival-time-dialog{
-      width:calc(100vw - 24px)!important;max-width:430px!important;max-height:calc(100dvh - 24px)!important;
-      overflow-y:auto!important;box-sizing:border-box!important;padding:18px!important;border-radius:16px!important;
-    }
-    .wd-time-popover,.wd-time-popover-compact{
-      position:fixed!important;left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;
-      width:auto!important;max-width:none!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;
-      padding:14px!important;gap:12px!important;border-radius:16px!important;
-      box-shadow:0 22px 60px rgba(16,36,56,.28)!important;overscroll-behavior:contain!important;
-    }
-    .wd-time-compact-grid{gap:5px!important}
-    .wd-time-compact-grid button{min-height:40px!important;padding:7px 2px!important;font-size:12px!important;border-radius:10px!important}
-    .wd-time-compact-section>b{margin-bottom:8px!important}
+    .wd-time-popover,.wd-time-popover-compact{width:min(330px,calc(100vw - 28px))!important;padding:10px!important;gap:10px!important}
+    .wd-time-compact-grid{gap:4px!important}
+    .wd-time-compact-grid button{min-height:34px!important;font-size:11.5px!important}
   }
   .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
 
@@ -8192,6 +8181,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-avatar{position:relative;width:52px;height:52px;flex:0 0 52px;min-width:52px;min-height:52px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#102438;color:#fff;font-weight:800}
         .wd-user b{display:block}.wd-user span{font-size:13px;color:#6c7a88}
         .wd-overview-heading{margin:0 0 9px 2px}
+        .wd-onboarding-card{margin:0 0 18px;padding:16px;border:1px solid #dfe7ed;border-radius:16px;background:#fff;box-shadow:0 8px 28px rgba(16,36,56,.035)}
+        .wd-onboarding-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+        .wd-onboarding-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .wd-onboarding-btn{min-height:38px;border-radius:10px;padding:9px 13px;font:inherit;font-size:12px;font-weight:850;line-height:1;cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+        .wd-onboarding-btn.secondary{border:1px solid #d7e1e8;background:#fff;color:#102438}
+        .wd-onboarding-btn.secondary:hover{border-color:#c7d4dc;background:#f7f9fb}
+        .wd-onboarding-btn.primary{border:1px solid #f08a28;background:#f08a28;color:#fff;box-shadow:0 5px 14px rgba(240,138,40,.16)}
+        .wd-onboarding-btn.primary:hover{background:#df7b1f;border-color:#df7b1f}
+        .wd-onboarding-btn:active{transform:translateY(1px)}
+        .wd-onboarding-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:2px}
         .wd-worktime-login-reminder{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px;padding:12px 14px;border:1px solid #f0d0ba;border-radius:13px;background:#fff8f1;color:#8a531d;box-shadow:0 4px 14px rgba(16,36,56,.035);animation:wdReminderIn .18s ease-out}.wd-worktime-login-reminder-copy{display:grid;gap:2px;min-width:0}.wd-worktime-login-reminder-copy b{color:#9f5211;font-size:13px}.wd-worktime-login-reminder-copy span{font-size:12px;line-height:1.4}.wd-worktime-login-reminder button{flex:0 0 auto;border:1px solid #efc59e;background:#fff;color:#a85a17;border-radius:9px;padding:8px 11px;font:inherit;font-size:11px;font-weight:900;cursor:pointer}.wd-worktime-login-reminder button:hover{background:#fff3e7}@keyframes wdReminderIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}.wd-overview-card{background:#fff;border:1px solid #e4ebf0;border-radius:13px;padding:11px 12px;min-width:0}.wd-overview-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px}.wd-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;min-width:0}.wd-overview-card b{display:block;margin-top:2px;color:#102438;font-size:19px;line-height:1.2}.wd-overview-card small{display:block;margin-top:3px;color:#70808e;font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wd-overview-card.next-work b{font-size:15px}.wd-overview-card.action{border-color:#f0d0ba;background:#fff8f1}.wd-overview-card.live{border-color:#cfe7db;background:#f2faf6}.wd-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.wd-overview-open{flex:0 0 auto;border:1px solid #d7e1e8;border-radius:7px;background:#fff;color:#102438;padding:4px 8px;font:inherit;font-size:10px;font-weight:900;line-height:1.15;cursor:pointer;white-space:nowrap}.wd-overview-card.action .wd-overview-open{border-color:#ecc69f;color:#a85a17;background:#fffdf9}.wd-overview-card.live .wd-overview-open{border-color:#bddcca;color:#167a54;background:#fff}.wd-overview-card.danger .wd-overview-open{border-color:#e5b7aa;color:#a74428;background:#fff}.wd-overview-open:hover{filter:brightness(.985)}
         .wd-stats-section{margin-bottom:20px}.wd-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px}.wd-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.wd-stats-toggle:hover{color:#c96c13}.wd-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.wd-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.wd-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}
@@ -8286,6 +8285,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .wd-invite{grid-template-columns:1fr}.wd-invite-actions{justify-content:flex-start}
           .wd-workday{grid-template-columns:1fr}.wd-workday-actions{width:100%;max-width:190px;justify-content:stretch}.wd-long-term-offer-card{grid-template-columns:1fr}.wd-long-term-offer-status{justify-content:flex-start;text-align:left;min-width:0;padding:4px 0}.wd-long-term-offer-actions{width:100%;max-width:none;grid-template-columns:1fr}
           .wd-heading-actions{justify-items:start}
+          .wd-onboarding-actions{width:100%}
+          .wd-onboarding-btn{flex:1 1 140px;min-height:42px}
           .wd-availability-alert{align-items:stretch;flex-direction:column}
           .wd-availability-alert-actions{justify-content:flex-start}
           .wd-bottom{bottom:10px}
@@ -8318,37 +8319,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       </header>
 
       <main className="wd-shell">
-        {!onAdminReturn &&
-          (!form.displayName.trim() ||
-            !form.phone.trim() ||
-            availableCount === 0) && (
-            <section
-              style={{
-                marginBottom: 18,
-                padding: 16,
-                border: "1px solid #dfe7ed",
-                borderRadius: 16,
-                background: "#fff",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <div>
-                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį darbo kvietimams</h3>
-                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="wd-secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
-                  <button className="wd-primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
-                </div>
-              </div>
-              <div className="wd-onboarding-steps">
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
-              </div>
-            </section>
-          )}
         <div className="wd-heading">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
@@ -8469,6 +8439,29 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         )}
 
+        {!onAdminReturn &&
+          (!form.displayName.trim() ||
+            !form.phone.trim() ||
+            availableCount === 0) && (
+            <section className="wd-onboarding-card">
+              <div className="wd-onboarding-top">
+                <div>
+                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
+                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį darbo kvietimams</h3>
+                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
+                </div>
+                <div className="wd-onboarding-actions">
+                  <button className="wd-onboarding-btn secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
+                  <button className="wd-onboarding-btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
+                </div>
+              </div>
+              <div className="wd-onboarding-steps">
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
+                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
+              </div>
+            </section>
+          )}
         <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
 
         <div className="wd-overview">
