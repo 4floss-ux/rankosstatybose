@@ -88,12 +88,7 @@ function applyBrandFavicon() {
 }
 const BRAND_LOGO_SRC = "/brand-logo.png";
 
-const workers = [
-  { initials:"TK", name:"Tomas K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Betonavimo pagalba","Medžiagų nešiojimas","Tvarkymas"], attendance:97, experience:2 },
-  { initials:"MP", name:"Mantas P.", status:"Laisvas rytoj", city:"Vilnius", skills:["Medžiagų nešiojimas","Tvarkymas"], attendance:100, experience:1 },
-  { initials:"DS", name:"Darius S.", status:"Laisvas šiandien", city:"Vilnius", skills:["Betonavimo pagalba","Krovos darbai"], attendance:94, experience:3 },
-  { initials:"RK", name:"Rytis K.", status:"Laisvas rytoj", city:"Vilnius", skills:["Tvarkymas","Statybvietės pagalba"], attendance:92, experience:2 },
-];
+
 
 function Icon({children}) {
   return <span className="icon">{children}</span>;
@@ -2784,126 +2779,6 @@ function Header({ onLogin, onEmployerSignup, user, onLogout }) {
     </header>
   );
 }
-
-function SearchBox({ onEmployerSignup }) {
-  return (
-    <div className="searchbox">
-      <div className="field">
-        <label>Miestas</label>
-        <div className="control">
-          ⌖ Vilnius <span>⌄</span>
-        </div>
-      </div>
-      <div className="field">
-        <label>Data</label>
-        <div className="control">
-          ▣ Rytoj <span>⌄</span>
-        </div>
-      </div>
-      <div className="field">
-        <label>Kiek žmonių reikia?</label>
-        <div className="control">
-          ◉ 3 <span>⌄</span>
-        </div>
-      </div>
-      <div className="field">
-        <label>Atvykimas</label>
-        <div className="control">
-          ↗ Darbuotojas atvyksta pats <span>⌄</span>
-        </div>
-      </div>
-      <div className="field">
-        <label>Pradžios laikas</label>
-        <div className="control">
-          ◷ 08:00 <span>⌄</span>
-        </div>
-      </div>
-
-      <button className="btn primary search-cta" onClick={onEmployerSignup}>
-        Rasti darbuotojus →
-      </button>
-
-      <div className="availability">
-        <span></span> Vilniuje rytoj laisvi <b>18 darbuotojų</b>
-      </div>
-    </div>
-  );
-}
-
-function WorkersPanel({ onEmployerSignup }) {
-  return (
-    <div className="product-window">
-      <div className="product-top">
-        <div className="mini-brand"><BrandImage height={22} /></div>
-        <div className="mini-actions">
-          <span>⌕</span>
-          <span>◉</span>
-        </div>
-      </div>
-
-      <div className="app-shell">
-        <aside className="sidebar">
-          <div className="active">⌕ Darbuotojų paieška</div>
-          <div>▤ Mano užklausos</div>
-          <div>▦ Darbo skydelis</div>
-          <div>
-            ◉ Pranešimai <b>3</b>
-          </div>
-          <div>▣ Mokėjimai</div>
-          <div>⚙ Nustatymai</div>
-        </aside>
-
-        <main className="app-main">
-          <div className="app-title-row">
-            <div>
-              <h3>Galimi darbuotojai</h3>
-              <p>Rasta 18 darbuotojų</p>
-            </div>
-            <button className="btn compact">Filtrai</button>
-          </div>
-
-          <div className="worker-list">
-            {workers.map((w) => (
-              <div className="worker-row" key={w.name}>
-                <div className="avatar">{w.initials}</div>
-
-                <div className="worker-main">
-                  <div className="worker-name">
-                    {w.name} <span className="status">{w.status}</span>
-                  </div>
-                  <div className="muted">{w.city}</div>
-                  <div className="tags">
-                    {w.skills.slice(0, 2).map((s) => (
-                      <span key={s}>{s}</span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="metric">
-                  <strong>{w.attendance}%</strong>
-                  <span>atvykimas</span>
-                </div>
-
-                <div className="metric">
-                  <strong>{w.experience} m.</strong>
-                  <span>patirties</span>
-                </div>
-
-                <button
-                  className="btn primary tiny"
-                  onClick={onEmployerSignup}
-                >
-                  Kviesti
-                </button>
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-}
-
 
 function platformWallTime(date, time = "00:00") {
   const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
