@@ -8447,7 +8447,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="wd-onboarding-top">
                 <div>
                   <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį darbo kvietimams</h3>
+                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį kvietimams į darbą</h3>
                   <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
                 </div>
                 <div className="wd-onboarding-actions">
@@ -9319,7 +9319,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <div className="wd-form">
           <section className="wd-card wd-invitations-section" id="worker-invitations">
-            <h2>Darbo kvietimai</h2>
+            <h2>Kvietimai į darbą</h2>
 
             {invitations.length ? (
               <>
@@ -9525,7 +9525,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="wd-empty-friendly">
                 <div className="wd-empty-friendly-icon">✓</div>
                 <div>
-                  <b>Naujų darbo kvietimų nėra</b>
+                  <b>Naujų kvietimų į darbą nėra</b>
                   Kai darbdavys atsiųs jums tinkamą pasiūlymą, jis atsiras čia.
                 </div>
               </div>
@@ -26361,7 +26361,7 @@ function PublicLandingPage({
     },
     {
       icon: "↗",
-      title: "Darbo kvietimai",
+      title: "Kvietimai į darbą",
       text: "Siųskite aiškius pasiūlymus su darbo vieta, laiku ir atlygiu.",
     },
     {
