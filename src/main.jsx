@@ -2615,7 +2615,8 @@ function AuthModal({
                 setSuccess(false);
               }}
               style={{ border: 0, padding: 0, background: "none", color: "#b85f0e",
-                font: "inherit", fontWeight: 750, cursor: "pointer", textAlign: "right" }}>
+                font: "inherit", fontSize: 13, lineHeight: 1.2, fontWeight: 750,
+                cursor: "pointer", textAlign: "right" }}>
               Pamiršau slaptažodį
             </button>
           )}
