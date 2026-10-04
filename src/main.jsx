@@ -12157,6 +12157,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
 const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
 const EMPLOYER_TRIAL_DAYS = 30;
+const BUSINESS_PRESENTATION_TOKEN = "imones-30d-business-7f4c29a1";
+
+function businessPresentationUrl() {
+  const url = new URL("/", window.location.origin);
+  url.searchParams.set("pristatymas", BUSINESS_PRESENTATION_TOKEN);
+  return url.href;
+}
 
 function employerPlanAnnualPrice(plan) {
   return Math.round(Number(plan?.price || 0) * 12 * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
@@ -23253,6 +23260,33 @@ function AdminDashboard({
     (dispute) => !dispute?.dispute_status || dispute.dispute_status === "disputed"
   ).length;
 
+  const presentationLink = businessPresentationUrl();
+
+  async function copyBusinessPresentationLink() {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(presentationLink);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = presentationLink;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+      setNotice("Įmonių pristatymo nuoroda nukopijuota.");
+    } catch {
+      setError("Nepavyko automatiškai nukopijuoti nuorodos. Nukopijuokite ją rankiniu būdu.");
+    }
+  }
+
+  function openBusinessPresentation() {
+    window.open(presentationLink, "_blank", "noopener,noreferrer");
+  }
+
   const tabs = [
     ["overview", "Suvestinė"],
     ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
@@ -24351,51 +24385,78 @@ function AdminDashboard({
 
 
         {activeTab === "overview" && (
-          <div className="admin-kpis">
-            <div className="admin-kpi">
-              <span>Darbuotojai</span>
-              <b>{Number(stats.totalWorkers || 0)}</b>
-            </div>
+          <>
+            <div className="admin-kpis">
+                        <div className="admin-kpi">
+                          <span>Darbuotojai</span>
+                          <b>{Number(stats.totalWorkers || 0)}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Įdarbinti darbuotojai</span>
+                          <b>{activeLongTermPlacements.length}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Darbdaviai</span>
+                          <b>{Number(stats.totalEmployers || 0)}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Aktyvūs darbai</span>
+                          <b>{Number(stats.openJobs || 0)}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Įvykdyti darbai</span>
+                          <b>{Number(stats.completedJobs || 0)}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Atšaukti darbai</span>
+                          <b>{Number(stats.cancelledJobs || 0)}</b>
+                        </div>
+            
+                        <div
+                          className={`admin-kpi ${
+                            Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
+                          }`}
+                        >
+                          <span>Neišspręsti ginčai</span>
+                          <b>{Number(stats.unresolvedDisputes || 0)}</b>
+                        </div>
+            
+                        <div className="admin-kpi">
+                          <span>Panaudoti darbuotojai / mėn.</span>
+                          <b>{Number(stats.workersUsedThisMonth || 0)}</b>
+                        </div>
+                      </div>
 
-            <div className="admin-kpi">
-              <span>Įdarbinti darbuotojai</span>
-              <b>{activeLongTermPlacements.length}</b>
-            </div>
+            <section className="admin-section" style={{ marginTop: 18, border: "1px solid #f0d2b5", background: "linear-gradient(135deg,#fff8f1,#fff)" }}>
+              <div className="admin-section-head">
+                <div>
+                  <div className="eyebrow">PRISTATYMAS ĮMONĖMS</div>
+                  <h2>Privati dalinimosi nuoroda</h2>
+                  <div className="admin-muted" style={{ maxWidth: 760 }}>
+                    Puslapis nerodomas viešame meniu ir pažymėtas „noindex“.
+                    Nuorodą matote tik administratoriaus valdymo centre, tačiau ją
+                    gavęs žmogus gali atidaryti pristatymą be prisijungimo.
+                  </div>
+                </div>
+                <span className="admin-pill green">Paruošta dalintis</span>
+              </div>
 
-            <div className="admin-kpi">
-              <span>Darbdaviai</span>
-              <b>{Number(stats.totalEmployers || 0)}</b>
-            </div>
-
-            <div className="admin-kpi">
-              <span>Aktyvūs darbai</span>
-              <b>{Number(stats.openJobs || 0)}</b>
-            </div>
-
-            <div className="admin-kpi">
-              <span>Įvykdyti darbai</span>
-              <b>{Number(stats.completedJobs || 0)}</b>
-            </div>
-
-            <div className="admin-kpi">
-              <span>Atšaukti darbai</span>
-              <b>{Number(stats.cancelledJobs || 0)}</b>
-            </div>
-
-            <div
-              className={`admin-kpi ${
-                Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
-              }`}
-            >
-              <span>Neišspręsti ginčai</span>
-              <b>{Number(stats.unresolvedDisputes || 0)}</b>
-            </div>
-
-            <div className="admin-kpi">
-              <span>Panaudoti darbuotojai / mėn.</span>
-              <b>{Number(stats.workersUsedThisMonth || 0)}</b>
-            </div>
-          </div>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 14 }}>
+                <div style={{ minWidth: 0, padding: "11px 13px", border: "1px solid #dfe7ed", borderRadius: 10, background: "#fff", color: "#526374", fontSize: 12, overflowWrap: "anywhere" }}>
+                  {presentationLink}
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="admin-small-btn" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button>
+                  <button className="admin-small-btn" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button>
+                </div>
+              </div>
+            </section>
+          </>
         )}
 
         {activeTab === "disputes" && (
@@ -26677,6 +26738,265 @@ function PublicLandingPage({
   );
 }
 
+
+function BusinessPresentationPage({ onSignup }) {
+  useEffect(() => {
+    const previousTitle = document.title;
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    const createdMeta = !robotsMeta;
+    const previousRobots = robotsMeta?.getAttribute("content") || "";
+
+    if (!robotsMeta) {
+      robotsMeta = document.createElement("meta");
+      robotsMeta.setAttribute("name", "robots");
+      document.head.appendChild(robotsMeta);
+    }
+
+    robotsMeta.setAttribute("content", "noindex,nofollow,noarchive");
+    document.title = "Statybos24.lt | Pristatymas statybos įmonėms";
+
+    return () => {
+      document.title = previousTitle;
+      if (createdMeta) robotsMeta?.remove();
+      else robotsMeta?.setAttribute("content", previousRobots);
+    };
+  }, []);
+
+  const steps = [
+    ["01", "Susikuriate įmonės paskyrą", "Vienoje vietoje valdote darbus, kvietimus, darbuotojų paiešką ir bendradarbiavimo istoriją."],
+    ["02", "Sukuriate konkretų darbą", "Nurodote vietą, datą, laiką, darbo sritį, reikalingų žmonių skaičių, atlygį ir kitas sąlygas."],
+    ["03", "Atsirenkate tinkamus žmones", "Ieškote pagal miestą, sritį, realų prieinamumą, kelionės spindulį, patirtį, istoriją, patikimumą ir įvertinimus."],
+    ["04", "Siunčiate darbo kvietimus", "Darbuotojas gauna aiškų pasiūlymą su vieta, laiku ir atlygiu. Apie kvietimą informuojamas ir el. paštu."],
+    ["05", "Valdote patvirtintą darbą", "Matote kas priėmė pasiūlymą, bendraujate, sekate grafiką, atvykimą ir darbo dienos eigą."],
+    ["06", "Uždarote darbą ir kuriate reputaciją", "Po darbo lieka istorija, įvertinimai ir atsiliepimai. Tvarkingi darbai stiprina abiejų pusių patikimumą."],
+  ];
+
+  const features = [
+    ["Darbuotojų paieška", "Miestas, darbo sritis, data, laikas, prieinamumas ir kelionės spindulys."],
+    ["Konkretūs kvietimai", "Darbo vieta, laikas ir atlygis pateikiami dar prieš darbuotojui sutinkant."],
+    ["El. pašto pranešimai", "Darbuotojai gauna pranešimus apie kvietimus ir svarbius darbo veiksmus."],
+    ["Pokalbiai", "Darbo komunikacija lieka vienoje vietoje; mokamuose planuose atsiranda daugiau pokalbių galimybių."],
+    ["Atvykimas ir darbo diena", "Galima fiksuoti atvykimą, darbo dienos rezultatą ir užbaigti darbą sistemoje."],
+    ["Istorija ir atsiliepimai", "Realių darbų istorija, reitingai ir atsiliepimai padeda priimti geresnį kitą sprendimą."],
+    ["Favoritai", "Gerai pasirodžiusius žmones galima išsisaugoti ir greitai pakviesti dar kartą."],
+    ["Komandos valdymas", "Business Pro prideda roles, atsakomybes, iki 5 vartotojų, vadovų statistiką ir vidinį pokalbį."],
+  ];
+
+  return (
+    <div className="bp-page">
+      <style>{`
+        .bp-page{min-height:100vh;background:#f4f6f8;color:#102438;font-family:Inter,Arial,sans-serif}
+        .bp-page *{box-sizing:border-box}
+        .bp-wrap{width:min(1160px,calc(100% - 36px));margin:0 auto}
+        .bp-hero{position:relative;overflow:hidden;background:#0f2233;color:#fff;padding:30px 0 72px}
+        .bp-hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 86% 12%,rgba(240,138,40,.18),transparent 31%),linear-gradient(120deg,rgba(240,138,40,.09),transparent 45%);pointer-events:none}
+        .bp-hero-inner{position:relative}
+        .bp-brand{display:inline-flex;background:#fff;border-radius:13px;padding:10px 14px}
+        .bp-kicker,.bp-eyebrow{color:#f08a28;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+        .bp-kicker{margin-top:42px}
+        .bp-hero h1{max-width:920px;margin:12px 0 18px;font-family:Manrope,Inter,sans-serif;font-size:clamp(38px,5.2vw,66px);line-height:1.04;letter-spacing:-.035em}
+        .bp-hero-lead{max-width:820px;margin:0;color:#d6dfe6;font-size:18px;line-height:1.62}
+        .bp-proof-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:32px}
+        .bp-proof{padding:17px;border:1px solid rgba(255,255,255,.14);border-radius:15px;background:rgba(255,255,255,.04)}
+        .bp-proof b{display:block;margin-bottom:5px;font-size:14px}.bp-proof span{color:#bdc9d2;font-size:12px;line-height:1.45}
+        .bp-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:28px}
+        .bp-primary{border:0;border-radius:11px;background:#f08a28;color:#fff;padding:13px 20px;font:inherit;font-weight:900;cursor:pointer}
+        .bp-quiet{color:#aebcc7;font-size:12px}
+        .bp-main{padding:58px 0 68px}.bp-section{margin-bottom:58px}
+        .bp-head{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:end;margin-bottom:22px}
+        .bp-head h2{margin:8px 0 0;font:800 clamp(28px,3.4vw,41px)/1.12 Manrope,Inter,sans-serif;letter-spacing:-.025em}
+        .bp-head p{margin:0;color:#61717f;font-size:14px;line-height:1.6}
+        .bp-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+        .bp-step{background:#fff;border:1px solid #dfe7ec;border-radius:17px;padding:21px;min-height:195px;box-shadow:0 7px 22px rgba(16,36,56,.04)}
+        .bp-step-no{display:inline-flex;padding:8px 10px;border-radius:7px;background:#102438;color:#fff;font-size:11px;font-weight:900;letter-spacing:.06em}
+        .bp-step h3{margin:17px 0 8px;font-size:18px;line-height:1.25}.bp-step p{margin:0;color:#637482;font-size:13px;line-height:1.55}
+        .bp-match{display:grid;grid-template-columns:1fr 48px 1fr;gap:12px;align-items:stretch;padding:18px;border:1px solid #dde5ea;border-radius:19px;background:#fff}
+        .bp-match-card{padding:21px;border-radius:14px;background:#f7f9fb}.bp-match-card h3{margin:0 0 13px}
+        .bp-pills{display:flex;flex-wrap:wrap;gap:8px}.bp-pill{padding:8px 10px;border:1px solid #dfe7ec;border-radius:8px;background:#fff;color:#526371;font-size:12px;font-weight:750}
+        .bp-arrow{display:grid;place-items:center;color:#f08a28;font-size:31px;font-weight:900}
+        .bp-note{margin-top:15px;padding:17px 19px;border-left:4px solid #f08a28;border-radius:0 13px 13px 0;background:#fff7ef;color:#4e5d69;font-size:14px;line-height:1.6}
+        .bp-trust{display:grid;grid-template-columns:1fr 1fr;gap:14px}.bp-card{background:#fff;border:1px solid #dfe7ec;border-radius:17px;padding:23px}
+        .bp-card h3{margin:0 0 9px;font-size:20px}.bp-card p{margin:0;color:#627381;font-size:13px;line-height:1.62}
+        .bp-feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+        .bp-feature{background:#fff;border:1px solid #dfe7ec;border-radius:15px;padding:18px;min-height:140px}
+        .bp-feature b{display:block;margin-bottom:7px;font-size:15px}.bp-feature span{color:#637482;font-size:12px;line-height:1.5}
+        .bp-long{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:28px;border-radius:20px;background:#102438;color:#fff}
+        .bp-long h3{margin:0;font-size:26px;line-height:1.2}.bp-long p{margin:0;color:#c7d2da;font-size:14px;line-height:1.65}
+        .bp-plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+        .bp-plan{display:flex;flex-direction:column;background:#fff;border:1px solid #dfe6eb;border-radius:19px;padding:21px;min-height:405px}
+        .bp-plan.featured{border:2px solid #f08a28}.bp-plan.pro{background:#102438;color:#fff;border-color:#102438}
+        .bp-plan-tag{color:#f08a28;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+        .bp-plan h3{margin:8px 0 4px;font-size:26px}.bp-price{font-size:31px;font-weight:900;margin:8px 0 12px}.bp-price small{font-size:12px;color:#7b8994}
+        .bp-plan.pro .bp-price small{color:#a4b2bc}.bp-desc{min-height:58px;color:#647584;font-size:13px;line-height:1.5}.bp-plan.pro .bp-desc{color:#c6d1d8}
+        .bp-plan ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}.bp-plan li{position:relative;padding-left:18px;color:#526472;font-size:12px;line-height:1.45}
+        .bp-plan.pro li{color:#d7e0e6}.bp-plan li:before{content:"✓";position:absolute;left:0;color:#2aa576;font-weight:900}
+        .bp-why{margin-top:auto;padding-top:15px;border-top:1px solid #e4eaee;color:#273a4b;font-size:12px;line-height:1.5}.bp-plan.pro .bp-why{border-color:rgba(255,255,255,.12);color:#d7e0e6}
+        .bp-trial{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:28px;border:1px solid #f0d2b5;border-radius:20px;background:linear-gradient(120deg,#fff5eb,#fff)}
+        .bp-trial h2{margin:7px 0 8px;font-size:30px}.bp-trial p{margin:0;color:#5e6e7b;font-size:14px;line-height:1.62}
+        .bp-footer{padding:22px 0 30px;border-top:1px solid #dfe6ea;color:#74828d;font-size:12px}.bp-footer-inner{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+        @media(max-width:900px){.bp-proof-grid,.bp-flow,.bp-feature-grid,.bp-plans{grid-template-columns:repeat(2,1fr)}.bp-head{grid-template-columns:1fr;gap:9px}.bp-plans .bp-plan:last-child{grid-column:1/-1}}
+        @media(max-width:650px){.bp-wrap{width:calc(100% - 24px)}.bp-hero{padding:20px 0 52px}.bp-kicker{margin-top:30px}.bp-hero h1{font-size:38px}.bp-hero-lead{font-size:16px}.bp-proof-grid,.bp-flow,.bp-feature-grid,.bp-plans,.bp-trust,.bp-long{grid-template-columns:1fr}.bp-plans .bp-plan:last-child{grid-column:auto}.bp-match{grid-template-columns:1fr}.bp-arrow{transform:rotate(90deg);min-height:26px}.bp-main{padding:42px 0 52px}.bp-section{margin-bottom:44px}.bp-step{min-height:0}.bp-trial{grid-template-columns:1fr;padding:22px}.bp-primary{width:100%}}
+      `}</style>
+
+      <header className="bp-hero">
+        <div className="bp-wrap bp-hero-inner">
+          <div className="bp-brand"><BrandImage height={44} /></div>
+          <div className="bp-kicker">Pristatymas statybos įmonei</div>
+          <h1>Darbuotojų paieška, kuri remiasi realiu prieinamumu ir darbo istorija.</h1>
+          <p className="bp-hero-lead">
+            <b>Statybos24.lt</b> – darbuotojų paieškos ir darbo valdymo platforma
+            statybos įmonėms. Ji padeda rasti žmones konkrečiam darbui, atsirinkti
+            pagal patirtį ir reputaciją, išsiųsti aiškų kvietimą ir visą eigą
+            valdyti vienoje vietoje.
+          </p>
+
+          <div className="bp-proof-grid">
+            <div className="bp-proof"><b>Realus poreikis</b><span>Vieta, darbo sritis, data, laikas, atlygis ir prieinamumas.</span></div>
+            <div className="bp-proof"><b>Patikimesnis pasirinkimas</b><span>Darbo istorija, patikimumas, įvertinimai ir atsiliepimai.</span></div>
+            <div className="bp-proof"><b>Trumpam arba ilgam</b><span>Sėkmingas trumpalaikis darbas gali tapti ilgalaikio bendradarbiavimo pradžia.</span></div>
+          </div>
+
+          <div className="bp-actions">
+            <button className="bp-primary" type="button" onClick={onSignup}>Registruotis darbdaviui</button>
+            <span className="bp-quiet">Darbuotojams platforma nemokama.</span>
+          </div>
+        </div>
+      </header>
+
+      <main className="bp-main">
+        <div className="bp-wrap">
+          <section className="bp-section">
+            <div className="bp-head">
+              <div><div className="bp-eyebrow">Visa eiga</div><h2>Nuo poreikio iki užbaigto darbo</h2></div>
+              <p>Statybos24.lt nėra tik skelbimų lenta. Darbas sukuriamas kaip konkretus poreikis, o po realaus bendradarbiavimo lieka istorija, kuri padeda kitą kartą apsispręsti greičiau.</p>
+            </div>
+            <div className="bp-flow">
+              {steps.map(([no, title, text]) => (
+                <article className="bp-step" key={no}>
+                  <span className="bp-step-no">ŽINGSNIS {no}</span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="bp-section">
+            <div className="bp-head">
+              <div><div className="bp-eyebrow">Darbuotojų atranka</div><h2>Atsirenkate žmones, kurie tinka būtent tam darbui</h2></div>
+              <p>Darbdavys pats valdo atranką. Sistema pateikia informaciją, reikalingą sprendimui – nuo realaus prieinamumo iki ankstesnių darbų istorijos.</p>
+            </div>
+
+            <div className="bp-match">
+              <div className="bp-match-card">
+                <h3>Jūsų darbo poreikis</h3>
+                <div className="bp-pills">
+                  {["Miestas / vieta","Darbo sritis","Data ir laikas","Atlygis","Žmonių skaičius"].map((item)=><span className="bp-pill" key={item}>{item}</span>)}
+                </div>
+              </div>
+              <div className="bp-arrow">→</div>
+              <div className="bp-match-card">
+                <h3>Darbuotojo reali informacija</h3>
+                <div className="bp-pills">
+                  {["Prieinamumas","Darbo sritys","Kelionės spindulys","Patirtis","Darbo istorija","Patikimumas","Įvertinimai"].map((item)=><span className="bp-pill" key={item}>{item}</span>)}
+                </div>
+              </div>
+            </div>
+
+            <div className="bp-note">
+              <b>Pavyzdys.</b> Rytoj Vilniuje reikia dviejų apdailininkų nuo 8:00.
+              Sukuriate darbą, nurodote vietą, laiką ir atlygį, atsirenkate tam
+              laikui prieinamus žmones, peržiūrite jų darbo istoriją ir įvertinimus,
+              tada siunčiate kvietimus. Darbuotojai apie pasiūlymą informuojami ir el. paštu.
+            </div>
+          </section>
+
+          <section className="bp-section">
+            <div className="bp-head">
+              <div><div className="bp-eyebrow">Pasitikėjimo istorija</div><h2>Kiekvienas realus darbas kuria stipresnį profilį</h2></div>
+              <p>Reputacija formuojasi iš realių darbų, atvykimo, darbo užbaigimo, įvertinimų ir atsiliepimų – tiek darbuotojui, tiek darbdaviui.</p>
+            </div>
+            <div className="bp-trust">
+              <article className="bp-card">
+                <h3>Darbuotojo reputacija</h3>
+                <p>Kiekvienas užbaigtas darbas papildo <b>darbo istoriją</b>. Tvarkingai atlikti darbai stiprina patikimumą, o įvertinimai ir atsiliepimai leidžia kitam darbdaviui spręsti ne vien iš profilio aprašymo.</p>
+              </article>
+              <article className="bp-card">
+                <h3>Darbdavio reputacija</h3>
+                <p>Patikimumą kaupia ir įmonė. Darbuotojai jį mato prieš priimdami kvietimą. Ginčytinoje situacijoje viena pusė negali tiesiog sugadinti kitos reputacijos – ginčas gali būti perduotas administratoriui spręsti.</p>
+              </article>
+            </div>
+          </section>
+
+          <section className="bp-section">
+            <div className="bp-head">
+              <div><div className="bp-eyebrow">Kasdienis valdymas</div><h2>Ką galite valdyti vienoje vietoje</h2></div>
+              <p>Nuo pirmo darbo kvietimo iki pakartotinio gero darbuotojo pasirinkimo – svarbiausia darbo eiga lieka toje pačioje sistemoje.</p>
+            </div>
+            <div className="bp-feature-grid">
+              {features.map(([title,text])=>(
+                <article className="bp-feature" key={title}><b>{title}</b><span>{text}</span></article>
+              ))}
+            </div>
+          </section>
+
+          <section className="bp-section">
+            <div className="bp-long">
+              <h3>Trumpalaikis darbas gali tapti praktišku būdu rasti žmogų ilgam.</h3>
+              <p>Užuot sprendus vien iš CV ar pokalbio, galite žmogų pamatyti realiame objekte. Jei jis pasiteisina, išsaugote jį favorituose, kviečiate į kitus darbus ir bendradarbiavimą galite tęsti ilgalaikio įdarbinimo kryptimi.</p>
+            </div>
+          </section>
+
+          <section className="bp-section">
+            <div className="bp-head">
+              <div><div className="bp-eyebrow">Planai įmonei</div><h2>Pradėkite nemokamai ir plėskite, kai reikia daugiau</h2></div>
+              <p>Basic leidžia išbandyti pagrindinę paiešką. Business prideda reputacijos duomenis ir daugiau valdymo. Business Pro skirtas kelių žmonių komandai.</p>
+            </div>
+
+            <div className="bp-plans">
+              <article className="bp-plan">
+                <span className="bp-plan-tag">Pradžia</span><h3>Basic</h3><div className="bp-price">0 € <small>/ mėn.</small></div>
+                <div className="bp-desc">Pagrindinis būdas išbandyti darbuotojų paiešką be prenumeratos.</div>
+                <ul><li>Iki 5 darbo pasiūlymų per mėnesį</li><li>Darbuotojų paieška ir kvietimai</li><li>1 įmonės vartotojas</li></ul>
+                <div className="bp-why"><b>Kada rinktis:</b> kai poreikis retas arba norite pirmiausia susipažinti su sistema.</div>
+              </article>
+
+              <article className="bp-plan featured">
+                <span className="bp-plan-tag">Rekomenduojamas</span><h3>Business</h3><div className="bp-price">29 € <small>/ mėn.</small></div>
+                <div className="bp-desc">Reguliariai darbuotojų ieškančiai įmonei, kuri nori geriau atsirinkti ir kaupti patikrintų žmonių ratą.</div>
+                <ul><li>Viskas, kas yra Basic plane</li><li>Iki 25 darbo pasiūlymų per mėnesį</li><li>Patikimumas ir įvertinimai</li><li>Favoritai</li><li>Privatūs ir bendri darbo pokalbiai</li><li>Išplėstinė statistika</li></ul>
+                <div className="bp-why"><b>Pakviestoms įmonėms:</b> 30 dienų nemokamai, be kortelės ir be įsipareigojimo.</div>
+              </article>
+
+              <article className="bp-plan pro">
+                <span className="bp-plan-tag">Komandai</span><h3>Business Pro</h3><div className="bp-price">59 € <small>/ mėn.</small></div>
+                <div className="bp-desc">Kai darbuotojų paiešką ir objektus vienu metu valdo keli įmonės žmonės.</div>
+                <ul><li>Viskas, kas yra Business plane</li><li>Neriboti darbo pasiūlymai</li><li>Iki 5 įmonės vartotojų ir rolės</li><li>„Mano darbai“ ir „Visi įmonės darbai“</li><li>Atsakingo žmogaus paskyrimas</li><li>Vadovų statistika</li><li>„Skubiai!“ laisvų darbuotojų kontaktai</li><li>Vidinis vadovų pokalbis</li></ul>
+                <div className="bp-why"><b>Kada rinktis:</b> kai reikia ne tik paieškos, bet ir aiškaus komandinio valdymo.</div>
+              </article>
+            </div>
+
+            <div className="bp-note">Business ir Business Pro galima rinktis mėnesiui arba metams. Metiniam atsiskaitymui taikoma <b>20 % nuolaida</b>.</div>
+          </section>
+
+          <section className="bp-trial">
+            <div>
+              <div className="bp-eyebrow">Išbandykite realiame poreikyje</div>
+              <h2>30 dienų Business nemokamai.</h2>
+              <p>Pakviestoms įmonėms Business planą aktyvuojame 30 dienų be kortelės ir be įsipareigojimo. Galite sukurti realų darbą ir įvertinti sistemą savo procese. Jei po išbandymo nepasirenkate mokamo plano, paskyra grįžta į nemokamą Basic.</p>
+            </div>
+            <button className="bp-primary" type="button" onClick={onSignup}>Registruotis darbdaviui</button>
+          </section>
+        </div>
+      </main>
+
+      <footer className="bp-footer">
+        <div className="bp-wrap bp-footer-inner"><span>© 2026 statybos24.lt</span><span>Kontaktas: alanas@statybos24.lt</span></div>
+      </footer>
+    </div>
+  );
+}
+
 function AppBootLoader() {
   return (
     <div
@@ -26730,6 +27050,9 @@ function App() {
   const [authRole, setAuthRole] = useState("worker");
   const [pricingBillingCycle, setPricingBillingCycle] = useState("monthly");
   const [adminMode, setAdminMode] = useState("admin");
+  const businessPresentationToken = new URLSearchParams(window.location.search).get(
+    "pristatymas"
+  );
   const [teamInviteToken, setTeamInviteToken] = useState(() =>
     new URLSearchParams(window.location.search).get("team_invite")
   );
@@ -26971,6 +27294,23 @@ function App() {
         error={recoveryError}
         onDone={finishPasswordRecovery}
       />
+    );
+  }
+
+  if (
+    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
+    (!user || accountRole === "admin")
+  ) {
+    return (
+      <>
+        <BusinessPresentationPage onSignup={openEmployerSignup} />
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode="signup"
+          initialRole="employer"
+        />
+      </>
     );
   }
 
