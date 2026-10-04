@@ -2082,6 +2082,7 @@ function AuthModal({
     password: "",
     city: "Vilnius",
     phone: "",
+    employerType: "company",
     companyName: "",
     companyCode: "",
   });
@@ -2185,6 +2186,7 @@ function AuthModal({
         if (
           role === "employer" &&
           !teamInvite &&
+          form.employerType === "company" &&
           !form.companyName.trim()
         ) {
           throw new Error("Įveskite įmonės pavadinimą.");
@@ -2216,12 +2218,18 @@ function AuthModal({
               city: canonicalCity,
               phone: normalizedPhone,
               ...(phoneProof ? { phone_verification_proof: phoneProof } : {}),
+              employer_type:
+                role === "employer" && !teamInvite
+                  ? form.employerType
+                  : "",
               company_name:
                 role === "employer" && !teamInvite
-                  ? form.companyName.trim()
+                  ? form.employerType === "individual"
+                    ? `${form.firstName.trim()} ${form.lastName.trim()}`.trim()
+                    : form.companyName.trim()
                   : "",
               company_code:
-                role === "employer" && !teamInvite
+                role === "employer" && !teamInvite && form.employerType === "company"
                   ? form.companyCode.trim()
                   : "",
             },
@@ -2469,28 +2477,90 @@ function AuthModal({
               </div>
 
               {role === "employer" && !teamInvite && (
-                <div style={twoColumns}>
-                  <label style={labelStyle}>
-                    Įmonės pavadinimas *
-                    <input
-                      style={inputStyle}
-                      value={form.companyName}
-                      onChange={setField("companyName")}
-                      placeholder="UAB Statyba"
-                      required
-                    />
-                  </label>
+                <>
+                  <div style={{ display: "grid", gap: 7 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#102438" }}>
+                      Darbdavio tipas
+                    </span>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 8,
+                        padding: 4,
+                        borderRadius: 12,
+                        background: "#f1f4f6",
+                      }}
+                    >
+                      {[
+                        ["company", "Įmonė"],
+                        ["individual", "Privatus asmuo"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() =>
+                            setForm((current) => ({
+                              ...current,
+                              employerType: value,
+                              ...(value === "individual"
+                                ? { companyName: "", companyCode: "" }
+                                : {}),
+                            }))
+                          }
+                          style={{
+                            minHeight: 42,
+                            border: 0,
+                            borderRadius: 9,
+                            background: form.employerType === value ? "#fff" : "transparent",
+                            color: "#102438",
+                            font: "inherit",
+                            fontSize: 13,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            boxShadow:
+                              form.employerType === value
+                                ? "0 1px 5px rgba(16,36,56,.10)"
+                                : "none",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {form.employerType === "individual" && (
+                      <span style={{ color: "#607180", fontSize: 12, lineHeight: 1.45 }}>
+                        Privatus asmuo taip pat gali kurti darbo pasiūlymus ir ieškoti darbuotojų.
+                        Darbdavio profilyje bus rodomas jūsų vardas ir pavardė.
+                      </span>
+                    )}
+                  </div>
 
-                  <label style={labelStyle}>
-                    Įmonės kodas
-                    <input
-                      style={inputStyle}
-                      value={form.companyCode}
-                      onChange={setField("companyCode")}
-                      placeholder="123456789"
-                    />
-                  </label>
-                </div>
+                  {form.employerType === "company" && (
+                    <div style={twoColumns}>
+                      <label style={labelStyle}>
+                        Įmonės pavadinimas *
+                        <input
+                          style={inputStyle}
+                          value={form.companyName}
+                          onChange={setField("companyName")}
+                          placeholder="UAB Statyba"
+                          required
+                        />
+                      </label>
+
+                      <label style={labelStyle}>
+                        Įmonės kodas
+                        <input
+                          style={inputStyle}
+                          value={form.companyCode}
+                          onChange={setField("companyCode")}
+                          placeholder="123456789"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -10644,7 +10714,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       marginBottom: 8,
                     }}
                   >
-                    Darbuotojų atsiliepimai apie įmonę
+                    Darbuotojų atsiliepimai apie darbdavį
                   </div>
 
                   <div style={{ display: "grid", gap: 9 }}>
@@ -10872,7 +10942,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             `}</style>
             <div className="wd-job-info-head">
               <div>
-                <div className="eyebrow">ĮMONĖS PROFILIS</div>
+                <div className="eyebrow">DARBDAVIO PROFILIS</div>
                 <h2>{workerCompanyProfileTarget.name || "Darbdavys"}</h2>
               </div>
               <button
@@ -10947,7 +11017,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
 
                   <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės patikimumas</div>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbdavio patikimumas</div>
                     <b
                       style={{
                         display: "block",
@@ -10963,7 +11033,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                 {!!workerCompanyProfileTarget.description && (
                   <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės aprašymas</div>
+                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbdavio aprašymas</div>
                     <div style={{ marginTop: 6, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
                       {workerCompanyProfileTarget.description}
                     </div>
@@ -17707,7 +17777,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="ed-company-editor-grid">
               <label className="ed-label">
-                Įmonės pavadinimas *
+                Darbdavio pavadinimas / vardas *
                 <input
                   className="ed-input"
                   value={companyForm.name}
@@ -17720,7 +17790,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </label>
 
               <label className="ed-label">
-                Įmonės kodas
+                Įmonės kodas (jei taikoma)
                 <input
                   className="ed-input ed-company-readonly"
                   value={companyForm.companyCode || "Nenurodytas"}
@@ -24601,7 +24671,7 @@ function AdminDashboard({
         .admin-resolution-help{margin-top:6px;font-size:11px;color:#6c7a88;line-height:1.45}
         .admin-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
         .admin-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:9000;display:grid;place-items:center;padding:20px}
-        .admin-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28)}
+        .admin-modal{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:18px;padding:22px;box-sizing:border-box;box-shadow:0 28px 90px rgba(16,36,56,.28);scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#98a5ae transparent}.admin-modal::-webkit-scrollbar{width:8px}.admin-modal::-webkit-scrollbar-track{background:transparent}.admin-modal::-webkit-scrollbar-thumb{background:#98a5ae;border-radius:999px;border:2px solid #fff}
         .admin-modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:17px}.admin-modal-head h2{margin:2px 0 0;font-family:Manrope,Inter,sans-serif;font-size:22px}
         .admin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-wide{grid-column:1/-1}
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
@@ -24610,7 +24680,7 @@ function AdminDashboard({
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(max-width:900px){.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-awards-grid{grid-template-columns:1fr}.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-top-actions>*:last-child{grid-column:1/-1}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
+        @media(max-width:620px){.admin-modal-overlay{padding:10px}.admin-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-top-actions>*:last-child{grid-column:1/-1}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
       `}</style>
 
       <header className="admin-topbar">
@@ -26014,7 +26084,7 @@ function AdminDashboard({
                   />
                 </label>
                 <label className="admin-label">
-                  Įmonės pavadinimas
+                  Darbdavio pavadinimas / vardas
                   <input
                     className="admin-input"
                     value={editorForm.name}
@@ -26022,7 +26092,7 @@ function AdminDashboard({
                   />
                 </label>
                 <label className="admin-label">
-                  Įmonės kodas
+                  Įmonės kodas (jei taikoma)
                   <input
                     className="admin-input"
                     value={editorForm.companyCode}
@@ -26058,7 +26128,7 @@ function AdminDashboard({
                         updateEditorField("isVerified", e.target.checked)
                       }
                     />{" "}
-                    Įmonė patvirtinta
+                    Darbdavys patvirtintas
                   </span>
                 </label>
                 <label className="admin-label">
