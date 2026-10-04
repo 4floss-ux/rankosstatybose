@@ -9452,7 +9452,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
               <div className="wd-kpi wd-kpi-issues">
                 <span>Probleminės darbo dienos</span>
-                <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
                 <div className="wd-kpi-issue-breakdown">
                   <span>Neatvykimai <strong>{metrics.noShowCount}</strong></span>
                   <span>Ankstyvi išėjimai <strong>{workerStats.unexcusedEarlyLeaveCount}</strong></span>
@@ -29891,7 +29890,7 @@ const mobileResponsiveFixStyles = `
       min-height: 0 !important;
       display: grid !important;
       grid-template-columns: 1fr !important;
-      grid-template-rows: auto auto auto !important;
+      grid-template-rows: auto auto !important;
       gap: 6px !important;
       text-align: left !important;
       padding: 11px 10px !important;
@@ -29904,17 +29903,9 @@ const mobileResponsiveFixStyles = `
       min-height: 0 !important;
     }
 
-    .wd-kpis > .wd-kpi.wd-kpi-issues > b {
-      grid-column: 1 !important;
-      grid-row: 2 !important;
-      justify-content: flex-start !important;
-      margin: 0 !important;
-      font-size: 22px !important;
-    }
-
     .wd-kpi-issues .wd-kpi-issue-breakdown {
       grid-column: 1 / -1 !important;
-      grid-row: 3 !important;
+      grid-row: 2 !important;
       margin-top: 0 !important;
       gap: 6px !important;
       grid-template-columns: 1fr !important;
