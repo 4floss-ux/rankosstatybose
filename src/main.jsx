@@ -4677,7 +4677,7 @@ function WorkerProfileModal({
           .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#102438}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
           .rs-profile-experience-text{margin:0;padding:12px 14px;border-radius:11px;background:#f6f8fa;color:#526374;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
-          @media(max-width:620px){.worker-profile-modal{border-radius:16px}.worker-profile-modal-scroll{max-height:calc(100vh - 20px);padding:17px}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
+          @media(max-width:620px){.worker-profile-modal{border-radius:16px;max-height:calc(100dvh - 20px)}.worker-profile-modal-scroll{max-height:calc(100dvh - 20px);padding:17px;padding-bottom:max(28px,env(safe-area-inset-bottom));overscroll-behavior:contain}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
           @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
         `}</style>
 
@@ -18738,6 +18738,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       : "Darbuotojai favoritai · Business"}
                   </button>
                 </div>
+
+                {workerSource === "team" &&
+                  planSummary?.can_saved_workers &&
+                  currentJob.status === "open" && (
+                    <button
+                      className="ed-primary ed-invite-all-mobile"
+                      type="button"
+                      disabled={
+                        invitingSavedTeam ||
+                        matchingSavedWorkersCount === 0
+                      }
+                      onClick={inviteSavedWorkerTeam}
+                    >
+                      {invitingSavedTeam
+                        ? "Siunčiami kvietimai..."
+                        : "Pakviesti visus tinkamus"}
+                    </button>
+                  )}
               </div>
               <div style={{ textAlign: "right" }}>
                 <b>{visibleCandidateWorkers.length} rasti</b>
@@ -18751,7 +18769,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   planSummary?.can_saved_workers &&
                   currentJob.status === "open" && (
                     <button
-                      className="ed-primary"
+                      className="ed-primary ed-invite-all-desktop"
                       type="button"
                       style={{ marginTop: 10 }}
                       disabled={
@@ -29062,6 +29080,52 @@ const mobileResponsiveFixStyles = `
     }
   }
 
+
+  /* Phone-only polish: keep worker profile fully scrollable and place team invite action under favorites. */
+  .ed-invite-all-mobile {
+    display: none;
+  }
+
+  @media (max-width: 620px) {
+    .worker-profile-modal {
+      max-height: calc(100dvh - 20px) !important;
+      height: auto !important;
+      overflow: hidden !important;
+    }
+
+    .worker-profile-modal-scroll {
+      max-height: calc(100dvh - 20px) !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      padding-bottom: max(32px, env(safe-area-inset-bottom)) !important;
+      scroll-padding-bottom: max(32px, env(safe-area-inset-bottom)) !important;
+      overscroll-behavior: contain !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .rs-modal-overlay:has(.worker-profile-modal) {
+      align-items: center !important;
+      padding: 10px 10px max(14px, env(safe-area-inset-bottom)) !important;
+    }
+
+    .ed-invite-all-desktop {
+      display: none !important;
+    }
+
+    .ed-invite-all-mobile {
+      display: inline-flex !important;
+      width: auto !important;
+      min-width: 0 !important;
+      min-height: 36px !important;
+      margin-top: 8px !important;
+      padding: 7px 11px !important;
+      border-radius: 9px !important;
+      font-size: 11.5px !important;
+      line-height: 1.2 !important;
+      justify-content: center !important;
+      white-space: normal !important;
+    }
+  }
 
   /* Compact employer history cards on phones. */
   @media (max-width: 620px) {
