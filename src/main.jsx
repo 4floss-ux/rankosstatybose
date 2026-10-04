@@ -371,24 +371,6 @@ function useStyledConfirm() {
   return { dialog, askConfirm, resolveConfirm };
 }
 
-function normalizePersonName(value) {
-  const clean = String(value || "")
-    .normalize("NFC")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (!clean) return "";
-
-  const lower = clean.toLocaleLowerCase("lt-LT");
-  return lower.replace(/(^|[\s\-’'])\p{L}/gu, (part) =>
-    part.toLocaleUpperCase("lt-LT")
-  );
-}
-
-function displayPersonName(value, fallback = "") {
-  return normalizePersonName(value) || fallback;
-}
-
 function normalizeLithuanianMobilePhone(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -2208,9 +2190,6 @@ function AuthModal({
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
-        const normalizedFirstName = normalizePersonName(form.firstName);
-        const normalizedLastName = normalizePersonName(form.lastName);
-        const normalizedDisplayName = `${normalizedFirstName} ${normalizedLastName}`.trim();
         const phoneProof = phoneVerification.requireProof();
         const canonicalCity = await canonicalCityName(form.city);
         if (!canonicalCity) {
@@ -2230,10 +2209,10 @@ function AuthModal({
               role: teamInvite ? "employer" : role,
               preferred_plan: "basic",
               preferred_billing_interval: "monthly",
-              first_name: normalizedFirstName,
-              last_name: normalizedLastName,
-              display_name: normalizedDisplayName,
-              legal_name: normalizedDisplayName,
+              first_name: form.firstName.trim(),
+              last_name: form.lastName.trim(),
+              display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+              legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
               phone: normalizedPhone,
               ...(phoneProof ? { phone_verification_proof: phoneProof } : {}),
@@ -2710,7 +2689,7 @@ function TeamInvitePage({
             <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
               Jums paruošta atskira darbdavio paskyra. Prisijungę dirbsite kaip{" "}
               <b style={{ color: "#102438" }}>
-                {displayPersonName(invite.invited_name, "Pakviestas narys")} · {invite.company_name}
+                {invite.invited_name} · {invite.company_name}
               </b>
               .
             </p>
@@ -6217,14 +6196,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       );
 
       const fallbackNameParts = String(profile?.display_name || "").trim().split(/\s+/).filter(Boolean);
-      const firstName = normalizePersonName(profile?.first_name || fallbackNameParts[0] || "");
-      const lastName = normalizePersonName(profile?.last_name || fallbackNameParts.slice(1).join(" ") || "");
-      const displayName = displayPersonName(`${firstName} ${lastName}`.trim() || profile?.display_name || "");
+      const firstName = profile?.first_name || fallbackNameParts[0] || "";
+      const lastName = profile?.last_name || fallbackNameParts.slice(1).join(" ") || "";
 
       setForm({
         firstName,
         lastName,
-        displayName,
+        displayName: `${firstName} ${lastName}`.trim() || profile?.display_name || "",
         city: profile?.city || "Vilnius",
         phone: privateData?.phone || "",
         travelRadius: worker?.travel_radius_km ?? 30,
@@ -7648,16 +7626,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       await phoneVerification.saveChange();
 
-      const normalizedFirstName = normalizePersonName(form.firstName);
-      const normalizedLastName = normalizePersonName(form.lastName);
-      const normalizedDisplayName = `${normalizedFirstName} ${normalizedLastName}`.trim();
-
       const profileUpdate = await supabase
         .from("profiles")
         .update({
-          first_name: normalizedFirstName,
-          last_name: normalizedLastName,
-          display_name: normalizedDisplayName,
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
           city: canonicalCity,
         })
         .eq("id", user.id);
@@ -7668,7 +7642,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .from("user_private")
         .update({
           phone: normalizedPhone,
-          legal_name: normalizedDisplayName,
+          legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
         })
         .eq("user_id", user.id);
 
@@ -8303,7 +8277,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
               <div>
-                <b>{displayPersonName(form.displayName, "Darbuotojas")}</b>
+                <b>{form.displayName || "Darbuotojas"}</b>
                 <span>{form.city || "Miestas nenurodytas"}</span>
               </div>
             </div>
@@ -12194,10 +12168,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
 const EMPLOYER_TRIAL_DAYS = 30;
 const BUSINESS_PRESENTATION_TOKEN = "imones-30d-business-7f4c29a1";
-const BUSINESS_PRESENTATION_PATH = "/pristatymas-imonems";
 
 function businessPresentationUrl() {
-  return new URL(BUSINESS_PRESENTATION_PATH, window.location.origin).href;
+  const url = new URL("/", window.location.origin);
+  url.searchParams.set("pristatymas", BUSINESS_PRESENTATION_TOKEN);
+  return url.href;
 }
 
 function employerPlanAnnualPrice(plan) {
@@ -12346,7 +12321,7 @@ function workerRecentActivityLabel(value) {
 }
 
 function shortWorkerName(name) {
-  const parts = normalizePersonName(name).split(/\s+/).filter(Boolean);
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "Darbuotojas";
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[1][0]}.`;
@@ -12795,7 +12770,7 @@ function companyAvatarUrl(path) {
 }
 
 function workerInitials(name) {
-  return (normalizePersonName(name) || "D")
+  return String(name || "D")
     .trim()
     .split(/\s+/)
     .filter(Boolean)
@@ -12976,6 +12951,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyWorkerReviews, setCompanyWorkerReviews] = useState([]);
   const [showReliabilityInfo, setShowReliabilityInfo] = useState(false);
   const [currentJob, setCurrentJob] = useState(null);
+  const [currentJobDescriptionExpanded, setCurrentJobDescriptionExpanded] = useState(false);
+  useEffect(() => {
+    setCurrentJobDescriptionExpanded(false);
+  }, [currentJob?.id]);
   const jobOpenRequestRef = useRef(0);
   const jobWorkersRequestRef = useRef(0);
   const jobMatchesRequestRef = useRef(0);
@@ -13563,7 +13542,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const result = await supabase.rpc("create_company_team_invite", {
         p_company_id: company.id,
         p_email: teamInviteForm.email.trim(),
-        p_display_name: normalizePersonName(teamInviteForm.displayName),
+        p_display_name: teamInviteForm.displayName.trim(),
         p_member_role: teamInviteForm.memberRole,
       });
 
@@ -13661,7 +13640,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const confirmed = await askConfirm({
       eyebrow: "KOMANDOS NARYS",
       title: "Pašalinti iš įmonės komandos?",
-      message: `${displayPersonName(member.display_name, "Komandos narys")} bus pašalintas iš komandos, o jo atsakingi darbai bus perduoti įmonės savininkui.`,
+      message: `${member.display_name} bus pašalintas iš komandos, o jo atsakingi darbai bus perduoti įmonės savininkui.`,
       confirmLabel: "Pašalinti",
       danger: true,
     });
@@ -17453,7 +17432,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-profile-summary-card">
                 <span>Jūs prisijungę kaip</span>
                 <b>
-                  {displayPersonName(currentTeamMember?.display_name, user.email || "Vartotojas")}
+                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
                 </b>
                 <small>{companyTeamRoleLabel(companyMemberRole)}</small>
               </div>
@@ -17602,7 +17581,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                           <div>
                             <b>
-                              {displayPersonName(review.worker_name, "Darbuotojas")} · {review.score} / 10
+                              {review.worker_name || "Darbuotojas"} · {review.score} / 10
                             </b>
                             <div className="ed-company-review-meta">
                               {formatJobTitle(review.job_title)}
@@ -17820,7 +17799,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }
                   options={activeTeamMembers.map((member) => ({
                     value: member.user_id,
-                    label: `${displayPersonName(member.display_name, "Komandos narys")} · ${companyTeamRoleLabel(member.member_role)}`,
+                    label: `${member.display_name} · ${companyTeamRoleLabel(member.member_role)}`,
                   }))}
                 />
                 <span
@@ -18341,7 +18320,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     )}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div className="ed-current-job-head-actions" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <span
                   className={`ed-current-job-status ${
                     currentJob.status === "cancelled"
@@ -18417,10 +18396,52 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               <div className="ed-current-job-description">
                 <span>Darbo aprašymas</span>
-                <div>
-                  {currentJob.description?.trim() ||
-                    "Darbo aprašymas nepateiktas."}
-                </div>
+                {(() => {
+                  const descriptionText =
+                    currentJob.description?.trim() ||
+                    "Darbo aprašymas nepateiktas.";
+                  const canToggleDescription = descriptionText.length > 180;
+                  return (
+                    <>
+                      <div
+                        className={`ed-current-job-description-copy ${
+                          currentJobDescriptionExpanded ? "expanded" : "collapsed"
+                        }`}
+                      >
+                        {descriptionText}
+                      </div>
+                      {canToggleDescription && (
+                        <button
+                          className="ed-description-toggle"
+                          type="button"
+                          style={{
+                            marginTop: 10,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            minHeight: 36,
+                            padding: "8px 12px",
+                            borderRadius: 999,
+                            border: "1px solid #d9e3ea",
+                            background: "#fff",
+                            color: "#102438",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                          }}
+                          onClick={() =>
+                            setCurrentJobDescriptionExpanded((value) => !value)
+                          }
+                          aria-expanded={currentJobDescriptionExpanded}
+                        >
+                          {currentJobDescriptionExpanded
+                            ? "Rodyti mažiau"
+                            : "Rodyti daugiau"}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -19977,7 +19998,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <div className="ed-team-member" key={member.user_id}>
                         <div>
                           <b>
-                            {displayPersonName(member.display_name, "Komandos narys")}
+                            {member.display_name}
                             {member.user_id === user.id ? " · Jūs" : ""}
                           </b>
                           <span>{member.email}</span>
@@ -19993,7 +20014,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             <>
                               <RoundedSelect
                                 className="ed-team-role-select"
-                                ariaLabel={`${displayPersonName(member.display_name, "Komandos narys")} rolė`}
+                                ariaLabel={`${member.display_name} rolė`}
                                 value={member.member_role}
                                 disabled={teamActionBusy}
                                 onChange={(value) =>
@@ -20210,7 +20231,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {pendingTeamInvites.length ? (
                         pendingTeamInvites.map((invite) => (
                           <div className="ed-team-invite" key={invite.invite_id}>
-                            <b>{displayPersonName(invite.display_name, "Pakviestas narys")}</b>
+                            <b>{invite.display_name}</b>
                             <span>
                               {invite.email} ·{" "}
                               {companyTeamRoleLabel(invite.member_role)}
@@ -22016,7 +22037,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               size={52}
                             />
                             <div>
-                              <b>{displayPersonName(worker.worker_name, "Darbuotojas")}</b>
+                              <b>{worker.worker_name}</b>
                               <small>
                                 {worker.city || "Miestas nenurodytas"} · kartu užbaigta darbo dienų: {worker.completed_days}
                               </small>
@@ -22057,7 +22078,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 {offer.position_title || "Įdarbinimo pasiūlymas"}
                               </b>
                               <div className="lt-existing-info-sub">
-                                Darbuotojas: {displayPersonName(offer.worker_name, "Darbuotojas")}
+                                Darbuotojas: {offer.worker_name || "Darbuotojas"}
                               </div>
                               <div className="lt-existing-info-meta">
                                 {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date}
@@ -22158,7 +22179,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         .map((offer) => (
                           <div className="lt-employed-row" key={`active-${offer.id}`}>
                             <div>
-                              <b>{displayPersonName(offer.worker_name, "Darbuotojas")}</b>
+                              <b>{offer.worker_name}</b>
                               <div className="lt-employed-meta">
                                 {offer.position_title} · nuo {offer.proposed_start_date}
                                 {offer.proposed_end_date ? ` iki ${offer.proposed_end_date}` : " · neterminuota"}
@@ -22414,7 +22435,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
 
         setForm((current) => ({
           ...current,
-          displayName: displayPersonName(profileResult.data?.display_name),
+          displayName: profileResult.data?.display_name || "",
           city: profileResult.data?.city || "Vilnius",
           phone: privateResult.data?.phone || "",
         }));
@@ -22452,7 +22473,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
       }
 
       const result = await supabase.rpc("admin_register_worker_mode", {
-        p_display_name: normalizePersonName(form.displayName),
+        p_display_name: form.displayName.trim(),
         p_city: city,
         p_phone: form.phone.trim() || null,
         p_travel_radius_km: travelRadius,
@@ -23649,8 +23670,8 @@ function AdminDashboard({
   function openWorkerEditor(worker) {
     setEditor({ type: "worker", id: worker.user_id });
     setEditorForm({
-      displayName: displayPersonName(worker.display_name),
-      legalName: displayPersonName(worker.legal_name),
+      displayName: worker.display_name || "",
+      legalName: worker.legal_name || "",
       phone: worker.phone || "",
       city: worker.city || "",
       isActive: Boolean(worker.is_active),
@@ -23676,7 +23697,7 @@ function AdminDashboard({
       trialBlockedByStripe: false,
     });
     setEditorForm({
-      displayName: displayPersonName(employer.display_name),
+      displayName: employer.display_name || "",
       phone: employer.phone || "",
       name: employer.company_name || "",
       companyCode: employer.company_code || "",
@@ -23782,7 +23803,7 @@ function AdminDashboard({
         const [profileResult, contactResult] = await Promise.all([
           supabase.rpc("admin_update_worker", {
             p_user_id: editor.id,
-            p_display_name: normalizePersonName(editorForm.displayName),
+            p_display_name: editorForm.displayName.trim(),
             p_city: city,
             p_is_active: Boolean(editorForm.isActive),
             p_travel_radius_km: travelRadiusKm,
@@ -23794,8 +23815,8 @@ function AdminDashboard({
           }),
           supabase.rpc("admin_update_account_contact", {
             p_user_id: editor.id,
-            p_display_name: normalizePersonName(editorForm.displayName),
-            p_legal_name: normalizePersonName(editorForm.legalName) || null,
+            p_display_name: editorForm.displayName.trim(),
+            p_legal_name: editorForm.legalName.trim() || null,
             p_phone: editorForm.phone.trim() || null,
           }),
         ]);
@@ -23821,7 +23842,7 @@ function AdminDashboard({
           }),
           supabase.rpc("admin_update_account_contact", {
             p_user_id: editor.ownerId,
-            p_display_name: normalizePersonName(editorForm.displayName),
+            p_display_name: editorForm.displayName.trim(),
             p_legal_name: null,
             p_phone: editorForm.phone.trim() || null,
           }),
@@ -24536,7 +24557,7 @@ function AdminDashboard({
                     <div className="admin-facts">
                       <div className="admin-fact">
                         <span>Darbuotojas</span>
-                        <b>{displayPersonName(dispute.worker_name, "Darbuotojas")}</b>
+                        <b>{dispute.worker_name}</b>
                       </div>
                       <div className="admin-fact">
                         <span>Darbdavys</span>
@@ -24697,7 +24718,7 @@ function AdminDashboard({
                   return (
                     <div className="admin-row" key={worker.user_id}>
                       <div className="admin-row-title">
-                        <b>{displayPersonName(worker.display_name, worker.email || "Darbuotojas")}</b>
+                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
                         <span>
                           {worker.email || "—"} ·{" "}
                           {worker.city || "Miestas nenurodytas"}
@@ -25164,7 +25185,7 @@ function AdminDashboard({
                     </div>
 
                     <div className="admin-employment-person">
-                      <b>{displayPersonName(placement.worker_name, "Darbuotojas")}</b>
+                      <b>{placement.worker_name || "Darbuotojas"}</b>
                       <span>Įdarbintas darbuotojas</span>
                     </div>
 
@@ -25287,7 +25308,7 @@ function AdminDashboard({
                   <div className="admin-row" key={rating.rating_id}>
                     <div className="admin-row-title">
                       <b>
-                        {displayPersonName(rating.worker_name, "Darbuotojas")} · {rating.score} / 10
+                        {rating.worker_name} · {rating.score} / 10
                       </b>
                       <span>
                         {rating.company_name} · {formatJobTitle(rating.job_title)}
@@ -27223,11 +27244,6 @@ function App() {
   const businessPresentationToken = new URLSearchParams(window.location.search).get(
     "pristatymas"
   );
-  const normalizedPathname =
-    window.location.pathname.replace(/\/+$/, "") || "/";
-  const isBusinessPresentation =
-    normalizedPathname === BUSINESS_PRESENTATION_PATH ||
-    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN;
   const [teamInviteToken, setTeamInviteToken] = useState(() =>
     new URLSearchParams(window.location.search).get("team_invite")
   );
@@ -27280,15 +27296,6 @@ function App() {
     );
 
     return () => listener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (
-      businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
-      normalizedPathname !== BUSINESS_PRESENTATION_PATH
-    ) {
-      window.history.replaceState({}, "", BUSINESS_PRESENTATION_PATH);
-    }
   }, []);
 
   useEffect(() => {
@@ -27482,7 +27489,7 @@ function App() {
   }
 
   if (
-    isBusinessPresentation &&
+    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
     (!user || accountRole === "admin")
   ) {
     return (
@@ -28567,6 +28574,241 @@ const mobileResponsiveFixStyles = `
       line-height: 1.2 !important;
     }
   }
+
+
+  /* Stronger mobile polish for the employer open-job screen. */
+  @media (max-width: 620px) {
+    .ed-current-job-overview {
+      border-radius: 18px !important;
+    }
+
+    .ed-current-job-overview-head {
+      padding: 14px 14px 12px !important;
+      gap: 12px !important;
+    }
+
+    .ed-current-job-overview-head h2 {
+      font-size: 18px !important;
+      line-height: 1.16 !important;
+      margin-bottom: 6px !important;
+    }
+
+    .ed-current-job-head-meta {
+      font-size: 12px !important;
+      gap: 4px 8px !important;
+    }
+
+    .ed-current-job-head-actions {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+      gap: 8px !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .ed-current-job-head-actions > * {
+      width: 100% !important;
+      min-height: 42px !important;
+      justify-content: center !important;
+      text-align: center !important;
+      white-space: normal !important;
+    }
+
+    .ed-current-job-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      padding: 10px 10px 0 !important;
+    }
+
+    .ed-current-job-field,
+    .ed-current-job-field.wide {
+      grid-column: span 1 !important;
+      min-height: 0 !important;
+      padding: 10px 11px !important;
+      border-radius: 12px !important;
+    }
+
+    .ed-current-job-field.wide:first-child,
+    .ed-current-job-field.wide:last-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .ed-current-job-field span {
+      font-size: 9.5px !important;
+      margin-bottom: 4px !important;
+    }
+
+    .ed-current-job-field b {
+      font-size: 12.5px !important;
+      line-height: 1.35 !important;
+    }
+
+    .ed-current-job-description {
+      margin: 10px !important;
+      padding: 12px !important;
+    }
+
+    .ed-current-job-description-copy.collapsed {
+      display: -webkit-box !important;
+      -webkit-line-clamp: 4 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+    }
+
+    .ed-description-toggle {
+      margin-top: 10px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-height: 36px !important;
+      padding: 8px 12px !important;
+      border-radius: 999px !important;
+      border: 1px solid #d9e3ea !important;
+      background: #fff !important;
+      color: #102438 !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      cursor: pointer !important;
+    }
+
+    .ed-attendance-panel {
+      margin-top: 18px !important;
+      padding: 14px 12px !important;
+      border-radius: 16px !important;
+    }
+
+    .ed-attendance-panel h2 {
+      font-size: 17px !important;
+      line-height: 1.2 !important;
+    }
+
+    .ed-attendance-help {
+      font-size: 11.5px !important;
+      line-height: 1.45 !important;
+    }
+
+    .ed-attendance-list {
+      gap: 10px !important;
+      margin-top: 12px !important;
+    }
+
+    .ed-attendance-row {
+      padding: 12px !important;
+      gap: 10px !important;
+      border-radius: 14px !important;
+      grid-template-columns: 1fr !important;
+      align-items: stretch !important;
+    }
+
+    .ed-worker-id {
+      align-items: flex-start !important;
+      gap: 10px !important;
+    }
+
+    .ed-worker-main {
+      gap: 5px !important;
+    }
+
+    .ed-worker-main > div:first-child {
+      gap: 7px !important;
+      align-items: flex-start !important;
+    }
+
+    .ed-worker-main b {
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+    }
+
+    .ed-worker-main > span {
+      font-size: 12px !important;
+      line-height: 1.35 !important;
+    }
+
+    .ed-worker-status {
+      margin-top: 4px !important;
+      gap: 6px !important;
+    }
+
+    .ed-attendance-badge {
+      margin-top: 0 !important;
+      padding: 5px 9px !important;
+      font-size: 10.5px !important;
+      line-height: 1.25 !important;
+      white-space: normal !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    .ed-next-step {
+      margin-top: 2px !important;
+      padding: 10px 11px !important;
+      border-radius: 12px !important;
+      font-size: 12px !important;
+      line-height: 1.45 !important;
+    }
+
+    .ed-next-step b {
+      display: block !important;
+      margin-bottom: 3px !important;
+      font-size: 12.5px !important;
+    }
+
+    .ed-attendance-row > .ed-member-metrics,
+    .ed-member-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      min-width: 0 !important;
+      width: 100% !important;
+    }
+
+    .ed-member-metric {
+      padding: 10px !important;
+      border-radius: 12px !important;
+    }
+
+    .ed-member-metric span {
+      font-size: 10.5px !important;
+      line-height: 1.25 !important;
+      margin-bottom: 4px !important;
+    }
+
+    .ed-member-metric b {
+      font-size: 18px !important;
+      line-height: 1.1 !important;
+    }
+
+    .ed-attendance-row > .ed-attendance-actions,
+    .ed-attendance-actions {
+      width: 100% !important;
+      min-width: 0 !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      justify-content: stretch !important;
+    }
+
+    .ed-attendance-actions > button,
+    .ed-attendance-actions > .ed-team-add,
+    .ed-attendance-actions > .ed-secondary,
+    .ed-attendance-actions > .ed-primary {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 42px !important;
+      padding: 9px 10px !important;
+      font-size: 12.5px !important;
+      line-height: 1.25 !important;
+      white-space: normal !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    .ed-attendance-actions > span,
+    .ed-attendance-actions > .ed-attendance-badge {
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+    }
+  }
+
 
   /* Compact employer history cards on phones. */
   @media (max-width: 620px) {
