@@ -5586,6 +5586,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showWorkTimeLoginReminder, setShowWorkTimeLoginReminder] = useState(false);
   const [workerActivePage, setWorkerActivePage] = useState(1);
   const [workerHistoryPage, setWorkerHistoryPage] = useState(1);
+  const [isPhoneLayout, setIsPhoneLayout] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth <= 620;
+  });
+  const [workerHistoryMobileIndex, setWorkerHistoryMobileIndex] = useState(0);
   const [workerProfileEditorTarget, setWorkerProfileEditorTarget] = useState("profile");
   const workerProfileEditorRef = useRef(null);
 
@@ -5598,6 +5603,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       );
     } catch {}
   }, [user?.id, showWorkerStats]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const syncPhoneLayout = () => setIsPhoneLayout(window.innerWidth <= 620);
+    syncPhoneLayout();
+    window.addEventListener("resize", syncPhoneLayout);
+    return () => window.removeEventListener("resize", syncPhoneLayout);
+  }, []);
 
   useEffect(() => {
     if (loading || !user?.id) return undefined;
@@ -7818,9 +7831,100 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     (workerHistoryPage - 1) * DASHBOARD_PAGE_SIZE,
     workerHistoryPage * DASHBOARD_PAGE_SIZE
   );
+  const workerHistoryMobileTotal = workerWorkHistory.length;
+  const safeWorkerHistoryMobileIndex = workerHistoryMobileTotal
+    ? Math.min(workerHistoryMobileIndex, workerHistoryMobileTotal - 1)
+    : 0;
+  const workerHistoryMobileItem = workerHistoryMobileTotal
+    ? workerWorkHistory[safeWorkerHistoryMobileIndex]
+    : null;
   const activeWorkerJobIds = new Set(
     activeWorkerWorkdays.map((item) => item.job?.id).filter(Boolean)
   );
+
+  const renderWorkerHistoryCard = (item, keyPrefix = "history") => {
+    const job = item?.job;
+    const attendance = item?.attendance || {};
+    if (!job) return null;
+
+    const cancelled = [
+      "cancelled_by_employer",
+      "cancelled_by_worker",
+    ].includes(item.status);
+
+    return (
+      <div className="wd-workday wd-history-workday" key={`${keyPrefix}-${item.id}`}>
+        <div>
+          <div className="wd-workday-head history">
+            <div className="wd-workday-head-main">
+              <div className="wd-workday-title">
+                <h3>{formatJobTitle(job.title)}</h3>
+                <span
+                  className={`wd-workday-phase ${
+                    cancelled ? "cancelled" : "done"
+                  }`}
+                >
+                  {cancelled ? "Atšauktas" : "Užbaigtas"}
+                </span>
+                {!cancelled && attendance.finalized_at && (
+                  <span
+                    className={`wd-workday-status ${
+                      attendance.final_outcome === "no_show" ||
+                      attendance.final_outcome === "left_early_unexcused"
+                        ? "red"
+                        : "green"
+                    }`}
+                  >
+                    {attendanceOutcomeLabel(attendance)}
+                  </span>
+                )}
+                {attendance.dispute_status === "resolved_worker" && (
+                  <span className="wd-workday-status green">
+                    ✓ Ginčas išspręstas jūsų naudai
+                  </span>
+                )}
+                {attendance.dispute_status === "resolved_employer" && (
+                  <span className="wd-workday-status red">
+                    Ginčas išspręstas ne jūsų naudai
+                  </span>
+                )}
+              </div>
+
+              <div className="wd-workday-meta">
+                <div className="wd-company-meta-line">
+                  <b>{item.companyName}</b>
+                  {job.pay_amount
+                    ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
+                    : ""}
+                  {" · "}
+                  {job.work_date} · {job.start_time?.slice(0, 5)}
+                  {job.end_time
+                    ? `–${job.end_time.slice(0, 5)}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {!cancelled && !attendance.finalized_at ? (
+            <span className="wd-workday-status green">
+              Darbas užbaigtas
+            </span>
+          ) : null}
+        </div>
+
+        <div className="wd-workday-actions">
+          <button
+            className="wd-decline"
+            type="button"
+            onClick={() => openWorkdayDetails(item)}
+          >
+            Darbo informacija
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(activeWorkerWorkdays.length / DASHBOARD_PAGE_SIZE));
@@ -7831,6 +7935,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     const totalPages = Math.max(1, Math.ceil(workerWorkHistory.length / DASHBOARD_PAGE_SIZE));
     if (workerHistoryPage > totalPages) setWorkerHistoryPage(totalPages);
   }, [workerWorkHistory.length, workerHistoryPage]);
+
+  useEffect(() => {
+    if (!workerWorkHistory.length) {
+      setWorkerHistoryMobileIndex(0);
+      return;
+    }
+    setWorkerHistoryMobileIndex((current) =>
+      Math.min(current, workerWorkHistory.length - 1)
+    );
+  }, [workerWorkHistory.length]);
 
   const workerTodayJobs = workdays.filter(
     (item) =>
@@ -9993,101 +10107,72 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
 
           <section className="wd-card" id="worker-job-history">
-            <h2>Darbų istorija</h2>
+            <div className="wd-history-section-head">
+              <h2>Darbų istorija</h2>
+              {isPhoneLayout && workerWorkHistory.length > 0 && (
+                <span className="wd-history-section-count">
+                  {safeWorkerHistoryMobileIndex + 1} / {workerHistoryMobileTotal}
+                </span>
+              )}
+            </div>
 
             {workerWorkHistory.length ? (
-              <>
-              <div className="wd-workdays">
-                {pagedWorkerWorkHistory.map((item) => {
-                  const job = item.job;
-                  const attendance = item.attendance || {};
-                  if (!job) return null;
-
-                  const cancelled = [
-                    "cancelled_by_employer",
-                    "cancelled_by_worker",
-                  ].includes(item.status);
-
-                  return (
-                    <div className="wd-workday" key={`history-${item.id}`}>
-                      <div>
-                        <div className="wd-workday-head history">
-                          <div className="wd-workday-head-main">
-                            <div className="wd-workday-title">
-                              <h3>{formatJobTitle(job.title)}</h3>
-                              <span
-                                className={`wd-workday-phase ${
-                                  cancelled ? "cancelled" : "done"
-                                }`}
-                              >
-                                {cancelled ? "Atšauktas" : "Užbaigtas"}
-                              </span>
-                              {!cancelled && attendance.finalized_at && (
-                                <span
-                                  className={`wd-workday-status ${
-                                    attendance.final_outcome === "no_show" ||
-                                    attendance.final_outcome === "left_early_unexcused"
-                                      ? "red"
-                                      : "green"
-                                  }`}
-                                >
-                                  {attendanceOutcomeLabel(attendance)}
-                                </span>
-                              )}
-                              {attendance.dispute_status === "resolved_worker" && (
-                                <span className="wd-workday-status green">
-                                  ✓ Ginčas išspręstas jūsų naudai
-                                </span>
-                              )}
-                              {attendance.dispute_status === "resolved_employer" && (
-                                <span className="wd-workday-status red">
-                                  Ginčas išspręstas ne jūsų naudai
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="wd-workday-meta">
-                              <div className="wd-company-meta-line">
-                                <b>{item.companyName}</b>
-                                {job.pay_amount
-                                  ? ` · ${formatNetPay(job.pay_amount, job.pay_unit)}`
-                                  : ""}
-                                {" · "}
-                                {job.work_date} · {job.start_time?.slice(0, 5)}
-                                {job.end_time
-                                  ? `–${job.end_time.slice(0, 5)}`
-                                  : ""}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {!cancelled && !attendance.finalized_at ? (
-                          <span className="wd-workday-status green">
-                            Darbas užbaigtas
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="wd-workday-actions">
-                        <button
-                          className="wd-decline"
-                          type="button"
-                          onClick={() => openWorkdayDetails(item)}
-                        >
-                          Darbo informacija
-                        </button>
-                      </div>
+              isPhoneLayout ? (
+                <div className="wd-history-mobile">
+                  <div className="wd-history-carousel-head">
+                    <div className="wd-history-carousel-copy">
+                      <b>Paskutinis darbas</b>
+                      <span>Perjunkite rodyklėmis ankstesnius darbus.</span>
                     </div>
-                  );
-                })}
-              </div>
-              <DashboardPagination
-                page={workerHistoryPage}
-                totalItems={workerWorkHistory.length}
-                onPageChange={setWorkerHistoryPage}
-              />
-              </>
+                    <div className="wd-history-nav">
+                      <button
+                        type="button"
+                        aria-label="Rodyti naujesnį darbą"
+                        onClick={() =>
+                          setWorkerHistoryMobileIndex((current) =>
+                            Math.max(0, current - 1)
+                          )
+                        }
+                        disabled={safeWorkerHistoryMobileIndex === 0}
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Rodyti senesnį darbą"
+                        onClick={() =>
+                          setWorkerHistoryMobileIndex((current) =>
+                            Math.min(workerHistoryMobileTotal - 1, current + 1)
+                          )
+                        }
+                        disabled={
+                          safeWorkerHistoryMobileIndex >=
+                          workerHistoryMobileTotal - 1
+                        }
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
+
+                  {workerHistoryMobileItem ? (
+                    renderWorkerHistoryCard(workerHistoryMobileItem, "history-mobile")
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <div className="wd-workdays wd-history-desktop">
+                    {pagedWorkerWorkHistory.map((item) =>
+                      renderWorkerHistoryCard(item)
+                    )}
+                  </div>
+                  <DashboardPagination
+                    page={workerHistoryPage}
+                    totalItems={workerWorkHistory.length}
+                    onPageChange={setWorkerHistoryPage}
+                  />
+                </>
+              )
             ) : (
               <div style={{ color: "#6c7a88" }}>
                 Užbaigtų darbų istorijos kol kas nėra.
@@ -10109,12 +10194,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-job-info-modal">
             <style>{`
               .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-              .wd-job-info-modal{width:min(840px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
-              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px 18px 14px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:22px;line-height:1.18}
-              .wd-job-info-close{width:40px;height:40px;border:0;border-radius:11px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
-              .wd-job-info-scroll{overflow:auto;padding:12px 18px 18px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
-              .wd-job-info-summary{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;margin-bottom:12px!important}.wd-job-info-card{border-radius:12px!important;padding:10px 12px!important;min-width:0}.wd-job-info-employer,.wd-job-info-pair,.wd-job-info-description{grid-column:1/-1}.wd-job-info-pair{gap:8px!important}.wd-job-info-employer{background:#f8fafb}.wd-job-info-card>div:first-child{font-size:11px!important}.wd-job-info-card b{line-height:1.3}.wd-job-info-description{margin-top:0!important}.wd-job-info-description>div:last-child{margin-top:4px!important;line-height:1.45!important}
-              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}.wd-job-info-summary{grid-template-columns:1fr!important;gap:10px!important}.wd-job-info-employer,.wd-job-info-pair,.wd-job-info-description{grid-column:auto}.wd-job-info-pair{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
+              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
+              .wd-job-info-close{width:44px;height:44px;border:0;border-radius:12px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 44px}
+              .wd-job-info-scroll{overflow:auto;padding:18px 24px 22px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}.wd-job-info-grid{display:grid;gap:12px}.wd-job-info-grid>*{min-width:0}
+              @media(min-width:761px){.wd-job-info-modal{width:min(720px,100%)}.wd-job-info-head{padding:18px 20px 14px}.wd-job-info-head h2{font-size:23px}.wd-job-info-scroll{padding:14px 18px 18px}.wd-job-info-grid{gap:10px;margin-bottom:14px}}
+              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
             `}</style>
             <div className="wd-job-info-head">
               <div>
@@ -10132,7 +10217,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="wd-job-info-scroll">
             <div
-              className="wd-job-info-summary"
+              className="wd-job-info-grid"
               style={{
                 display: "grid",
                 gap: 12,
@@ -10140,7 +10225,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               <div
-                className="wd-job-info-card wd-job-info-employer"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10181,7 +10265,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               {workdayDetailsTarget.companyReliability !== undefined && (
                 <div
-                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10225,7 +10308,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               )}
 
               <div
-                className="wd-job-info-pair"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2,minmax(0,1fr))",
@@ -10233,7 +10315,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 }}
               >
                 <div
-                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10253,7 +10334,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
 
                 <div
-                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10275,7 +10355,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
-                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10293,7 +10372,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
-                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10312,7 +10390,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
-                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10331,7 +10408,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
-                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10372,7 +10448,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
-                className="wd-job-info-card wd-job-info-description"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -11661,16 +11736,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-worker-offer-modal">
             <style>{`
-              .lt-worker-offer-modal{width:min(980px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:20px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:18px 20px 20px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
-              .lt-worker-offer-modal .rs-modal-head{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #edf1f4}.lt-worker-offer-modal .rs-modal-head h2{font-size:22px!important;line-height:1.18!important}
-              .lt-worker-offer-modal .rs-close{border-radius:11px!important;width:40px!important;height:40px!important;flex-basis:40px!important}
-              .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:12px!important;padding:11px 12px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:70px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
-              .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:11px;margin-bottom:4px}
-              .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:15px;line-height:1.3}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.35}
-              .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:6px;margin-top:8px;border-radius:12px!important;overflow:visible!important}
-              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:10px;align-items:center;padding:9px 11px;border:1px solid #dfe7ed!important;border-radius:11px!important;background:#fff!important;font-size:11.5px;box-sizing:border-box;box-shadow:none!important;min-height:40px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
-              @media(max-width:760px){.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .rs-modal-head{padding-bottom:0;border-bottom:0;margin-bottom:18px}.lt-worker-offer-modal .rs-modal-head h2{font-size:20px!important}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card{padding:14px!important;min-height:0}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
+              .lt-worker-offer-modal{width:min(860px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:22px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:24px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
+              .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
+              .lt-worker-offer-modal .rs-close{border-radius:12px!important}
+              .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:92px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
+              .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:5px}
+              .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
+              .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
+              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#fff!important;font-size:12px;box-sizing:border-box;box-shadow:none!important;min-height:48px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
+              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
             <div className="lt-worker-offer-scroll">
@@ -28919,6 +28993,254 @@ const mobileResponsiveFixStyles = `
       font-size: 11.5px !important;
       line-height: 1.2 !important;
       white-space: normal !important;
+    }
+  }
+
+
+  /* Additional compact worker dashboard polish: denser phone cards, history carousel and tighter detail modals. */
+  @media (max-width: 620px) {
+    .wd-overview {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .wd-overview > .wd-overview-card:last-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .wd-overview-card {
+      padding: 12px !important;
+      border-radius: 16px !important;
+      min-height: 112px !important;
+    }
+
+    .wd-overview-card span {
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+    }
+
+    .wd-overview-card b {
+      font-size: 18px !important;
+      line-height: 1.15 !important;
+      margin-top: 5px !important;
+    }
+
+    .wd-overview-card.next-work b {
+      font-size: 15px !important;
+    }
+
+    .wd-overview-card small {
+      white-space: normal !important;
+      font-size: 11px !important;
+      line-height: 1.38 !important;
+      margin-top: 4px !important;
+    }
+
+    .wd-overview-open {
+      padding: 4px 7px !important;
+      font-size: 10px !important;
+    }
+
+    .wd-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .wd-kpis > .wd-kpi:last-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .wd-kpi {
+      padding: 13px 11px !important;
+      min-height: 118px !important;
+      border-radius: 16px !important;
+    }
+
+    .wd-kpi > span,
+    .wd-kpi-info-btn {
+      min-height: 0 !important;
+      font-size: 12px !important;
+      line-height: 1.3 !important;
+    }
+
+    .wd-kpi b {
+      min-height: 0 !important;
+      margin-top: 7px !important;
+      font-size: 22px !important;
+      line-height: 1.1 !important;
+    }
+
+    .wd-kpi small {
+      margin-top: 6px !important;
+      font-size: 11px !important;
+      line-height: 1.35 !important;
+    }
+
+    .wd-history-section-head {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .wd-history-section-head h2 {
+      margin: 0 !important;
+    }
+
+    .wd-history-section-count {
+      flex: 0 0 auto !important;
+      border-radius: 999px !important;
+      padding: 6px 10px !important;
+      background: #f3f6f8 !important;
+      color: #526374 !important;
+      font-size: 11px !important;
+      font-weight: 800 !important;
+    }
+
+    .wd-history-mobile {
+      display: grid !important;
+      gap: 10px !important;
+    }
+
+    .wd-history-carousel-head {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      padding: 10px 0 2px !important;
+    }
+
+    .wd-history-carousel-copy {
+      min-width: 0 !important;
+    }
+
+    .wd-history-carousel-copy b {
+      display: block !important;
+      margin-bottom: 3px !important;
+      font-size: 13px !important;
+    }
+
+    .wd-history-carousel-copy span {
+      display: block !important;
+      color: #6c7a88 !important;
+      font-size: 11px !important;
+      line-height: 1.35 !important;
+    }
+
+    .wd-history-nav {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      flex: 0 0 auto !important;
+    }
+
+    .wd-history-nav button {
+      width: 38px !important;
+      height: 38px !important;
+      border-radius: 12px !important;
+      border: 1px solid #d7e1e8 !important;
+      background: #fff !important;
+      color: #102438 !important;
+      font-size: 20px !important;
+      font-weight: 800 !important;
+      line-height: 1 !important;
+      cursor: pointer !important;
+    }
+
+    .wd-history-nav button:disabled {
+      opacity: 0.42 !important;
+      cursor: default !important;
+    }
+
+    #worker-job-history {
+      padding: 16px !important;
+    }
+
+    #worker-job-history .wd-workday {
+      padding: 14px !important;
+      gap: 12px !important;
+      border-radius: 16px !important;
+    }
+
+    #worker-job-history .wd-workday h3 {
+      font-size: 16px !important;
+      line-height: 1.28 !important;
+    }
+
+    #worker-job-history .wd-company-meta-line {
+      font-size: 13px !important;
+      line-height: 1.45 !important;
+    }
+
+    #worker-job-history .wd-workday-actions > button {
+      min-height: 42px !important;
+      font-size: 12.5px !important;
+    }
+  }
+
+  @media (min-width: 621px) {
+    .wd-history-mobile {
+      display: none !important;
+    }
+  }
+
+  @media (min-width: 761px) {
+    .wd-job-info-modal {
+      width: min(720px, 100%) !important;
+      max-height: calc(100vh - 40px) !important;
+    }
+
+    .wd-job-info-head {
+      padding: 18px 20px 14px !important;
+    }
+
+    .wd-job-info-head h2 {
+      font-size: 23px !important;
+    }
+
+    .wd-job-info-scroll {
+      padding: 14px 18px 18px !important;
+    }
+
+    .wd-job-info-grid {
+      gap: 10px !important;
+      margin-bottom: 14px !important;
+    }
+
+    .lt-worker-offer-modal {
+      width: min(900px, calc(100vw - 40px)) !important;
+      max-height: calc(100vh - 40px) !important;
+    }
+
+    .lt-worker-offer-scroll {
+      padding: 16px 18px 18px !important;
+    }
+
+    .lt-worker-offer-modal .rs-modal-head {
+      margin-bottom: 14px !important;
+      padding-bottom: 14px !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-grid {
+      gap: 10px !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-card {
+      padding: 12px !important;
+      border-radius: 14px !important;
+      min-height: 0 !important;
+    }
+
+    .lt-employment-modal {
+      width: min(1000px, calc(100vw - 40px)) !important;
+      padding: 18px !important;
+    }
+
+    .lt-employment-modal .lt-employed-row,
+    .lt-employment-modal .lt-existing-offer {
+      padding: 12px 14px !important;
+      gap: 12px !important;
     }
   }
 
