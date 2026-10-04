@@ -1505,7 +1505,7 @@ function PlatformTermsDialog({ open, onClose }) {
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-terms-title" style={{ width: "min(680px,100%)", maxHeight: "min(780px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-terms-title" style={{ width: "min(680px,100%)", maxHeight: "min(780px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
           <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
@@ -1535,7 +1535,7 @@ function PlatformBusinessDetailsDialog({ open, onClose }) {
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 1220, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-business-details-title" style={{ width: "min(560px,100%)", maxHeight: "min(720px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,34px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-business-details-title" style={{ width: "min(560px,100%)", maxHeight: "min(720px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,34px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-business-details-title" style={{ margin: "6px 0 16px" }}>Rekvizitai</h2></div>
           <button type="button" aria-label="Uždaryti rekvizitus" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
@@ -1565,7 +1565,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100vh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2></div>
           <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
@@ -2267,7 +2267,7 @@ function AuthModal({
 
   const card = {
     width: "min(520px, 100%)",
-    maxHeight: "calc(100vh - 40px)",
+    maxHeight: "calc(100dvh - 40px)",
     overflow: "hidden",
     background: "#fff",
     borderRadius: 20,
@@ -2276,7 +2276,7 @@ function AuthModal({
   };
 
   const cardScroll = {
-    maxHeight: "calc(100vh - 40px)",
+    maxHeight: "calc(100dvh - 40px)",
     overflowY: "auto",
     padding: 28,
     boxSizing: "border-box",
@@ -3376,7 +3376,7 @@ function ConversationModal({
       <div className="rs-modal-card">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(760px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
+          .rs-modal-card{width:min(760px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
           .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
           .rs-messages{display:grid;align-content:start;justify-items:start;gap:10px;overflow:auto;padding:16px;background:#f8fafb;border:1px solid #e8eef2;border-radius:18px;min-height:260px;max-height:420px}
@@ -3392,7 +3392,7 @@ function ConversationModal({
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px;justify-self:stretch}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
           .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
           .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
+          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
         `}</style>
 
         <div className="rs-modal-head">
@@ -3613,7 +3613,7 @@ function DisputeConversationModal({
       <div className="rs-modal-card">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(720px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
+          .rs-modal-card{width:min(720px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
           .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
           .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
@@ -3627,7 +3627,7 @@ function DisputeConversationModal({
           .rs-msg-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
           .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{min-height:44px}.rs-message{max-width:92%}}
+          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{min-height:44px}.rs-message{max-width:92%}}
         `}</style>
 
         <div className="rs-modal-head">
@@ -3861,7 +3861,7 @@ function GroupConversationModal({
       <div className="rs-modal-card rs-job-chat-modal">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(760px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
+          .rs-modal-card{width:min(760px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
           .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
           .rs-messages{display:grid;align-content:start;justify-items:start;gap:10px;overflow:auto;padding:16px;background:#f8fafb;border:1px solid #e8eef2;border-radius:18px;min-height:260px;max-height:420px}
@@ -3877,7 +3877,7 @@ function GroupConversationModal({
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px;justify-self:stretch}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
           .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}.rs-job-chat-modal .rs-modal-head .eyebrow{color:#102438!important}.rs-job-chat-modal [role="note"]{align-items:flex-start!important;padding:8px 10px!important;margin-bottom:10px!important;border-color:#ead8c7!important;background:#fffaf5!important;color:#6b4a2d!important;font-size:11.5px!important;line-height:1.4!important}
           .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
+          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
         `}</style>
 
         <div className="rs-modal-head">
@@ -4271,7 +4271,7 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
     >
       <style>{`
         .lt-chat-overlay{position:fixed;inset:0;z-index:2800;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.62);backdrop-filter:blur(2px)}
-        .lt-chat-card{width:min(720px,calc(100vw - 40px));max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);color:#102438}
+        .lt-chat-card{width:min(720px,calc(100vw - 40px));max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);color:#102438}
         .lt-chat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 22px 18px;border-bottom:1px solid #e8eef2}
         .lt-chat-head h2{margin:5px 0 0;font-size:24px;line-height:1.2}.lt-chat-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
         .lt-chat-close{border:0;background:#f2f5f7;color:#102438;border-radius:12px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer;flex:0 0 42px}
@@ -4284,7 +4284,7 @@ function LongTermConversationModal({ open, onClose, placementId, title, user }) 
         .lt-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 16px 16px;border-top:1px solid #e8eef2;background:#fff}
         .lt-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.lt-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
         .lt-chat-form button{align-self:stretch;min-width:92px;border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}.lt-chat-form button:disabled{opacity:.45;cursor:not-allowed}
-        @media(max-width:620px){.lt-chat-overlay{padding:10px}.lt-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px}.lt-chat-head{padding:17px}.lt-chat-form{grid-template-columns:1fr}.lt-chat-form button{min-height:44px}.lt-chat-message{width:92%}}
+        @media(max-width:620px){.lt-chat-overlay{padding:10px}.lt-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px}.lt-chat-head{padding:17px}.lt-chat-form{grid-template-columns:1fr}.lt-chat-form button{min-height:44px}.lt-chat-message{width:92%}}
       `}</style>
       <div className="lt-chat-card">
         <div className="lt-chat-head">
@@ -4466,7 +4466,7 @@ function CompanyTeamChatModal({
       <div className="ctc-modal">
         <style>{`
           .ctc-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .ctc-modal{width:min(720px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
+          .ctc-modal{width:min(720px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438}
           .ctc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
           .ctc-head h2{margin:6px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
           .ctc-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
@@ -4481,7 +4481,7 @@ function CompanyTeamChatModal({
           .ctc-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:10px;border-top:1px solid #e4ebf0;padding-top:14px;margin-top:14px}
           .ctc-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;line-height:1.4;outline:none}.ctc-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
           .ctc-form button{min-height:54px;border:0;border-radius:11px;background:#f08a28;color:#fff;padding:0 18px;font:inherit;font-weight:800;cursor:pointer}.ctc-form button:disabled{opacity:.55;cursor:not-allowed}
-          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.ctc-head h2{font-size:21px}.ctc-message{max-width:92%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
+          @media(max-width:620px){.ctc-overlay{padding:10px}.ctc-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.ctc-head h2{font-size:21px}.ctc-message{max-width:92%}.ctc-form{grid-template-columns:1fr}.ctc-form button{min-height:44px}}
         `}</style>
 
         <div className="ctc-head">
@@ -4730,8 +4730,8 @@ function WorkerProfileModal({
       <div className="rs-modal-card worker-profile-modal">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .worker-profile-modal{width:min(700px,100%);max-height:calc(100vh - 40px);overflow:hidden;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:0;color:#102438}
-          .worker-profile-modal-scroll{max-height:calc(100vh - 40px);overflow:auto;padding:22px;box-sizing:border-box;scrollbar-gutter:stable}
+          .worker-profile-modal{width:min(700px,100%);max-height:calc(100dvh - 40px);overflow:hidden;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:0;color:#102438}
+          .worker-profile-modal-scroll{max-height:calc(100dvh - 40px);overflow:auto;padding:22px;box-sizing:border-box;scrollbar-gutter:stable}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
           .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
           .rs-profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -4996,7 +4996,7 @@ const RELIABILITY_MODAL_STYLES = `
   }
   .reliability-modal{
     width:min(620px,100%);
-    max-height:calc(100vh - 48px);
+    max-height:calc(100dvh - 48px);
     overflow:hidden;
     background:#fff;
     border:1px solid rgba(16,36,56,.08);
@@ -5006,7 +5006,7 @@ const RELIABILITY_MODAL_STYLES = `
     color:#102438;
   }
   .reliability-modal-scroll{
-    max-height:calc(100vh - 48px);
+    max-height:calc(100dvh - 48px);
     overflow-y:auto;
     overflow-x:hidden;
     box-sizing:border-box;
@@ -5194,8 +5194,8 @@ const RELIABILITY_MODAL_STYLES = `
   }
   @media(max-width:600px){
     .reliability-modal-overlay{padding:12px}
-    .reliability-modal{border-radius:16px;max-height:calc(100vh - 24px)}
-    .reliability-modal-scroll{padding:20px;max-height:calc(100vh - 24px)}
+    .reliability-modal{border-radius:16px;max-height:calc(100dvh - 24px)}
+    .reliability-modal-scroll{padding:20px;max-height:calc(100dvh - 24px)}
     .reliability-modal h2{font-size:23px}
     .reliability-score-box{align-items:flex-start}
     .reliability-rule{grid-template-columns:50px minmax(0,1fr);padding:11px}
@@ -5521,7 +5521,7 @@ function BugReportModal({ open, onClose, onSubmitted }) {
       onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
       style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(16,36,56,.62)" }}
     >
-      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100vh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
+      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100dvh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
           <div>
             <div className="eyebrow">SVETAINĖS KLAIDA</div>
@@ -8463,7 +8463,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
         .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;overflow:hidden}.ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 18px 14px;border-bottom:1px solid #edf1f4;background:#fff}.ed-current-job-overview-head h2{margin:2px 0 4px;font-size:22px}.ed-current-job-overview-head p{margin:0;color:#6c7a88;font-size:13px}.ed-current-job-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#edf8f3;color:#167a54;white-space:nowrap}.ed-current-job-status.open{background:#eaf2fb;color:#245d89}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a}.ed-current-job-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid #edf1f4}.ed-current-job-field{min-width:0;padding:13px 16px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4}.ed-current-job-field:nth-child(4n){border-right:0}.ed-current-job-field:nth-last-child(-n+4){border-bottom:0}.ed-current-job-field span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}.ed-current-job-field b{display:block;font-size:13px;overflow-wrap:anywhere}.ed-current-job-description{padding:14px 16px 16px}.ed-current-job-description span{display:block;color:#6c7a88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}.ed-current-job-description div{font-size:13px;line-height:1.55;white-space:pre-wrap}.ed-attendance-panel{margin-top:30px;margin-bottom:22px;padding:18px;border:1px solid #e4ebf0;border-radius:14px;background:#f8fafb}.ed-attendance-panel h2{margin:0 0 4px}.ed-attendance-list{display:grid;gap:9px;margin-top:14px}.ed-attendance-row{display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(220px,1.35fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid #e4ebf0;border-radius:12px;padding:13px}.ed-attendance-meta{font-size:12px;color:#6c7a88;line-height:1.5}.ed-attendance-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:800;margin-top:0}.ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
         .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-        .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+        .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
         .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
         .wd-days{display:grid;gap:10px}.wd-day{display:grid;grid-template-columns:135px 170px minmax(120px,1fr) minmax(120px,1fr);align-items:end;gap:14px;border:1px solid #e4ebf0;border-radius:12px;padding:14px}
         .wd-day.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.available .wd-day-date b{color:#a85212}.wd-day.available .wd-status-select{border-color:#f0ba86}.wd-day.occupied{background:#f4f7f9;border-color:#d7e0e7;box-shadow:inset 3px 0 0 #6c7a88}.wd-day.occupied .wd-day-date b{color:#526374}.wd-day.occupied .wd-status-select{background:#fff!important;color:#102438!important;border-color:#dbe4ea!important}.wd-day.occupied.available{background:#fff7ef;border-color:#f0ba86;box-shadow:inset 3px 0 0 #f08a28}.wd-day.occupied.available .wd-day-date b{color:#a85212}.wd-day.occupied.available .wd-status-select{background:#fff!important;color:#102438!important;border-color:#f0ba86!important}.wd-day.conflict{background:#fff4f1!important;border-color:#d85b3f!important;box-shadow:inset 4px 0 0 #c4472d,0 0 0 2px rgba(196,71,45,.08)!important}.wd-day.conflict .wd-day-date b{color:#a83924!important}.wd-day-conflict-note{grid-column:1/-1;border:1px solid #efc7bb;border-radius:10px;background:#fff0ec;color:#a74428;padding:10px 12px;font-size:12px;font-weight:800;line-height:1.45;text-align:center}.wd-day-occupied-note{grid-column:1/-1;color:#607180;font-size:11px;font-weight:700;margin-top:2px;text-align:center;line-height:1.5;padding:2px 10px}.wd-day-occupied-note b{color:#102438}
@@ -10474,12 +10474,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-job-info-modal">
             <style>{`
               .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
+              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
               .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
               .wd-job-info-close{width:44px;height:44px;border:0;border-radius:12px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 44px}
               .wd-job-info-scroll{overflow:auto;padding:18px 24px 22px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}.wd-job-info-grid{display:grid;gap:12px}.wd-job-info-grid>*{min-width:0}
               @media(min-width:761px){.wd-job-info-modal{width:min(720px,100%)}.wd-job-info-head{padding:18px 20px 14px}.wd-job-info-head h2{font-size:23px}.wd-job-info-scroll{padding:14px 18px 18px}.wd-job-info-grid{gap:10px;margin-bottom:14px}}
-              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
+              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
             `}</style>
             <div className="wd-job-info-head">
               <div>
@@ -11069,7 +11069,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-job-info-modal wd-company-profile-modal">
             <style>{`
               .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
+              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
               .wd-company-profile-modal{width:min(860px,100%)}
               .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}
               .wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
@@ -11079,7 +11079,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               .wd-job-info-scroll::-webkit-scrollbar{width:8px}
               .wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}
               .wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
-              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal,.wd-company-profile-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
+              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal,.wd-company-profile-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
             `}</style>
             <div className="wd-job-info-head">
               <div>
@@ -11816,14 +11816,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="rs-modal-card worker-accept-modal">
             <style>{`
               .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
               .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
               .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-              .worker-accept-modal{width:min(620px,100%)!important;max-height:calc(100vh - 40px)!important;padding:0!important;overflow:hidden!important;border-radius:18px!important;box-sizing:border-box}
-              .worker-accept-modal-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:22px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}
+              .worker-accept-modal{width:min(620px,100%)!important;max-height:calc(100dvh - 40px)!important;padding:0!important;overflow:hidden!important;border-radius:18px!important;box-sizing:border-box}
+              .worker-accept-modal-scroll{max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;padding:22px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}
               .worker-accept-modal-scroll::-webkit-scrollbar{width:8px}.worker-accept-modal-scroll::-webkit-scrollbar-track{background:transparent}.worker-accept-modal-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
               .worker-accept-modal *{box-sizing:border-box}
-              @media(max-width:620px){.rs-modal-overlay{padding:10px}.worker-accept-modal{max-height:calc(100vh - 20px)!important;border-radius:18px!important}.worker-accept-modal-scroll{max-height:calc(100vh - 20px);padding:18px}}
+              @media(max-width:620px){.rs-modal-overlay{padding:10px}.worker-accept-modal{max-height:calc(100dvh - 20px)!important;border-radius:18px!important}.worker-accept-modal-scroll{max-height:calc(100dvh - 20px);padding:18px}}
             `}</style>
             <div className="worker-accept-modal-scroll">
             <div className="rs-modal-head">
@@ -11990,7 +11990,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-worker-offer-modal">
             <style>{`
-              .lt-worker-offer-modal{width:min(860px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:22px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:24px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
+              .lt-worker-offer-modal{width:min(860px,100%)!important;max-height:calc(100dvh - 40px)!important;border-radius:22px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;padding:24px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
               .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
               .lt-worker-offer-modal .rs-close{border-radius:12px!important}
               .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:92px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
@@ -11998,7 +11998,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
               .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
               .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#fff!important;font-size:12px;box-sizing:border-box;box-shadow:none!important;min-height:48px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
-              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
+              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100dvh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100dvh - 20px);padding:18px}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
             <div className="lt-worker-offer-scroll">
@@ -12896,7 +12896,7 @@ function MonthlyAwardTopBadge({ awards, size = 31, tooltipLimit = 6 }) {
               zIndex: 20000,
               width: 286,
               maxWidth: "calc(100vw - 28px)",
-              maxHeight: "min(330px,calc(100vh - 28px))",
+              maxHeight: "min(330px,calc(100dvh - 28px))",
               overflowY: "auto",
               padding: "12px 13px",
               border: "1px solid #ead3a2",
@@ -17420,9 +17420,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-urgent-btn{border:0;border-radius:10px;background:#102438;color:#fff;padding:12px 16px;font:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
         .ed-urgent-btn:hover{background:#1d354d}
         .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
         .ed-attendance-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-attendance-modal{width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-attendance-modal{width:min(560px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
         .ed-attendance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
         .ed-attendance-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
         .ed-attendance-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
@@ -17433,7 +17433,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-attendance-choice{display:grid;gap:10px}
         .ed-attendance-choice>button{width:100%;min-height:48px}
         .ed-rating-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-rating-modal{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-rating-modal{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
         .ed-rating-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
         .ed-rating-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
         .ed-rating-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
@@ -17456,7 +17456,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-worker-source button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
         .ed-worker-source button.locked{color:#9a6a3d}
         .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-saved-modal{width:min(850px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-saved-modal{width:min(850px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
         .ed-job-info-modal{border-radius:22px!important;overflow:hidden!important;background:#fff;isolation:isolate}
         .ed-job-info-scroll{border-radius:inherit;scrollbar-width:thin;scrollbar-color:#98a5ae transparent;scrollbar-gutter:stable}.ed-job-info-scroll::-webkit-scrollbar{width:8px}.ed-job-info-scroll::-webkit-scrollbar-track{background:transparent}.ed-job-info-scroll::-webkit-scrollbar-thumb{background:#98a5ae;border-radius:999px;border:2px solid #fff}
         .ed-saved-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
@@ -17561,7 +17561,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-analytics-lock{margin-top:12px;border:1px dashed #d5dde4;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fafbfc}
         .ed-analytics-lock b{display:block;font-size:13px}.ed-analytics-lock span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
         .ed-plan-overlay{position:fixed;inset:0;z-index:9400;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
+        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
         .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
         .ed-plan-modal > .ed-note{margin:0 0 16px}
         .ed-plan-modal > .ed-note.ok{margin-bottom:24px}
@@ -17598,7 +17598,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
         .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
         .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-team-modal{width:min(980px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
+        .ed-team-modal{width:min(980px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
         .ed-team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
         .ed-team-head h2{margin:3px 0 4px;font-family:Manrope,Inter,sans-serif;font-size:25px}
         .ed-team-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.5}
@@ -17696,7 +17696,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-current-job-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-current-job-field.wide{grid-column:span 2}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
-        @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100vh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
+        @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
       <header className="ed-topbar">
@@ -20103,7 +20103,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             className="ed-attendance-modal"
             style={{
               width: "min(560px, 100%)",
-              maxHeight: "calc(100vh - 40px)",
+              maxHeight: "calc(100dvh - 40px)",
               overflow: "auto",
               background: "#fff",
               borderRadius: 20,
@@ -20367,7 +20367,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             className="ed-rating-modal"
             style={{
               width: "min(620px, 100%)",
-              maxHeight: "calc(100vh - 40px)",
+              maxHeight: "calc(100dvh - 40px)",
               overflow: "auto",
               background: "#fff",
               borderRadius: 20,
@@ -20812,7 +20812,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             className="ed-saved-modal ed-job-info-modal"
             style={{
               width: "min(760px, 100%)",
-              maxHeight: "calc(100vh - 40px)",
+              maxHeight: "calc(100dvh - 40px)",
               overflow: "hidden",
               padding: 0,
               borderRadius: 22,
@@ -20821,7 +20821,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div
               className="ed-job-info-scroll"
               style={{
-                maxHeight: "calc(100vh - 40px)",
+                maxHeight: "calc(100dvh - 40px)",
                 overflowY: "auto",
                 padding: 24,
                 boxSizing: "border-box",
@@ -21999,7 +21999,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="rs-modal-card">
             <style>{`
               .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:12000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
               .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
               .rs-modal-head h2{margin:0;font-size:22px}
               .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -22098,9 +22098,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
               @media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-offer{grid-template-columns:1fr}.lt-existing-status{justify-items:start;text-align:left;padding:6px 0}.lt-existing-actions{grid-template-columns:repeat(2,minmax(126px,1fr));justify-content:stretch;max-width:none;min-width:0}}
-              @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{grid-template-columns:1fr}.lt-employment-worker .ed-primary{width:100%}.wd-long-term-offer-actions{width:100%;justify-content:flex-start}.wd-long-term-offer-actions>button{flex:1 1 140px}}
+              @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{grid-template-columns:1fr}.lt-employment-worker .ed-primary{width:100%}.wd-long-term-offer-actions{width:100%;justify-content:flex-start}.wd-long-term-offer-actions>button{flex:1 1 140px}}
             `}</style>
 
             <div className="rs-modal-head">
@@ -22872,7 +22872,7 @@ function AdminSetupModal({
     >
       <style>{`
         .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
-        .admin-setup-card{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:24px;color:#102438}
+        .admin-setup-card{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:24px;color:#102438}
         .admin-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
         .admin-setup-head h2{font-family:Manrope,Inter,sans-serif;margin:4px 0 0;font-size:25px}
         .admin-setup-head p{margin:7px 0 0;color:#6c7a88;line-height:1.5;max-width:620px}
@@ -23463,7 +23463,7 @@ function AdminJobChatModal({ job, user, onClose }) {
     >
       <style>{`
         .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-chat-card{width:min(720px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
+        .admin-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
         .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
         .admin-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
@@ -23475,7 +23475,7 @@ function AdminJobChatModal({ job, user, onClose }) {
         .admin-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
         .admin-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
         .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:92%}}
+        @media(max-width:560px){.admin-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:92%}}
       `}</style>
 
       <div className="admin-chat-card">
@@ -23691,7 +23691,7 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
     >
       <style>{`
         .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100vh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
+        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
         .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
         .admin-team-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
@@ -23703,7 +23703,7 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
         .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}.admin-team-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
         .admin-team-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-team-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
         .admin-team-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-team-chat-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:17px;border-radius:16px}.admin-team-chat-message{max-width:92%}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
+        @media(max-width:560px){.admin-team-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-team-chat-message{max-width:92%}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
       `}</style>
 
       <div className="admin-team-chat-card">
@@ -26785,7 +26785,7 @@ function AdminDashboard({
           <div
             style={{
               width: "min(640px,100%)",
-              maxHeight: "calc(100vh - 40px)",
+              maxHeight: "calc(100dvh - 40px)",
               overflow: "auto",
               background: "#fff",
               borderRadius: 18,
@@ -29771,7 +29771,7 @@ const mobileResponsiveFixStyles = `
   @media (min-width: 761px) {
     .wd-job-info-modal {
       width: min(720px, 100%) !important;
-      max-height: calc(100vh - 40px) !important;
+      max-height: calc(100dvh - 40px) !important;
     }
 
     .wd-job-info-head {
@@ -29793,7 +29793,7 @@ const mobileResponsiveFixStyles = `
 
     .lt-worker-offer-modal {
       width: min(900px, calc(100vw - 40px)) !important;
-      max-height: calc(100vh - 40px) !important;
+      max-height: calc(100dvh - 40px) !important;
     }
 
     .lt-worker-offer-scroll {
