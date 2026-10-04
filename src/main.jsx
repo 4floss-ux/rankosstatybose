@@ -17524,7 +17524,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           border-radius:4px;
         }
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:25px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:10px!important}
-        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.ed-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.ed-active-jobs-section:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#1c9b67}.ed-active-jobs-section>div:first-child h2{color:#167a54}.ed-active-jobs-section .ed-job{background:#fff}
+        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.ed-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.ed-active-jobs-section>div:first-child h2{color:#167a54}.ed-active-jobs-section .ed-job{background:#fff}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
         .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
@@ -17619,9 +17619,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-invite b{display:block;font-size:13px}.ed-team-invite span{display:block;color:#6c7a88;font-size:11px;margin-top:3px}
         .ed-team-invite-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
         .ed-team-link{margin-top:12px;background:#f6f8fa;border-radius:10px;padding:11px;font-size:11px;overflow-wrap:anywhere;color:#405264}
-        .ed-job-scope{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-        .ed-job-scope button{border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 13px;min-height:38px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
-        .ed-job-scope button.active{background:#102438;color:#fff;border-color:#102438}
+        .ed-job-scope{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+        .ed-job-scope button{position:relative;border:1px solid #d7e3dd;border-left:4px solid #1c9b67;background:#fff;color:#405264;border-radius:11px;padding:10px 14px 10px 13px;min-height:40px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;box-shadow:0 3px 10px rgba(16,36,56,.035);transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+        .ed-job-scope button:hover{background:#f7fbf9;border-color:#bfdccc;border-left-color:#167a54}
+        .ed-job-scope button.active{background:#eaf7f1;color:#126947;border-color:#b8ddcc;border-left-color:#167a54;box-shadow:0 4px 12px rgba(28,155,103,.09)}
         .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-responsible-name{color:#f08a28;font-weight:800;margin-left:4px}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
@@ -30104,6 +30105,23 @@ const mobileResponsiveFixStyles = `
     }
 
     /* Employer active jobs and worker availability: one card/day at a time. */
+    .ed-job-scope {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .ed-job-scope button {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 42px !important;
+      padding: 9px 10px 9px 11px !important;
+      font-size: 11.5px !important;
+      line-height: 1.2 !important;
+      text-align: center !important;
+    }
+
     .ed-active-carousel-nav,
     .wd-availability-carousel-nav {
       display: grid !important;
