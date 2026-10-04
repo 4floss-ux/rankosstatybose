@@ -184,7 +184,7 @@ function ChatConductNotice() {
       role="note"
       style={{
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         gap: 9,
         padding: "9px 11px",
         marginBottom: 12,
@@ -2880,9 +2880,9 @@ function currentVilniusTimeRounded5() {
   return `${hour}:${String(minute).padStart(2, "0")}`;
 }
 
-function nextSevenDays() {
+function nextFourteenDays() {
   const today = localDateISO(new Date());
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: 14 }, (_, i) => {
     const iso = addPlatformDays(today, i);
     const date = platformDateTime(iso, "12:00");
     return {
@@ -3787,7 +3787,7 @@ function GroupConversationModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="rs-modal-card">
+      <div className="rs-modal-card rs-job-chat-modal">
         <style>{`
           .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
           .rs-modal-card{width:min(760px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:22px;color:#102438}
@@ -3804,7 +3804,7 @@ function GroupConversationModal({
           .rs-msg-form button{height:54px;align-self:end;min-width:0;border:0;background:#f08a28;color:#fff;border-radius:16px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
           .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
           .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px;justify-self:stretch}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
-          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
+          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}.rs-job-chat-modal .rs-modal-head .eyebrow{color:#102438!important}.rs-job-chat-modal [role="note"]{align-items:flex-start!important;padding:8px 10px!important;margin-bottom:10px!important;border-color:#ead8c7!important;background:#fffaf5!important;color:#6b4a2d!important;font-size:11.5px!important;line-height:1.4!important}
           .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
           @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
         `}</style>
@@ -5536,7 +5536,7 @@ function BugResolutionNotice({ userId }) {
 
 
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
-  const days = nextSevenDays();
+  const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -5591,6 +5591,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return window.innerWidth <= 620;
   });
   const [workerHistoryMobileIndex, setWorkerHistoryMobileIndex] = useState(0);
+  const [availabilityMobileIndex, setAvailabilityMobileIndex] = useState(0);
   const [workerProfileEditorTarget, setWorkerProfileEditorTarget] = useState("profile");
   const workerProfileEditorRef = useRef(null);
 
@@ -7618,10 +7619,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         setAvailabilityConflictDates([...new Set(dates)]);
 
         const firstDate = dates[0];
+        if (isPhoneLayout) {
+          const firstIndex = days.findIndex((day) => day.iso === firstDate);
+          if (firstIndex >= 0) setAvailabilityMobileIndex(firstIndex);
+        }
         window.requestAnimationFrame(() => {
-          document
-            .getElementById(`worker-availability-day-${firstDate}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          window.requestAnimationFrame(() => {
+            document
+              .getElementById(`worker-availability-day-${firstDate}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
         });
 
         const conflictInfo = conflictingAvailabilityDays[0];
@@ -7789,6 +7796,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const availableCount = days.filter((day) =>
     availabilityFitsWindow(day.iso, availability[day.iso])
   ).length;
+  const safeAvailabilityMobileIndex = Math.min(
+    Math.max(0, availabilityMobileIndex),
+    Math.max(0, days.length - 1)
+  );
+  const availabilityMobileDay = days[safeAvailabilityMobileIndex] || null;
+  const availabilityDaysForRender = isPhoneLayout
+    ? availabilityMobileDay
+      ? [availabilityMobileDay]
+      : []
+    : days;
 
   const profileAvatarUrl = avatarMarkedForRemoval
     ? ""
@@ -7945,6 +7962,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       Math.min(current, workerWorkHistory.length - 1)
     );
   }, [workerWorkHistory.length]);
+
+  useEffect(() => {
+    setAvailabilityMobileIndex((current) =>
+      Math.min(Math.max(0, current), Math.max(0, days.length - 1))
+    );
+  }, [days.length]);
 
   const workerTodayJobs = workdays.filter(
     (item) =>
@@ -8162,6 +8185,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function openWorkerProfileEditor(target = "profile") {
     setWorkerProfileEditorTarget(target);
+    if (target === "availability") setAvailabilityMobileIndex(0);
     setShowProfileEditor(true);
   }
 
@@ -8904,12 +8928,43 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             >
               <h3>Kada galite dirbti?</h3>
               <p>
-                Pažymėkite artimiausias dienas, kuriomis realiai galite priimti
+                Pažymėkite artimiausias 14 dienų, kuriomis realiai galite priimti
                 darbo pasiūlymą.
               </p>
 
+              {isPhoneLayout && availabilityMobileDay && (
+                <div className="wd-availability-carousel-nav">
+                  <button
+                    type="button"
+                    aria-label="Ankstesnė diena"
+                    disabled={safeAvailabilityMobileIndex === 0}
+                    onClick={() =>
+                      setAvailabilityMobileIndex((current) => Math.max(0, current - 1))
+                    }
+                  >
+                    ‹
+                  </button>
+                  <div>
+                    <b>{availabilityMobileDay.weekday} · {availabilityMobileDay.label}</b>
+                    <span>{safeAvailabilityMobileIndex + 1} / {days.length}</span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Kita diena"
+                    disabled={safeAvailabilityMobileIndex >= days.length - 1}
+                    onClick={() =>
+                      setAvailabilityMobileIndex((current) =>
+                        Math.min(days.length - 1, current + 1)
+                      )
+                    }
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+
               <div className="wd-days">
-                {days.map((day) => {
+                {availabilityDaysForRender.map((day) => {
                   const state = availability[day.iso] || {
                     available: false,
                     from: "08:00",
@@ -12948,6 +13003,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [jobScope, setJobScope] = useState("mine");
   const [employerActivePage, setEmployerActivePage] = useState(1);
   const [employerHistoryPage, setEmployerHistoryPage] = useState(1);
+  const [isEmployerPhoneLayout, setIsEmployerPhoneLayout] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth <= 620;
+  });
+  const [employerActiveMobileIndex, setEmployerActiveMobileIndex] = useState(0);
   const [acceptedWorkersPage, setAcceptedWorkersPage] = useState(1);
   const [declinedWorkersPage, setDeclinedWorkersPage] = useState(1);
   const [showEmployerStats, setShowEmployerStats] = useState(() => {
@@ -12977,6 +13037,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       );
     } catch {}
   }, [user?.id, showEmployerStats]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const syncEmployerPhoneLayout = () =>
+      setIsEmployerPhoneLayout(window.innerWidth <= 620);
+    syncEmployerPhoneLayout();
+    window.addEventListener("resize", syncEmployerPhoneLayout);
+    return () => window.removeEventListener("resize", syncEmployerPhoneLayout);
+  }, []);
+
   const [teamInviteForm, setTeamInviteForm] = useState({
     displayName: "",
     email: "",
@@ -16876,6 +16946,19 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (employerActivePage - 1) * DASHBOARD_PAGE_SIZE,
     employerActivePage * DASHBOARD_PAGE_SIZE
   );
+  const employerActiveMobileTotal = activeVisibleJobs.length;
+  const safeEmployerActiveMobileIndex = employerActiveMobileTotal
+    ? Math.min(employerActiveMobileIndex, employerActiveMobileTotal - 1)
+    : 0;
+  const employerActiveMobileJob = employerActiveMobileTotal
+    ? activeVisibleJobs[safeEmployerActiveMobileIndex]
+    : null;
+  const activeJobsForRender = isEmployerPhoneLayout
+    ? employerActiveMobileJob
+      ? [employerActiveMobileJob]
+      : []
+    : pagedActiveVisibleJobs;
+
   const pagedEmployerJobHistory = employerJobHistory.slice(
     (employerHistoryPage - 1) * DASHBOARD_PAGE_SIZE,
     employerHistoryPage * DASHBOARD_PAGE_SIZE
@@ -16884,7 +16967,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   useEffect(() => {
     setEmployerActivePage(1);
     setEmployerHistoryPage(1);
+    setEmployerActiveMobileIndex(0);
   }, [jobScope]);
+
+  useEffect(() => {
+    setEmployerActiveMobileIndex((current) =>
+      activeVisibleJobs.length
+        ? Math.min(Math.max(0, current), activeVisibleJobs.length - 1)
+        : 0
+    );
+  }, [activeVisibleJobs.length]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(activeVisibleJobs.length / DASHBOARD_PAGE_SIZE));
@@ -19300,8 +19392,39 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
+              {isEmployerPhoneLayout && employerActiveMobileTotal > 1 && (
+                <div className="ed-active-carousel-nav">
+                  <button
+                    type="button"
+                    aria-label="Ankstesnis aktyvus darbas"
+                    disabled={safeEmployerActiveMobileIndex === 0}
+                    onClick={() =>
+                      setEmployerActiveMobileIndex((current) => Math.max(0, current - 1))
+                    }
+                  >
+                    ‹
+                  </button>
+                  <div>
+                    <b>Aktyvus darbas</b>
+                    <span>{safeEmployerActiveMobileIndex + 1} / {employerActiveMobileTotal}</span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Kitas aktyvus darbas"
+                    disabled={safeEmployerActiveMobileIndex >= employerActiveMobileTotal - 1}
+                    onClick={() =>
+                      setEmployerActiveMobileIndex((current) =>
+                        Math.min(employerActiveMobileTotal - 1, current + 1)
+                      )
+                    }
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+
               <div className="ed-jobs">
-              {pagedActiveVisibleJobs.map((job) => {
+              {activeJobsForRender.map((job) => {
                 const unreadNonMessageNews = unreadEmployerNotifications(job.id).filter(
                   (item) =>
                     item.event_type !== "message" &&
@@ -19475,11 +19598,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 );
               })}
               </div>
-              <DashboardPagination
-                page={employerActivePage}
-                totalItems={activeVisibleJobs.length}
-                onPageChange={setEmployerActivePage}
-              />
+              {!isEmployerPhoneLayout && (
+                <DashboardPagination
+                  page={employerActivePage}
+                  totalItems={activeVisibleJobs.length}
+                  onPageChange={setEmployerActivePage}
+                />
+              )}
             </>
           ) : (
             <div className="ed-jobs-empty">
@@ -26779,7 +26904,6 @@ function PublicLandingPage({
                 <div className="home-kicker">Darbdavių planai</div>
                 <h2>Pradėkite nemokamai. Augant poreikiui – rinkitės daugiau galimybių.</h2>
                 <span className="home-free-worker">Darbuotojams platforma nemokama</span>
-                <span className="home-trial-offer">Pakviestoms įmonėms: 30 dienų Business išbandymas nemokamai, be kortelės ir be įsipareigojimo.</span>
               </div>
               <div className="home-toggle" aria-label="Mokėjimo laikotarpis">
                 <button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button>
@@ -26803,11 +26927,6 @@ function PublicLandingPage({
                     {item.key === "business_pro" && <span className="home-plan-badge pro">PILNAS VALDYMAS</span>}
                     <h3>{item.name}</h3>
                     <p className="home-plan-sub">{item.description}</p>
-                    {item.key === "business" && (
-                      <div className="home-plan-trial">
-                        Pakviestoms įmonėms – 30 dienų nemokamai. Išbandymas aktyvuojamas po registracijos.
-                      </div>
-                    )}
                     <div className="home-amount">
                       {paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(item)) : formatPlanPrice(item.price) : "0"} €
                       <small> / {paid && yearly ? "metus" : "mėn."}</small>
@@ -29504,8 +29623,175 @@ const mobileResponsiveFixStyles = `
     }
 
     .ed-kpi b {
-      margin-top: 6px !important;
+      margin-top: 5px !important;
+      font-size: 18px !important;
+    }
+
+    /* Employer main screen: shorter intro and tighter action stack. */
+    .ed-shell {
+      margin-top: 18px !important;
+    }
+
+    .ed-heading {
+      margin-bottom: 16px !important;
+      gap: 12px !important;
+    }
+
+    .ed-heading .eyebrow {
+      font-size: 10px !important;
+    }
+
+    .ed-heading h1 {
+      margin-top: 5px !important;
+      font-size: 25px !important;
+      line-height: 1.12 !important;
+    }
+
+    .ed-heading p {
+      margin-top: 7px !important;
+      font-size: 12.5px !important;
+      line-height: 1.42 !important;
+    }
+
+    .ed-heading-actions {
+      gap: 7px !important;
+    }
+
+    .ed-heading-primary-row {
+      gap: 7px !important;
+    }
+
+    .ed-heading-actions > button,
+    .ed-heading-primary-row > button {
+      min-height: 42px !important;
+      padding: 9px 11px !important;
+      border-radius: 11px !important;
+      font-size: 12px !important;
+    }
+
+    /* Employer active jobs and worker availability: one card/day at a time. */
+    .ed-active-carousel-nav,
+    .wd-availability-carousel-nav {
+      display: grid !important;
+      grid-template-columns: 38px minmax(0, 1fr) 38px !important;
+      align-items: center !important;
+      gap: 8px !important;
+      margin: 10px 0 4px !important;
+      padding: 7px 8px !important;
+      border: 1px solid #dfe7ed !important;
+      border-radius: 12px !important;
+      background: #fff !important;
+    }
+
+    .ed-active-carousel-nav > div,
+    .wd-availability-carousel-nav > div {
+      min-width: 0 !important;
+      text-align: center !important;
+    }
+
+    .ed-active-carousel-nav b,
+    .wd-availability-carousel-nav b {
+      display: block !important;
+      color: #102438 !important;
+      font-size: 11.5px !important;
+      line-height: 1.25 !important;
+    }
+
+    .ed-active-carousel-nav span,
+    .wd-availability-carousel-nav span {
+      display: block !important;
+      margin-top: 2px !important;
+      color: #7a8996 !important;
+      font-size: 10px !important;
+      font-weight: 800 !important;
+    }
+
+    .ed-active-carousel-nav button,
+    .wd-availability-carousel-nav button {
+      width: 38px !important;
+      height: 38px !important;
+      padding: 0 !important;
+      border: 1px solid #d7e1e8 !important;
+      border-radius: 10px !important;
+      background: #fff !important;
+      color: #102438 !important;
       font-size: 20px !important;
+      line-height: 1 !important;
+      font-weight: 900 !important;
+    }
+
+    .ed-active-carousel-nav button:disabled,
+    .wd-availability-carousel-nav button:disabled {
+      opacity: .35 !important;
+    }
+
+    .ed-jobs {
+      margin-top: 8px !important;
+    }
+
+    #worker-availability-editor .wd-days {
+      gap: 0 !important;
+    }
+
+    #worker-availability-editor .wd-day {
+      padding: 11px !important;
+      gap: 8px !important;
+      border-radius: 14px !important;
+    }
+
+    #worker-availability-editor .wd-day-date b {
+      font-size: 13px !important;
+    }
+
+    #worker-availability-editor .wd-day-date span,
+    #worker-availability-editor .wd-availability-choice > span,
+    #worker-availability-editor .wd-time-field > span {
+      font-size: 10px !important;
+    }
+
+    /* Long-term offer details: keep summary dense on phones. */
+    .lt-worker-offer-modal .lt-detail-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 7px !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-card {
+      min-height: 0 !important;
+      padding: 10px !important;
+      border-radius: 12px !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-card > span {
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-card > b {
+      font-size: 13px !important;
+      line-height: 1.3 !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .lt-worker-offer-modal .lt-detail-card small {
+      font-size: 10px !important;
+      line-height: 1.3 !important;
+    }
+
+    .lt-worker-offer-modal .lt-schedule-row {
+      padding: 9px 10px !important;
+      gap: 5px !important;
+      font-size: 10.5px !important;
+    }
+
+    /* Worker priority/stat cards a little shorter. */
+    .wd-overview-card {
+      min-height: 76px !important;
+      padding: 8px 9px !important;
+    }
+
+    .wd-kpi {
+      min-height: 78px !important;
+      padding: 8px 7px !important;
     }
   }
 
