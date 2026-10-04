@@ -9172,9 +9172,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     type="button"
                     aria-label="Ankstesnė diena"
-                    disabled={safeAvailabilityMobileIndex === 0}
                     onClick={() =>
-                      setAvailabilityMobileIndex((current) => Math.max(0, current - 1))
+                      setAvailabilityMobileIndex((current) =>
+                        (current - 1 + days.length) % days.length
+                      )
                     }
                   >
                     ‹
@@ -9186,10 +9187,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     type="button"
                     aria-label="Kita diena"
-                    disabled={safeAvailabilityMobileIndex >= days.length - 1}
                     onClick={() =>
                       setAvailabilityMobileIndex((current) =>
-                        Math.min(days.length - 1, current + 1)
+                        (current + 1) % days.length
                       )
                     }
                   >
@@ -10399,10 +10399,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         aria-label="Rodyti naujesnį darbą"
                         onClick={() =>
                           setWorkerHistoryMobileIndex((current) =>
-                            Math.max(0, current - 1)
+                            (current - 1 + workerHistoryMobileTotal) %
+                            workerHistoryMobileTotal
                           )
                         }
-                        disabled={safeWorkerHistoryMobileIndex === 0}
                       >
                         ‹
                       </button>
@@ -10411,12 +10411,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                         aria-label="Rodyti senesnį darbą"
                         onClick={() =>
                           setWorkerHistoryMobileIndex((current) =>
-                            Math.min(workerHistoryMobileTotal - 1, current + 1)
+                            (current + 1) % workerHistoryMobileTotal
                           )
-                        }
-                        disabled={
-                          safeWorkerHistoryMobileIndex >=
-                          workerHistoryMobileTotal - 1
                         }
                       >
                         ›
@@ -13214,6 +13210,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return window.innerWidth <= 620;
   });
   const [employerActiveMobileIndex, setEmployerActiveMobileIndex] = useState(0);
+  const [employerHistoryMobileIndex, setEmployerHistoryMobileIndex] = useState(0);
   const [acceptedWorkersPage, setAcceptedWorkersPage] = useState(1);
   const [declinedWorkersPage, setDeclinedWorkersPage] = useState(1);
   const [showEmployerStats, setShowEmployerStats] = useState(() => {
@@ -17197,11 +17194,24 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (employerHistoryPage - 1) * DASHBOARD_PAGE_SIZE,
     employerHistoryPage * DASHBOARD_PAGE_SIZE
   );
+  const employerHistoryMobileTotal = employerJobHistory.length;
+  const safeEmployerHistoryMobileIndex = employerHistoryMobileTotal
+    ? Math.min(employerHistoryMobileIndex, employerHistoryMobileTotal - 1)
+    : 0;
+  const employerHistoryMobileJob = employerHistoryMobileTotal
+    ? employerJobHistory[safeEmployerHistoryMobileIndex]
+    : null;
+  const employerHistoryForRender = isEmployerPhoneLayout
+    ? employerHistoryMobileJob
+      ? [employerHistoryMobileJob]
+      : []
+    : pagedEmployerJobHistory;
 
   useEffect(() => {
     setEmployerActivePage(1);
     setEmployerHistoryPage(1);
     setEmployerActiveMobileIndex(0);
+    setEmployerHistoryMobileIndex(0);
   }, [jobScope]);
 
   useEffect(() => {
@@ -17211,6 +17221,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         : 0
     );
   }, [activeVisibleJobs.length]);
+
+  useEffect(() => {
+    setEmployerHistoryMobileIndex((current) =>
+      employerJobHistory.length
+        ? Math.min(Math.max(0, current), employerJobHistory.length - 1)
+        : 0
+    );
+  }, [employerJobHistory.length]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(activeVisibleJobs.length / DASHBOARD_PAGE_SIZE));
@@ -19652,9 +19670,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     type="button"
                     aria-label="Ankstesnis aktyvus darbas"
-                    disabled={safeEmployerActiveMobileIndex === 0}
                     onClick={() =>
-                      setEmployerActiveMobileIndex((current) => Math.max(0, current - 1))
+                      setEmployerActiveMobileIndex((current) =>
+                        (current - 1 + employerActiveMobileTotal) %
+                        employerActiveMobileTotal
+                      )
                     }
                   >
                     ‹
@@ -19666,10 +19686,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <button
                     type="button"
                     aria-label="Kitas aktyvus darbas"
-                    disabled={safeEmployerActiveMobileIndex >= employerActiveMobileTotal - 1}
                     onClick={() =>
                       setEmployerActiveMobileIndex((current) =>
-                        Math.min(employerActiveMobileTotal - 1, current + 1)
+                        (current + 1) % employerActiveMobileTotal
                       )
                     }
                   >
@@ -19883,8 +19902,39 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
           {employerJobHistory.length ? (
             <>
+            {isEmployerPhoneLayout && employerHistoryMobileTotal > 1 && (
+              <div className="ed-active-carousel-nav">
+                <button
+                  type="button"
+                  aria-label="Naujesnis istorijos darbas"
+                  onClick={() =>
+                    setEmployerHistoryMobileIndex((current) =>
+                      (current - 1 + employerHistoryMobileTotal) %
+                      employerHistoryMobileTotal
+                    )
+                  }
+                >
+                  ‹
+                </button>
+                <div>
+                  <b>Darbų istorija</b>
+                  <span>{safeEmployerHistoryMobileIndex + 1} / {employerHistoryMobileTotal}</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Senesnis istorijos darbas"
+                  onClick={() =>
+                    setEmployerHistoryMobileIndex((current) =>
+                      (current + 1) % employerHistoryMobileTotal
+                    )
+                  }
+                >
+                  ›
+                </button>
+              </div>
+            )}
             <div className="ed-jobs">
-              {pagedEmployerJobHistory.map((job) => {
+              {employerHistoryForRender.map((job) => {
                 const jobDashboardState = employerJobDashboardState(job);
 
                 return (
@@ -19975,11 +20025,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 );
               })}
             </div>
-            <DashboardPagination
-              page={employerHistoryPage}
-              totalItems={employerJobHistory.length}
-              onPageChange={setEmployerHistoryPage}
-            />
+            {!isEmployerPhoneLayout && (
+              <DashboardPagination
+                page={employerHistoryPage}
+                totalItems={employerJobHistory.length}
+                onPageChange={setEmployerHistoryPage}
+              />
+            )}
             </>
           ) : (
             <div className="ed-jobs-empty">
