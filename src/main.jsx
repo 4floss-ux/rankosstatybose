@@ -6516,10 +6516,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         ...current,
         city: row.urgent_city || canonicalCity,
       }));
-      setShowUrgentAvailability(false);
-      setNotice(
-        "Režimas „Laisvas dabar“ įjungtas. Darbdaviai šiame mieste gali matyti jūsų telefono numerį, kol patys šio režimo neišjungsite."
-      );
+      setNotice("");
     } catch (err) {
       setError(err?.message || "Nepavyko įjungti režimo „Laisvas dabar“.");
     } finally {
@@ -6537,8 +6534,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       if (result.error) throw result.error;
 
       setUrgentAvailability({ city: "", active: false });
-      setShowUrgentAvailability(false);
-      setNotice("Režimas „Laisvas dabar“ išjungtas.");
+      setNotice("");
     } catch (err) {
       setError(err?.message || "Nepavyko išjungti režimo „Laisvas dabar“.");
     } finally {
@@ -8625,7 +8621,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             >
               {urgentAvailabilityIsActive()
                 ? "Laisvas dabar · įjungta"
-                : "Laisvas dabar"}
+                : "Laisvas dabar · išjungta"}
             </button>
 
             {urgentAvailabilityIsActive() && !hasCurrentScheduledWork() && (
@@ -11313,8 +11309,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <div className="eyebrow">LAISVAS DABAR</div>
                 <h2>
                   {urgentAvailabilityIsActive()
-                    ? "Režimas įjungtas"
-                    : "Leisti darbdaviui jus rasti skubiai"}
+                    ? "„Laisvas dabar“ įjungta"
+                    : "„Laisvas dabar“ išjungta"}
                 </h2>
               </div>
             </div>
@@ -11331,10 +11327,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 fontSize: 13,
               }}
             >
-              Įjungę šį režimą patvirtinate, kad šiuo metu laukiate skubaus
-              darbo. Darbdaviai, ieškantys darbuotojo jūsų profilyje nurodytame
-              mieste, galės matyti jūsų vardą ir telefono numerį, kol šį režimą
-              išjungsite.
+              {urgentAvailabilityIsActive() ? (
+                <>
+                  Režimas įjungtas. Darbdaviai, ieškantys darbuotojo jūsų
+                  profilyje nurodytame mieste, gali matyti jūsų vardą ir telefono
+                  numerį, kol režimą išjungsite.
+                </>
+              ) : (
+                <>
+                  Režimas išjungtas. Darbdaviai „Skubiai!“ paieškoje nemato jūsų
+                  telefono numerio. Įjunkite tik tada, kai šiuo metu realiai
+                  laukiate skubaus darbo.
+                </>
+              )}
             </div>
 
             {hasCurrentScheduledWork() && !urgentAvailabilityIsActive() && (
