@@ -17430,10 +17430,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-rating-scores{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px;margin-bottom:16px}
         .ed-rating-scores>button{min-width:0;padding:10px 0}
         .ed-rating-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
-        .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px}.ed-urgent-head h2{margin:3px 0 5px;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
+        .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:12px}.ed-urgent-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
         .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
         .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
         .ed-urgent-results{display:grid;gap:9px}.ed-urgent-row{border:1px solid #e4ebf0;border-radius:12px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+        .ed-urgent-results-nav{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;gap:10px;margin:12px auto 0;width:min(100%,240px)}
+        .ed-urgent-results-nav>span{text-align:center;color:#6c7a88;font-size:12px;font-weight:850}
+        .ed-urgent-results-nav>button{width:42px;height:42px;padding:0;border:1px solid #d7e1e8;border-radius:50%;background:#fff;color:#405264;font:inherit;font-size:23px;font-weight:850;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(16,36,56,.05)}
+        .ed-urgent-results-nav>button:hover{background:#f7f9fb;border-color:#c7d5de}
         .ed-urgent-worker{display:flex;align-items:center;gap:11px}.ed-urgent-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f5;display:grid;place-items:center;font-weight:800;flex:0 0 44px}.ed-urgent-avatar img{width:100%;height:100%;object-fit:cover}.ed-urgent-worker b{display:block}.ed-urgent-worker span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
         .ed-urgent-contact{text-align:right}.ed-urgent-contact b{display:block;font-size:15px;margin-bottom:6px}.ed-urgent-empty{text-align:center;color:#6c7a88;padding:28px 10px}
         .ed-worker-source{display:flex;align-items:center;gap:5px;margin-top:12px;padding:4px;background:#f1f4f6;border-radius:10px;width:max-content;max-width:100%}
@@ -21231,11 +21235,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div>
                 <div className="eyebrow">SKUBIAI!</div>
                 <h2>Kas gali atvykti dirbti dabar?</h2>
-                <p>
-                  Pasirinkite miestą. Rodomi tik darbuotojai, kurie patys
-                  įjungė režimą „Laisvas dabar“ ir sutiko parodyti savo
-                  telefono numerį Business Pro darbdaviams.
-                </p>
               </div>
 
               <button
@@ -21250,11 +21249,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="ed-urgent-note">
-              Ši paieška nesukuria darbo pasiūlymo ir nesiunčia kvietimų.
-              Susisiekę su darbuotoju darbo sąlygas suderinate tiesiogiai.
-              Darbuotojo numeris iš sąrašo dingsta, kai pats darbuotojas
-              išjungia „Laisvas dabar“ režimą. Rodomi tik per paskutines 24 val.
-              platformoje aktyvūs darbuotojai.
+              Kontaktai skirti tiesiogiai susisiekti dėl skubaus darbo.
+              Numeris rodomas tik kol darbuotojas įjungęs „Laisvas dabar“.
             </div>
 
             <div className="ed-urgent-filter">
@@ -21293,7 +21289,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <>
               <div className="ed-urgent-results">
                 {urgentSearchResults
-                  .slice((urgentSearchPage - 1) * DASHBOARD_PAGE_SIZE, urgentSearchPage * DASHBOARD_PAGE_SIZE)
+                  .slice((urgentSearchPage - 1) * 5, urgentSearchPage * 5)
                   .map((worker) => (
                   <div className="ed-urgent-row" key={worker.worker_id}>
                     <div className="ed-urgent-worker">
@@ -21342,11 +21338,39 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 ))}
               </div>
-              <DashboardPagination
-                page={urgentSearchPage}
-                totalItems={urgentSearchResults.length}
-                onPageChange={setUrgentSearchPage}
-              />
+              {urgentSearchResults.length > 5 && (
+                <div className="ed-urgent-results-nav">
+                  <button
+                    type="button"
+                    aria-label="Ankstesni darbuotojai"
+                    onClick={() => {
+                      const totalPages = Math.ceil(urgentSearchResults.length / 5);
+                      setUrgentSearchPage((current) =>
+                        current <= 1 ? totalPages : current - 1
+                      );
+                    }}
+                  >
+                    ‹
+                  </button>
+
+                  <span>
+                    {urgentSearchPage} / {Math.ceil(urgentSearchResults.length / 5)}
+                  </span>
+
+                  <button
+                    type="button"
+                    aria-label="Kiti darbuotojai"
+                    onClick={() => {
+                      const totalPages = Math.ceil(urgentSearchResults.length / 5);
+                      setUrgentSearchPage((current) =>
+                        current >= totalPages ? 1 : current + 1
+                      );
+                    }}
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
               </>
             ) : (
               <div className="ed-urgent-empty">
