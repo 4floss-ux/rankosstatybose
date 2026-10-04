@@ -11308,19 +11308,15 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           }}
         >
           <div className="rs-modal-card">
-            <div className="rs-modal-head">
+            <div className="rs-modal-head" style={{ marginBottom: 14 }}>
               <div>
                 <div className="eyebrow">LAISVAS DABAR</div>
-                <h2>Leisti darbdaviui jus rasti skubiai</h2>
+                <h2>
+                  {urgentAvailabilityIsActive()
+                    ? "Režimas įjungtas"
+                    : "Leisti darbdaviui jus rasti skubiai"}
+                </h2>
               </div>
-              <button
-                className="rs-close"
-                type="button"
-                disabled={urgentSaving}
-                onClick={() => setShowUrgentAvailability(false)}
-              >
-                <CloseMark />
-              </button>
             </div>
 
             <div
@@ -11336,77 +11332,44 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               Įjungę šį režimą patvirtinate, kad šiuo metu laukiate skubaus
-              darbo. Darbdaviai, ieškantys darbuotojo jūsų
-              pasirinktame mieste, galės matyti jūsų vardą ir telefono numerį,
-              kol patys šio režimo neišjungsite.
+              darbo. Darbdaviai, ieškantys darbuotojo jūsų profilyje nurodytame
+              mieste, galės matyti jūsų vardą ir telefono numerį, kol šį režimą
+              išjungsite.
             </div>
 
-            {hasCurrentScheduledWork() && (
+            {hasCurrentScheduledWork() && !urgentAvailabilityIsActive() && (
               <div className="wd-note err" style={{ marginBottom: 14 }}>
-                Dabar turite patvirtintą darbą. Net jei į jį neatvykote, „Laisvas dabar“
-                galėsite įjungti tik pasibaigus suplanuotam darbo laikui.
+                Dabar turite patvirtintą darbą. „Laisvas dabar“ galėsite įjungti
+                pasibaigus suplanuotam darbo laikui.
               </div>
             )}
 
-            <div style={{ display: "grid", gap: 14 }}>
-              <label className="wd-label">
-                Miestas
-                <CityAutocomplete
-                  className="wd-input"
-                  value={urgentForm.city}
-                  onChange={(value) =>
-                    setUrgentForm((current) => ({
-                      ...current,
-                      city: value,
-                    }))
-                  }
-                  placeholder="Pvz. Vilnius"
-                />
-              </label>
-
-            </div>
-
-            <div
+            <button
+              className={urgentAvailabilityIsActive() ? "wd-decline" : "wd-urgent-btn"}
+              type="button"
+              disabled={
+                urgentSaving ||
+                (!urgentAvailabilityIsActive() && hasCurrentScheduledWork())
+              }
+              onClick={
+                urgentAvailabilityIsActive()
+                  ? disableUrgentAvailability
+                  : enableUrgentAvailability
+              }
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 9,
-                flexWrap: "wrap",
-                marginTop: 18,
+                width: "100%",
+                minHeight: 48,
+                marginTop: 2,
+                fontSize: 14,
+                fontWeight: 850,
               }}
             >
-              <div>
-                {urgentAvailabilityIsActive() && (
-                  <button
-                    className="wd-decline"
-                    type="button"
-                    disabled={urgentSaving}
-                    onClick={disableUrgentAvailability}
-                  >
-                    Išjungti „Laisvas dabar“
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: 9 }}>
-                <button
-                  className="wd-decline"
-                  type="button"
-                  disabled={urgentSaving}
-                  onClick={() => setShowUrgentAvailability(false)}
-                >
-                  Atšaukti
-                </button>
-                <button
-                  className="wd-urgent-btn"
-                  type="button"
-                  disabled={urgentSaving || hasCurrentScheduledWork()}
-                  onClick={enableUrgentAvailability}
-                >
-                  {urgentSaving ? "Saugoma..." : "Esu laisvas dabar"}
-                </button>
-              </div>
-            </div>
+              {urgentSaving
+                ? "Saugoma..."
+                : urgentAvailabilityIsActive()
+                ? "Išjungti"
+                : "Įjungti"}
+            </button>
           </div>
         </div>
       )}
