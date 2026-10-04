@@ -10109,11 +10109,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <div className="wd-job-info-modal">
             <style>{`
               .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
-              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
-              .wd-job-info-close{width:44px;height:44px;border:0;border-radius:12px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 44px}
-              .wd-job-info-scroll{overflow:auto;padding:18px 24px 22px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
-              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
+              .wd-job-info-modal{width:min(840px,100%);max-height:calc(100vh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(16,36,56,.30);color:#102438}
+              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px 18px 14px;border-bottom:1px solid #e8eef2;background:#fff}.wd-job-info-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:22px;line-height:1.18}
+              .wd-job-info-close{width:40px;height:40px;border:0;border-radius:11px;background:#f2f5f7;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
+              .wd-job-info-scroll{overflow:auto;padding:12px 18px 18px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}.wd-job-info-scroll::-webkit-scrollbar{width:8px}.wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}.wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
+              .wd-job-info-summary{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;margin-bottom:12px!important}.wd-job-info-card{border-radius:12px!important;padding:10px 12px!important;min-width:0}.wd-job-info-employer,.wd-job-info-pair,.wd-job-info-description{grid-column:1/-1}.wd-job-info-pair{gap:8px!important}.wd-job-info-employer{background:#f8fafb}.wd-job-info-card>div:first-child{font-size:11px!important}.wd-job-info-card b{line-height:1.3}.wd-job-info-description{margin-top:0!important}.wd-job-info-description>div:last-child{margin-top:4px!important;line-height:1.45!important}
+              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}.wd-job-info-summary{grid-template-columns:1fr!important;gap:10px!important}.wd-job-info-employer,.wd-job-info-pair,.wd-job-info-description{grid-column:auto}.wd-job-info-pair{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
             `}</style>
             <div className="wd-job-info-head">
               <div>
@@ -10131,6 +10132,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             <div className="wd-job-info-scroll">
             <div
+              className="wd-job-info-summary"
               style={{
                 display: "grid",
                 gap: 12,
@@ -10138,6 +10140,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             >
               <div
+                className="wd-job-info-card wd-job-info-employer"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10178,6 +10181,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
               {workdayDetailsTarget.companyReliability !== undefined && (
                 <div
+                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10221,6 +10225,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               )}
 
               <div
+                className="wd-job-info-pair"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2,minmax(0,1fr))",
@@ -10228,6 +10233,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 }}
               >
                 <div
+                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10247,6 +10253,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
 
                 <div
+                  className="wd-job-info-card"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10268,6 +10275,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
+                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10285,6 +10293,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
+                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10303,6 +10312,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
+                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10321,6 +10331,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
+                className="wd-job-info-card"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -10361,6 +10372,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
 
               <div
+                className="wd-job-info-card wd-job-info-description"
                 style={{
                   border: "1px solid #e4ebf0",
                   borderRadius: 16,
@@ -11649,15 +11661,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-worker-offer-modal">
             <style>{`
-              .lt-worker-offer-modal{width:min(860px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:22px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:24px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
-              .lt-worker-offer-modal .rs-modal-head{margin-bottom:18px}
-              .lt-worker-offer-modal .rs-close{border-radius:12px!important}
-              .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:16px!important;padding:16px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:92px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
-              .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:12px;margin-bottom:5px}
-              .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:16px;line-height:1.35}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:5px;color:#6c7a88;line-height:1.45}
-              .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:8px;margin-top:12px;border-radius:16px!important;overflow:visible!important}
-              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:12px;align-items:center;padding:12px 14px;border:1px solid #dfe7ed!important;border-radius:14px!important;background:#fff!important;font-size:12px;box-sizing:border-box;box-shadow:none!important;min-height:48px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
-              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
+              .lt-worker-offer-modal{width:min(980px,100%)!important;max-height:calc(100vh - 40px)!important;border-radius:20px!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-sizing:border-box}.lt-worker-offer-scroll{max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:18px 20px 20px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}.lt-worker-offer-scroll::-webkit-scrollbar{width:8px}.lt-worker-offer-scroll::-webkit-scrollbar-track{background:transparent}.lt-worker-offer-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
+              .lt-worker-offer-modal .rs-modal-head{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #edf1f4}.lt-worker-offer-modal .rs-modal-head h2{font-size:22px!important;line-height:1.18!important}
+              .lt-worker-offer-modal .rs-close{border-radius:11px!important;width:40px!important;height:40px!important;flex-basis:40px!important}
+              .lt-worker-offer-modal .lt-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}.lt-worker-offer-modal .lt-detail-card{border:1px solid #dfe7ed!important;border-radius:12px!important;padding:11px 12px!important;background:#fff!important;overflow:hidden;box-sizing:border-box;box-shadow:none!important;min-height:70px;height:100%;display:flex;flex-direction:column;justify-content:flex-start}
+              .lt-worker-offer-modal .lt-detail-card>span{display:block;color:#6c7a88;font-size:11px;margin-bottom:4px}
+              .lt-worker-offer-modal .lt-detail-card>b{display:block;color:#102438;font-size:15px;line-height:1.3}.lt-worker-offer-modal .lt-detail-card small{display:block;margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.35}
+              .lt-worker-offer-modal .lt-schedule-table{display:grid;gap:6px;margin-top:8px;border-radius:12px!important;overflow:visible!important}
+              .lt-worker-offer-modal .lt-schedule-row{display:grid;grid-template-columns:1.05fr .8fr 1.4fr;gap:10px;align-items:center;padding:9px 11px;border:1px solid #dfe7ed!important;border-radius:11px!important;background:#fff!important;font-size:11.5px;box-sizing:border-box;box-shadow:none!important;min-height:40px}.lt-worker-offer-modal .lt-schedule-row span{color:#526374}.lt-worker-offer-modal .lt-schedule-row b{color:#102438}
+              @media(max-width:760px){.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+              @media(max-width:620px){.lt-worker-offer-modal{border-radius:18px!important;max-height:calc(100vh - 20px)!important}.lt-worker-offer-scroll{max-height:calc(100vh - 20px);padding:18px}.lt-worker-offer-modal .rs-modal-head{padding-bottom:0;border-bottom:0;margin-bottom:18px}.lt-worker-offer-modal .rs-modal-head h2{font-size:20px!important}.lt-worker-offer-modal .lt-detail-grid{grid-template-columns:1fr}.lt-worker-offer-modal .lt-schedule-row{grid-template-columns:1fr}.lt-worker-offer-modal .lt-detail-card{padding:14px!important;min-height:0}.lt-worker-offer-modal .lt-detail-card+ .lt-detail-card{min-width:0}}
             `}</style>
 
             <div className="lt-worker-offer-scroll">
