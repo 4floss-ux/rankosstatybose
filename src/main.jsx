@@ -8535,7 +8535,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 ? {
                     display: "flex",
                     width: "100%",
-                    justifyContent: "space-between",
+                    justifyContent: "center",
                     gap: 8,
                     flexWrap: "nowrap",
                   }
@@ -28384,6 +28384,27 @@ const mobileResponsiveFixStyles = `
       border-radius: 9px !important;
       font-size: 12px !important;
       line-height: 1.1 !important;
+      white-space: nowrap !important;
+    }
+
+    .wd-topbar-actions {
+      justify-content: center !important;
+      gap: 8px !important;
+    }
+
+    .wd-topbar-actions > .btn,
+    .wd-topbar-actions > .wd-mobile-profile-btn {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-width: 104px !important;
+      max-width: none !important;
+      min-height: 36px !important;
+      height: 36px !important;
+      padding: 6px 13px !important;
+      border-radius: 9px !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      line-height: 1 !important;
       white-space: nowrap !important;
     }
 
