@@ -8621,32 +8621,6 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <small>{workerUnreadMessages.length ? "Atidarykite pokalbį" : "Viskas perskaityta"}</small>
           </div>
 
-          <div
-            className={`wd-overview-card ${
-              workerOpenDisputes.length ? "danger" : ""
-            }`}
-          >
-            <div className="wd-overview-card-top">
-              <span>Ginčai</span>
-              {workerOpenDisputes.length > 0 && (
-                <button
-                  className="wd-overview-open"
-                  type="button"
-                  onClick={() => openWorkerDashboardTarget("workdays")}
-                >
-                  Peržiūrėti
-                </button>
-              )}
-            </div>
-            <b>{workerOpenDisputes.length}</b>
-            <small>
-              {workerOpenDisputes.length
-                ? workerOpenDisputes.length === 1
-                  ? "Nagrinėja administratorius"
-                  : "Nagrinėjami administratoriaus"
-                : "Aktyvių ginčų nėra"}
-            </small>
-          </div>
         </div>
 
         {showProfileEditor && (
@@ -10818,6 +10792,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="wd-job-info-scroll">
               <div style={{ display: "grid", gap: 12 }}>
                 <div
+                  className="wd-company-profile-identity"
                   style={{
                     border: "1px solid #e4ebf0",
                     borderRadius: 16,
@@ -10855,27 +10830,28 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
 
                 <div
+                  className="wd-company-profile-metrics"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
                     gap: 10,
                   }}
                 >
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
                     <div style={{ color: "#6c7a88", fontSize: 12 }}>Įvykdyti darbai</div>
                     <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
                       {Number(workerCompanyProfileTarget.completedJobs || 0)}
                     </b>
                   </div>
 
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
                     <div style={{ color: "#6c7a88", fontSize: 12 }}>Atšaukti darbai</div>
                     <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
                       {Number(workerCompanyProfileTarget.cancelledJobs || 0)}
                     </b>
                   </div>
 
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
+                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
                     <div style={{ color: "#6c7a88", fontSize: 12 }}>Įmonės patikimumas</div>
                     <b
                       style={{
@@ -29241,6 +29217,295 @@ const mobileResponsiveFixStyles = `
     .lt-employment-modal .lt-existing-offer {
       padding: 12px 14px !important;
       gap: 12px !important;
+    }
+  }
+
+
+  /* Mobile density pass: worker dashboard, employer header and worker-facing company profile. */
+  @media (max-width: 620px) {
+    /* Employer header: centered logo, compact plan/profile/logout in one row. */
+    .ed-topbar {
+      min-height: 0 !important;
+      height: auto !important;
+    }
+
+    .ed-topbar-inner {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      justify-items: center !important;
+      align-items: center !important;
+      gap: 8px !important;
+      width: calc(100% - 24px) !important;
+      padding: 10px 0 11px !important;
+    }
+
+    .ed-topbar-inner > .brand {
+      justify-self: center !important;
+      margin: 0 auto !important;
+      max-width: 100% !important;
+    }
+
+    .ed-topbar-inner > .brand img {
+      max-width: min(188px, 58vw) !important;
+      max-height: 38px !important;
+    }
+
+    .ed-topbar-inner > div:last-child {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      width: 100% !important;
+      gap: 6px !important;
+      align-items: stretch !important;
+    }
+
+    .ed-topbar-inner > div:last-child > * {
+      min-width: 0 !important;
+      width: 100% !important;
+      min-height: 36px !important;
+      padding: 7px 5px !important;
+      border-radius: 10px !important;
+      font-size: 10.5px !important;
+      line-height: 1.15 !important;
+      white-space: normal !important;
+      text-align: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+    }
+
+    .ed-topbar-inner > div:last-child .ed-plan-badge {
+      min-height: 36px !important;
+      padding: 7px 5px !important;
+      font-size: 10.5px !important;
+    }
+
+    /* Worker dashboard: four compact priority cards. */
+    .wd-overview-heading {
+      margin: 0 0 7px 2px !important;
+      font-size: 10.5px !important;
+      letter-spacing: .075em !important;
+    }
+
+    .wd-overview {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 7px !important;
+      margin-bottom: 14px !important;
+    }
+
+    .wd-overview > .wd-overview-card:last-child {
+      grid-column: auto !important;
+    }
+
+    .wd-overview-card {
+      min-height: 84px !important;
+      padding: 9px 10px !important;
+      border-radius: 13px !important;
+    }
+
+    .wd-overview-card-top {
+      min-height: 19px !important;
+      gap: 5px !important;
+    }
+
+    .wd-overview-card span {
+      font-size: 9px !important;
+      line-height: 1.2 !important;
+      letter-spacing: .035em !important;
+    }
+
+    .wd-overview-card b,
+    .wd-overview-card.next-work b {
+      margin-top: 4px !important;
+      font-size: 16px !important;
+      line-height: 1.08 !important;
+    }
+
+    .wd-overview-card small {
+      margin-top: 3px !important;
+      font-size: 9.7px !important;
+      line-height: 1.25 !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 2 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      white-space: normal !important;
+    }
+
+    .wd-overview-open {
+      padding: 3px 5px !important;
+      border-radius: 6px !important;
+      font-size: 9px !important;
+    }
+
+    /* Worker statistics: visibly shorter without losing the five indicators. */
+    .wd-stats-section {
+      margin-bottom: 14px !important;
+    }
+
+    .wd-stats-head {
+      margin-bottom: 7px !important;
+    }
+
+    .wd-stats-toggle {
+      gap: 6px !important;
+      font-size: 10.5px !important;
+      letter-spacing: .065em !important;
+    }
+
+    .wd-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 7px !important;
+    }
+
+    .wd-kpi {
+      min-height: 86px !important;
+      padding: 9px 8px !important;
+      border-radius: 13px !important;
+    }
+
+    .wd-kpi > span,
+    .wd-kpi-info-btn,
+    .wd-kpi-info-label {
+      font-size: 10px !important;
+      line-height: 1.2 !important;
+    }
+
+    .wd-kpi b {
+      margin-top: 5px !important;
+      font-size: 19px !important;
+      line-height: 1.05 !important;
+    }
+
+    .wd-kpi small {
+      margin-top: 4px !important;
+      font-size: 9.5px !important;
+      line-height: 1.25 !important;
+      white-space: normal !important;
+    }
+
+    .wd-kpis > .wd-kpi:last-child {
+      grid-column: 1 / -1 !important;
+      min-height: 62px !important;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      align-items: center !important;
+      gap: 5px 12px !important;
+      text-align: left !important;
+    }
+
+    .wd-kpis > .wd-kpi:last-child > span {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+    }
+
+    .wd-kpis > .wd-kpi:last-child > b {
+      grid-column: 2 !important;
+      grid-row: 1 / span 2 !important;
+      margin: 0 !important;
+      font-size: 22px !important;
+    }
+
+    .wd-kpis > .wd-kpi:last-child > small {
+      grid-column: 1 !important;
+      grid-row: 2 !important;
+      margin: 0 !important;
+    }
+
+    /* Worker-facing company profile: identity then 3 compact metrics in one row. */
+    .wd-company-profile-modal .wd-job-info-head {
+      padding: 14px 15px 12px !important;
+    }
+
+    .wd-company-profile-modal .wd-job-info-head h2 {
+      margin-top: 5px !important;
+      font-size: 20px !important;
+    }
+
+    .wd-company-profile-modal .wd-job-info-scroll {
+      padding: 11px 12px 14px !important;
+    }
+
+    .wd-company-profile-identity {
+      padding: 10px !important;
+      border-radius: 13px !important;
+    }
+
+    .wd-company-profile-identity > div {
+      gap: 9px !important;
+      flex-wrap: nowrap !important;
+    }
+
+    .wd-company-profile-identity b {
+      font-size: 16px !important;
+    }
+
+    .wd-company-profile-identity [style*="margin-top: 4px"] {
+      margin-top: 2px !important;
+      font-size: 11.5px !important;
+    }
+
+    .wd-company-profile-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+    }
+
+    .wd-company-profile-metric {
+      min-width: 0 !important;
+      padding: 8px 6px !important;
+      border-radius: 12px !important;
+      text-align: center !important;
+    }
+
+    .wd-company-profile-metric > div {
+      font-size: 8.5px !important;
+      line-height: 1.2 !important;
+      min-height: 21px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .wd-company-profile-metric > b {
+      margin-top: 3px !important;
+      font-size: 15px !important;
+      line-height: 1.1 !important;
+      white-space: nowrap !important;
+    }
+
+    /* Employer statistics also stay denser on phones. */
+    .ed-stats-section {
+      padding: 9px 0 !important;
+    }
+
+    .ed-stats-head {
+      margin-bottom: 7px !important;
+      padding: 0 10px !important;
+    }
+
+    .ed-stats-toggle {
+      font-size: 10.5px !important;
+      gap: 6px !important;
+    }
+
+    .ed-kpis,
+    .ed-kpis.ed-kpis-eight {
+      gap: 7px !important;
+    }
+
+    .ed-kpi {
+      min-height: 78px !important;
+      padding: 10px 8px !important;
+      border-radius: 12px !important;
+    }
+
+    .ed-kpi span {
+      min-height: 0 !important;
+      font-size: 10px !important;
+      line-height: 1.2 !important;
+    }
+
+    .ed-kpi b {
+      margin-top: 6px !important;
+      font-size: 20px !important;
     }
   }
 
