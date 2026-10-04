@@ -23592,7 +23592,8 @@ function AdminDashboard({
     });
   }
 
-  function openEmployerEditor(employer) {
+  async function openEmployerEditor(employer) {
+    setError("");
     setEditor({
       type: "employer",
       id: employer.company_id,
@@ -23602,6 +23603,8 @@ function AdminDashboard({
       originalPlanPeriodEnd: employer.plan_current_period_end
         ? String(employer.plan_current_period_end).slice(0, 10)
         : "",
+      trialEligibilityLoading: true,
+      trialBlockedByStripe: false,
     });
     setEditorForm({
       displayName: employer.display_name || "",
@@ -23619,6 +23622,45 @@ function AdminDashboard({
         ? String(employer.plan_current_period_end).slice(0, 10)
         : "",
     });
+
+    try {
+      const billingResult = await supabase.rpc("get_company_billing_status", {
+        p_company_id: employer.company_id,
+      });
+
+      if (billingResult.error) throw billingResult.error;
+
+      const billing = billingResult.data?.[0] || null;
+      const trialBlockedByStripe =
+        Boolean(billing?.has_stripe_subscription) &&
+        ["active", "trialing", "past_due"].includes(
+          billing?.subscription_status
+        );
+
+      setEditor((current) =>
+        current?.type === "employer" && current.id === employer.company_id
+          ? {
+              ...current,
+              trialEligibilityLoading: false,
+              trialBlockedByStripe,
+            }
+          : current
+      );
+    } catch (err) {
+      setEditor((current) =>
+        current?.type === "employer" && current.id === employer.company_id
+          ? {
+              ...current,
+              trialEligibilityLoading: false,
+              trialBlockedByStripe: true,
+            }
+          : current
+      );
+      setError(
+        err?.message ||
+          "Nepavyko patikrinti Stripe prenumeratos. Bandomasis planas saugumo sumetimais neaktyvuojamas."
+      );
+    }
   }
 
   function openJobEditor(job) {
@@ -25654,7 +25696,20 @@ function AdminDashboard({
                     className="admin-input"
                     ariaLabel="Prenumeratos būsena"
                     value={editorForm.subscriptionStatus}
-                    onChange={(value) => updateEditorField("subscriptionStatus", value)}
+                    onChange={(value) => {
+                      if (
+                        value === "trialing" &&
+                        (editor?.trialEligibilityLoading || editor?.trialBlockedByStripe)
+                      ) {
+                        setError(
+                          editor?.trialEligibilityLoading
+                            ? "Palaukite, kol bus patikrinta Stripe prenumerata."
+                            : "Nemokamo Business išbandymo negalima aktyvuoti įmonei, kuri jau turi aktyvią Stripe prenumeratą."
+                        );
+                        return;
+                      }
+                      updateEditorField("subscriptionStatus", value);
+                    }}
                     options={[{ value: "active", label: "Aktyvi" }, { value: "trialing", label: "Bandomoji" }, { value: "past_due", label: "Laukiama apmokėjimo" }, { value: "cancelled", label: "Nutraukta" }]}
                   />
                 </div>
@@ -25672,11 +25727,24 @@ function AdminDashboard({
                 <div className="admin-label admin-wide" style={{ border: "1px solid #f2d7bc", background: "#fff8f1", borderRadius: 12, padding: 13 }}>
                   <b>30 dienų Business išbandymas</b>
                   <span style={{ color: "#6c7a88", fontSize: 12, lineHeight: 1.45 }}>
-                    Paruošia Business planą, bandomąją būseną ir pabaigos datą po {EMPLOYER_TRIAL_DAYS} dienų. Įsigalios paspaudus „Išsaugoti“.
+                    {editor?.trialEligibilityLoading
+                      ? "Tikrinama, ar įmonė neturi aktyvios Stripe prenumeratos..."
+                      : editor?.trialBlockedByStripe
+                      ? "Šiai įmonei nemokamas išbandymas nepasiekiamas, nes jau yra aktyvi Stripe prenumerata. Pirmiausia ją valdykite arba nutraukite per Stripe."
+                      : `Paruošia Business planą, bandomąją būseną ir pabaigos datą po ${EMPLOYER_TRIAL_DAYS} dienų. Įsigalios paspaudus „Išsaugoti“. `}
                   </span>
                   <button
                     className="admin-small-btn"
                     type="button"
+                    disabled={
+                      Boolean(editor?.trialEligibilityLoading) ||
+                      Boolean(editor?.trialBlockedByStripe)
+                    }
+                    title={
+                      editor?.trialBlockedByStripe
+                        ? "Įmonė jau turi aktyvią Stripe prenumeratą"
+                        : undefined
+                    }
                     onClick={() =>
                       setEditorForm((current) => ({
                         ...current,
@@ -25689,7 +25757,11 @@ function AdminDashboard({
                       }))
                     }
                   >
-                    Paruošti 30 d. Business išbandymą
+                    {editor?.trialEligibilityLoading
+                      ? "Tikrinama..."
+                      : editor?.trialBlockedByStripe
+                      ? "Išbandymas nepasiekiamas"
+                      : "Paruošti 30 d. Business išbandymą"}
                   </button>
                 </div>
 
