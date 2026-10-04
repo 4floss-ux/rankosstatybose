@@ -8645,6 +8645,33 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <small>{workerUnreadMessages.length ? "Atidarykite pokalbį" : "Viskas perskaityta"}</small>
           </div>
 
+          <div
+            className={`wd-overview-card wd-overview-card-disputes ${
+              workerOpenDisputes.length ? "danger" : ""
+            }`}
+          >
+            <div className="wd-overview-card-top">
+              <span>Ginčai</span>
+              {workerOpenDisputes.length > 0 && (
+                <button
+                  className="wd-overview-open"
+                  type="button"
+                  onClick={() => openWorkerDashboardTarget("workdays")}
+                >
+                  Peržiūrėti
+                </button>
+              )}
+            </div>
+            <b>{workerOpenDisputes.length}</b>
+            <small>
+              {workerOpenDisputes.length
+                ? workerOpenDisputes.length === 1
+                  ? "Nagrinėja administratorius"
+                  : "Nagrinėjami administratoriaus"
+                : "Aktyvių ginčų nėra"}
+            </small>
+          </div>
+
         </div>
 
         {showProfileEditor && (
@@ -29094,6 +29121,9 @@ const mobileResponsiveFixStyles = `
 
   /* Additional compact worker dashboard polish: denser phone cards, history carousel and tighter detail modals. */
   @media (max-width: 620px) {
+    .wd-overview-card-disputes {
+      display: none !important;
+    }
     .wd-overview {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       gap: 10px !important;
