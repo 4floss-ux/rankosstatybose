@@ -60,7 +60,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-const TERMS_VERSION = "2026-10-04-v4";
+const TERMS_VERSION = "2026-10-04-v5";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
 const PRIVACY_VERSION = "2026-10-04-v5";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
@@ -1517,6 +1517,7 @@ function PlatformTermsDialog({ open, onClose }) {
         <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
         <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
         <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
+        <p><b>Pakviestų įmonių Business išbandymas.</b> Atrinktoms ar tiesiogiai pakviestoms įmonėms administratorius gali suteikti 30 dienų Business planą nemokamai, be mokėjimo kortelės ir be automatinio apmokestinimo. Pasibaigus nurodytam bandomajam laikotarpiui planas automatiškai grįžta į Basic, nebent įmonė iki tol pati pasirenka mokamą Business ar Business Pro prenumeratą.</p>
         <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
       </section>
@@ -12155,6 +12156,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
 
 const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
+const EMPLOYER_TRIAL_DAYS = 30;
 
 function employerPlanAnnualPrice(plan) {
   return Math.round(Number(plan?.price || 0) * 12 * (1 - EMPLOYER_ANNUAL_DISCOUNT) * 100) / 100;
@@ -12236,6 +12238,14 @@ function employerSubscriptionStatusLabel(status) {
   if (status === "past_due") return "Laukiama apmokėjimo";
   if (status === "cancelled") return "Nutraukta";
   return "Aktyvus";
+}
+
+function isComplimentaryBusinessTrial(planSummary, billingStatus) {
+  return (
+    planSummary?.plan_key === "business" &&
+    planSummary?.subscription_status === "trialing" &&
+    !billingStatus?.has_stripe_subscription
+  );
 }
 
 async function edgeFunctionErrorMessage(error, fallback) {
@@ -20840,7 +20850,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   <div className="ed-billing-card">
                     <span>Kaina</span>
                     <b>
-                      {billingStatus.effective_plan_key === "basic"
+                      {isComplimentaryBusinessTrial(planSummary, billingStatus)
+                        ? "0 € išbandymo metu"
+                        : billingStatus.effective_plan_key === "basic"
                         ? "0 € / mėn."
                         : `${formatPlanPrice(Number(billingStatus.amount_cents || 0) / 100)} € / ${
                             billingStatus.billing_interval === "yearly"
@@ -20849,7 +20861,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           }`}
                     </b>
                     <small>
-                      {billingStatus.billing_interval === "yearly"
+                      {isComplimentaryBusinessTrial(planSummary, billingStatus)
+                        ? "30 dienų nemokamai · be kortelės"
+                        : billingStatus.billing_interval === "yearly"
                         ? "Metinis atsiskaitymas"
                         : "Mėnesinis atsiskaitymas"}
                     </small>
@@ -20857,7 +20871,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
                   <div className="ed-billing-card">
                     <span>
-                      {billingStatus.cancel_at_period_end
+                      {isComplimentaryBusinessTrial(planSummary, billingStatus)
+                        ? "Išbandymas iki"
+                        : billingStatus.cancel_at_period_end
                         ? "Galioja iki"
                         : "Kitas laikotarpis"}
                     </span>
@@ -20871,7 +20887,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         : "—"}
                     </b>
                     <small>
-                      {billingStatus.cancel_at_period_end
+                      {isComplimentaryBusinessTrial(planSummary, billingStatus)
+                        ? "Po datos planas automatiškai taps Basic"
+                        : billingStatus.cancel_at_period_end
                         ? "Po datos prenumerata nebus pratęsta"
                         : billingStatus.effective_plan_key === "basic"
                         ? "Nemokamas planas"
@@ -20897,6 +20915,27 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </small>
                   </div>
                 </div>
+
+                {isComplimentaryBusinessTrial(planSummary, billingStatus) &&
+                  planSummary?.current_period_end && (
+                    <div
+                      className="ed-billing-warning"
+                      style={{ background: "#eef8f3", borderColor: "#c7e8d8" }}
+                    >
+                      <b>Business išbandymas aktyvus.</b>{" "}
+                      Visos Business funkcijos galioja iki{" "}
+                      <b>
+                        {new Intl.DateTimeFormat("lt-LT", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }).format(new Date(planSummary.current_period_end))}
+                      </b>
+                      . Kortelės nereikia ir mokestis nenuskaičiuojamas. Jei iki
+                      šios datos nepasirinksite mokamos prenumeratos, planas
+                      automatiškai grįš į <b>Basic</b>.
+                    </div>
+                  )}
 
                 {billingStatus.in_payment_grace && (
                   <div className="ed-billing-warning">
@@ -21143,6 +21182,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           ? "Atidaroma..."
                           : plan.price === 0
                           ? "Pasirinkti Basic"
+                          : samePlan &&
+                            isComplimentaryBusinessTrial(planSummary, billingStatus)
+                          ? "Tęsti Business po išbandymo"
                           : samePlan && billingStatus?.has_stripe_subscription
                           ? planBillingCycle === "yearly"
                             ? "Keisti į metinį atsiskaitymą"
@@ -21156,11 +21198,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="ed-plan-footnote">
-              Business ir Business Pro apmokami saugiai per Stripe. Galite
-              mokėti kas mėnesį arba iš karto už 12 mėnesių; metiniam
-              atsiskaitymui taikoma 20% nuolaida. Mokamo plano teisės
-              aktyvuojamos tik tada, kai Stripe patvirtina prenumeratą.
-              Kortelės duomenų statybos24.lt nesaugo.
+              Pakviestoms įmonėms Business gali būti aktyvuotas 30 dienų
+              nemokamai, be kortelės ir be įsipareigojimo; pasibaigus
+              išbandymui planas automatiškai grįžta į Basic, jei nepasirenkama
+              mokama prenumerata. Business ir Business Pro apmokami saugiai per
+              Stripe. Galite mokėti kas mėnesį arba iš karto už 12 mėnesių;
+              metiniam atsiskaitymui taikoma 20% nuolaida. Kortelės duomenų
+              statybos24.lt nesaugo.
             </div>
           </div>
         </div>
@@ -23683,7 +23727,7 @@ function AdminDashboard({
 
         if (planChanged) {
           const periodEnd = editorForm.planPeriodEnd
-            ? `${editorForm.planPeriodEnd}T23:59:59+03:00`
+            ? platformDateTime(editorForm.planPeriodEnd, "23:59:59")?.toISOString() || null
             : null;
 
           const planResult = await supabase.rpc("admin_set_company_plan", {
@@ -25625,6 +25669,30 @@ function AdminDashboard({
                   />
                 </div>
 
+                <div className="admin-label admin-wide" style={{ border: "1px solid #f2d7bc", background: "#fff8f1", borderRadius: 12, padding: 13 }}>
+                  <b>30 dienų Business išbandymas</b>
+                  <span style={{ color: "#6c7a88", fontSize: 12, lineHeight: 1.45 }}>
+                    Paruošia Business planą, bandomąją būseną ir pabaigos datą po {EMPLOYER_TRIAL_DAYS} dienų. Įsigalios paspaudus „Išsaugoti“.
+                  </span>
+                  <button
+                    className="admin-small-btn"
+                    type="button"
+                    onClick={() =>
+                      setEditorForm((current) => ({
+                        ...current,
+                        planKey: "business",
+                        subscriptionStatus: "trialing",
+                        planPeriodEnd: addPlatformDays(
+                          localDateISO(new Date()),
+                          EMPLOYER_TRIAL_DAYS
+                        ),
+                      }))
+                    }
+                  >
+                    Paruošti 30 d. Business išbandymą
+                  </button>
+                </div>
+
                 <label className="admin-label admin-wide">
                   Įmonės aprašymas
                   <textarea
@@ -26325,7 +26393,7 @@ function PublicLandingPage({
         .home-summary{position:relative;background:var(--navy);color:#fff;border-radius:24px;padding:28px;box-shadow:0 28px 70px rgba(16,36,56,.22);overflow:hidden}.home-summary:after{content:"";position:absolute;right:-70px;top:-70px;width:190px;height:190px;border-radius:50%;background:rgba(240,138,40,.13)}.home-summary-top{position:relative;z-index:1}.home-summary-label{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(240,138,40,.16);color:#ffc184;font-size:10px;font-weight:900;letter-spacing:.12em}.home-summary h2{font:850 25px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-summary>div>p{color:#bfd0dc;font-size:13px;line-height:1.6;margin:0}.home-summary-list{position:relative;z-index:1;display:grid;gap:10px;margin-top:23px}.home-summary-row{display:grid;grid-template-columns:40px minmax(0,1fr);gap:13px;align-items:start;padding:14px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(255,255,255,.055)}.home-summary-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--orange);color:#fff;font-weight:900}.home-summary-row b{display:block;font-size:14px}.home-summary-row span:last-child{display:block;margin-top:3px;color:#bfd0dc;font-size:11.5px;line-height:1.5}
         .home-section{padding:70px 0}.home-section.soft{background:var(--soft)}.home-section-head{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:28px}.home-section h2,.home-cta h2{font:850 clamp(28px,3.2vw,40px)/1.15 Manrope,Inter,sans-serif;letter-spacing:-.035em;margin:10px 0 0}.home-intro{color:var(--muted);max-width:610px;margin:0;font-size:14px;line-height:1.65}.home-services{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-service{background:#fff;border:1px solid var(--line);border-radius:16px;padding:21px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.home-service:hover{transform:translateY(-2px);border-color:#f0c79e;box-shadow:0 14px 34px rgba(16,36,56,.07)}.home-service-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--cream);color:#ba6418;font-size:18px;font-weight:900}.home-service h3{font:850 16px Manrope,Inter,sans-serif;margin:15px 0 7px}.home-service p{font-size:12.5px;line-height:1.58;color:var(--muted);margin:0}
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:16px}.home-audience{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:28px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff 58%)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff 58%)}.home-audience-tag{display:inline-flex;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.home-audience h3{font:850 24px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-audience p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}.home-audience ul{list-style:none;padding:0;display:grid;gap:9px;margin:20px 0 22px}.home-audience li{font-size:12.5px;padding-left:22px;position:relative}.home-audience li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}
-        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:620px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan-badge.pro{background:var(--navy)}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
+        .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:680px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-trial-offer{display:block;margin-top:10px;color:#8a531d;font-size:12px;font-weight:800;line-height:1.5}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan-badge.pro{background:var(--navy)}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-plan-trial{margin:-5px 0 13px;padding:9px 10px;border:1px solid #f2d7bc;border-radius:10px;background:#fff7ef;color:#8a531d;font-size:10.5px;font-weight:800;line-height:1.4}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
         .home-cta{padding:64px 0;background:linear-gradient(135deg,#102438,#17364f);color:#fff}.home-cta-inner{display:flex;align-items:center;justify-content:space-between;gap:30px}.home-cta h2{margin:0 0 8px;color:#fff}.home-cta p{margin:0;color:#bfd0dc;max-width:650px;font-size:13.5px}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;flex:none}.home-cta .home-btn.outline{border-color:rgba(255,255,255,.32);background:transparent;color:#fff}.home-cta .home-btn.outline:hover{background:rgba(255,255,255,.08)}
         .home-footer{padding:24px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:11.5px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{grid-template-columns:1fr;gap:34px;padding:64px 0}.home-summary{max-width:650px}.home-services{grid-template-columns:repeat(2,1fr)}.home-prices{gap:9px}.home-plan{padding:18px}.home-cta-inner{align-items:flex-start;flex-direction:column}.home-cta-buttons{justify-content:flex-start}}
@@ -26459,6 +26527,7 @@ function PublicLandingPage({
                 <div className="home-kicker">Darbdavių planai</div>
                 <h2>Pradėkite nemokamai. Augant poreikiui – rinkitės daugiau galimybių.</h2>
                 <span className="home-free-worker">Darbuotojams platforma nemokama</span>
+                <span className="home-trial-offer">Pakviestoms įmonėms: 30 dienų Business išbandymas nemokamai, be kortelės ir be įsipareigojimo.</span>
               </div>
               <div className="home-toggle" aria-label="Mokėjimo laikotarpis">
                 <button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button>
@@ -26482,6 +26551,11 @@ function PublicLandingPage({
                     {item.key === "business_pro" && <span className="home-plan-badge pro">PILNAS VALDYMAS</span>}
                     <h3>{item.name}</h3>
                     <p className="home-plan-sub">{item.description}</p>
+                    {item.key === "business" && (
+                      <div className="home-plan-trial">
+                        Pakviestoms įmonėms – 30 dienų nemokamai. Išbandymas aktyvuojamas po registracijos.
+                      </div>
+                    )}
                     <div className="home-amount">
                       {paid ? yearly ? formatPlanPrice(employerPlanAnnualPrice(item)) : formatPlanPrice(item.price) : "0"} €
                       <small> / {paid && yearly ? "metus" : "mėn."}</small>
