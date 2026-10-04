@@ -2416,66 +2416,6 @@ function AuthModal({
         <form onSubmit={submit} style={{ display: "grid", gap: 13 }}>
           {mode === "signup" && (
             <>
-              <div style={twoColumns}>
-                <label style={labelStyle}>
-                  Vardas *
-                  <input
-                    style={inputStyle}
-                    value={form.firstName}
-                    onChange={setField("firstName")}
-                    placeholder="Pvz. Tomas"
-                    autoComplete="given-name"
-                    required
-                  />
-                </label>
-
-                <label style={labelStyle}>
-                  Pavardė *
-                  <input
-                    style={inputStyle}
-                    value={form.lastName}
-                    onChange={setField("lastName")}
-                    placeholder="Pvz. Jonaitis"
-                    autoComplete="family-name"
-                    required
-                  />
-                </label>
-              </div>
-
-              <div style={twoColumns}>
-                <label style={labelStyle}>
-                  Miestas
-                  <CityAutocomplete
-                    style={inputStyle}
-                    value={form.city}
-                    onChange={(value) =>
-                      setForm((current) => ({ ...current, city: value }))
-                    }
-                    placeholder="Pradėkite rašyti miestą"
-                  />
-                </label>
-
-                <label style={labelStyle}>
-                  Telefonas *
-                  <input
-                    style={inputStyle}
-                    value={form.phone}
-                    onChange={setField("phone")}
-                    onBlur={() => {
-                      const normalized = normalizeLithuanianMobilePhone(form.phone);
-                      if (normalized) {
-                        setForm((current) => ({ ...current, phone: normalized }));
-                      }
-                    }}
-                    placeholder="+37061234567"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    required
-                  />
-                  <PhoneAvailabilityHint verification={phoneVerification} />
-                </label>
-              </div>
-
               {role === "employer" && !teamInvite && (
                 <>
                   <div style={{ display: "grid", gap: 7 }}>
@@ -2562,6 +2502,66 @@ function AuthModal({
                   )}
                 </>
               )}
+
+              <div style={twoColumns}>
+                <label style={labelStyle}>
+                  Vardas *
+                  <input
+                    style={inputStyle}
+                    value={form.firstName}
+                    onChange={setField("firstName")}
+                    placeholder="Pvz. Tomas"
+                    autoComplete="given-name"
+                    required
+                  />
+                </label>
+
+                <label style={labelStyle}>
+                  Pavardė *
+                  <input
+                    style={inputStyle}
+                    value={form.lastName}
+                    onChange={setField("lastName")}
+                    placeholder="Pvz. Jonaitis"
+                    autoComplete="family-name"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div style={twoColumns}>
+                <label style={labelStyle}>
+                  Miestas
+                  <CityAutocomplete
+                    style={inputStyle}
+                    value={form.city}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, city: value }))
+                    }
+                    placeholder="Pradėkite rašyti miestą"
+                  />
+                </label>
+
+                <label style={labelStyle}>
+                  Telefonas *
+                  <input
+                    style={inputStyle}
+                    value={form.phone}
+                    onChange={setField("phone")}
+                    onBlur={() => {
+                      const normalized = normalizeLithuanianMobilePhone(form.phone);
+                      if (normalized) {
+                        setForm((current) => ({ ...current, phone: normalized }));
+                      }
+                    }}
+                    placeholder="+37061234567"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    required
+                  />
+                  <PhoneAvailabilityHint verification={phoneVerification} />
+                </label>
+              </div>
             </>
           )}
 
@@ -4770,6 +4770,7 @@ function WorkerProfileModal({
         <div className="worker-profile-modal-scroll">
         <div className="rs-modal-head">
           <div style={{ display: "flex", gap: 13, alignItems: "center" }}>
+            <MonthlyAwardMiniList awards={monthlyAwards} size={44} />
             <div
               style={{
                 width: 50,
@@ -4921,12 +4922,6 @@ function WorkerProfileModal({
               : "Darbuotojas dar nepateikė savo patirties aprašymo.")}
           </p>
         </div>
-
-        <MonthlyAwardsPanel
-          awards={monthlyAwards}
-          recipientType="worker"
-          showEmpty={true}
-        />
 
         <div className="rs-profile-section">
           <b>Paskutiniai darbdavių įvertinimai</b>
@@ -5687,7 +5682,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerHistoryMobileIndex, setWorkerHistoryMobileIndex] = useState(0);
   const [availabilityMobileIndex, setAvailabilityMobileIndex] = useState(0);
   const [workerProfileEditorTarget, setWorkerProfileEditorTarget] = useState("profile");
+  const [profileFormErrors, setProfileFormErrors] = useState({});
+  const [availabilityValidationMessages, setAvailabilityValidationMessages] = useState({});
   const workerProfileEditorRef = useRef(null);
+  const profileFieldRefs = useRef({});
 
   useEffect(() => {
     if (!user?.id) return;
@@ -6411,12 +6409,33 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function updateField(key, value) {
     setProfileSaved(false);
+    setProfileFormErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
     setForm((current) => {
       const next = { ...current, [key]: value };
       if (key === "firstName" || key === "lastName") {
         next.displayName = `${next.firstName || ""} ${next.lastName || ""}`.trim();
       }
       return next;
+    });
+  }
+
+  function showProfileFieldError(field, message) {
+    setProfileFormErrors((current) => ({ ...current, [field]: message }));
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const node = profileFieldRefs.current[field];
+        if (!node) return;
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        const focusTarget = node.querySelector?.(
+          'input, textarea, button, [tabindex]:not([tabindex="-1"])'
+        );
+        focusTarget?.focus?.({ preventScroll: true });
+      });
     });
   }
 
@@ -6726,6 +6745,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setAvailabilityConflictDates((current) =>
       current.filter((item) => item !== date)
     );
+    setAvailabilityValidationMessages((current) => {
+      if (!current[date]) return current;
+      const next = { ...current };
+      delete next[date];
+      return next;
+    });
     setAvailability((current) => ({
       ...current,
       [date]: { ...current[date], ...patch },
@@ -7638,36 +7663,49 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     setSaving(true);
     setNotice("");
     setError("");
+    setProfileFormErrors({});
+    setAvailabilityValidationMessages({});
 
     try {
       if (!form.firstName.trim()) {
-        throw new Error("Įveskite vardą.");
+        showProfileFieldError("firstName", "Įveskite vardą.");
+        return;
       }
       if (!form.lastName.trim()) {
-        throw new Error("Įveskite pavardę.");
+        showProfileFieldError("lastName", "Įveskite pavardę.");
+        return;
       }
       if (!form.phone.trim()) {
-        throw new Error("Telefono numeris darbuotojo profilyje yra privalomas.");
+        showProfileFieldError("phone", "Telefono numeris yra privalomas.");
+        return;
       }
       if (!form.shortBio.trim()) {
-        throw new Error('Užpildykite patirties lauką. Jei patirties neturite, įrašykite „Neturiu“.');
+        showProfileFieldError(
+          "shortBio",
+          'Užpildykite patirties lauką. Jei patirties neturite, įrašykite „Neturiu“.'
+        );
+        return;
       }
 
       const normalizedPhone = normalizeLithuanianMobilePhone(form.phone);
       if (!normalizedPhone) {
-        throw new Error(
+        showProfileFieldError(
+          "phone",
           "Įveskite galiojantį Lietuvos mobiliojo telefono numerį, pvz. +37061234567."
         );
+        return;
       }
 
       const canonicalCity = await canonicalCityName(form.city);
       if (!canonicalCity) {
-        throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
+        showProfileFieldError("city", "Pasirinkite miestą iš pasiūlymų sąrašo.");
+        return;
       }
 
       const travelRadius = Number(form.travelRadius);
       if (!Number.isFinite(travelRadius) || travelRadius < 5 || travelRadius > 50) {
-        throw new Error("Kelionės spindulys turi būti nuo 5 iki 50 km.");
+        showProfileFieldError("travelRadius", "Nurodykite nuo 5 iki 50 km.");
+        return;
       }
 
       const invalidAvailabilityDays = [];
@@ -7710,6 +7748,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           ...invalidAvailabilityDays,
           ...conflictingAvailabilityDays.map((item) => item.date),
         ];
+        const messages = {};
+        invalidAvailabilityDays.forEach((date) => {
+          messages[date] = "Laisvo laiko pradžia ir pabaiga negali sutapti.";
+        });
+        conflictingAvailabilityDays.forEach((item) => {
+          messages[item.date] = `Pasirinktas laikas kertasi su užfiksuotu darbu arba nepalieka 1 val. tarpo nuvykimui.${item.conflict?.label ? ` Kertasi su: ${item.conflict.label}.` : ""}`;
+        });
+        setAvailabilityValidationMessages(messages);
         setAvailabilityConflictDates([...new Set(dates)]);
 
         const firstDate = dates[0];
@@ -7724,19 +7770,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               ?.scrollIntoView({ behavior: "smooth", block: "center" });
           });
         });
-
-        const conflictInfo = conflictingAvailabilityDays[0];
-        if (conflictInfo) {
-          return;
-        }
-
-        const invalidDay = days.find((day) => day.iso === invalidAvailabilityDays[0]);
-        throw new Error(
-          `${invalidDay?.label || "Pasirinkta diena"}: laisvo laiko pradžia ir pabaiga negali sutapti.`
-        );
+        return;
       }
 
       setAvailabilityConflictDates([]);
+      setAvailabilityValidationMessages({});
 
       await phoneVerification.saveChange();
 
@@ -8279,6 +8317,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function openWorkerProfileEditor(target = "profile") {
     setWorkerProfileEditorTarget(target);
+    setProfileFormErrors({});
+    setAvailabilityValidationMessages({});
     if (target === "availability") setAvailabilityMobileIndex(0);
     setShowProfileEditor(true);
   }
@@ -8365,6 +8405,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         @keyframes wdStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .wd-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;min-height:138px;box-sizing:border-box}
         .wd-kpi>span{display:flex;align-items:flex-start;justify-content:center;width:100%;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}.wd-kpi b{font-size:25px;line-height:1.08;margin-top:8px;min-height:54px;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums}.wd-kpi small{min-height:15px}.wd-kpi-info-btn{display:flex;align-items:flex-start;justify-content:center;width:100%;max-width:100%;min-height:36px;margin:0 auto;border:0;background:transparent;padding:0;color:#6c7a88;font:inherit;font-size:13px;line-height:1.35;text-align:center;cursor:pointer}.wd-kpi-info-label{min-height:0!important}.wd-kpi-info-btn:hover{color:#102438;text-decoration:underline;text-underline-offset:3px}.wd-kpi-info-btn:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:4px;border-radius:5px}
+        .wd-kpi-issues{border-color:#ecd9d2;background:#fffdfc}.wd-kpi-issue-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;margin-top:2px}.wd-kpi-issue-breakdown>span{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;padding:6px 7px;border-radius:8px;background:#f8f4f2;color:#735f59;font-size:10px;line-height:1.2;text-align:left}.wd-kpi-issue-breakdown strong{color:#9b4b36;font-size:11px;font-variant-numeric:tabular-nums}
         .wd-form{display:grid;gap:18px}
         .wd-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.wd-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.wd-active-jobs-section:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#1c9b67}.wd-active-jobs-section>h2{color:#167a54}.wd-active-jobs-section .wd-workday{background:#fff}.wd-evidence-reminder{display:block;margin:10px 0 16px;padding:12px 14px;border:1px solid #efc89f;border-radius:12px;background:#fff8f1;color:#5d6873;font-size:12px;line-height:1.48}.wd-evidence-reminder-title{display:flex!important;align-items:center;gap:7px;margin-bottom:3px;color:#8a4b12;font-size:12.5px}.wd-evidence-reminder-icon{width:18px;height:18px;flex:0 0 18px;display:inline-flex;align-items:center;justify-content:center;color:#b85f0e;line-height:0}.wd-evidence-reminder-icon svg{width:17px;height:17px;display:block}.wd-evidence-reminder>div>span{display:block}.wd-invitations-section{background:#fff7ee;border-color:#f2c18f;box-shadow:0 8px 28px rgba(240,138,40,.08)}.wd-invitations-section>h2{color:#9f5211}.wd-invitations-section .wd-empty-friendly{background:#fff;border-color:#f0d5ba}
         .wd-card h2{margin:0 0 6px;font-size:22px}.wd-card-sub{margin:0 0 22px;color:#6c7a88}.wd-recent-ratings-card{margin-bottom:18px}.wd-recent-ratings-card>.eyebrow{margin-bottom:14px}.wd-recent-ratings-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.wd-recent-rating{border:1px solid #e4ebf0;border-radius:13px;padding:13px 14px;background:#f8fafb}.wd-recent-rating-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.wd-recent-rating-head b{font-family:Manrope,Inter,sans-serif;font-size:17px}.wd-recent-rating-head span{font-size:11px;color:#8a98a6}.wd-recent-rating p{margin:8px 0 0;color:#526374;line-height:1.5;white-space:pre-wrap}@media(max-width:760px){.wd-recent-ratings-list{grid-template-columns:1fr}.wd-worktime-login-reminder{align-items:flex-start;flex-direction:column}.wd-worktime-login-reminder button{width:100%}}.wd-empty-friendly{display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px dashed #d6e0e7;border-radius:12px;background:#f8fafb;color:#607180;font-size:13px;line-height:1.45}.wd-empty-friendly-icon{width:34px;height:34px;border-radius:10px;background:#edf2f5;display:grid;place-items:center;flex:0 0 34px;color:#526374;font-size:16px}.wd-empty-friendly b{display:block;color:#102438;margin-bottom:2px;font-size:13px}
@@ -8372,6 +8413,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#263b4d}
         .wd-input,.wd-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
         .wd-input:focus,.wd-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
+        .wd-label.has-error .wd-input,.wd-label.has-error .wd-textarea{border-color:#cf6049;box-shadow:0 0 0 3px rgba(207,96,73,.09)}
+        .wd-field-error{display:block;color:#b4472a;font-size:11px;font-weight:750;line-height:1.35;margin-top:-1px}
         .wd-textarea{min-height:92px;resize:vertical}
         .wd-checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}.wd-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
         .wd-skills{display:flex;gap:8px;flex-wrap:wrap}.wd-skill{border:1px solid #dfe7ed;background:#fff;color:#425466;border-radius:999px;padding:8px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -8466,9 +8509,43 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       `}</style>
 
       <header className="wd-topbar">
-        <div className="wd-topbar-inner">
-          <BrandLogo className="brand" href="#" height={46} />
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <div
+          className="wd-topbar-inner"
+          style={
+            isPhoneLayout
+              ? {
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  justifyItems: "center",
+                  gap: 10,
+                  padding: "10px 0",
+                }
+              : undefined
+          }
+        >
+          <div
+            style={
+              isPhoneLayout
+                ? { width: "100%", display: "flex", justifyContent: "center" }
+                : undefined
+            }
+          >
+            <BrandLogo className="brand" href="#" height={46} />
+          </div>
+          <div
+            className="wd-topbar-actions"
+            style={
+              isPhoneLayout
+                ? {
+                    display: "flex",
+                    width: "100%",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    flexWrap: "nowrap",
+                  }
+                : { display: "flex", alignItems: "center", gap: 9 }
+            }
+          >
             {onAdminReturn && (
               <button
                 className="btn ghost"
@@ -8476,6 +8553,21 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 onClick={onAdminReturn}
               >
                 ← Administravimas
+              </button>
+            )}
+            {!onAdminReturn && isPhoneLayout && (
+              <button
+                className="btn ghost wd-mobile-profile-btn"
+                type="button"
+                onClick={() => {
+                  if (showProfileEditor) {
+                    setShowProfileEditor(false);
+                  } else {
+                    openWorkerProfileEditor("profile");
+                  }
+                }}
+              >
+                {showProfileEditor ? "Uždaryti" : "Mano informacija"}
               </button>
             )}
             <button className="btn ghost" onClick={onLogout}>
@@ -8560,21 +8652,23 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             )}
 
-            <button
-              className="wd-edit-profile"
-              type="button"
-              onClick={() => {
-                if (showProfileEditor) {
-                  setShowProfileEditor(false);
-                } else {
-                  openWorkerProfileEditor("profile");
-                }
-              }}
-            >
-              {showProfileEditor
-                ? "Uždaryti redagavimą"
-                : "Tvarkyti mano informaciją"}
-            </button>
+            {!isPhoneLayout && (
+              <button
+                className="wd-edit-profile"
+                type="button"
+                onClick={() => {
+                  if (showProfileEditor) {
+                    setShowProfileEditor(false);
+                  } else {
+                    openWorkerProfileEditor("profile");
+                  }
+                }}
+              >
+                {showProfileEditor
+                  ? "Uždaryti redagavimą"
+                  : "Tvarkyti mano informaciją"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -8841,51 +8935,57 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
-              <MonthlyAwardsPanel
-                awards={monthlyAwards}
-                recipientType="worker"
-                showEmpty={true}
-              />
-
               <div className="wd-grid-2">
-                <label className="wd-label">
+                <label
+                  className={`wd-label${profileFormErrors.firstName ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.firstName = node; }}
+                >
                   Vardas *
                   <input
                     className="wd-input"
                     value={form.firstName}
                     onChange={(e) => updateField("firstName", e.target.value)}
                     autoComplete="given-name"
+                    aria-invalid={Boolean(profileFormErrors.firstName)}
                     required
                   />
+                  {profileFormErrors.firstName && <span className="wd-field-error" role="alert">{profileFormErrors.firstName}</span>}
                 </label>
 
-                <label className="wd-label">
+                <label
+                  className={`wd-label${profileFormErrors.lastName ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.lastName = node; }}
+                >
                   Pavardė *
                   <input
                     className="wd-input"
                     value={form.lastName}
                     onChange={(e) => updateField("lastName", e.target.value)}
                     autoComplete="family-name"
+                    aria-invalid={Boolean(profileFormErrors.lastName)}
                     required
                   />
+                  {profileFormErrors.lastName && <span className="wd-field-error" role="alert">{profileFormErrors.lastName}</span>}
                 </label>
 
-                <label className="wd-label">
+                <label
+                  className={`wd-label${profileFormErrors.city ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.city = node; }}
+                >
                   Miestas *
                   <CityAutocomplete
                     className="wd-input"
                     value={form.city}
-                    onChange={(value) => {
-                  updateField("city", value);
-                  if (editingJobId && value !== currentJob?.city) {
-                    setSelectedJobAddress(null);
-                  }
-                }}
+                    onChange={(value) => updateField("city", value)}
                     placeholder="Pradėkite rašyti miestą"
                   />
+                  {profileFormErrors.city && <span className="wd-field-error" role="alert">{profileFormErrors.city}</span>}
                 </label>
 
-                <label className="wd-label">
+                <label
+                  className={`wd-label${profileFormErrors.phone ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.phone = node; }}
+                >
                   Telefonas *
                   <input
                     className="wd-input"
@@ -8898,14 +8998,19 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     placeholder="+37061234567"
                     inputMode="tel"
                     autoComplete="tel"
+                    aria-invalid={Boolean(profileFormErrors.phone)}
                     required
                   />
+                  {profileFormErrors.phone && <span className="wd-field-error" role="alert">{profileFormErrors.phone}</span>}
                   <PhoneAvailabilityHint verification={phoneVerification} />
                 </label>
 
                 <PhoneVerificationFields verification={phoneVerification} />
 
-                <label className="wd-label">
+                <label
+                  className={`wd-label${profileFormErrors.travelRadius ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.travelRadius = node; }}
+                >
                   Kiek km galite nuvykti?
                   <input
                     className="wd-input"
@@ -8916,7 +9021,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     onChange={(e) =>
                       updateField("travelRadius", e.target.value)
                     }
+                    aria-invalid={Boolean(profileFormErrors.travelRadius)}
                   />
+                  {profileFormErrors.travelRadius && <span className="wd-field-error" role="alert">{profileFormErrors.travelRadius}</span>}
                 </label>
 
                 <div className="wd-location-card">
@@ -9007,7 +9114,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
 
-              <label className="wd-label" style={{ marginTop: 16 }}>
+              <label
+                className={`wd-label${profileFormErrors.shortBio ? " has-error" : ""}`}
+                style={{ marginTop: 16 }}
+                ref={(node) => { profileFieldRefs.current.shortBio = node; }}
+              >
                 Patirtis *
                 <textarea
                   className="wd-textarea"
@@ -9015,7 +9126,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   required
                   onChange={(e) => updateField("shortBio", e.target.value)}
                   placeholder="Pvz. 2 metus dirbau statybų pagalbiniu. Jei patirties neturite, įrašykite „Neturiu“."
+                  aria-invalid={Boolean(profileFormErrors.shortBio)}
                 />
+                {profileFormErrors.shortBio && <span className="wd-field-error" role="alert">{profileFormErrors.shortBio}</span>}
               </label>
             </div>
 
@@ -9105,6 +9218,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   const conflict = conflictMarked
                     ? availabilityConflictForDate(day.iso, state)
                     : null;
+                  const validationMessage = availabilityValidationMessages[day.iso] || "";
 
                   return (
                     <div
@@ -9168,9 +9282,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                       </div>
 
                       {conflictMarked && (
-                        <div className="wd-day-conflict-note">
-                          Pasirinktas laikas kertasi su užfiksuotu darbu arba nepalieka 1 val. tarpo nuvykimui.
-                          {conflict?.label ? ` Kertasi su: ${conflict.label}.` : ""}
+                        <div className="wd-day-conflict-note" role="alert">
+                          {validationMessage || (
+                            <>
+                              Pasirinktas laikas kertasi su užfiksuotu darbu arba nepalieka 1 val. tarpo nuvykimui.
+                              {conflict?.label ? ` Kertasi su: ${conflict.label}.` : ""}
+                            </>
+                          )}
                         </div>
                       )}
 
@@ -9332,12 +9450,13 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     : "Dar nėra vertinimų"}
                 </small>
               </div>
-              <div className="wd-kpi">
+              <div className="wd-kpi wd-kpi-issues">
                 <span>Probleminės darbo dienos</span>
                 <b>{metrics.noShowCount + workerStats.unexcusedEarlyLeaveCount}</b>
-                <small style={{ display: "block", marginTop: 5, color: "#8a98a6", whiteSpace: "nowrap", fontSize: 11 }}>
-                  Neatvykimai {metrics.noShowCount} · ankstyvi išėjimai {workerStats.unexcusedEarlyLeaveCount}
-                </small>
+                <div className="wd-kpi-issue-breakdown">
+                  <span>Neatvykimai <strong>{metrics.noShowCount}</strong></span>
+                  <span>Ankstyvi išėjimai <strong>{workerStats.unexcusedEarlyLeaveCount}</strong></span>
+                </div>
               </div>
             </div>
           )}
@@ -10329,8 +10448,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </>
               )
             ) : (
-              <div style={{ color: "#6c7a88" }}>
-                Užbaigtų darbų istorijos kol kas nėra.
+              <div className="wd-empty-friendly">
+                <div className="wd-empty-friendly-icon">✓</div>
+                <div>
+                  <b>Darbų istorijos dar nėra</b>
+                  Kai darbas bus užbaigtas arba atšauktas, jis bus rodomas čia.
+                </div>
               </div>
             )}
           </section>
@@ -12876,11 +12999,6 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
 
   if (!rows.length && !showEmpty) return null;
 
-  const heading =
-    recipientType === "company"
-      ? "Įmonės TOP pasiekimai"
-      : "Darbuotojo TOP pasiekimai";
-
   return (
     <div
       style={{
@@ -12902,12 +13020,7 @@ function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false }) {
           marginBottom: rows.length ? 14 : 0,
         }}
       >
-        <div>
-          <div className="eyebrow">MĖNESIO TOP</div>
-          <b style={{ display: "block", marginTop: 4, color: "#102438", fontSize: 16 }}>
-            {heading}
-          </b>
-        </div>
+        <div className="eyebrow">MĖNESIO TOP</div>
         {rows.length > 0 && (
           <span style={{ color: "#6c7a88", fontSize: 12 }}>
             Pasiekimų: {rows.length}
@@ -18857,7 +18970,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <button
                       className="ed-primary ed-invite-all-desktop"
                       type="button"
-                      style={{ marginTop: 10 }}
+                      style={{ marginTop: 10, padding: "9px 14px", fontSize: 13, borderRadius: 9, minHeight: 0 }}
                       disabled={
                         invitingSavedTeam ||
                         matchingSavedWorkersCount === 0
@@ -29172,6 +29285,13 @@ const mobileResponsiveFixStyles = `
     display: none;
   }
 
+  .ed-invite-all-desktop {
+    width: auto !important;
+    max-width: 100% !important;
+    align-self: flex-end !important;
+    white-space: nowrap;
+  }
+
   @media (max-width: 620px) {
     .worker-profile-modal {
       max-height: calc(100dvh - 20px) !important;
@@ -29752,6 +29872,51 @@ const mobileResponsiveFixStyles = `
       grid-column: 1 !important;
       grid-row: 2 !important;
       margin: 0 !important;
+    }
+
+    .wd-kpis > .wd-kpi.wd-kpi-issues {
+      grid-column: 1 / -1 !important;
+      min-height: 0 !important;
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      grid-template-rows: auto auto auto !important;
+      gap: 6px !important;
+      text-align: left !important;
+      padding: 11px 10px !important;
+    }
+
+    .wd-kpis > .wd-kpi.wd-kpi-issues > span {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      justify-content: flex-start !important;
+      min-height: 0 !important;
+    }
+
+    .wd-kpis > .wd-kpi.wd-kpi-issues > b {
+      grid-column: 1 !important;
+      grid-row: 2 !important;
+      justify-content: flex-start !important;
+      margin: 0 !important;
+      font-size: 22px !important;
+    }
+
+    .wd-kpi-issues .wd-kpi-issue-breakdown {
+      grid-column: 1 / -1 !important;
+      grid-row: 3 !important;
+      margin-top: 0 !important;
+      gap: 6px !important;
+      grid-template-columns: 1fr !important;
+    }
+
+    .wd-kpi-issues .wd-kpi-issue-breakdown > span {
+      padding: 6px 8px !important;
+      font-size: 10px !important;
+      line-height: 1.2 !important;
+      border-radius: 9px !important;
+    }
+
+    .wd-kpi-issues .wd-kpi-issue-breakdown strong {
+      font-size: 10px !important;
     }
 
     /* Worker-facing company profile: identity then 3 compact metrics in one row. */
