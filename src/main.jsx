@@ -4677,8 +4677,20 @@ function WorkerProfileModal({
           .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#102438}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
           .rs-profile-experience-text{margin:0;padding:12px 14px;border-radius:11px;background:#f6f8fa;color:#526374;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
-          @media(max-width:620px){.worker-profile-modal{border-radius:16px}.worker-profile-modal-scroll{max-height:calc(100vh - 20px);padding:17px}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
-          @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
+          @media(max-width:620px){
+            .worker-profile-modal{border-radius:16px}
+            .worker-profile-modal-scroll{max-height:calc(100vh - 20px);padding:13px}
+            .rs-profile-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+            .rs-profile-stat{min-width:0;padding:9px 7px;border-radius:11px}
+            .rs-profile-stat span{font-size:9px;line-height:1.18;margin-bottom:3px;overflow-wrap:anywhere}
+            .rs-profile-stat b{font-size:14px;line-height:1.15;overflow-wrap:anywhere}
+            .rs-profile-stat.phone{grid-column:span 2}
+            .rs-profile-phone{gap:4px;flex-wrap:nowrap}
+            .rs-profile-phone b{font-size:11px}
+            .rs-profile-phone button{padding:5px 6px;font-size:8.5px;white-space:nowrap}
+            .rs-profile-section,.rs-profile-experience{margin-top:12px}
+            .rs-profile-experience{padding:12px}
+          }
         `}</style>
 
         <div className="worker-profile-modal-scroll">
@@ -4727,7 +4739,7 @@ function WorkerProfileModal({
             <b>{worker.city || "—"}</b>
           </div>
 
-          <div className="rs-profile-stat">
+          <div className="rs-profile-stat phone">
             <span>Telefonas</span>
             {contactLoading ? (
               <SilentLoader size={14} minHeight={20} />
@@ -13035,6 +13047,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return window.innerWidth <= 620;
   });
   const [employerActiveMobileIndex, setEmployerActiveMobileIndex] = useState(0);
+  const [candidateWorkerMobileIndex, setCandidateWorkerMobileIndex] = useState(0);
+  const [acceptedWorkerMobileIndex, setAcceptedWorkerMobileIndex] = useState(0);
+  const [declinedWorkerMobileIndex, setDeclinedWorkerMobileIndex] = useState(0);
   const [acceptedWorkersPage, setAcceptedWorkersPage] = useState(1);
   const [declinedWorkersPage, setDeclinedWorkersPage] = useState(1);
   const [showEmployerStats, setShowEmployerStats] = useState(() => {
@@ -16880,10 +16895,68 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     declinedWorkersPage * DASHBOARD_PAGE_SIZE
   );
 
+  const safeCandidateWorkerMobileIndex = visibleCandidateWorkers.length
+    ? Math.min(candidateWorkerMobileIndex, visibleCandidateWorkers.length - 1)
+    : 0;
+  const candidateWorkersForRender = isEmployerPhoneLayout
+    ? visibleCandidateWorkers[safeCandidateWorkerMobileIndex]
+      ? [visibleCandidateWorkers[safeCandidateWorkerMobileIndex]]
+      : []
+    : visibleCandidateWorkers;
+
+  const safeAcceptedWorkerMobileIndex = jobWorkers.length
+    ? Math.min(acceptedWorkerMobileIndex, jobWorkers.length - 1)
+    : 0;
+  const acceptedWorkersForRender = isEmployerPhoneLayout
+    ? jobWorkers[safeAcceptedWorkerMobileIndex]
+      ? [jobWorkers[safeAcceptedWorkerMobileIndex]]
+      : []
+    : pagedAcceptedWorkers;
+
+  const safeDeclinedWorkerMobileIndex = declinedCandidateWorkers.length
+    ? Math.min(declinedWorkerMobileIndex, declinedCandidateWorkers.length - 1)
+    : 0;
+  const declinedWorkersForRender = isEmployerPhoneLayout
+    ? declinedCandidateWorkers[safeDeclinedWorkerMobileIndex]
+      ? [declinedCandidateWorkers[safeDeclinedWorkerMobileIndex]]
+      : []
+    : pagedDeclinedWorkers;
+
   useEffect(() => {
     setAcceptedWorkersPage(1);
     setDeclinedWorkersPage(1);
+    setCandidateWorkerMobileIndex(0);
+    setAcceptedWorkerMobileIndex(0);
+    setDeclinedWorkerMobileIndex(0);
   }, [currentJob?.id]);
+
+  useEffect(() => {
+    setCandidateWorkerMobileIndex(0);
+  }, [workerSource]);
+
+  useEffect(() => {
+    setCandidateWorkerMobileIndex((current) =>
+      visibleCandidateWorkers.length
+        ? Math.min(Math.max(0, current), visibleCandidateWorkers.length - 1)
+        : 0
+    );
+  }, [visibleCandidateWorkers.length]);
+
+  useEffect(() => {
+    setAcceptedWorkerMobileIndex((current) =>
+      jobWorkers.length
+        ? Math.min(Math.max(0, current), jobWorkers.length - 1)
+        : 0
+    );
+  }, [jobWorkers.length]);
+
+  useEffect(() => {
+    setDeclinedWorkerMobileIndex((current) =>
+      declinedCandidateWorkers.length
+        ? Math.min(Math.max(0, current), declinedCandidateWorkers.length - 1)
+        : 0
+    );
+  }, [declinedCandidateWorkers.length]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(jobWorkers.length / DASHBOARD_PAGE_SIZE));
@@ -17448,7 +17521,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-jobs-empty-icon{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #e1e8ed;display:grid;place-items:center;color:#102438;font-size:20px;font-weight:800;flex:0 0 36px}
         .ed-jobs-empty b{display:block;color:#102438;font-size:13px;margin-bottom:2px}.ed-jobs-empty span{display:block;font-size:12px;line-height:1.45}
         .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
-        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #f08a28}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#b64d2a;border:0;padding:5px 8px}
+        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #176b50}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#b64d2a;border:0;padding:5px 8px}
         .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
         .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -18727,8 +18800,39 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             {searching ? (
               <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
             ) : visibleCandidateWorkers.length ? (
-              <div className="ed-results">
-                {visibleCandidateWorkers.map((worker) => {
+              <>
+                {isEmployerPhoneLayout && visibleCandidateWorkers.length > 1 && (
+                  <div className="ed-compact-carousel-nav ed-worker-carousel-nav">
+                    <button
+                      type="button"
+                      aria-label="Ankstesnis rastas darbuotojas"
+                      disabled={safeCandidateWorkerMobileIndex === 0}
+                      onClick={() =>
+                        setCandidateWorkerMobileIndex((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      ‹
+                    </button>
+                    <div>
+                      <b>Rastas darbuotojas</b>
+                      <span>{safeCandidateWorkerMobileIndex + 1} / {visibleCandidateWorkers.length}</span>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Kitas rastas darbuotojas"
+                      disabled={safeCandidateWorkerMobileIndex >= visibleCandidateWorkers.length - 1}
+                      onClick={() =>
+                        setCandidateWorkerMobileIndex((current) =>
+                          Math.min(visibleCandidateWorkers.length - 1, current + 1)
+                        )
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+                <div className="ed-results ed-worker-results-compact">
+                {candidateWorkersForRender.map((worker) => {
                   const invited = invitedIds.includes(worker.id);
                   return (
                     <div
@@ -18845,7 +18949,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              </>
             ) : (
               <div className="ed-empty">
                 {workerSource === "team"
@@ -18862,11 +18967,42 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   Čia matote pasiūlymą priėmusius darbuotojus ir jų darbo dienos veiksmus.
                 </p>
 
+                {isEmployerPhoneLayout && jobWorkers.length > 1 && (
+                  <div className="ed-compact-carousel-nav ed-worker-carousel-nav">
+                    <button
+                      type="button"
+                      aria-label="Ankstesnis priėmęs darbuotojas"
+                      disabled={safeAcceptedWorkerMobileIndex === 0}
+                      onClick={() =>
+                        setAcceptedWorkerMobileIndex((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      ‹
+                    </button>
+                    <div>
+                      <b>Priėmęs darbuotojas</b>
+                      <span>{safeAcceptedWorkerMobileIndex + 1} / {jobWorkers.length}</span>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Kitas priėmęs darbuotojas"
+                      disabled={safeAcceptedWorkerMobileIndex >= jobWorkers.length - 1}
+                      onClick={() =>
+                        setAcceptedWorkerMobileIndex((current) =>
+                          Math.min(jobWorkers.length - 1, current + 1)
+                        )
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+
                 <div className="ed-attendance-list">
                   {jobWorkersLoading && (
                     <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
                   )}
-                  {!jobWorkersLoading && pagedAcceptedWorkers.map((worker) => {
+                  {!jobWorkersLoading && acceptedWorkersForRender.map((worker) => {
                     const attendance = worker.attendance || {};
                     const ended = jobHasEnded(currentJob);
                     const checkInOpen = jobCheckInWindowOpen(currentJob);
@@ -19246,12 +19382,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     Šiuo metu pasiūlymo dar nepriėmė nė vienas darbuotojas.
                   </div>
                 )}
-                <DashboardPagination
-                  page={acceptedWorkersPage}
-                  totalItems={jobWorkersLoading ? 0 : jobWorkers.length}
-                  pageSize={DASHBOARD_PAGE_SIZE}
-                  onPageChange={setAcceptedWorkersPage}
-                />
+                {!isEmployerPhoneLayout && (
+                  <DashboardPagination
+                    page={acceptedWorkersPage}
+                    totalItems={jobWorkersLoading ? 0 : jobWorkers.length}
+                    pageSize={DASHBOARD_PAGE_SIZE}
+                    onPageChange={setAcceptedWorkersPage}
+                  />
+                )}
               </div>
 
             {declinedCandidateWorkers.length > 0 &&
@@ -19261,8 +19399,38 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 <p className="ed-attendance-help">
                   Šie darbuotojai atsisakė šio darbo pasiūlymo ir negali būti pakviesti pakartotinai tik į šį konkretų pasiūlymą. Į kitus darbo pasiūlymus juos galima kviesti įprastai, jei jie atitinka kriterijus.
                 </p>
-                <div className="ed-results">
-                  {pagedDeclinedWorkers.map((worker) => (
+                {isEmployerPhoneLayout && declinedCandidateWorkers.length > 1 && (
+                  <div className="ed-compact-carousel-nav ed-worker-carousel-nav">
+                    <button
+                      type="button"
+                      aria-label="Ankstesnis atsisakęs darbuotojas"
+                      disabled={safeDeclinedWorkerMobileIndex === 0}
+                      onClick={() =>
+                        setDeclinedWorkerMobileIndex((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      ‹
+                    </button>
+                    <div>
+                      <b>Atsisakęs darbuotojas</b>
+                      <span>{safeDeclinedWorkerMobileIndex + 1} / {declinedCandidateWorkers.length}</span>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Kitas atsisakęs darbuotojas"
+                      disabled={safeDeclinedWorkerMobileIndex >= declinedCandidateWorkers.length - 1}
+                      onClick={() =>
+                        setDeclinedWorkerMobileIndex((current) =>
+                          Math.min(declinedCandidateWorkers.length - 1, current + 1)
+                        )
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+                <div className="ed-results ed-worker-results-compact">
+                  {declinedWorkersForRender.map((worker) => (
                     <div
                       className={
                         canViewWorkerMetrics
@@ -19326,12 +19494,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     </div>
                   ))}
                 </div>
-                <DashboardPagination
-                  page={declinedWorkersPage}
-                  totalItems={declinedCandidateWorkers.length}
-                  pageSize={DASHBOARD_PAGE_SIZE}
-                  onPageChange={setDeclinedWorkersPage}
-                />
+                {!isEmployerPhoneLayout && (
+                  <DashboardPagination
+                    page={declinedWorkersPage}
+                    totalItems={declinedCandidateWorkers.length}
+                    pageSize={DASHBOARD_PAGE_SIZE}
+                    onPageChange={setDeclinedWorkersPage}
+                  />
+                )}
               </div>
             )}
 
@@ -21012,7 +21182,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <>
               <div className="ed-urgent-results">
                 {urgentSearchResults
-                  .slice((urgentSearchPage - 1) * DASHBOARD_PAGE_SIZE, urgentSearchPage * DASHBOARD_PAGE_SIZE)
+                  .slice((urgentSearchPage - 1) * 5, urgentSearchPage * 5)
                   .map((worker) => (
                   <div className="ed-urgent-row" key={worker.worker_id}>
                     <div className="ed-urgent-worker">
@@ -21061,11 +21231,36 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   </div>
                 ))}
               </div>
-              <DashboardPagination
-                page={urgentSearchPage}
-                totalItems={urgentSearchResults.length}
-                onPageChange={setUrgentSearchPage}
-              />
+              {urgentSearchResults.length > 5 && (() => {
+                const urgentTotalPages = Math.ceil(urgentSearchResults.length / 5);
+                const safeUrgentPage = Math.min(Math.max(1, urgentSearchPage), urgentTotalPages);
+                return (
+                  <div className="ed-compact-carousel-nav ed-urgent-carousel-nav">
+                    <button
+                      type="button"
+                      aria-label="Ankstesni skubiai laisvi darbuotojai"
+                      disabled={safeUrgentPage <= 1}
+                      onClick={() => setUrgentSearchPage((page) => Math.max(1, page - 1))}
+                    >
+                      ‹
+                    </button>
+                    <div>
+                      <b>Kontaktai</b>
+                      <span>{safeUrgentPage} / {urgentTotalPages}</span>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Kiti skubiai laisvi darbuotojai"
+                      disabled={safeUrgentPage >= urgentTotalPages}
+                      onClick={() =>
+                        setUrgentSearchPage((page) => Math.min(urgentTotalPages, page + 1))
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                );
+              })()}
               </>
             ) : (
               <div className="ed-urgent-empty">
@@ -27828,6 +28023,58 @@ function App() {
 }
 
 const mobileResponsiveFixStyles = `
+  .ed-compact-carousel-nav {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 7px 8px;
+    border: 1px solid #dfe7ed;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .ed-compact-carousel-nav > div {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .ed-compact-carousel-nav b {
+    display: block;
+    color: #102438;
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+
+  .ed-compact-carousel-nav span {
+    display: block;
+    margin-top: 2px;
+    color: #7a8996;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .ed-compact-carousel-nav button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d7e1e8;
+    border-radius: 10px;
+    background: #fff;
+    color: #102438;
+    font: inherit;
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  .ed-compact-carousel-nav button:disabled {
+    opacity: .35;
+    cursor: default;
+  }
+
   @media (max-width: 620px) {
     html, body, #root {
       max-width: 100%;
@@ -29697,6 +29944,88 @@ const mobileResponsiveFixStyles = `
       padding: 9px 11px !important;
       border-radius: 11px !important;
       font-size: 12px !important;
+    }
+
+    /* Employer worker search / accepted / declined: one compact card at a time. */
+    .ed-worker-carousel-nav {
+      margin: 9px 0 8px !important;
+    }
+
+    .ed-worker-results-compact {
+      gap: 0 !important;
+    }
+
+    .ed-worker-results-compact .ed-worker,
+    .ed-results .ed-worker {
+      padding: 12px !important;
+      gap: 9px !important;
+      border-radius: 14px !important;
+      background: #fff !important;
+    }
+
+    .ed-worker .ed-avatar {
+      width: 46px !important;
+      height: 46px !important;
+      flex: 0 0 46px !important;
+      font-size: 15px !important;
+    }
+
+    .ed-worker .ed-worker-id {
+      gap: 9px !important;
+      align-items: center !important;
+    }
+
+    .ed-worker .ed-worker-id > div:last-child {
+      flex: 1 1 160px !important;
+    }
+
+    .ed-worker .ed-worker-id b {
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+    }
+
+    .ed-worker .ed-worker-id span {
+      font-size: 11.5px !important;
+      line-height: 1.35 !important;
+    }
+
+    .ed-worker .ed-worker-activity {
+      justify-content: flex-start !important;
+    }
+
+    .ed-worker .ed-metric {
+      display: flex !important;
+      align-items: baseline !important;
+      gap: 7px !important;
+      padding: 0 2px !important;
+      text-align: left !important;
+    }
+
+    .ed-worker .ed-metric b {
+      font-size: 18px !important;
+    }
+
+    .ed-worker .ed-metric span {
+      font-size: 11px !important;
+    }
+
+    .ed-worker .ed-worker-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 7px !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .ed-worker .ed-worker-actions > button {
+      min-width: 0 !important;
+      min-height: 40px !important;
+      padding: 8px 9px !important;
+      font-size: 12px !important;
+      white-space: normal !important;
+    }
+
+    .ed-attendance-panel .ed-compact-carousel-nav {
+      margin-top: 10px !important;
     }
 
     /* Employer active jobs and worker availability: one card/day at a time. */
