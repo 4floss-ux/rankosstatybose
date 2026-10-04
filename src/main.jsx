@@ -8567,7 +8567,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }
                 }}
               >
-                {showProfileEditor ? "Uždaryti" : "Mano informacija"}
+                {showProfileEditor ? "Uždaryti" : "Profilis"}
               </button>
             )}
             <button className="btn ghost" onClick={onLogout}>
@@ -28406,6 +28406,18 @@ const mobileResponsiveFixStyles = `
       min-height: 42px;
       white-space: normal !important;
       overflow-wrap: anywhere !important;
+    }
+
+    .wd-topbar-inner .wd-mobile-profile-btn {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-width: 0 !important;
+      min-height: 36px !important;
+      padding: 7px 12px !important;
+      border-radius: 9px !important;
+      font-size: 12px !important;
+      line-height: 1.1 !important;
+      white-space: nowrap !important;
     }
 
     .wd-shell,
