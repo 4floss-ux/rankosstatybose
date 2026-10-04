@@ -15,5 +15,8 @@
     "vite": "^6.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@sentry/vite-plugin": "^5.4.0"
   }
 }
