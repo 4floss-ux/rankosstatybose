@@ -30179,6 +30179,66 @@ const mobileResponsiveFixStyles = `
 
 `;
 
+
+function BackToTopButton() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const updateVisibility = () => {
+      setVisible(window.scrollY > 420);
+    };
+
+    updateVisibility();
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateVisibility);
+    };
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      type="button"
+      aria-label="Grįžti į puslapio viršų"
+      title="Į viršų"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      style={{
+        position: "fixed",
+        right: 18,
+        bottom: 18,
+        zIndex: 850,
+        width: 42,
+        height: 42,
+        padding: 0,
+        border: "1px solid #d7e0e7",
+        borderRadius: "50%",
+        background: "rgba(255,255,255,.94)",
+        color: "#526374",
+        boxShadow: "0 6px 20px rgba(16,36,56,.12)",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          display: "block",
+          width: 10,
+          height: 10,
+          borderLeft: "2px solid currentColor",
+          borderTop: "2px solid currentColor",
+          transform: "rotate(45deg) translate(2px, 2px)",
+        }}
+      />
+    </button>
+  );
+}
+
 function FatalAppError() {
   return (
     <main
@@ -30235,6 +30295,7 @@ createRoot(document.getElementById("root")).render(
       <style>{unifiedCloseStyles}</style>
       <style>{mobileResponsiveFixStyles}</style>
       <App />
+      <BackToTopButton />
     </>
   </Sentry.ErrorBoundary>
 );
