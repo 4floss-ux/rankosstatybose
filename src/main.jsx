@@ -4747,8 +4747,24 @@ function WorkerProfileModal({
           .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#102438}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
           .rs-profile-experience-text{margin:0;padding:12px 14px;border-radius:11px;background:#f6f8fa;color:#526374;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#f8fafb}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}
-          @media(max-width:620px){.worker-profile-modal{border-radius:16px;max-height:calc(100dvh - 20px)}.worker-profile-modal-scroll{max-height:calc(100dvh - 20px);padding:17px;padding-bottom:max(28px,env(safe-area-inset-bottom));overscroll-behavior:contain}.rs-profile-grid{grid-template-columns:repeat(2,1fr)}}
-          @media(max-width:420px){.rs-profile-grid{grid-template-columns:1fr}}
+          @media(max-width:620px){
+            .worker-profile-modal{border-radius:16px;max-height:calc(100dvh - 20px)}
+            .worker-profile-modal-scroll{max-height:calc(100dvh - 20px);padding:15px;padding-bottom:max(28px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+            .rs-modal-head{margin-bottom:12px;gap:10px}
+            .rs-profile-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+            .rs-profile-stat{min-width:0;padding:9px 8px;border-radius:10px}
+            .rs-profile-stat span{font-size:9.5px;line-height:1.2;margin-bottom:4px;overflow-wrap:anywhere}
+            .rs-profile-stat b{font-size:14px;line-height:1.2;overflow-wrap:anywhere;word-break:break-word}
+            .rs-profile-stat:nth-child(2){grid-column:span 2}
+            .rs-profile-phone{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;align-items:center}
+            .rs-profile-phone button{padding:5px 6px;font-size:9px;border-radius:7px}
+            .rs-profile-section{margin-top:13px}
+            .rs-profile-experience{margin-top:13px;padding:12px;border-radius:13px}
+            .rs-profile-experience-head{margin-bottom:8px}
+            .rs-profile-experience-text{padding:10px 11px;line-height:1.5;font-size:12px}
+            .rs-review-list{gap:8px;margin-top:8px}
+            .rs-review{padding:10px}
+          }
         `}</style>
 
         <div className="worker-profile-modal-scroll">
@@ -18823,7 +18839,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     >
                       {invitingSavedTeam
                         ? "Siunčiami kvietimai..."
-                        : "Pakviesti visus tinkamus"}
+                        : `Pakviesti visus tinkamus · ${matchingSavedWorkersCount}/${savedWorkers.length}`}
                     </button>
                   )}
               </div>
@@ -18850,7 +18866,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     >
                       {invitingSavedTeam
                         ? "Siunčiami kvietimai..."
-                        : "Pakviesti visus tinkamus"}
+                        : `Pakviesti visus tinkamus · ${matchingSavedWorkersCount}/${savedWorkers.length}`}
                     </button>
                   )}
               </div>
@@ -29183,16 +29199,17 @@ const mobileResponsiveFixStyles = `
     }
 
     .ed-invite-all-mobile {
-      display: inline-flex !important;
-      width: auto !important;
+      display: flex !important;
+      width: 100% !important;
       min-width: 0 !important;
-      min-height: 36px !important;
+      min-height: 42px !important;
       margin-top: 8px !important;
-      padding: 7px 11px !important;
-      border-radius: 9px !important;
-      font-size: 11.5px !important;
+      padding: 9px 12px !important;
+      border-radius: 11px !important;
+      font-size: 12.5px !important;
       line-height: 1.2 !important;
       justify-content: center !important;
+      text-align: center !important;
       white-space: normal !important;
     }
   }
