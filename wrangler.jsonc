@@ -3,6 +3,7 @@
   "name": "rankosstatybose",
   "compatibility_date": "2026-09-25",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
   }
 }
