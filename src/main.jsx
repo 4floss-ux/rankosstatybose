@@ -30340,6 +30340,217 @@ const mobileResponsiveFixStyles = `
 `;
 
 
+
+function MobilePopupBackGuard() {
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return undefined;
+    }
+
+    const media = window.matchMedia("(max-width: 760px)");
+    if (!media.matches) return undefined;
+
+    const popupSelector = [
+      '[role="dialog"][aria-modal="true"]',
+      '.account-delete-overlay',
+      '.admin-chat-overlay',
+      '.admin-modal-overlay',
+      '.admin-setup-overlay',
+      '.admin-team-chat-overlay',
+      '.ctc-overlay',
+      '.ed-attendance-overlay',
+      '.ed-plan-overlay',
+      '.ed-rating-overlay',
+      '.ed-saved-overlay',
+      '.ed-team-overlay',
+      '.ed-urgent-overlay',
+      '.lt-end-notice-overlay',
+      '.reliability-modal-overlay',
+      '.rs-modal-overlay',
+      '.wd-job-info-overlay',
+    ].join(",");
+
+    let guardActive = false;
+    let cleanupPopstate = false;
+    let scheduled = 0;
+
+    const isVisible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        Number(style.opacity || 1) === 0
+      ) {
+        return false;
+      }
+
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+
+    const popupRoots = () => {
+      const visible = Array.from(document.querySelectorAll(popupSelector)).filter(
+        isVisible
+      );
+
+      // If an overlay and its inner dialog both match, count it as one popup.
+      return visible.filter(
+        (element) =>
+          !visible.some(
+            (candidate) =>
+              candidate !== element &&
+              candidate.contains(element) &&
+              isVisible(candidate)
+          )
+      );
+    };
+
+    const topPopup = () => {
+      const roots = popupRoots();
+      if (!roots.length) return null;
+
+      return roots
+        .map((element, index) => ({
+          element,
+          index,
+          z: Number.parseInt(window.getComputedStyle(element).zIndex, 10) || 0,
+        }))
+        .sort((a, b) => (a.z === b.z ? a.index - b.index : a.z - b.z))
+        .at(-1)?.element || null;
+    };
+
+    const closeTopPopup = () => {
+      const popup = topPopup();
+      if (!popup) return false;
+
+      const closeSelectors = [
+        'button[aria-label^="Uždaryti"]',
+        'button[title^="Uždaryti"]',
+        '.rs-close',
+        '.reliability-modal-close',
+        '.account-delete-close',
+        '.admin-setup-close',
+        '.ctc-close',
+        '.ed-attendance-close',
+        '.ed-rating-close',
+        '.lt-chat-close',
+        '.wd-job-info-close',
+        '.wd-profile-editor-close',
+      ];
+
+      const closeButton = popup.matches("button")
+        ? popup
+        : popup.querySelector(closeSelectors.join(","));
+
+      if (closeButton instanceof HTMLElement && !closeButton.hasAttribute("disabled")) {
+        closeButton.click();
+        return true;
+      }
+
+      const textCloseButton = Array.from(popup.querySelectorAll("button")).find(
+        (button) => {
+          if (button.disabled) return false;
+          const label = String(button.textContent || "").trim();
+          return label === "Uždaryti" || label === "Atšaukti";
+        }
+      );
+
+      if (textCloseButton instanceof HTMLElement) {
+        textCloseButton.click();
+        return true;
+      }
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          code: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+
+      // A number of existing modals already close when their overlay itself
+      // receives a pointer/mouse press.
+      if (popup.className && String(popup.className).includes("overlay")) {
+        popup.dispatchEvent(
+          new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          })
+        );
+      }
+
+      return true;
+    };
+
+    const syncGuard = () => {
+      scheduled = 0;
+      const hasPopup = popupRoots().length > 0;
+
+      if (hasPopup && !guardActive) {
+        window.history.pushState(
+          {
+            ...(window.history.state || {}),
+            __statybos24PopupGuard: true,
+          },
+          "",
+          window.location.href
+        );
+        guardActive = true;
+        return;
+      }
+
+      // If the user closed the final popup with X / Cancel, silently remove
+      // the duplicate history entry so the next Back press behaves normally.
+      if (!hasPopup && guardActive && !cleanupPopstate) {
+        cleanupPopstate = true;
+        window.history.back();
+      }
+    };
+
+    const scheduleSync = () => {
+      if (scheduled) return;
+      scheduled = window.requestAnimationFrame(syncGuard);
+    };
+
+    const onPopState = () => {
+      if (cleanupPopstate) {
+        cleanupPopstate = false;
+        guardActive = false;
+        return;
+      }
+
+      if (guardActive && popupRoots().length > 0) {
+        guardActive = false;
+        closeTopPopup();
+
+        // If another popup remains underneath, the observer will add a fresh
+        // guard entry for that layer.
+        window.setTimeout(scheduleSync, 0);
+      }
+    };
+
+    const observer = new MutationObserver(scheduleSync);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    window.addEventListener("popstate", onPopState);
+    scheduleSync();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("popstate", onPopState);
+      if (scheduled) window.cancelAnimationFrame(scheduled);
+    };
+  }, []);
+
+  return null;
+}
+
 function BackToTopButton() {
   const [visible, setVisible] = useState(false);
 
@@ -30455,6 +30666,7 @@ createRoot(document.getElementById("root")).render(
       <style>{unifiedCloseStyles}</style>
       <style>{mobileResponsiveFixStyles}</style>
       <App />
+      <MobilePopupBackGuard />
       <BackToTopButton />
     </>
   </Sentry.ErrorBoundary>
