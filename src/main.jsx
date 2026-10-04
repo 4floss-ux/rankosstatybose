@@ -371,6 +371,24 @@ function useStyledConfirm() {
   return { dialog, askConfirm, resolveConfirm };
 }
 
+function normalizePersonName(value) {
+  const clean = String(value || "")
+    .normalize("NFC")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (!clean) return "";
+
+  const lower = clean.toLocaleLowerCase("lt-LT");
+  return lower.replace(/(^|[\s\-’'])\p{L}/gu, (part) =>
+    part.toLocaleUpperCase("lt-LT")
+  );
+}
+
+function displayPersonName(value, fallback = "") {
+  return normalizePersonName(value) || fallback;
+}
+
 function normalizeLithuanianMobilePhone(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -2190,6 +2208,9 @@ function AuthModal({
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
+        const normalizedFirstName = normalizePersonName(form.firstName);
+        const normalizedLastName = normalizePersonName(form.lastName);
+        const normalizedDisplayName = `${normalizedFirstName} ${normalizedLastName}`.trim();
         const phoneProof = phoneVerification.requireProof();
         const canonicalCity = await canonicalCityName(form.city);
         if (!canonicalCity) {
@@ -2209,10 +2230,10 @@ function AuthModal({
               role: teamInvite ? "employer" : role,
               preferred_plan: "basic",
               preferred_billing_interval: "monthly",
-              first_name: form.firstName.trim(),
-              last_name: form.lastName.trim(),
-              display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
-              legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+              first_name: normalizedFirstName,
+              last_name: normalizedLastName,
+              display_name: normalizedDisplayName,
+              legal_name: normalizedDisplayName,
               city: canonicalCity,
               phone: normalizedPhone,
               ...(phoneProof ? { phone_verification_proof: phoneProof } : {}),
@@ -2689,7 +2710,7 @@ function TeamInvitePage({
             <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
               Jums paruošta atskira darbdavio paskyra. Prisijungę dirbsite kaip{" "}
               <b style={{ color: "#102438" }}>
-                {invite.invited_name} · {invite.company_name}
+                {displayPersonName(invite.invited_name, "Pakviestas narys")} · {invite.company_name}
               </b>
               .
             </p>
@@ -6196,13 +6217,14 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       );
 
       const fallbackNameParts = String(profile?.display_name || "").trim().split(/\s+/).filter(Boolean);
-      const firstName = profile?.first_name || fallbackNameParts[0] || "";
-      const lastName = profile?.last_name || fallbackNameParts.slice(1).join(" ") || "";
+      const firstName = normalizePersonName(profile?.first_name || fallbackNameParts[0] || "");
+      const lastName = normalizePersonName(profile?.last_name || fallbackNameParts.slice(1).join(" ") || "");
+      const displayName = displayPersonName(`${firstName} ${lastName}`.trim() || profile?.display_name || "");
 
       setForm({
         firstName,
         lastName,
-        displayName: `${firstName} ${lastName}`.trim() || profile?.display_name || "",
+        displayName,
         city: profile?.city || "Vilnius",
         phone: privateData?.phone || "",
         travelRadius: worker?.travel_radius_km ?? 30,
@@ -7626,12 +7648,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       await phoneVerification.saveChange();
 
+      const normalizedFirstName = normalizePersonName(form.firstName);
+      const normalizedLastName = normalizePersonName(form.lastName);
+      const normalizedDisplayName = `${normalizedFirstName} ${normalizedLastName}`.trim();
+
       const profileUpdate = await supabase
         .from("profiles")
         .update({
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+          first_name: normalizedFirstName,
+          last_name: normalizedLastName,
+          display_name: normalizedDisplayName,
           city: canonicalCity,
         })
         .eq("id", user.id);
@@ -7642,7 +7668,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .from("user_private")
         .update({
           phone: normalizedPhone,
-          legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+          legal_name: normalizedDisplayName,
         })
         .eq("user_id", user.id);
 
@@ -8277,7 +8303,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 )}
               </div>
               <div>
-                <b>{form.displayName || "Darbuotojas"}</b>
+                <b>{displayPersonName(form.displayName, "Darbuotojas")}</b>
                 <span>{form.city || "Miestas nenurodytas"}</span>
               </div>
             </div>
@@ -12168,11 +12194,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 const EMPLOYER_ANNUAL_DISCOUNT = 0.2;
 const EMPLOYER_TRIAL_DAYS = 30;
 const BUSINESS_PRESENTATION_TOKEN = "imones-30d-business-7f4c29a1";
+const BUSINESS_PRESENTATION_PATH = "/pristatymas-imonems";
 
 function businessPresentationUrl() {
-  const url = new URL("/", window.location.origin);
-  url.searchParams.set("pristatymas", BUSINESS_PRESENTATION_TOKEN);
-  return url.href;
+  return new URL(BUSINESS_PRESENTATION_PATH, window.location.origin).href;
 }
 
 function employerPlanAnnualPrice(plan) {
@@ -12321,7 +12346,7 @@ function workerRecentActivityLabel(value) {
 }
 
 function shortWorkerName(name) {
-  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  const parts = normalizePersonName(name).split(/\s+/).filter(Boolean);
   if (!parts.length) return "Darbuotojas";
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[1][0]}.`;
@@ -12770,7 +12795,7 @@ function companyAvatarUrl(path) {
 }
 
 function workerInitials(name) {
-  return String(name || "D")
+  return (normalizePersonName(name) || "D")
     .trim()
     .split(/\s+/)
     .filter(Boolean)
@@ -13538,7 +13563,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       const result = await supabase.rpc("create_company_team_invite", {
         p_company_id: company.id,
         p_email: teamInviteForm.email.trim(),
-        p_display_name: teamInviteForm.displayName.trim(),
+        p_display_name: normalizePersonName(teamInviteForm.displayName),
         p_member_role: teamInviteForm.memberRole,
       });
 
@@ -13636,7 +13661,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const confirmed = await askConfirm({
       eyebrow: "KOMANDOS NARYS",
       title: "Pašalinti iš įmonės komandos?",
-      message: `${member.display_name} bus pašalintas iš komandos, o jo atsakingi darbai bus perduoti įmonės savininkui.`,
+      message: `${displayPersonName(member.display_name, "Komandos narys")} bus pašalintas iš komandos, o jo atsakingi darbai bus perduoti įmonės savininkui.`,
       confirmLabel: "Pašalinti",
       danger: true,
     });
@@ -17428,7 +17453,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div className="ed-profile-summary-card">
                 <span>Jūs prisijungę kaip</span>
                 <b>
-                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
+                  {displayPersonName(currentTeamMember?.display_name, user.email || "Vartotojas")}
                 </b>
                 <small>{companyTeamRoleLabel(companyMemberRole)}</small>
               </div>
@@ -17577,7 +17602,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           </div>
                           <div>
                             <b>
-                              {review.worker_name || "Darbuotojas"} · {review.score} / 10
+                              {displayPersonName(review.worker_name, "Darbuotojas")} · {review.score} / 10
                             </b>
                             <div className="ed-company-review-meta">
                               {formatJobTitle(review.job_title)}
@@ -17795,7 +17820,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }
                   options={activeTeamMembers.map((member) => ({
                     value: member.user_id,
-                    label: `${member.display_name} · ${companyTeamRoleLabel(member.member_role)}`,
+                    label: `${displayPersonName(member.display_name, "Komandos narys")} · ${companyTeamRoleLabel(member.member_role)}`,
                   }))}
                 />
                 <span
@@ -19952,7 +19977,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       <div className="ed-team-member" key={member.user_id}>
                         <div>
                           <b>
-                            {member.display_name}
+                            {displayPersonName(member.display_name, "Komandos narys")}
                             {member.user_id === user.id ? " · Jūs" : ""}
                           </b>
                           <span>{member.email}</span>
@@ -19968,7 +19993,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             <>
                               <RoundedSelect
                                 className="ed-team-role-select"
-                                ariaLabel={`${member.display_name} rolė`}
+                                ariaLabel={`${displayPersonName(member.display_name, "Komandos narys")} rolė`}
                                 value={member.member_role}
                                 disabled={teamActionBusy}
                                 onChange={(value) =>
@@ -20185,7 +20210,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                       {pendingTeamInvites.length ? (
                         pendingTeamInvites.map((invite) => (
                           <div className="ed-team-invite" key={invite.invite_id}>
-                            <b>{invite.display_name}</b>
+                            <b>{displayPersonName(invite.display_name, "Pakviestas narys")}</b>
                             <span>
                               {invite.email} ·{" "}
                               {companyTeamRoleLabel(invite.member_role)}
@@ -21991,7 +22016,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               size={52}
                             />
                             <div>
-                              <b>{worker.worker_name}</b>
+                              <b>{displayPersonName(worker.worker_name, "Darbuotojas")}</b>
                               <small>
                                 {worker.city || "Miestas nenurodytas"} · kartu užbaigta darbo dienų: {worker.completed_days}
                               </small>
@@ -22032,7 +22057,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                                 {offer.position_title || "Įdarbinimo pasiūlymas"}
                               </b>
                               <div className="lt-existing-info-sub">
-                                Darbuotojas: {offer.worker_name || "Darbuotojas"}
+                                Darbuotojas: {displayPersonName(offer.worker_name, "Darbuotojas")}
                               </div>
                               <div className="lt-existing-info-meta">
                                 {longTermContractLabel(offer.contract_type)} · nuo {offer.proposed_start_date}
@@ -22133,7 +22158,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         .map((offer) => (
                           <div className="lt-employed-row" key={`active-${offer.id}`}>
                             <div>
-                              <b>{offer.worker_name}</b>
+                              <b>{displayPersonName(offer.worker_name, "Darbuotojas")}</b>
                               <div className="lt-employed-meta">
                                 {offer.position_title} · nuo {offer.proposed_start_date}
                                 {offer.proposed_end_date ? ` iki ${offer.proposed_end_date}` : " · neterminuota"}
@@ -22389,7 +22414,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
 
         setForm((current) => ({
           ...current,
-          displayName: profileResult.data?.display_name || "",
+          displayName: displayPersonName(profileResult.data?.display_name),
           city: profileResult.data?.city || "Vilnius",
           phone: privateResult.data?.phone || "",
         }));
@@ -22427,7 +22452,7 @@ function AdminWorkerGateway({ user, onAdminReturn, onLogout }) {
       }
 
       const result = await supabase.rpc("admin_register_worker_mode", {
-        p_display_name: form.displayName.trim(),
+        p_display_name: normalizePersonName(form.displayName),
         p_city: city,
         p_phone: form.phone.trim() || null,
         p_travel_radius_km: travelRadius,
@@ -23624,8 +23649,8 @@ function AdminDashboard({
   function openWorkerEditor(worker) {
     setEditor({ type: "worker", id: worker.user_id });
     setEditorForm({
-      displayName: worker.display_name || "",
-      legalName: worker.legal_name || "",
+      displayName: displayPersonName(worker.display_name),
+      legalName: displayPersonName(worker.legal_name),
       phone: worker.phone || "",
       city: worker.city || "",
       isActive: Boolean(worker.is_active),
@@ -23651,7 +23676,7 @@ function AdminDashboard({
       trialBlockedByStripe: false,
     });
     setEditorForm({
-      displayName: employer.display_name || "",
+      displayName: displayPersonName(employer.display_name),
       phone: employer.phone || "",
       name: employer.company_name || "",
       companyCode: employer.company_code || "",
@@ -23757,7 +23782,7 @@ function AdminDashboard({
         const [profileResult, contactResult] = await Promise.all([
           supabase.rpc("admin_update_worker", {
             p_user_id: editor.id,
-            p_display_name: editorForm.displayName.trim(),
+            p_display_name: normalizePersonName(editorForm.displayName),
             p_city: city,
             p_is_active: Boolean(editorForm.isActive),
             p_travel_radius_km: travelRadiusKm,
@@ -23769,8 +23794,8 @@ function AdminDashboard({
           }),
           supabase.rpc("admin_update_account_contact", {
             p_user_id: editor.id,
-            p_display_name: editorForm.displayName.trim(),
-            p_legal_name: editorForm.legalName.trim() || null,
+            p_display_name: normalizePersonName(editorForm.displayName),
+            p_legal_name: normalizePersonName(editorForm.legalName) || null,
             p_phone: editorForm.phone.trim() || null,
           }),
         ]);
@@ -23796,7 +23821,7 @@ function AdminDashboard({
           }),
           supabase.rpc("admin_update_account_contact", {
             p_user_id: editor.ownerId,
-            p_display_name: editorForm.displayName.trim(),
+            p_display_name: normalizePersonName(editorForm.displayName),
             p_legal_name: null,
             p_phone: editorForm.phone.trim() || null,
           }),
@@ -24511,7 +24536,7 @@ function AdminDashboard({
                     <div className="admin-facts">
                       <div className="admin-fact">
                         <span>Darbuotojas</span>
-                        <b>{dispute.worker_name}</b>
+                        <b>{displayPersonName(dispute.worker_name, "Darbuotojas")}</b>
                       </div>
                       <div className="admin-fact">
                         <span>Darbdavys</span>
@@ -24672,7 +24697,7 @@ function AdminDashboard({
                   return (
                     <div className="admin-row" key={worker.user_id}>
                       <div className="admin-row-title">
-                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
+                        <b>{displayPersonName(worker.display_name, worker.email || "Darbuotojas")}</b>
                         <span>
                           {worker.email || "—"} ·{" "}
                           {worker.city || "Miestas nenurodytas"}
@@ -25139,7 +25164,7 @@ function AdminDashboard({
                     </div>
 
                     <div className="admin-employment-person">
-                      <b>{placement.worker_name || "Darbuotojas"}</b>
+                      <b>{displayPersonName(placement.worker_name, "Darbuotojas")}</b>
                       <span>Įdarbintas darbuotojas</span>
                     </div>
 
@@ -25262,7 +25287,7 @@ function AdminDashboard({
                   <div className="admin-row" key={rating.rating_id}>
                     <div className="admin-row-title">
                       <b>
-                        {rating.worker_name} · {rating.score} / 10
+                        {displayPersonName(rating.worker_name, "Darbuotojas")} · {rating.score} / 10
                       </b>
                       <span>
                         {rating.company_name} · {formatJobTitle(rating.job_title)}
@@ -27198,6 +27223,11 @@ function App() {
   const businessPresentationToken = new URLSearchParams(window.location.search).get(
     "pristatymas"
   );
+  const normalizedPathname =
+    window.location.pathname.replace(/\/+$/, "") || "/";
+  const isBusinessPresentation =
+    normalizedPathname === BUSINESS_PRESENTATION_PATH ||
+    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN;
   const [teamInviteToken, setTeamInviteToken] = useState(() =>
     new URLSearchParams(window.location.search).get("team_invite")
   );
@@ -27250,6 +27280,15 @@ function App() {
     );
 
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (
+      businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
+      normalizedPathname !== BUSINESS_PRESENTATION_PATH
+    ) {
+      window.history.replaceState({}, "", BUSINESS_PRESENTATION_PATH);
+    }
   }, []);
 
   useEffect(() => {
@@ -27443,7 +27482,7 @@ function App() {
   }
 
   if (
-    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
+    isBusinessPresentation &&
     (!user || accountRole === "admin")
   ) {
     return (
