@@ -24944,11 +24944,6 @@ function AdminDashboard({
         <div className="admin-head">
           <div>
             <div className="eyebrow">ADMINISTRATORIAUS VALDYMO CENTRAS</div>
-            <h1>Svetainės suvestinė ir valdymas</h1>
-            <p>
-              Čia matote realų sistemos naudojimą, ginčus, vartotojus, darbus,
-              įmonių vadovų pokalbius, atsiliepimus ir įkeltus failus.
-            </p>
           </div>
 
           <span className="admin-pill green">Administratorius</span>
@@ -30211,6 +30206,35 @@ const mobileResponsiveFixStyles = `
 
     .admin-kpi b {
       font-size: 27px !important;
+    }
+  }
+
+
+
+  /* Admin phone header: centered logo and cleaner heading area. */
+  @media (max-width: 620px) {
+    .admin-topbar-inner > .brand {
+      width: 100% !important;
+      max-width: 100% !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-self: center !important;
+      margin: 0 auto !important;
+    }
+
+    .admin-topbar-inner > .brand img {
+      margin: 0 auto !important;
+      max-width: min(210px, 62vw) !important;
+      height: auto !important;
+    }
+
+    .admin-head {
+      margin-bottom: 14px !important;
+    }
+
+    .admin-head > div {
+      width: 100% !important;
+      min-width: 0 !important;
     }
   }
 
