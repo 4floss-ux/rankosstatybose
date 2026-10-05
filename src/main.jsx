@@ -30141,6 +30141,80 @@ const mobileResponsiveFixStyles = `
   }
 
 
+
+  /* Phone admin compact grid: navigation 3 per row, overview stats 2 per row. */
+  @media (max-width: 620px) {
+    .admin-tabs {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      width: 100% !important;
+    }
+
+    .admin-tab {
+      min-width: 0 !important;
+      width: 100% !important;
+      min-height: 58px !important;
+      padding: 10px 6px !important;
+      border-radius: 12px !important;
+      font-size: 11.5px !important;
+      line-height: 1.15 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      text-align: center !important;
+    }
+
+    .admin-kpis {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .admin-kpi {
+      min-width: 0 !important;
+      min-height: 104px !important;
+      padding: 13px 14px !important;
+      border-radius: 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+
+    .admin-kpi span {
+      font-size: 11.5px !important;
+      line-height: 1.25 !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .admin-kpi b {
+      margin-top: 12px !important;
+      font-size: 29px !important;
+      line-height: 1 !important;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .admin-tab {
+      min-height: 56px !important;
+      padding: 9px 4px !important;
+      font-size: 10.5px !important;
+    }
+
+    .admin-kpi {
+      min-height: 98px !important;
+      padding: 12px !important;
+    }
+
+    .admin-kpi span {
+      font-size: 10.5px !important;
+    }
+
+    .admin-kpi b {
+      font-size: 27px !important;
+    }
+  }
+
+
   /* Mobile density pass: worker dashboard, employer header and worker-facing company profile. */
   @media (max-width: 620px) {
     /* Employer header: centered logo, compact plan/profile/logout in one row. */
