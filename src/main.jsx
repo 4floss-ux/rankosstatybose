@@ -25154,11 +25154,17 @@ function AdminDashboard({
                 <span className="admin-pill green">Paruošta dalintis</span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 14 }}>
-                <div style={{ minWidth: 0, padding: "11px 13px", border: "1px solid #dfe7ed", borderRadius: 10, background: "#fff", color: "#526374", fontSize: 12, overflowWrap: "anywhere" }}>
+              <div
+                className="admin-presentation-share"
+                style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 14 }}
+              >
+                <div
+                  className="admin-presentation-link"
+                  style={{ minWidth: 0, padding: "11px 13px", border: "1px solid #dfe7ed", borderRadius: 10, background: "#fff", color: "#526374", fontSize: 12, overflowWrap: "anywhere" }}
+                >
                   {presentationLink}
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="admin-presentation-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button className="admin-small-btn" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button>
                   <button className="admin-small-btn" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button>
                 </div>
@@ -29698,6 +29704,13 @@ const mobileResponsiveFixStyles = `
   }
 
 
+
+  @media (min-width: 621px) {
+    .wd-kpi-issues .wd-kpi-issue-breakdown {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
   /* Additional compact worker dashboard polish: denser phone cards, history carousel and tighter detail modals. */
   @media (max-width: 620px) {
     .wd-overview-card-disputes {
@@ -29945,6 +29958,185 @@ const mobileResponsiveFixStyles = `
     .lt-employment-modal .lt-existing-offer {
       padding: 12px 14px !important;
       gap: 12px !important;
+    }
+  }
+
+
+
+  /* Phone-only admin layout fixes: keep analytics and presentation inside viewport. */
+  @media (max-width: 620px) {
+    .admin-page,
+    .admin-shell,
+    .admin-section,
+    .admin-section-head,
+    .admin-traffic,
+    .admin-traffic-grid,
+    .admin-traffic-grid > *,
+    .admin-traffic-top,
+    .admin-presentation-share,
+    .admin-presentation-link,
+    .admin-presentation-actions {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .admin-page {
+      overflow-x: hidden !important;
+    }
+
+    .admin-shell {
+      width: calc(100% - 20px) !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    .admin-section {
+      padding: 16px !important;
+      overflow: hidden !important;
+    }
+
+    .admin-section-head {
+      gap: 10px !important;
+    }
+
+    .admin-section-head > div {
+      min-width: 0 !important;
+    }
+
+    .admin-section h2 {
+      font-size: 19px !important;
+      line-height: 1.2 !important;
+    }
+
+    .admin-muted {
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .admin-traffic-top {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .admin-traffic-stat {
+      padding: 11px 12px !important;
+      min-height: 88px !important;
+      border-radius: 12px !important;
+    }
+
+    .admin-traffic-stat span {
+      font-size: 10.5px !important;
+      line-height: 1.25 !important;
+    }
+
+    .admin-traffic-stat b {
+      margin-top: 6px !important;
+      font-size: 24px !important;
+    }
+
+    .admin-traffic-grid {
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 14px !important;
+      width: 100% !important;
+    }
+
+    /* 14 days -> two rows of 7 on phone, so nothing pushes the page sideways. */
+    .admin-traffic-chart {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+      display: grid !important;
+      grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+      align-items: end !important;
+      gap: 8px 3px !important;
+      padding: 10px 5px 7px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .admin-traffic-day {
+      min-width: 0 !important;
+      width: 100% !important;
+      height: 90px !important;
+      overflow: hidden !important;
+      gap: 3px !important;
+    }
+
+    .admin-traffic-bar-wrap {
+      width: 100% !important;
+      height: 58px !important;
+      min-height: 58px !important;
+    }
+
+    .admin-traffic-bar {
+      width: min(14px, 68%) !important;
+    }
+
+    .admin-traffic-value {
+      font-size: 8px !important;
+      line-height: 1 !important;
+    }
+
+    .admin-traffic-day-label {
+      width: 100% !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+      white-space: nowrap !important;
+      text-align: center !important;
+      font-size: 7.5px !important;
+      line-height: 1 !important;
+      letter-spacing: -0.02em !important;
+    }
+
+    .admin-traffic-cities,
+    .admin-traffic-city,
+    .admin-traffic-note {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .admin-traffic-city span,
+    .admin-traffic-note {
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+    }
+
+    .admin-presentation-share {
+      grid-template-columns: minmax(0, 1fr) !important;
+      width: 100% !important;
+      gap: 9px !important;
+    }
+
+    .admin-presentation-link {
+      width: 100% !important;
+      padding: 10px 11px !important;
+      font-size: 10.5px !important;
+      line-height: 1.45 !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+      white-space: normal !important;
+    }
+
+    .admin-presentation-actions {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      width: 100% !important;
+      gap: 8px !important;
+    }
+
+    .admin-presentation-actions .admin-small-btn {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 42px !important;
+      padding: 9px 8px !important;
+      font-size: 11.5px !important;
+      line-height: 1.2 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      box-sizing: border-box !important;
     }
   }
 
