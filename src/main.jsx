@@ -30341,14 +30341,106 @@ const mobileResponsiveFixStyles = `
 
 
 
+
+const mobileModalSafetyStyles = `
+  @media (max-width: 760px) {
+    :is(
+      .account-delete-overlay,
+      .admin-chat-overlay,
+      .admin-modal-overlay,
+      .admin-setup-overlay,
+      .admin-team-chat-overlay,
+      .ctc-overlay,
+      .ed-attendance-overlay,
+      .ed-plan-overlay,
+      .ed-rating-overlay,
+      .ed-saved-overlay,
+      .ed-team-overlay,
+      .ed-urgent-overlay,
+      .lt-chat-overlay,
+      .lt-employment-overlay,
+      .lt-end-notice-overlay,
+      .reliability-modal-overlay,
+      .rs-modal-overlay,
+      .wd-job-info-overlay
+    ) {
+      box-sizing: border-box !important;
+      padding-top: max(12px, env(safe-area-inset-top)) !important;
+      padding-right: 10px !important;
+      padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+      padding-left: 10px !important;
+      overflow: hidden !important;
+      align-items: center !important;
+      justify-items: center !important;
+    }
+
+    :is(
+      .account-delete-overlay,
+      .admin-chat-overlay,
+      .admin-modal-overlay,
+      .admin-setup-overlay,
+      .admin-team-chat-overlay,
+      .ctc-overlay,
+      .ed-attendance-overlay,
+      .ed-plan-overlay,
+      .ed-rating-overlay,
+      .ed-saved-overlay,
+      .ed-team-overlay,
+      .ed-urgent-overlay,
+      .lt-chat-overlay,
+      .lt-employment-overlay,
+      .lt-end-notice-overlay,
+      .reliability-modal-overlay,
+      .rs-modal-overlay,
+      .wd-job-info-overlay
+    ) > * {
+      box-sizing: border-box !important;
+      max-width: calc(100vw - 20px) !important;
+      max-height: calc(
+        100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      ) !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      overscroll-behavior: contain !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .worker-profile-modal,
+    .worker-profile-modal-scroll,
+    .reliability-modal,
+    .reliability-modal-scroll,
+    .lt-employment-modal,
+    .lt-chat-card,
+    .wd-job-info-modal,
+    .admin-modal,
+    .admin-setup-card,
+    .admin-chat-card,
+    .admin-team-chat-card,
+    .ctc-modal,
+    .ed-attendance-modal,
+    .ed-plan-modal,
+    .ed-rating-modal,
+    .ed-saved-modal,
+    .ed-team-modal,
+    .ed-urgent-modal,
+    .account-delete-modal,
+    .lt-end-notice-card,
+    .rs-modal-card {
+      box-sizing: border-box !important;
+    }
+  }
+`;
+
 function MobilePopupBackGuard() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return undefined;
     }
 
-    const media = window.matchMedia("(max-width: 760px)");
-    if (!media.matches) return undefined;
+    if (!window.matchMedia("(max-width: 760px)").matches) {
+      return undefined;
+    }
 
     const popupSelector = [
       '[role="dialog"][aria-modal="true"]',
@@ -30364,18 +30456,21 @@ function MobilePopupBackGuard() {
       '.ed-saved-overlay',
       '.ed-team-overlay',
       '.ed-urgent-overlay',
+      '.lt-chat-overlay',
+      '.lt-employment-overlay',
       '.lt-end-notice-overlay',
       '.reliability-modal-overlay',
       '.rs-modal-overlay',
       '.wd-job-info-overlay',
     ].join(",");
 
-    let guardActive = false;
-    let cleanupPopstate = false;
-    let scheduled = 0;
+    const guardKey = "__statybos24MobileBackGuard";
+    let passingThrough = false;
+    let destroyed = false;
 
     const isVisible = (element) => {
       if (!(element instanceof HTMLElement)) return false;
+
       const style = window.getComputedStyle(element);
       if (
         style.display === "none" ||
@@ -30390,11 +30485,10 @@ function MobilePopupBackGuard() {
     };
 
     const popupRoots = () => {
-      const visible = Array.from(document.querySelectorAll(popupSelector)).filter(
-        isVisible
-      );
+      const visible = Array.from(
+        document.querySelectorAll(popupSelector)
+      ).filter(isVisible);
 
-      // If an overlay and its inner dialog both match, count it as one popup.
       return visible.filter(
         (element) =>
           !visible.some(
@@ -30425,8 +30519,8 @@ function MobilePopupBackGuard() {
       if (!popup) return false;
 
       const closeSelectors = [
-        'button[aria-label^="Uždaryti"]',
-        'button[title^="Uždaryti"]',
+        'button[aria-label*="Uždaryti"]',
+        'button[title*="Uždaryti"]',
         '.rs-close',
         '.reliability-modal-close',
         '.account-delete-close',
@@ -30439,26 +30533,61 @@ function MobilePopupBackGuard() {
         '.wd-profile-editor-close',
       ];
 
-      const closeButton = popup.matches("button")
-        ? popup
-        : popup.querySelector(closeSelectors.join(","));
+      const closeButton = popup.querySelector(closeSelectors.join(","));
 
-      if (closeButton instanceof HTMLElement && !closeButton.hasAttribute("disabled")) {
+      if (
+        closeButton instanceof HTMLButtonElement &&
+        !closeButton.disabled
+      ) {
         closeButton.click();
         return true;
       }
 
-      const textCloseButton = Array.from(popup.querySelectorAll("button")).find(
-        (button) => {
-          if (button.disabled) return false;
-          const label = String(button.textContent || "").trim();
-          return label === "Uždaryti" || label === "Atšaukti";
+      const textCloseButton = Array.from(
+        popup.querySelectorAll("button")
+      ).find((button) => {
+        if (!(button instanceof HTMLButtonElement) || button.disabled) {
+          return false;
         }
-      );
 
-      if (textCloseButton instanceof HTMLElement) {
+        const label = String(button.textContent || "").trim();
+        return (
+          label === "Uždaryti" ||
+          label === "Atšaukti" ||
+          label === "Grįžti"
+        );
+      });
+
+      if (textCloseButton instanceof HTMLButtonElement) {
         textCloseButton.click();
         return true;
+      }
+
+      // Most remaining overlays already support closing by tapping the
+      // dimmed background. Dispatch directly on the overlay so React receives
+      // target === currentTarget.
+      if (String(popup.className || "").includes("overlay")) {
+        popup.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            bubbles: true,
+            cancelable: true,
+            pointerType: "touch",
+          })
+        );
+        popup.dispatchEvent(
+          new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          })
+        );
+        popup.dispatchEvent(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          })
+        );
       }
 
       document.dispatchEvent(
@@ -30470,86 +30599,71 @@ function MobilePopupBackGuard() {
         })
       );
 
-      // A number of existing modals already close when their overlay itself
-      // receives a pointer/mouse press.
-      if (popup.className && String(popup.className).includes("overlay")) {
-        popup.dispatchEvent(
-          new MouseEvent("mousedown", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          })
-        );
-      }
-
       return true;
     };
 
-    const syncGuard = () => {
-      scheduled = 0;
-      const hasPopup = popupRoots().length > 0;
+    const armGuard = () => {
+      if (destroyed) return;
 
-      if (hasPopup && !guardActive) {
-        window.history.pushState(
-          {
-            ...(window.history.state || {}),
-            __statybos24PopupGuard: true,
-          },
-          "",
-          window.location.href
-        );
-        guardActive = true;
+      if (window.history.state?.[guardKey]) {
         return;
       }
 
-      // If the user closed the final popup with X / Cancel, silently remove
-      // the duplicate history entry so the next Back press behaves normally.
-      if (!hasPopup && guardActive && !cleanupPopstate) {
-        cleanupPopstate = true;
-        window.history.back();
-      }
+      window.history.pushState(
+        {
+          ...(window.history.state || {}),
+          [guardKey]: true,
+        },
+        "",
+        window.location.href
+      );
     };
 
-    const scheduleSync = () => {
-      if (scheduled) return;
-      scheduled = window.requestAnimationFrame(syncGuard);
-    };
+    // Keep one duplicate entry above the real page for the whole mobile
+    // session. This makes Android/iOS Back deterministic even if a popup was
+    // opened without causing a DOM mutation that an observer could notice.
+    armGuard();
 
     const onPopState = () => {
-      if (cleanupPopstate) {
-        cleanupPopstate = false;
-        guardActive = false;
+      if (destroyed) return;
+
+      if (passingThrough) {
+        passingThrough = false;
         return;
       }
 
-      if (guardActive && popupRoots().length > 0) {
-        guardActive = false;
+      const popup = topPopup();
+
+      if (popup) {
         closeTopPopup();
 
-        // If another popup remains underneath, the observer will add a fresh
-        // guard entry for that layer.
-        window.setTimeout(scheduleSync, 0);
+        // Back just consumed our guard entry. Add it again so another Back
+        // closes another popup (if stacked) instead of leaving the site.
+        window.setTimeout(() => {
+          if (!destroyed) armGuard();
+        }, 0);
+        return;
       }
+
+      // No popup is open: transparently consume the guard and continue to the
+      // user's real previous page, so normal Back behaviour stays unchanged.
+      passingThrough = true;
+      window.setTimeout(() => {
+        if (!destroyed) window.history.back();
+      }, 0);
     };
 
-    const observer = new MutationObserver(scheduleSync);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
     window.addEventListener("popstate", onPopState);
-    scheduleSync();
 
     return () => {
-      observer.disconnect();
+      destroyed = true;
       window.removeEventListener("popstate", onPopState);
-      if (scheduled) window.cancelAnimationFrame(scheduled);
     };
   }, []);
 
   return null;
 }
+
 
 function BackToTopButton() {
   const [visible, setVisible] = useState(false);
@@ -30665,6 +30779,7 @@ createRoot(document.getElementById("root")).render(
     <>
       <style>{unifiedCloseStyles}</style>
       <style>{mobileResponsiveFixStyles}</style>
+      <style>{mobileModalSafetyStyles}</style>
       <App />
       <MobilePopupBackGuard />
       <BackToTopButton />
