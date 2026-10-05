@@ -23808,6 +23808,7 @@ function AdminDashboard({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({});
+  const [visitorAnalytics, setVisitorAnalytics] = useState({});
   const [disputes, setDisputes] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [employers, setEmployers] = useState([]);
@@ -23932,6 +23933,7 @@ function AdminDashboard({
     try {
       const [
         statsResult,
+        visitorAnalyticsResult,
         disputesResult,
         workersResult,
         employersResult,
@@ -23945,6 +23947,7 @@ function AdminDashboard({
         monthlyAwardsResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
+        supabase.rpc("get_admin_visitor_analytics", { p_days: 14 }),
         supabase.rpc("get_attendance_disputes"),
         supabase.rpc("get_admin_workers"),
         supabase.rpc("get_admin_employers"),
@@ -23998,6 +24001,9 @@ function AdminDashboard({
       );
 
       setStats(statsResult.data || {});
+      if (!visitorAnalyticsResult.error) {
+        setVisitorAnalytics(visitorAnalyticsResult.data || {});
+      }
       setDisputes(disputeRows);
       setWorkers(workersResult.data || []);
       setEmployers(employersResult.data || []);
@@ -24781,6 +24787,30 @@ function AdminDashboard({
     );
   }).length;
 
+  const trafficToday = Number(visitorAnalytics?.today || 0);
+  const trafficYesterday = Number(visitorAnalytics?.yesterday || 0);
+  const trafficDevices = visitorAnalytics?.todayDevices || {};
+  const trafficCities = Array.isArray(visitorAnalytics?.todayCities)
+    ? visitorAnalytics.todayCities
+    : [];
+  const trafficDaily = Array.isArray(visitorAnalytics?.daily)
+    ? visitorAnalytics.daily
+    : [];
+  const trafficMaxDaily = Math.max(
+    1,
+    ...trafficDaily.map((item) => Number(item?.count || 0))
+  );
+
+  function adminTrafficDateLabel(value) {
+    if (!value) return "—";
+    const parsed = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString("lt-LT", {
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+
   if (loading) {
     return <SilentLoader fullscreen size={28} />;
   }
@@ -24808,6 +24838,7 @@ function AdminDashboard({
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
         .admin-kpi.attention{border-color:#f0c4b5;background:#fffaf8}.admin-kpi.attention b{color:#b64d2a}
+        .admin-traffic{margin-top:18px}.admin-traffic-top{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.admin-traffic-stat{border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb;padding:14px}.admin-traffic-stat span{display:block;color:#6c7a88;font-size:11px;line-height:1.35}.admin-traffic-stat b{display:block;margin-top:8px;font-family:Manrope,Inter,sans-serif;font-size:25px;line-height:1;color:#102438}.admin-traffic-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:16px;margin-top:16px}.admin-traffic-subtitle{font-size:12px;font-weight:800;color:#526374;margin-bottom:10px}.admin-traffic-chart{height:170px;display:flex;align-items:flex-end;gap:6px;padding:14px 8px 4px;border:1px solid #edf1f4;border-radius:12px;background:#fbfcfd}.admin-traffic-day{min-width:0;flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}.admin-traffic-value{font-size:9px;font-weight:800;color:#526374;line-height:1}.admin-traffic-bar-wrap{width:100%;height:118px;display:flex;align-items:flex-end;justify-content:center}.admin-traffic-bar{width:min(22px,72%);min-height:2px;border-radius:5px 5px 2px 2px;background:#1c9b67}.admin-traffic-day-label{font-size:9px;color:#7a8996;white-space:nowrap}.admin-traffic-cities{display:grid;gap:7px}.admin-traffic-city{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1f4;padding:7px 0;font-size:12px}.admin-traffic-city:last-child{border-bottom:0}.admin-traffic-city span{color:#526374}.admin-traffic-city b{color:#102438}.admin-traffic-note{margin-top:10px;color:#7a8996;font-size:11px;line-height:1.45}
         .admin-toast-stack{position:relative;z-index:1;display:grid;gap:8px;width:100%;margin:0 0 14px}
         .admin-toast{display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:13px;padding:12px 14px;box-shadow:0 4px 14px rgba(16,36,56,.035);font-size:13px;font-weight:750;line-height:1.45}
         .admin-toast.ok{background:#edf8f3;border:1px solid #bfe6d3;color:#146f4d}
@@ -24863,8 +24894,8 @@ function AdminDashboard({
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media(max-width:900px){.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-awards-grid{grid-template-columns:1fr}.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
-        @media(max-width:620px){.admin-modal-overlay{padding:10px}.admin-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-top-actions>*:last-child{grid-column:1/-1}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}}
+        @media(max-width:900px){.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-awards-grid{grid-template-columns:1fr}.admin-row{grid-template-columns:1fr 1fr}.admin-row>:last-child{grid-column:1/-1}.admin-bug-row{grid-template-columns:1fr 1fr}.admin-bug-actions{grid-column:1/-1;justify-content:flex-start}.admin-facts{grid-template-columns:1fr 1fr}.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-traffic-grid{grid-template-columns:1fr}.admin-traffic-top{grid-template-columns:repeat(2,minmax(0,1fr))} }
+        @media(max-width:620px){.admin-modal-overlay{padding:10px}.admin-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-top-actions>*:last-child{grid-column:1/-1}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row,.admin-traffic-top{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}.admin-traffic-chart{gap:3px;padding-left:3px;padding-right:3px}.admin-traffic-day-label{font-size:8px}.admin-traffic-value{font-size:8px}}
       `}</style>
 
       <header className="admin-topbar">
@@ -25018,6 +25049,96 @@ function AdminDashboard({
                           <b>{Number(stats.workersUsedThisMonth || 0)}</b>
                         </div>
                       </div>
+
+            <section className="admin-section admin-traffic">
+              <div className="admin-section-head">
+                <div>
+                  <div className="eyebrow">SVETAINĖS LANKOMUMAS</div>
+                  <h2>Unikalūs lankytojai</h2>
+                  <div className="admin-muted">
+                    Tas pats įrenginys tą pačią parą skaičiuojamas vieną kartą.
+                  </div>
+                </div>
+                <span className="admin-pill green">Pagal parą</span>
+              </div>
+
+              <div className="admin-traffic-top">
+                <div className="admin-traffic-stat">
+                  <span>Šiandien</span>
+                  <b>{trafficToday}</b>
+                </div>
+                <div className="admin-traffic-stat">
+                  <span>Vakar</span>
+                  <b>{trafficYesterday}</b>
+                </div>
+                <div className="admin-traffic-stat">
+                  <span>Telefonu šiandien</span>
+                  <b>{Number(trafficDevices.mobile || 0)}</b>
+                </div>
+                <div className="admin-traffic-stat">
+                  <span>Kompiuteriu šiandien</span>
+                  <b>{Number(trafficDevices.desktop || 0)}</b>
+                </div>
+              </div>
+
+              <div className="admin-traffic-grid">
+                <div>
+                  <div className="admin-traffic-subtitle">
+                    Paskutinės {trafficDaily.length || 14} dienų
+                  </div>
+                  <div className="admin-traffic-chart">
+                    {trafficDaily.map((item) => {
+                      const count = Number(item?.count || 0);
+                      const height = Math.max(
+                        count > 0 ? 5 : 2,
+                        Math.round((count / trafficMaxDaily) * 100)
+                      );
+
+                      return (
+                        <div className="admin-traffic-day" key={item.date}>
+                          <div className="admin-traffic-value">{count}</div>
+                          <div className="admin-traffic-bar-wrap">
+                            <div
+                              className="admin-traffic-bar"
+                              style={{ height: `${height}%` }}
+                              title={`${item.date}: ${count}`}
+                            />
+                          </div>
+                          <div className="admin-traffic-day-label">
+                            {adminTrafficDateLabel(item.date)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="admin-traffic-subtitle">Miestai šiandien</div>
+                  <div className="admin-traffic-cities">
+                    {trafficCities.length ? (
+                      trafficCities.map((item) => (
+                        <div
+                          className="admin-traffic-city"
+                          key={`${item.city}-${item.count}`}
+                        >
+                          <span>{item.city || "Nežinoma"}</span>
+                          <b>{Number(item.count || 0)}</b>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="admin-muted">
+                        Šiandien lankytojų dar neužfiksuota.
+                      </div>
+                    )}
+                  </div>
+                  <div className="admin-traffic-note">
+                    Miestas nustatomas apytiksliai pagal Cloudflare tinklo
+                    informaciją. IP adresai Supabase lentelėje nesaugomi.
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section className="admin-section" style={{ marginTop: 18, border: "1px solid #f0d2b5", background: "linear-gradient(135deg,#fff8f1,#fff)" }}>
               <div className="admin-section-head">
@@ -30432,6 +30553,83 @@ const mobileModalSafetyStyles = `
   }
 `;
 
+
+function SiteAnalyticsTracker() {
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const hostname = String(window.location.hostname || "").toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".local")
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function sendVisit() {
+      try {
+        const observerKey = "s24_analytics_observer_v1";
+        const visitorKey = "s24_visitor_id_v1";
+
+        if (window.localStorage.getItem(observerKey) === "1") {
+          return;
+        }
+
+        const sessionResult = await supabase.auth.getSession();
+        if (cancelled) return;
+
+        const sessionUser = sessionResult.data?.session?.user || null;
+        const email = String(sessionUser?.email || "").trim().toLowerCase();
+
+        if (
+          email === "4floss@gmail.com" ||
+          email === "tattoo.staponas@gmail.com"
+        ) {
+          window.localStorage.setItem(observerKey, "1");
+          return;
+        }
+
+        let visitorId = window.localStorage.getItem(visitorKey);
+        if (!visitorId) {
+          visitorId =
+            typeof crypto?.randomUUID === "function"
+              ? crypto.randomUUID()
+              : `s24-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .slice(2)}-${Math.random().toString(36).slice(2)}`;
+          window.localStorage.setItem(visitorKey, visitorId);
+        }
+
+        await fetch("/api/analytics/visit", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            visitorId,
+            userId: sessionUser?.id || null,
+          }),
+          keepalive: true,
+          credentials: "same-origin",
+        });
+      } catch {
+        // Lankomumo skaitiklis niekada neturi trukdyti naudotis svetaine.
+      }
+    }
+
+    sendVisit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return null;
+}
+
 function MobilePopupBackGuard() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
@@ -30781,6 +30979,7 @@ createRoot(document.getElementById("root")).render(
       <style>{mobileResponsiveFixStyles}</style>
       <style>{mobileModalSafetyStyles}</style>
       <App />
+      <SiteAnalyticsTracker />
       <MobilePopupBackGuard />
       <BackToTopButton />
     </>
