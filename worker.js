@@ -3,6 +3,10 @@ const JSON_HEADERS = {
   "cache-control": "no-store",
 };
 
+const FALLBACK_SUPABASE_URL = "https://vxbfihnhielqambosmkc.supabase.co";
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_fV4wji_VDNfHeBzmtvlwQw_D7jZjBiB";
+
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -84,13 +88,12 @@ async function recordVisit(request, env) {
       ? body.userId
       : null;
 
-  const now = new Date();
   const dateKey = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Vilnius",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
+  }).format(new Date());
 
   const visitorHash = await sha256Hex(`${dateKey}|${visitorId}`);
 
@@ -98,39 +101,48 @@ async function recordVisit(request, env) {
     typeof request.cf?.city === "string"
       ? request.cf.city.slice(0, 120)
       : null;
+
   const country =
     typeof request.cf?.country === "string"
       ? request.cf.country.slice(0, 80)
       : null;
 
-  const supabaseUrl = String(env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
-  const supabaseKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY || "");
+  const supabaseUrl = String(
+    env?.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL
+  ).replace(/\/+$/, "");
 
-  if (!supabaseUrl || !supabaseKey) {
-    return jsonResponse({ ok: false, error: "analytics_not_configured" }, 503);
-  }
-
-  const result = await fetch(
-    `${supabaseUrl}/rest/v1/rpc/record_site_visit`,
-    {
-      method: "POST",
-      headers: {
-        apikey: supabaseKey,
-        authorization: `Bearer ${supabaseKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        p_visitor_hash: visitorHash,
-        p_city: city,
-        p_country: country,
-        p_device_type: detectDevice(request),
-        p_user_id: userId,
-      }),
-    }
+  const supabaseKey = String(
+    env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      FALLBACK_SUPABASE_PUBLISHABLE_KEY
   );
 
+  const result = await fetch(`${supabaseUrl}/rest/v1/rpc/record_site_visit`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseKey,
+      authorization: `Bearer ${supabaseKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      p_visitor_hash: visitorHash,
+      p_city: city,
+      p_country: country,
+      p_device_type: detectDevice(request),
+      p_user_id: userId,
+    }),
+  });
+
   if (!result.ok) {
-    return jsonResponse({ ok: false }, 502);
+    const errorText = await result.text().catch(() => "");
+    return jsonResponse(
+      {
+        ok: false,
+        error: "supabase_record_failed",
+        status: result.status,
+        detail: errorText.slice(0, 300),
+      },
+      502
+    );
   }
 
   return jsonResponse({ ok: true });
