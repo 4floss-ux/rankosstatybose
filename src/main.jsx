@@ -60,7 +60,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-const TERMS_VERSION = "2026-10-04-v5";
+const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
 const PRIVACY_VERSION = "2026-10-04-v5";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
@@ -1517,7 +1517,7 @@ function PlatformTermsDialog({ open, onClose }) {
         <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
         <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
         <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
-        <p><b>Pakviestų įmonių Business išbandymas.</b> Atrinktoms ar tiesiogiai pakviestoms įmonėms administratorius gali suteikti 30 dienų Business planą nemokamai, be mokėjimo kortelės ir be automatinio apmokestinimo. Pasibaigus nurodytam bandomajam laikotarpiui planas automatiškai grįžta į Basic, nebent įmonė iki tol pati pasirenka mokamą Business ar Business Pro prenumeratą.</p>
+        <p><b>Įmonių Business išbandymas.</b> Naujas darbdavys, registracijos metu pasirinkęs tipą „Įmonė“, automatiškai gauna 30 dienų Business planą nemokamai, be mokėjimo kortelės ir be automatinio apmokestinimo. Privatiems darbdaviams automatinis Business išbandymas netaikomas. Pasibaigus 30 dienų laikotarpiui įmonės planas automatiškai tampa Basic, nebent iki tol pasirenkama mokama Business arba Business Pro prenumerata.</p>
         <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
       </section>
@@ -2409,7 +2409,7 @@ function AuthModal({
 
         {mode === "signup" && role === "employer" && !teamInvite && (
           <p style={{ color: "#607180", fontSize: 13, lineHeight: 1.5, margin: "0 0 18px" }}>
-            Registracija nemokama. Planą galėsite pakeisti savo paskyroje.
+            Registracija nemokama. Įmonėms Business planas pirmas 30 dienų suteikiamas automatiškai be kortelės; privatūs darbdaviai pradeda nuo Basic.
           </p>
         )}
 
@@ -2471,7 +2471,12 @@ function AuthModal({
                     {form.employerType === "individual" && (
                       <span style={{ color: "#607180", fontSize: 12, lineHeight: 1.45 }}>
                         Privatus asmuo taip pat gali kurti darbo pasiūlymus ir ieškoti darbuotojų.
-                        Darbdavio profilyje bus rodomas jūsų vardas ir pavardė.
+                        Darbdavio profilyje bus rodomas jūsų vardas ir pavardė. Automatinis 30 dienų Business išbandymas taikomas tik įmonėms.
+                      </span>
+                    )}
+                    {form.employerType === "company" && (
+                      <span style={{ color: "#16845b", fontSize: 12, lineHeight: 1.45, fontWeight: 750 }}>
+                        Užregistravus įmonę, Business planas bus aktyvuotas automatiškai 30 dienų nemokamai. Kortelės nereikia ir automatinio mokesčio nebus.
                       </span>
                     )}
                   </div>
@@ -21792,10 +21797,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             <div className="ed-plan-footnote">
-              Pakviestoms įmonėms Business gali būti aktyvuotas 30 dienų
-              nemokamai, be kortelės ir be įsipareigojimo; pasibaigus
-              išbandymui planas automatiškai grįžta į Basic, jei nepasirenkama
-              mokama prenumerata. Business ir Business Pro apmokami saugiai per
+              Naujoms įmonėms Business automatiškai aktyvuojamas 30 dienų
+              nemokamai, be kortelės ir be įsipareigojimo. Privatiems darbdaviams
+              automatinis išbandymas netaikomas. Pasibaigus išbandymui planas
+              automatiškai grįžta į Basic, jei nepasirenkama mokama prenumerata.
+              Business ir Business Pro apmokami saugiai per
               Stripe. Galite mokėti kas mėnesį arba iš karto už 12 mėnesių;
               metiniam atsiskaitymui taikoma 20% nuolaida. Kortelės duomenų
               statybos24.lt nesaugo.
@@ -27266,7 +27272,7 @@ function PublicLandingPage({
               <div className="home-kicker">Statybų darbo platforma</div>
               <h1>Darbuotojai ir statybų darbai – <em>vienoje vietoje.</em></h1>
               <p className="home-lead">
-                Padedame darbdaviams rasti žmones pagal realų prieinamumą,
+                Padedame įmonėms ir privatiems darbdaviams rasti žmones pagal realų prieinamumą,
                 o darbuotojams – gauti aiškius darbo pasiūlymus su vieta, laiku ir atlygiu.
               </p>
               <div className="home-hero-actions">
@@ -27277,6 +27283,7 @@ function PublicLandingPage({
                 <span>Paieška pagal prieinamumą</span>
                 <span>Aiškūs darbo kvietimai</span>
                 <span>Lengvai valdoma sistema</span>
+                <span>Įmonėms 30 d. Business nemokamai</span>
               </div>
             </div>
 
@@ -27332,17 +27339,18 @@ function PublicLandingPage({
                 <div className="home-kicker">Kam skirta</div>
                 <h2>Viena platforma abiem darbo pusėms.</h2>
               </div>
-              <p className="home-intro">Darbdavys greičiau randa tinkamus žmones, darbuotojas iš anksto mato, į kokį darbą yra kviečiamas.</p>
+              <p className="home-intro">Įmonė ar privatus darbdavys greičiau randa tinkamus žmones, o darbuotojas iš anksto mato, į kokį darbą yra kviečiamas.</p>
             </div>
             <div className="home-audiences">
               <article className="home-audience employer">
                 <span className="home-audience-tag">Darbdaviams</span>
-                <h3>Raskite žmones konkrečiam darbui.</h3>
-                <p>Sukurkite darbą, atrinkite tinkamus darbuotojus ir valdykite visą eigą vienoje sistemoje.</p>
+                <h3>Įmonėms ir privatiems darbdaviams.</h3>
+                <p>Registruokitės kaip įmonė arba privatus asmuo, sukurkite darbą, atrinkite tinkamus darbuotojus ir valdykite visą eigą vienoje sistemoje.</p>
                 <ul>
                   <li>Paieška pagal miestą, laiką ir prieinamumą</li>
                   <li>Kvietimai, pokalbiai ir darbo dienos valdymas</li>
                   <li>Favoritai, istorija, įvertinimai ir komandos funkcijos</li>
+                  <li>Naujoms įmonėms – 30 dienų Business nemokamai, be kortelės</li>
                 </ul>
                 <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Registruotis darbdaviui</button>
               </article>
@@ -27369,6 +27377,7 @@ function PublicLandingPage({
                 <div className="home-kicker">Darbdavių planai</div>
                 <h2>Pradėkite nemokamai. Augant poreikiui – rinkitės daugiau galimybių.</h2>
                 <span className="home-free-worker">Darbuotojams platforma nemokama</span>
+                <span className="home-free-worker">Naujoms įmonėms – 30 d. Business nemokamai</span>
               </div>
               <div className="home-toggle" aria-label="Mokėjimo laikotarpis">
                 <button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button>
@@ -27412,7 +27421,7 @@ function PublicLandingPage({
           <div className="home-wrap home-cta-inner">
             <div>
               <h2>Raskite žmogų darbui arba darbą sau.</h2>
-              <p>Registracija užtrunka kelias minutes. Pasirinkite savo pusę ir pradėkite naudotis platforma.</p>
+              <p>Registracija užtrunka kelias minutes. Galite registruotis kaip įmonė, privatus darbdavys arba darbuotojas.</p>
             </div>
             <div className="home-cta-buttons">
               <button className="home-btn" type="button" onClick={() => onEmployerSignup()}>Ieškau darbuotojų</button>
@@ -27509,7 +27518,7 @@ function BusinessPresentationPage({ onSignup }) {
   ];
 
   const faqs = [
-    ["Ar 30 dienų Business išbandymui reikia kortelės?", "Ne. Pakviestoms įmonėms bandomasis Business planas aktyvuojamas be kortelės ir be automatinio apmokestinimo."],
+    ["Ar 30 dienų Business išbandymui reikia kortelės?", "Ne. Naujai užsiregistravusiai įmonei Business planas 30 dienų aktyvuojamas automatiškai, be kortelės ir be automatinio apmokestinimo. Privatiems darbdaviams šis išbandymas netaikomas."],
     ["Kas nutinka pasibaigus 30 dienų?", "Jei nepasirenkate mokamos prenumeratos, planas automatiškai grįžta į nemokamą Basic."],
     ["Ar sistema skirta tik vienos dienos darbams?", "Ne. Platforma tinka trumpalaikiam poreikiui, pakartotiniams darbams ir kaip praktinis kelias į ilgalaikį bendradarbiavimą."],
     ["Ar darbuotojams platforma mokama?", "Ne. Darbuotojams Statybos24.lt naudojimas nemokamas."],
@@ -27575,7 +27584,7 @@ function BusinessPresentationPage({ onSignup }) {
 
           <div className="bp-actions">
             <button className="bp-primary" type="button" onClick={onSignup}>Registruotis darbdaviui</button>
-            <span className="bp-quiet">Pakviestoms įmonėms – 30 dienų Business nemokamai, be kortelės.</span>
+            <span className="bp-quiet">Naujoms įmonėms – 30 dienų Business automatiškai, nemokamai ir be kortelės.</span>
           </div>
         </div>
       </header>
@@ -27774,7 +27783,7 @@ function BusinessPresentationPage({ onSignup }) {
                 <span className="bp-plan-tag">Rekomenduojamas</span><h3>Business</h3><div className="bp-price">29 € <small>/ mėn.</small></div>
                 <div className="bp-desc">Reguliariai darbuotojų ieškančiai įmonei, kuri nori geriau atsirinkti ir kaupti patikrintų žmonių ratą.</div>
                 <ul><li>Viskas, kas yra Basic plane</li><li>Iki 25 darbo pasiūlymų per mėnesį</li><li>Patikimumas ir įvertinimai</li><li>Favoritai</li><li>Privatūs ir bendri darbo pokalbiai</li><li>Išplėstinė įmonės statistika</li><li>1 įmonės vartotojas</li></ul>
-                <div className="bp-why"><b>Pakviestoms įmonėms:</b> 30 dienų nemokamai, be kortelės ir be įsipareigojimo.</div>
+                <div className="bp-why"><b>Naujoms įmonėms:</b> 30 dienų Business automatiškai, nemokamai, be kortelės ir be įsipareigojimo.</div>
               </article>
 
               <article className="bp-plan pro">
@@ -27795,7 +27804,7 @@ function BusinessPresentationPage({ onSignup }) {
               <div>
                 <div className="bp-eyebrow">Išbandykite be rizikos</div>
                 <h2>30 dienų Business nemokamai.</h2>
-                <p>Pakviestoms įmonėms Business planą aktyvuojame 30 dienų be kortelės ir be automatinio mokesčio. Per tą laiką galioja Business funkcijos. Jei po išbandymo nepasirenkate mokamos prenumeratos, paskyra automatiškai grįžta į Basic.</p>
+                <p>Naujai užsiregistravusiai įmonei Business planas aktyvuojamas automatiškai 30 dienų be kortelės ir be automatinio mokesčio. Per tą laiką galioja Business funkcijos. Jei po išbandymo nepasirenkate mokamos prenumeratos, paskyra automatiškai grįžta į Basic. Privatiems darbdaviams šis automatinis išbandymas netaikomas.</p>
                 <button className="bp-primary" type="button" onClick={onSignup}>Registruotis darbdaviui</button>
               </div>
               <div className="bp-screen-wrap">
@@ -27821,7 +27830,7 @@ function BusinessPresentationPage({ onSignup }) {
             <div>
               <div className="bp-eyebrow">Pabandykite savo realiame poreikyje</div>
               <h2>Sukurkite pirmą darbą ir įvertinkite sistemą praktiškai.</h2>
-              <p>Registracija užtrunka kelias minutes. Jei gavote šią pristatymo nuorodą iš mūsų, po registracijos galime aktyvuoti 30 dienų Business išbandymą be kortelės ir įsipareigojimo.</p>
+              <p>Registracija užtrunka kelias minutes. Pasirinkus darbdavio tipą „Įmonė“, 30 dienų Business išbandymas aktyvuojamas automatiškai be kortelės ir įsipareigojimo.</p>
             </div>
             <button className="bp-primary" type="button" onClick={onSignup}>Registruotis darbdaviui</button>
           </section>
