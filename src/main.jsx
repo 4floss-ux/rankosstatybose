@@ -8623,6 +8623,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 {showProfileEditor ? "Uždaryti" : "Profilis"}
               </button>
             )}
+            {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -17805,6 +17806,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             )}
 
+            {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
+
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -22167,8 +22170,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;scrollbar-width:thin;scrollbar-color:#c7d0d7 transparent}.lt-employment-modal::-webkit-scrollbar{width:8px}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:#c7d0d7;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
-              @media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-offer{grid-template-columns:1fr}.lt-existing-status{justify-items:start;text-align:left;padding:6px 0}.lt-existing-actions{grid-template-columns:repeat(2,minmax(126px,1fr));justify-content:stretch;max-width:none;min-width:0}}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-width:1120px;min-width:0;max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;box-sizing:border-box;justify-self:center;align-self:center;scrollbar-width:none;-ms-overflow-style:none}.lt-employment-modal::-webkit-scrollbar{width:0;height:0;display:none}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
+              @media(min-width:901px){.lt-employed-table,.lt-existing-offers{width:100%;min-width:0}.lt-employed-row,.lt-existing-offer{width:100%;min-width:0;box-sizing:border-box}.lt-employed-row>*,.lt-existing-offer>*{min-width:0}}@media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-offer{grid-template-columns:1fr}.lt-existing-status{justify-items:start;text-align:left;padding:6px 0}.lt-existing-actions{grid-template-columns:repeat(2,minmax(126px,1fr));justify-content:stretch;max-width:none;min-width:0}}
               @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{grid-template-columns:1fr}.lt-employment-worker .ed-primary{width:100%}.wd-long-term-offer-actions{width:100%;justify-content:flex-start}.wd-long-term-offer-actions>button{flex:1 1 140px}}
             `}</style>
 
@@ -23865,6 +23868,375 @@ function AdminCompanyTeamChatModal({ chat, user, onClose }) {
   );
 }
 
+
+function adminPrivateMessageDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("lt-LT", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function AdminPrivateInboxButton({ user }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function refreshUnread() {
+    if (!user?.id) return;
+
+    try {
+      const result = await supabase.rpc(
+        "get_my_admin_private_message_unread_count"
+      );
+      if (result.error) throw result.error;
+      setUnread(Number(result.data || 0));
+    } catch {
+      // Žinučių indikatorius neturi trukdyti naudotis paskyra.
+    }
+  }
+
+  async function openInbox() {
+    setOpen(true);
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("get_my_admin_private_messages", {
+        p_limit: 50,
+      });
+      if (result.error) throw result.error;
+      setMessages(result.data || []);
+
+      const readResult = await supabase.rpc(
+        "mark_my_admin_private_messages_read"
+      );
+      if (readResult.error) throw readResult.error;
+      setUnread(0);
+    } catch (err) {
+      setError(err?.message || "Nepavyko įkelti administratoriaus žinučių.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    refreshUnread();
+    const timer = window.setInterval(refreshUnread, 60000);
+
+    return () => window.clearInterval(timer);
+  }, [user?.id]);
+
+  return (
+    <>
+      <style>{`
+        .apm-inbox-btn{position:relative}
+        .apm-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:999px;background:#f08a28;color:#fff;font-size:9px;font-weight:900;line-height:1}
+        .apm-overlay{position:fixed;inset:0;z-index:14500;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.6);backdrop-filter:blur(2px)}
+        .apm-card{width:min(620px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);color:#102438;scrollbar-width:none}
+        .apm-card::-webkit-scrollbar{width:0;height:0}
+        .apm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:15px;border-bottom:1px solid #edf1f4}
+        .apm-head h2{margin:4px 0 0;font-size:22px}
+        .apm-close{width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:11px;background:#f2f5f7;color:#102438;cursor:pointer;flex:0 0 40px}
+        .apm-list{display:grid;gap:10px;margin-top:16px}
+        .apm-message{padding:14px 15px;border:1px solid #dfe7ed;border-radius:14px;background:#f8fafb}
+        .apm-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#263b4d}
+        .apm-message time{display:block;margin-top:8px;color:#81909c;font-size:10.5px}
+        .apm-empty{padding:24px 10px;text-align:center;color:#71808d}
+        @media(max-width:620px){
+          .apm-overlay{padding:10px}
+          .apm-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}
+          .apm-inbox-btn .apm-full{display:none}
+        }
+      `}</style>
+
+      <button
+        className="btn ghost apm-inbox-btn"
+        type="button"
+        onClick={openInbox}
+        title="Administratoriaus žinutės"
+      >
+        <span className="apm-full">Administratoriaus </span>žinutės
+        {unread > 0 && (
+          <span className="apm-count">{Math.min(99, unread)}</span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="apm-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div className="apm-card">
+            <div className="apm-head">
+              <div>
+                <div className="eyebrow">PRIVATU</div>
+                <h2>Administratoriaus žinutės</h2>
+              </div>
+              <button
+                type="button"
+                className="apm-close"
+                onClick={() => setOpen(false)}
+                aria-label="Uždaryti"
+              >
+                <CloseMark />
+              </button>
+            </div>
+
+            {loading ? (
+              <SilentLoader size={22} minHeight={120} />
+            ) : error ? (
+              <div className="apm-empty" style={{ color: "#b64d2a" }}>
+                {error}
+              </div>
+            ) : messages.length ? (
+              <div className="apm-list">
+                {messages.map((message) => (
+                  <article className="apm-message" key={message.message_id}>
+                    <p>{message.body}</p>
+                    <time>{adminPrivateMessageDate(message.created_at)}</time>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="apm-empty">
+                Administratoriaus žinučių dar nėra.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function AdminPrivateMessageComposer({ target, onClose, onSent }) {
+  const [body, setBody] = useState("");
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!target?.userId) {
+      setBody("");
+      setHistory([]);
+      setError("");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function loadHistory() {
+      setLoadingHistory(true);
+      setError("");
+
+      try {
+        const result = await supabase.rpc("get_admin_private_message_thread", {
+          p_recipient_id: target.userId,
+          p_limit: 30,
+        });
+        if (result.error) throw result.error;
+        if (!cancelled) setHistory(result.data || []);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Nepavyko įkelti ankstesnių žinučių.");
+        }
+      } finally {
+        if (!cancelled) setLoadingHistory(false);
+      }
+    }
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [target?.userId]);
+
+  if (!target) return null;
+
+  async function sendMessage() {
+    const clean = body.trim();
+    if (!clean) {
+      setError("Parašykite žinutę.");
+      return;
+    }
+
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await supabase.rpc("send_admin_private_message", {
+        p_recipient_id: target.userId,
+        p_body: clean,
+      });
+      if (result.error) throw result.error;
+
+      setBody("");
+
+      const historyResult = await supabase.rpc(
+        "get_admin_private_message_thread",
+        {
+          p_recipient_id: target.userId,
+          p_limit: 30,
+        }
+      );
+      if (!historyResult.error) setHistory(historyResult.data || []);
+
+      onSent?.();
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsiųsti žinutės.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div
+      className="admin-modal-overlay"
+      style={{ zIndex: 15000 }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !sending) onClose?.();
+      }}
+    >
+      <div className="admin-modal" style={{ width: "min(660px,100%)" }}>
+        <div className="admin-modal-head">
+          <div>
+            <div className="eyebrow">PRIVATI ADMINISTRATORIAUS ŽINUTĖ</div>
+            <h2>{target.name || "Vartotojas"}</h2>
+            <div className="admin-muted">
+              Gavėjas žinutę matys savo paskyroje.
+            </div>
+          </div>
+          <button
+            className="rs-close"
+            type="button"
+            disabled={sending}
+            onClick={onClose}
+            aria-label="Uždaryti"
+          >
+            <CloseMark />
+          </button>
+        </div>
+
+        <label className="admin-label" style={{ marginTop: 16 }}>
+          Žinutė
+          <textarea
+            className="admin-input admin-textarea"
+            value={body}
+            maxLength={2000}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Parašykite privačią žinutę..."
+            style={{ minHeight: 120 }}
+          />
+        </label>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            alignItems: "center",
+            marginTop: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <span className="admin-muted">{body.length}/2000</span>
+          <button
+            className="admin-small-btn"
+            type="button"
+            disabled={sending || !body.trim()}
+            onClick={sendMessage}
+            style={{
+              background: "#102438",
+              color: "#fff",
+              borderColor: "#102438",
+              minWidth: 120,
+            }}
+          >
+            {sending ? "Siunčiama..." : "Siųsti"}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "#fff3ef",
+              color: "#a84b2a",
+              fontSize: 12,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginTop: 20 }}>
+          <div className="eyebrow">ANKSTESNĖS ŽINUTĖS</div>
+          {loadingHistory ? (
+            <SilentLoader size={18} minHeight={80} />
+          ) : history.length ? (
+            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+              {history.map((message) => (
+                <div
+                  key={message.message_id}
+                  style={{
+                    padding: "11px 12px",
+                    border: "1px solid #e3e9ee",
+                    borderRadius: 11,
+                    background: "#f8fafb",
+                  }}
+                >
+                  <div
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                      lineHeight: 1.5,
+                      fontSize: 12.5,
+                    }}
+                  >
+                    {message.body}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      color: "#81909c",
+                      fontSize: 10.5,
+                    }}
+                  >
+                    {adminPrivateMessageDate(message.created_at)}
+                    {" · "}
+                    {message.read_at ? "Perskaityta" : "Dar neperskaityta"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty" style={{ marginTop: 10 }}>
+              Šiam vartotojui žinučių dar nesiųsta.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard({
   user,
   onLogout,
@@ -23906,6 +24278,7 @@ function AdminDashboard({
   const [adminConversation, setAdminConversation] = useState(null);
   const [adminTeamConversation, setAdminTeamConversation] = useState(null);
   const [adminDisputeConversation, setAdminDisputeConversation] = useState(null);
+  const [adminMessageTarget, setAdminMessageTarget] = useState(null);
   const [editorForm, setEditorForm] = useState({});
   const [editorSaving, setEditorSaving] = useState(false);
   const [adminPage, setAdminPage] = useState(1);
@@ -25506,6 +25879,25 @@ function AdminDashboard({
                             : "Išjungtas"}
                         </span>
 
+                        {!isSelf && (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            onClick={() =>
+                              setAdminMessageTarget({
+                                userId: worker.user_id,
+                                name:
+                                  worker.display_name ||
+                                  worker.email ||
+                                  "Darbuotojas",
+                                role: "worker",
+                              })
+                            }
+                          >
+                            Žinutė
+                          </button>
+                        )}
+
                         <button
                           className="admin-small-btn"
                           onClick={() => openWorkerEditor(worker)}
@@ -25649,6 +26041,25 @@ function AdminDashboard({
                             ? "Patvirtinta"
                             : "Nepatvirtinta"}
                         </span>
+
+                        {!isSelf && (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            onClick={() =>
+                              setAdminMessageTarget({
+                                userId: employer.owner_id,
+                                name:
+                                  employer.company_name ||
+                                  employer.email ||
+                                  "Darbdavys",
+                                role: "employer",
+                              })
+                            }
+                          >
+                            Žinutė
+                          </button>
+                        )}
 
                         <button
                           className="admin-small-btn"
@@ -26298,6 +26709,12 @@ function AdminDashboard({
         workerName={adminDisputeConversation?.workerName}
         companyName={adminDisputeConversation?.companyName}
         user={user}
+      />
+
+      <AdminPrivateMessageComposer
+        target={adminMessageTarget}
+        onClose={() => setAdminMessageTarget(null)}
+        onSent={() => setNotice("Privati žinutė išsiųsta.")}
       />
 
       {editor && (
