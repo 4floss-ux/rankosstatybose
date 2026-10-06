@@ -23884,12 +23884,10 @@ function adminPrivateMessageDate(value) {
 }
 
 function AdminPrivateInboxButton({ user }) {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [activeMessage, setActiveMessage] = useState(null);
   const [unread, setUnread] = useState(0);
-  const [dismissedUnread, setDismissedUnread] = useState(0);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   async function refreshUnread() {
     if (!user?.id) return;
@@ -23899,33 +23897,47 @@ function AdminPrivateInboxButton({ user }) {
         "get_my_admin_private_message_unread_count"
       );
       if (result.error) throw result.error;
-      setUnread(Number(result.data || 0));
+
+      const nextUnread = Number(result.data || 0);
+      setUnread((previous) => {
+        if (nextUnread > previous) setNoticeDismissed(false);
+        return nextUnread;
+      });
     } catch {
-      // Žinučių indikatorius neturi trukdyti naudotis paskyra.
+      // Pranešimas neturi trukdyti naudotis paskyra.
     }
   }
 
-  async function openInbox() {
-    setOpen(true);
+  async function openNewestUnreadMessage() {
+    if (!user?.id || loading) return;
+
     setLoading(true);
-    setError("");
 
     try {
       const result = await supabase.rpc("get_my_admin_private_messages", {
         p_limit: 50,
       });
       if (result.error) throw result.error;
-      setMessages(result.data || []);
+
+      const rows = result.data || [];
+      const message = rows.find((item) => !item.read_at) || rows[0] || null;
+
+      if (!message) {
+        setUnread(0);
+        return;
+      }
+
+      setActiveMessage(message);
 
       const readResult = await supabase.rpc(
-        "mark_my_admin_private_messages_read"
+        "mark_my_admin_private_message_read",
+        { p_message_id: message.message_id }
       );
       if (readResult.error) throw readResult.error;
 
-      setUnread(0);
-      setDismissedUnread(0);
-    } catch (err) {
-      setError(err?.message || "Nepavyko įkelti administratoriaus žinučių.");
+      await refreshUnread();
+    } catch {
+      // Jei žinutės atidaryti nepavyko, paliekame pranešimą matomą.
     } finally {
       setLoading(false);
     }
@@ -23935,67 +23947,60 @@ function AdminPrivateInboxButton({ user }) {
     if (!user?.id) return undefined;
 
     refreshUnread();
-    const timer = window.setInterval(refreshUnread, 60000);
+    const timer = window.setInterval(refreshUnread, 30000);
 
     return () => window.clearInterval(timer);
   }, [user?.id]);
 
-  const showNotice = unread > 0 && unread > dismissedUnread && !open;
+  const showNotice = unread > 0 && !noticeDismissed && !activeMessage;
 
   return (
     <>
       <style>{`
-        .apm-notice{position:fixed;right:18px;top:18px;z-index:14450;width:min(380px,calc(100vw - 36px));box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:13px 14px;border:1px solid #f0c89f;border-radius:14px;background:#fffaf5;box-shadow:0 16px 44px rgba(16,36,56,.18);color:#102438}
-        .apm-notice-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#f08a28;color:#fff;font-size:16px;font-weight:900}
-        .apm-notice-copy{min-width:0}
-        .apm-notice-copy b{display:block;font-size:13px;line-height:1.3}
-        .apm-notice-copy span{display:block;margin-top:2px;color:#6b7a87;font-size:10.5px;line-height:1.35}
-        .apm-notice-actions{display:flex;align-items:center;gap:5px}
+        .apm-notice{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:14450;width:min(430px,calc(100vw - 24px));box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #efd3b7;border-radius:13px;background:#fff;box-shadow:0 14px 40px rgba(16,36,56,.16);color:#102438}
+        .apm-notice-icon{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:9px;background:#f08a28;color:#fff;font-size:14px;font-weight:900}
+        .apm-notice-title{min-width:0;flex:1;font-size:12.5px;font-weight:850;line-height:1.25}
+        .apm-notice-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}
         .apm-notice-open,.apm-notice-dismiss{border:0;cursor:pointer}
-        .apm-notice-open{padding:8px 10px;border-radius:9px;background:#102438;color:#fff;font-size:10.5px;font-weight:800}
-        .apm-notice-dismiss{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:transparent;color:#607180;font-size:18px;line-height:1}
-        .apm-overlay{position:fixed;inset:0;z-index:14500;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.6);backdrop-filter:blur(2px)}
-        .apm-card{width:min(620px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);color:#102438;scrollbar-width:none}
-        .apm-card::-webkit-scrollbar{width:0;height:0}
-        .apm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:15px;border-bottom:1px solid #edf1f4}
-        .apm-head h2{margin:4px 0 0;font-size:22px}
-        .apm-close{width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:11px;background:#f2f5f7;color:#102438;cursor:pointer;flex:0 0 40px}
-        .apm-list{display:grid;gap:10px;margin-top:16px}
-        .apm-message{padding:14px 15px;border:1px solid #dfe7ed;border-radius:14px;background:#f8fafb}
-        .apm-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#263b4d}
-        .apm-message time{display:block;margin-top:8px;color:#81909c;font-size:10.5px}
-        .apm-empty{padding:24px 10px;text-align:center;color:#71808d}
+        .apm-notice-open{padding:7px 9px;border-radius:8px;background:#102438;color:#fff;font-size:10.5px;font-weight:850;white-space:nowrap}
+        .apm-notice-open:disabled{opacity:.6;cursor:default}
+        .apm-notice-dismiss{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#f2f5f7;color:#536574;font-size:17px;line-height:1}
+        .apm-overlay{position:fixed;inset:0;z-index:14500;display:grid;place-items:center;padding:18px;background:rgba(16,36,56,.52);backdrop-filter:blur(2px)}
+        .apm-message-card{position:relative;width:min(520px,calc(100vw - 36px));max-height:calc(100dvh - 36px);overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #e2e9ee;border-radius:18px;padding:22px 58px 22px 22px;box-shadow:0 28px 90px rgba(16,36,56,.28);scrollbar-width:none}
+        .apm-message-card::-webkit-scrollbar{width:0;height:0}
+        .apm-message-card p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#1f3447;font-size:15px;line-height:1.65}
+        .apm-message-close{position:absolute;top:12px;right:12px;width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;background:#f2f5f7;color:#102438;cursor:pointer}
         @media(max-width:620px){
-          .apm-notice{left:10px;right:10px;top:10px;width:auto;grid-template-columns:auto minmax(0,1fr);padding:12px}
-          .apm-notice-actions{grid-column:2;justify-content:flex-start}
+          .apm-notice{top:10px;width:calc(100vw - 20px);padding:9px 10px;gap:8px}
+          .apm-notice-icon{width:28px;height:28px;flex-basis:28px}
+          .apm-notice-title{font-size:11.5px}
+          .apm-notice-open{padding:7px 8px;font-size:10px}
           .apm-overlay{padding:10px}
-          .apm-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}
+          .apm-message-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:20px 54px 20px 18px;border-radius:15px}
+          .apm-message-card p{font-size:14px;line-height:1.6}
+          .apm-message-close{top:10px;right:10px;width:34px;height:34px}
         }
       `}</style>
 
       {showNotice && (
         <div className="apm-notice" role="status" aria-live="polite">
           <div className="apm-notice-icon" aria-hidden="true">!</div>
-          <div className="apm-notice-copy">
-            <b>
-              {unread === 1
-                ? "Administratorius atsiuntė jums žinutę."
-                : `Administratorius atsiuntė jums ${unread} žinutes.`}
-            </b>
-            <span>Žinutė yra privati ir matoma tik jums.</span>
+          <div className="apm-notice-title">
+            Administratoriaus žinutė
           </div>
           <div className="apm-notice-actions">
             <button
               className="apm-notice-open"
               type="button"
-              onClick={openInbox}
+              disabled={loading}
+              onClick={openNewestUnreadMessage}
             >
-              Peržiūrėti
+              {loading ? "..." : "Peržiūrėti"}
             </button>
             <button
               className="apm-notice-dismiss"
               type="button"
-              onClick={() => setDismissedUnread(unread)}
+              onClick={() => setNoticeDismissed(true)}
               aria-label="Uždaryti pranešimą"
               title="Uždaryti"
             >
@@ -24005,49 +24010,33 @@ function AdminPrivateInboxButton({ user }) {
         </div>
       )}
 
-      {open && (
+      {activeMessage && (
         <div
           className="apm-overlay"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
+            if (e.target === e.currentTarget) {
+              setActiveMessage(null);
+              setNoticeDismissed(false);
+              refreshUnread();
+            }
           }}
         >
-          <div className="apm-card">
-            <div className="apm-head">
-              <div>
-                <div className="eyebrow">PRIVATU</div>
-                <h2>Administratoriaus žinutė</h2>
-              </div>
-              <button
-                type="button"
-                className="apm-close"
-                onClick={() => setOpen(false)}
-                aria-label="Uždaryti"
-              >
-                <CloseMark />
-              </button>
-            </div>
+          <div className="apm-message-card">
+            <button
+              type="button"
+              className="apm-message-close"
+              onClick={() => {
+                setActiveMessage(null);
+                setNoticeDismissed(false);
+                refreshUnread();
+              }}
+              aria-label="Uždaryti žinutę"
+              title="Uždaryti"
+            >
+              <CloseMark />
+            </button>
 
-            {loading ? (
-              <SilentLoader size={22} minHeight={120} />
-            ) : error ? (
-              <div className="apm-empty" style={{ color: "#b64d2a" }}>
-                {error}
-              </div>
-            ) : messages.length ? (
-              <div className="apm-list">
-                {messages.map((message) => (
-                  <article className="apm-message" key={message.message_id}>
-                    <p>{message.body}</p>
-                    <time>{adminPrivateMessageDate(message.created_at)}</time>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="apm-empty">
-                Administratoriaus žinučių dar nėra.
-              </div>
-            )}
+            <p>{activeMessage.body}</p>
           </div>
         </div>
       )}
@@ -24254,7 +24243,13 @@ function AdminPrivateMessageComposer({ target, onClose, onSent }) {
                   >
                     {adminPrivateMessageDate(message.created_at)}
                     {" · "}
-                    {message.read_at ? "Perskaityta" : "Dar neperskaityta"}
+                    {message.read_at ? (
+                      <span style={{ color: "#16845b", fontWeight: 850 }}>
+                        ✓ Peržiūrėjo
+                      </span>
+                    ) : (
+                      <span>Neperskaityta</span>
+                    )}
                   </div>
                 </div>
               ))}
