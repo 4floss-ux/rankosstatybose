@@ -24047,7 +24047,8 @@ function AdminPrivateInboxButton({ user }) {
         }
         @media(max-width:620px){
           .apm-notice{
-            width:min(286px,calc(100vw - 52px));
+            width:calc(100vw - 28px);
+            max-width:520px;
             padding:18px 16px;
             border-radius:15px
           }
@@ -24056,6 +24057,7 @@ function AdminPrivateInboxButton({ user }) {
           .apm-overlay{padding:10px}
           .apm-message-card{
             width:calc(100vw - 28px);
+            max-width:520px;
             max-height:calc(100dvh - 28px);
             padding:20px 54px 20px 18px;
             border-radius:15px
