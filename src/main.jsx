@@ -24363,17 +24363,17 @@ function AdminDashboard({
 
   const tabs = [
     ["overview", "Suvestinė"],
-    ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
-    ["monthlyAwards", "Mėnesio geriausi"],
     ["jobs", "Darbai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Vadovų pokalbiai"],
+    ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
     ["ratings", "Atsiliepimai"],
+    ["monthlyAwards", "Mėnesio geriausi"],
+    ["audit", "Veiksmų istorija"],
     ["files", "Failai"],
     ["bugs", `Svetainės klaidos${activeSiteBugCount ? ` (${activeSiteBugCount})` : ""}`],
-    ["audit", "Veiksmų istorija"],
   ];
 
   useEffect(() => {
@@ -25404,14 +25404,6 @@ function AdminDashboard({
               Darbdavio režimas
             </button>
             <button
-              className="admin-mode primary"
-              type="button"
-              disabled={refreshing}
-              onClick={() => loadAdminData(true)}
-            >
-              {refreshing ? "Atnaujinama..." : "Atnaujinti"}
-            </button>
-            <button
               className="btn ghost"
               type="button"
               style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
@@ -25486,61 +25478,56 @@ function AdminDashboard({
         {activeTab === "overview" && (
           <>
             <div className="admin-kpis">
-                        <div className="admin-kpi">
-                          <span>Darbuotojai</span>
-                          <b>{Number(stats.totalWorkers || 0)}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Įdarbinti darbuotojai</span>
-                          <b>{activeLongTermPlacements.length}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Darbdaviai</span>
-                          <b>{Number(stats.totalEmployers || 0)}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Aktyvūs darbai</span>
-                          <b>{Number(stats.openJobs || 0)}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Įvykdyti darbai</span>
-                          <b>{Number(stats.completedJobs || 0)}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Atšaukti darbai</span>
-                          <b>{Number(stats.cancelledJobs || 0)}</b>
-                        </div>
-            
-                        <div
-                          className={`admin-kpi ${
-                            Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
-                          }`}
-                        >
-                          <span>Neišspręsti ginčai</span>
-                          <b>{Number(stats.unresolvedDisputes || 0)}</b>
-                        </div>
-            
-                        <div className="admin-kpi">
-                          <span>Panaudoti darbuotojai / mėn.</span>
-                          <b>{Number(stats.workersUsedThisMonth || 0)}</b>
-                        </div>
-                      </div>
+              <div className="admin-kpi">
+                <span>Darbuotojai</span>
+                <b>{Number(stats.totalWorkers || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Darbdaviai</span>
+                <b>{Number(stats.totalEmployers || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Panaudoti darbuotojai</span>
+                <b>{Number(stats.workersUsedThisMonth || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Aktyvūs darbai</span>
+                <b>{Number(stats.openJobs || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Įvykdyti darbai</span>
+                <b>{Number(stats.completedJobs || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Atšaukti darbai</span>
+                <b>{Number(stats.cancelledJobs || 0)}</b>
+              </div>
+
+              <div className="admin-kpi">
+                <span>Įdarbinti darbuotojai</span>
+                <b>{activeLongTermPlacements.length}</b>
+              </div>
+
+              <div
+                className={`admin-kpi ${
+                  Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
+                }`}
+              >
+                <span>Neišspręsti ginčai</span>
+                <b>{Number(stats.unresolvedDisputes || 0)}</b>
+              </div>
+            </div>
 
             <section className="admin-section admin-traffic">
               <div className="admin-section-head">
                 <div>
                   <div className="eyebrow">SVETAINĖS LANKOMUMAS</div>
-                  <h2>Unikalūs lankytojai</h2>
-                  <div className="admin-muted">
-                    Tas pats įrenginys tą pačią parą skaičiuojamas vieną kartą.
-                  </div>
                 </div>
-                <span className="admin-pill green">Pagal parą</span>
               </div>
 
               <div className="admin-traffic-top">
@@ -25613,10 +25600,6 @@ function AdminDashboard({
                       </div>
                     )}
                   </div>
-                  <div className="admin-traffic-note">
-                    Miestas nustatomas apytiksliai pagal Cloudflare tinklo
-                    informaciją. IP adresai Supabase lentelėje nesaugomi.
-                  </div>
                 </div>
               </div>
             </section>
@@ -25626,11 +25609,6 @@ function AdminDashboard({
                 <div>
                   <div className="eyebrow">PRISTATYMAS ĮMONĖMS</div>
                   <h2>Privati dalinimosi nuoroda</h2>
-                  <div className="admin-muted" style={{ maxWidth: 760 }}>
-                    Puslapis nerodomas viešame meniu ir pažymėtas „noindex“.
-                    Nuorodą matote tik administratoriaus valdymo centre, tačiau ją
-                    gavęs žmogus gali atidaryti pristatymą be prisijungimo.
-                  </div>
                 </div>
                 <span className="admin-pill green">Paruošta dalintis</span>
               </div>
