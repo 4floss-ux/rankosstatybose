@@ -25420,15 +25420,6 @@ function AdminDashboard({
       </header>
 
       <main className="admin-shell">
-        <div className="admin-head">
-          <div>
-            <div className="eyebrow">ADMINISTRATORIAUS VALDYMO CENTRAS</div>
-          </div>
-
-          <span className="admin-pill green">Administratorius</span>
-        </div>
-
-
         {(notice || error) && (
           <div className="admin-toast-stack">
             {notice && (
