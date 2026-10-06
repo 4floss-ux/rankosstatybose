@@ -23887,6 +23887,7 @@ function AdminPrivateInboxButton({ user }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [dismissedUnread, setDismissedUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23920,7 +23921,9 @@ function AdminPrivateInboxButton({ user }) {
         "mark_my_admin_private_messages_read"
       );
       if (readResult.error) throw readResult.error;
+
       setUnread(0);
+      setDismissedUnread(0);
     } catch (err) {
       setError(err?.message || "Nepavyko įkelti administratoriaus žinučių.");
     } finally {
@@ -23937,11 +23940,20 @@ function AdminPrivateInboxButton({ user }) {
     return () => window.clearInterval(timer);
   }, [user?.id]);
 
+  const showNotice = unread > 0 && unread > dismissedUnread && !open;
+
   return (
     <>
       <style>{`
-        .apm-inbox-btn{position:relative}
-        .apm-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:999px;background:#f08a28;color:#fff;font-size:9px;font-weight:900;line-height:1}
+        .apm-notice{position:fixed;right:18px;top:18px;z-index:14450;width:min(380px,calc(100vw - 36px));box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:13px 14px;border:1px solid #f0c89f;border-radius:14px;background:#fffaf5;box-shadow:0 16px 44px rgba(16,36,56,.18);color:#102438}
+        .apm-notice-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#f08a28;color:#fff;font-size:16px;font-weight:900}
+        .apm-notice-copy{min-width:0}
+        .apm-notice-copy b{display:block;font-size:13px;line-height:1.3}
+        .apm-notice-copy span{display:block;margin-top:2px;color:#6b7a87;font-size:10.5px;line-height:1.35}
+        .apm-notice-actions{display:flex;align-items:center;gap:5px}
+        .apm-notice-open,.apm-notice-dismiss{border:0;cursor:pointer}
+        .apm-notice-open{padding:8px 10px;border-radius:9px;background:#102438;color:#fff;font-size:10.5px;font-weight:800}
+        .apm-notice-dismiss{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:transparent;color:#607180;font-size:18px;line-height:1}
         .apm-overlay{position:fixed;inset:0;z-index:14500;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.6);backdrop-filter:blur(2px)}
         .apm-card{width:min(620px,calc(100vw - 40px));max-height:calc(100dvh - 40px);overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);color:#102438;scrollbar-width:none}
         .apm-card::-webkit-scrollbar{width:0;height:0}
@@ -23954,23 +23966,44 @@ function AdminPrivateInboxButton({ user }) {
         .apm-message time{display:block;margin-top:8px;color:#81909c;font-size:10.5px}
         .apm-empty{padding:24px 10px;text-align:center;color:#71808d}
         @media(max-width:620px){
+          .apm-notice{left:10px;right:10px;top:10px;width:auto;grid-template-columns:auto minmax(0,1fr);padding:12px}
+          .apm-notice-actions{grid-column:2;justify-content:flex-start}
           .apm-overlay{padding:10px}
           .apm-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}
-          .apm-inbox-btn .apm-full{display:none}
         }
       `}</style>
 
-      <button
-        className="btn ghost apm-inbox-btn"
-        type="button"
-        onClick={openInbox}
-        title="Administratoriaus žinutės"
-      >
-        <span className="apm-full">Administratoriaus </span>žinutės
-        {unread > 0 && (
-          <span className="apm-count">{Math.min(99, unread)}</span>
-        )}
-      </button>
+      {showNotice && (
+        <div className="apm-notice" role="status" aria-live="polite">
+          <div className="apm-notice-icon" aria-hidden="true">!</div>
+          <div className="apm-notice-copy">
+            <b>
+              {unread === 1
+                ? "Administratorius atsiuntė jums žinutę."
+                : `Administratorius atsiuntė jums ${unread} žinutes.`}
+            </b>
+            <span>Žinutė yra privati ir matoma tik jums.</span>
+          </div>
+          <div className="apm-notice-actions">
+            <button
+              className="apm-notice-open"
+              type="button"
+              onClick={openInbox}
+            >
+              Peržiūrėti
+            </button>
+            <button
+              className="apm-notice-dismiss"
+              type="button"
+              onClick={() => setDismissedUnread(unread)}
+              aria-label="Uždaryti pranešimą"
+              title="Uždaryti"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div
@@ -23983,7 +24016,7 @@ function AdminPrivateInboxButton({ user }) {
             <div className="apm-head">
               <div>
                 <div className="eyebrow">PRIVATU</div>
-                <h2>Administratoriaus žinutės</h2>
+                <h2>Administratoriaus žinutė</h2>
               </div>
               <button
                 type="button"
