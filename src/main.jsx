@@ -62,11 +62,36 @@ const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-04-v5";
+const PRIVACY_VERSION = "2026-10-06-v6";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
 const PUBLIC_BUSINESS_NUMBER = "1521110";
+
+function getVilniusTodayISO() {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Vilnius",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function workerBirthDateError(value, required = false) {
+  const date = String(value || "").trim();
+  if (!date) return required ? "Nurodykite gimimo datą." : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return "Įveskite teisingą gimimo datą.";
+  }
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    return "Įveskite teisingą gimimo datą.";
+  }
+  if (date < "1900-01-01" || date > getVilniusTodayISO()) {
+    return "Gimimo data negali būti ateityje arba ankstesnė nei 1900 m.";
+  }
+  return "";
+}
 
 const BRAND_NAME = "statybos24";
 const BRAND_DOMAIN = "statybos24.lt";
@@ -1573,7 +1598,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Duomenų valdytojas.</b> statybos24.lt platformos duomenų valdytojo veiklos rekvizitas: {PUBLIC_BUSINESS_ACTIVITY}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>. Dėl privatumo ir duomenų subjektų teisių galima kreiptis el. paštu <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
 
-        <p><b>Kokius duomenis tvarkome.</b> Priklausomai nuo naudojimosi platforma, tvarkome paskyros ir kontaktinius duomenis (pvz., vardą, el. paštą, telefono numerį, miestą), darbuotojo profesinę informaciją ir įgūdžius, prieinamumo grafiką bei aktyvumo būseną, darbdavio ir įmonės duomenis, darbų skelbimų informaciją, kvietimus, rezervacijas, atvykimo ir darbo dienos užbaigimo įrašus, reitingus, patikimumo rodiklius, favoritus, ginčų informaciją, darbo ir komandos pokalbių turinį bei techninius ir saugumo įrašus.</p>
+        <p><b>Kokius duomenis tvarkome.</b> Priklausomai nuo naudojimosi platforma, tvarkome paskyros ir kontaktinius duomenis (pvz., vardą, el. paštą, telefono numerį, miestą), darbuotojo gimimo datą (saugoma privačiai, darbdaviams nerodoma), darbuotojo profesinę informaciją ir įgūdžius, prieinamumo grafiką bei aktyvumo būseną, darbdavio ir įmonės duomenis, darbų skelbimų informaciją, kvietimus, rezervacijas, atvykimo ir darbo dienos užbaigimo įrašus, reitingus, patikimumo rodiklius, favoritus, ginčų informaciją, darbo ir komandos pokalbių turinį bei techninius ir saugumo įrašus.</p>
 
         <p><b>Mokėjimų duomenys.</b> Mokamų darbdavio planų atsiskaitymui naudojamas Stripe. statybos24.lt sistemoje saugomi tik mokėjimo administravimui reikalingi Stripe identifikatoriai, prenumeratos būsena, planas, atsiskaitymo laikotarpis, sąskaitos identifikatorius ir mokėjimo laikas, kai ši informacija gaunama iš Stripe. Pilnų mokėjimo kortelės duomenų statybos24.lt nekaupia ir jie įvedami Stripe valdomame Checkout lange.</p>
 
@@ -2078,6 +2103,7 @@ function AuthModal({
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    birthDate: "",
     email: "",
     password: "",
     city: "Vilnius",
@@ -2165,6 +2191,10 @@ function AuthModal({
         if (!form.lastName.trim()) {
           throw new Error("Įveskite pavardę.");
         }
+        if (role === "worker") {
+          const birthDateError = workerBirthDateError(form.birthDate, true);
+          if (birthDateError) throw new Error(birthDateError);
+        }
 
         if (form.password.length < 8) {
           throw new Error("Slaptažodis turi būti bent 8 simbolių.");
@@ -2213,6 +2243,7 @@ function AuthModal({
               preferred_billing_interval: "monthly",
               first_name: form.firstName.trim(),
               last_name: form.lastName.trim(),
+              ...(role === "worker" ? { birth_date: form.birthDate } : {}),
               display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
@@ -2516,6 +2547,25 @@ function AuthModal({
                   />
                 </label>
               </div>
+
+              {role === "worker" && (
+                <label style={labelStyle}>
+                  Gimimo data *
+                  <input
+                    style={{ ...inputStyle, boxSizing: "border-box", minWidth: 0 }}
+                    type="date"
+                    min="1900-01-01"
+                    max={getVilniusTodayISO()}
+                    value={form.birthDate}
+                    onChange={setField("birthDate")}
+                    autoComplete="bday"
+                    required
+                  />
+                  <span style={{ color: "#71808d", fontSize: 11, fontWeight: 400 }}>
+                    Gimimo data nėra rodoma darbdaviams.
+                  </span>
+                </label>
+              )}
 
               <div style={twoColumns}>
                 <label style={labelStyle}>
@@ -5840,6 +5890,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    birthDate: "",
     displayName: "",
     city: "Vilnius",
     phone: "",
@@ -6233,7 +6284,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           .single(),
         supabase
           .from("user_private")
-          .select("phone")
+          .select("phone, birth_date")
           .eq("user_id", user.id)
           .maybeSingle(),
         supabase
@@ -6307,6 +6358,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setForm({
         firstName,
         lastName,
+        birthDate: privateData?.birth_date || "",
         displayName: `${firstName} ${lastName}`.trim() || profile?.display_name || "",
         city: profile?.city || "Vilnius",
         phone: privateData?.phone || "",
@@ -7670,6 +7722,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         showProfileFieldError("lastName", "Įveskite pavardę.");
         return;
       }
+      const birthDateError = workerBirthDateError(form.birthDate);
+      if (birthDateError) {
+        showProfileFieldError("birthDate", birthDateError);
+        return;
+      }
       if (!form.phone.trim()) {
         showProfileFieldError("phone", "Telefono numeris yra privalomas.");
         return;
@@ -7789,6 +7846,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .from("user_private")
         .update({
           phone: normalizedPhone,
+          birth_date: form.birthDate || null,
           legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
         })
         .eq("user_id", user.id);
@@ -8961,6 +9019,28 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     required
                   />
                   {profileFormErrors.lastName && <span className="wd-field-error" role="alert">{profileFormErrors.lastName}</span>}
+                </label>
+
+                <label
+                  className={`wd-label${profileFormErrors.birthDate ? " has-error" : ""}`}
+                  ref={(node) => { profileFieldRefs.current.birthDate = node; }}
+                >
+                  Gimimo data
+                  <input
+                    className="wd-input"
+                    style={{ minWidth: 0, width: "100%", boxSizing: "border-box" }}
+                    type="date"
+                    min="1900-01-01"
+                    max={getVilniusTodayISO()}
+                    value={form.birthDate}
+                    onChange={(e) => updateField("birthDate", e.target.value)}
+                    autoComplete="bday"
+                    aria-invalid={Boolean(profileFormErrors.birthDate)}
+                  />
+                  {profileFormErrors.birthDate && <span className="wd-field-error" role="alert">{profileFormErrors.birthDate}</span>}
+                  <small style={{ fontSize: 11, color: "#72818d", fontWeight: 400 }}>
+                    Šią datą matote tik savo profilyje – darbdaviams ji nerodoma.
+                  </small>
                 </label>
 
                 <label
