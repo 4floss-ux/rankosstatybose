@@ -29392,8 +29392,8 @@ const mobileResponsiveFixStyles = `
     }
 
     .admin-top-actions > *:last-child {
-      grid-column: 1 / -1 !important;
-      margin-bottom: 2px !important;
+      grid-column: auto !important;
+      margin-bottom: 0 !important;
     }
 
     /* Public header stays inside the phone viewport. */
