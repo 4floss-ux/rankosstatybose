@@ -23952,36 +23952,31 @@ function AdminPrivateInboxButton({ user }) {
     <>
       <style>{`
         .apm-notice{
-          position:fixed;
-          left:50%;
-          top:50%;
-          transform:translate(-50%,-50%);
+          position:fixed !important;
+          inset:auto !important;
+          left:50% !important;
+          right:auto !important;
+          top:50% !important;
+          bottom:auto !important;
+          transform:translate(-50%,-50%) !important;
           z-index:14450;
-          width:min(320px,calc(100vw - 48px));
-          box-sizing:border-box;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          gap:14px;
-          padding:22px 20px;
+          width:240px !important;
+          max-width:calc(100vw - 64px) !important;
+          min-width:0 !important;
+          box-sizing:border-box !important;
+          display:flex !important;
+          flex-direction:column !important;
+          align-items:center !important;
+          justify-content:center !important;
+          gap:12px !important;
+          padding:18px 16px !important;
+          margin:0 !important;
           border:1px solid #efd3b7;
           border-radius:16px;
           background:#fff;
           box-shadow:0 18px 54px rgba(16,36,56,.22);
           color:#102438;
           text-align:center
-        }
-        .apm-notice-icon{
-          width:38px;
-          height:38px;
-          display:grid;
-          place-items:center;
-          border-radius:11px;
-          background:#f08a28;
-          color:#fff;
-          font-size:18px;
-          font-weight:900
         }
         .apm-notice-title{
           font-size:14px;
@@ -24047,9 +24042,9 @@ function AdminPrivateInboxButton({ user }) {
         }
         @media(max-width:620px){
           .apm-notice{
-            width:calc(100vw - 28px);
-            max-width:520px;
-            padding:18px 16px;
+            width:224px !important;
+            max-width:calc(100vw - 72px) !important;
+            padding:17px 14px !important;
             border-radius:15px
           }
           .apm-notice-title{font-size:13px}
@@ -24057,7 +24052,6 @@ function AdminPrivateInboxButton({ user }) {
           .apm-overlay{padding:10px}
           .apm-message-card{
             width:calc(100vw - 28px);
-            max-width:520px;
             max-height:calc(100dvh - 28px);
             padding:20px 54px 20px 18px;
             border-radius:15px
@@ -24100,6 +24094,7 @@ function AdminPrivateInboxButton({ user }) {
                 refreshUnread();
               }}
               aria-label="Uždaryti žinutę"
+              title="Uždaryti"
             >
               <CloseMark />
             </button>
