@@ -23963,8 +23963,8 @@ function AdminPrivateInboxButton({ user }) {
           flex-direction:column;
           align-items:center;
           justify-content:center;
-          gap:12px;
-          padding:20px 18px;
+          gap:14px;
+          padding:22px 20px;
           border:1px solid #efd3b7;
           border-radius:16px;
           background:#fff;
@@ -24067,7 +24067,6 @@ function AdminPrivateInboxButton({ user }) {
 
       {showNotice && (
         <div className="apm-notice" role="status" aria-live="polite">
-          <div className="apm-notice-icon" aria-hidden="true">!</div>
           <div className="apm-notice-title">Administratoriaus žinutė</div>
           <button
             className="apm-notice-open"
@@ -24099,7 +24098,6 @@ function AdminPrivateInboxButton({ user }) {
                 refreshUnread();
               }}
               aria-label="Uždaryti žinutę"
-              title="Uždaryti"
             >
               <CloseMark />
             </button>
