@@ -29023,20 +29023,20 @@ function HirePage() {
         .hire-hero-actions-v4{margin-top:22px!important}.hire-hero-actions-v4 .hire-btn{min-width:170px}
         .hire-hero-facts{display:none!important}
 
-        .hire-route-background{right:2.5%!important;width:42%!important;height:400px!important;top:50%!important;transform:translateY(-50%)!important}
-        .hire-route-background:before{content:""!important;position:absolute!important;inset:28px 12px 18px 12px!important;border-radius:40px!important;background:radial-gradient(circle at 46% 50%,rgba(240,138,40,.11),transparent 18%),radial-gradient(circle at 72% 28%,rgba(16,40,63,.065),transparent 32%),radial-gradient(circle at 32% 74%,rgba(16,40,63,.05),transparent 28%),linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.18))!important;box-shadow:inset 0 0 0 1px rgba(16,40,63,.035)!important}
-        .hire-route-background:after{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 56% 52%,rgba(255,255,255,.58),transparent 42%)!important}
+        .hire-route-background{right:-1%!important;width:49%!important;height:386px!important;top:50%!important;transform:translateY(-50%)!important}
+        .hire-route-background:before{content:""!important;position:absolute!important;inset:-12px -10px -8px -14px!important;background:radial-gradient(circle at 28% 52%,rgba(240,138,40,.12),transparent 16%),radial-gradient(circle at 62% 20%,rgba(16,40,63,.06),transparent 22%),radial-gradient(circle at 86% 58%,rgba(16,40,63,.05),transparent 18%),radial-gradient(circle at 48% 86%,rgba(16,40,63,.045),transparent 16%)!important;filter:blur(2px)!important}
+        .hire-route-background:after{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 52% 54%,rgba(255,255,255,.54),transparent 38%)!important}
         .hire-route-word,.hire-route-lines-v8,.hire-route-source-v8,.hire-route-target-v8{display:none!important}
         .hire-route-cloud{position:absolute;inset:0;z-index:3}
-        .hire-route-origin{position:absolute;left:10%;top:46%;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:rgba(240,138,40,.12);color:#d97e1f;font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 10px 24px rgba(240,138,40,.14)}
-        .hire-route-origin:before{content:"";width:8px;height:8px;border-radius:50%;background:#f08a28;box-shadow:0 0 0 6px rgba(240,138,40,.12)}
-        .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.96;letter-spacing:-.05em;text-wrap:balance}
-        .hire-route-country.c1{right:6%;top:10%;font-size:56px;color:rgba(16,40,63,.16)}
-        .hire-route-country.c2{left:26%;top:9%;font-size:32px;color:rgba(16,40,63,.46);text-transform:none;letter-spacing:-.04em}
-        .hire-route-country.c3{right:2%;top:43%;font-size:40px;color:rgba(16,40,63,.3)}
-        .hire-route-country.c4{left:36%;bottom:11%;font-size:36px;color:rgba(16,40,63,.26);text-transform:none;letter-spacing:-.04em}
-        .hire-route-country.c5{right:17%;bottom:7%;font-size:25px;color:rgba(16,40,63,.44);text-transform:none;letter-spacing:-.03em}
-        .hire-route-europe{position:absolute;left:18%;bottom:0;font-family:Manrope,Inter,sans-serif;font-size:72px;font-weight:950;letter-spacing:-.07em;color:rgba(16,40,63,.03);white-space:nowrap}
+        .hire-route-origin{position:absolute;left:4%;top:43%;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:rgba(240,138,40,.11);color:#d97e1f;font-size:9.5px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 10px 24px rgba(240,138,40,.12)}
+        .hire-route-origin:before{content:"";width:8px;height:8px;border-radius:50%;background:#f08a28;box-shadow:0 0 0 6px rgba(240,138,40,.10)}
+        .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.92;letter-spacing:-.055em;text-wrap:balance;pointer-events:none}
+        .hire-route-country.c1{right:4%;top:2%;font-size:74px;color:rgba(16,40,63,.12)}
+        .hire-route-country.c2{left:15%;top:-1%;font-size:38px;color:rgba(16,40,63,.42);letter-spacing:-.045em}
+        .hire-route-country.c3{right:0;top:38%;font-size:52px;color:rgba(16,40,63,.24)}
+        .hire-route-country.c4{left:24%;bottom:4%;font-size:48px;color:rgba(16,40,63,.19);letter-spacing:-.045em}
+        .hire-route-country.c5{right:18%;bottom:-1%;font-size:30px;color:rgba(16,40,63,.36);letter-spacing:-.035em}
+        .hire-route-europe{position:absolute;left:7%;bottom:-4%;font-family:Manrope,Inter,sans-serif;font-size:94px;font-weight:950;letter-spacing:-.08em;color:rgba(16,40,63,.025);white-space:nowrap}
 
         .hire-side-request{width:100%;min-height:46px;margin:10px 0 4px;border:0;border-radius:10px;background:#10283f;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;font:inherit;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(16,40,63,.10)}
         .hire-side-request:hover{background:#173b59}.hire-side-request svg{color:#f08a28}
@@ -29058,7 +29058,7 @@ function HirePage() {
         .hire-faq{gap:30px!important}.hire-faq-list{display:grid!important;gap:7px!important}.hire-faq-item{border:1px solid #e5ebf0!important;border-radius:10px!important;background:#fff!important;padding:0!important;overflow:hidden}.hire-faq-item summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 14px;color:#10283f;font-size:11px;font-weight:850}.hire-faq-item summary::-webkit-details-marker{display:none}.hire-faq-item summary b{font-size:18px;font-weight:500;color:#f08a28;transition:transform .15s ease}.hire-faq-item[open] summary b{transform:rotate(45deg)}.hire-faq-item p{margin:0!important;padding:0 14px 14px!important;color:#71808d!important;font-size:10.5px!important;line-height:1.55!important}.hire-contact-clean{padding:38px 0 18px!important}.hire-contact-card{padding:20px 22px!important}
 
         @media (max-width:1100px){
-          .hire-hero-main-v8{width:55%!important}.hire-route-background{right:-1%!important;width:47%!important;transform:translateY(-50%) scale(.92)!important;transform-origin:center!important}
+          .hire-hero-main-v8{width:53%!important}.hire-route-background{right:-2%!important;width:50%!important;transform:translateY(-50%) scale(.94)!important;transform-origin:center!important}
         }
         @media (max-width:820px){
           .hire-mobile-hero-tools{display:flex!important;align-items:flex-start!important;margin-bottom:0!important;padding-top:14px;padding-bottom:0}.hire-mobile-hero-tools .hire-language-dropdown{width:66px}
