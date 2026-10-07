@@ -28925,7 +28925,7 @@ function HirePage() {
         .hire-sidebar{width:244px;padding:0 16px 18px;background:#fff;border-right:1px solid #e5ebf0;box-shadow:8px 0 28px rgba(16,40,63,.025)}
         .hire-side-brand{height:96px;padding:17px 8px 12px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #edf1f4}
         .hire-side-brand>a{width:100%;justify-content:center!important}.hire-side-brand img{margin:0 auto!important}
-        .hire-side-context{text-align:center;margin:15px 4px 11px;padding:0;color:#8996a1;font-size:8px;line-height:1.4;letter-spacing:.13em}
+        .hire-side-context{text-align:center;color:#8996a1;font-size:8px;line-height:1.4;letter-spacing:.13em}
         .hire-side-nav{gap:4px}.hire-side-nav a{min-height:43px;padding:9px 10px;border-radius:9px;font-size:10px}.hire-side-nav a span{width:28px;height:28px;border-radius:7px}.hire-side-nav a.active{background:#10283f;color:#fff}.hire-side-nav a.request-link:not(.active){color:#b86116;background:#fff7ef}.hire-side-nav a.request-link:not(.active) span{background:#fff0e2;color:#e1781c}.hire-side-nav a.request-link.active{background:#f08a28;color:#fff}.hire-side-nav a.request-link.active span{background:rgba(255,255,255,.16);color:#fff}
         .hire-side-tools{margin-top:auto;padding:14px 4px 0;border-top:1px solid #edf1f4;display:grid;gap:11px}.hire-side-tool-label{display:block;margin-bottom:5px;color:#9aa5ad;font-size:7.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.hire-language-dropdown .hire-dropdown-trigger{min-height:38px;padding:8px 10px;border:1px solid #dfe7ec;border-radius:9px;background:#fff;color:#10283f;font-size:10px;font-weight:850;box-shadow:none}.hire-language-dropdown .hire-dropdown-trigger:hover{border-color:#cad6de}.hire-language-dropdown.open .hire-dropdown-trigger,.hire-language-dropdown .hire-dropdown-trigger:focus-visible{border-color:#efaa6a;box-shadow:0 0 0 3px rgba(240,138,40,.10)}.hire-language-dropdown .hire-dropdown-menu{min-width:176px}.hire-side-email{display:flex;align-items:center;gap:8px;color:#5f7180;text-decoration:none;font-size:9px;font-weight:800}.hire-side-email:hover{color:#f08a28}.hire-side-email svg{width:17px;height:17px;color:#f08a28}
         .hire-topbar{left:244px;background:rgba(255,255,255,.94);box-shadow:none}.hire-topbar-inner-v4{min-height:70px}.hire-top-context small{font-size:8px}.hire-top-actions-v4{gap:9px}.hire-top-language{display:none}.hire-top-actions-v4 .hire-btn.primary{min-height:40px;padding:9px 14px;border-radius:9px}
@@ -28978,10 +28978,11 @@ function HirePage() {
 
 
         /* ===== HIRE V8 · COMPACT / INTEGRATED ROUTE ===== */
-        .hire-side-brand{display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 8px 20px!important;gap:8px}
+        .hire-side-brand{display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 8px 18px!important;gap:7px}
         .hire-side-brand>a{justify-content:center!important;margin-inline:auto!important}
+        .hire-side-brand .hire-side-context{display:block!important;margin:0!important;padding:0!important;width:100%!important;text-align:center!important;color:#8996a1!important;font-size:7.5px!important;font-weight:900!important;line-height:1.25!important;letter-spacing:.13em!important;white-space:nowrap!important}
         .hire-brand-sublabel{display:block;color:#98a4ae;font-size:7.5px;font-weight:950;letter-spacing:.16em;line-height:1;text-transform:uppercase;white-space:nowrap}
-        .hire-mobile-brand-lockup{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}.hire-mobile-brand-lockup .hire-brand-sublabel{font-size:6.5px;letter-spacing:.13em}
+        .hire-mobile-brand-lockup{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;min-width:0}.hire-mobile-brand-lockup .hire-brand-sublabel{font-size:6.5px;letter-spacing:.13em}.hire-mobile-context{display:block;color:#8a97a2;font-size:5.8px;font-weight:900;line-height:1.15;letter-spacing:.11em;white-space:nowrap}
 
         .hire-hero{padding:0!important;min-height:560px;display:flex;align-items:center;background:linear-gradient(115deg,#ffffff 0%,#f8fafc 58%,#eef4f7 100%)!important;overflow:hidden;position:relative}
         .hire-hero:before{content:""!important;display:block!important;position:absolute;inset:0;background:linear-gradient(90deg,rgba(16,40,63,.025) 1px,transparent 1px),linear-gradient(rgba(16,40,63,.025) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(90deg,transparent 30%,#000 64%);pointer-events:none}
@@ -28989,7 +28990,7 @@ function HirePage() {
         .hire-hero-v8{position:relative;min-height:560px;display:flex;align-items:center;z-index:1}
         .hire-hero-main-v8{position:relative;z-index:4;width:min(58%,690px);padding:46px 0}
         .hire-hero-kicker-v4{padding:0!important;border:0!important;background:transparent!important;border-radius:0!important;color:#788792!important;font-size:8px!important;letter-spacing:.15em!important}
-        .hire-hero-title-v4{margin:16px 0 0!important;max-width:680px!important;font-size:clamp(48px,5.4vw,78px)!important;line-height:1.01!important;letter-spacing:-.048em!important;text-wrap:balance}
+        .hire-hero-title-v4{margin:0!important;max-width:680px!important;font-size:clamp(48px,5.4vw,78px)!important;line-height:1.01!important;letter-spacing:-.048em!important;text-wrap:balance}
         .hire-hero-title-v4 .hire-hero-line-accent{margin-top:5px!important}
         .hire-hero-copy-v4{max-width:560px!important;margin-top:17px!important;color:#62727f!important;font-size:13.5px!important;line-height:1.55!important}
         .hire-hero-actions-v4{margin-top:22px!important}.hire-hero-actions-v4 .hire-btn{min-height:45px!important}
@@ -29016,7 +29017,7 @@ function HirePage() {
         .hire-hero-actions-v4{margin-top:22px!important}.hire-hero-actions-v4 .hire-btn{min-width:170px}
         .hire-hero-facts{display:none!important}
 
-        .hire-route-background{right:-4%!important;width:60%!important;height:410px!important;top:50%!important;transform:translateY(-50%)!important}
+        .hire-route-background{right:-1%!important;width:61%!important;height:410px!important;top:50%!important;transform:translateY(-50%)!important}
         .hire-route-background:before{content:""!important;position:absolute!important;inset:-20px -16px -16px -26px!important;background:radial-gradient(circle at 17% 51%,rgba(240,138,40,.12),transparent 14%),radial-gradient(circle at 48% 17%,rgba(16,40,63,.05),transparent 20%),radial-gradient(circle at 82% 48%,rgba(16,40,63,.045),transparent 18%),radial-gradient(circle at 39% 82%,rgba(16,40,63,.04),transparent 18%)!important;filter:blur(2px)!important}
         .hire-route-background:after{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 42% 52%,rgba(255,255,255,.44),transparent 34%)!important}
         .hire-route-word,.hire-route-lines-v8,.hire-route-source-v8,.hire-route-target-v8{display:none!important}
@@ -29026,7 +29027,7 @@ function HirePage() {
         .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.9;letter-spacing:-.055em;text-wrap:balance;pointer-events:none;user-select:none}
         .hire-route-country.c1{left:28%;top:0;font-size:72px;color:rgba(16,40,63,.105)}
         .hire-route-country.c2{left:7%;top:8%;font-size:36px;color:rgba(16,40,63,.34);letter-spacing:-.045em}
-        .hire-route-country.c3{right:0;top:35%;font-size:51px;color:rgba(16,40,63,.20)}
+        .hire-route-country.c3{right:7%;top:35%;font-size:49px;color:rgba(16,40,63,.20)}
         .hire-route-country.c4{left:20%;bottom:8%;font-size:46px;color:rgba(16,40,63,.16);letter-spacing:-.045em}
         .hire-route-country.c5{right:17%;bottom:1%;font-size:29px;color:rgba(16,40,63,.31);letter-spacing:-.035em}
         .hire-route-europe{position:absolute;left:4%;bottom:-6%;font-family:Manrope,Inter,sans-serif;font-size:102px;font-weight:950;letter-spacing:-.08em;color:rgba(16,40,63,.022);white-space:nowrap}
@@ -29083,14 +29084,13 @@ function HirePage() {
           .hire-request-wrap{padding:0 0 38px!important}.hire-request-head{padding:17px!important}.hire-request-head h2{font-size:27px!important}.hire-request-head p{font-size:10.5px!important}.hire-request-window-head-inner{width:calc(100% - 20px)!important;min-height:64px!important;grid-template-columns:minmax(0,1fr) auto!important;gap:10px!important}.hire-request-window-title{display:none!important}.hire-request-window-brand{gap:8px!important}.hire-request-window-brand img{height:29px!important}.hire-request-window-brand strong{font-size:8.5px!important}.hire-request-window-brand span{font-size:6px!important}.hire-request-window-actions{gap:6px!important}.hire-request-window-actions .hire-language-dropdown{width:62px!important}.hire-request-close{width:38px!important;height:38px!important;border-radius:10px!important}.hire-request-overlay .hire-request-shell{padding-top:14px!important}.hire-faq{grid-template-columns:1fr!important;gap:14px!important}.hire-faq>div:first-child h2{font-size:28px!important}.hire-contact-clean{padding:28px 0 14px!important}.hire-contact-card{padding:17px!important}.hire-mobile-nav{padding-block:6px!important}
         }
         @media (max-width:560px){
-          .hire-mobile-hero-tools{padding-top:11px}.hire-mobile-brand-lockup .hire-brand-sublabel{font-size:6px}.hire-hero-main-v8{padding-top:19px!important}.hire-hero-kicker-v4{font-size:7px!important}.hire-hero-title-v4{font-size:clamp(35px,10.9vw,45px)!important;letter-spacing:-.035em!important}.hire-hero-copy-v4{font-size:11.5px!important}.hire-hero-actions-v4{display:block!important}.hire-hero-actions-v4 .hire-btn{width:100%!important;min-height:42px!important;padding:9px 8px!important;font-size:9.5px!important}.hire-hero-facts{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:5px!important}.hire-hero-facts span{justify-content:center;padding:7px 5px;border-top:1px solid #e8edf1;font-size:7px!important;text-align:center}.hire-route-mobile{width:auto!important;max-width:100%!important;justify-content:flex-start!important;margin-top:12px!important;padding:0!important}.hire-route-mobile b{min-width:36px!important;height:36px!important}.hire-section{padding:30px 0!important}.hire-section-head h2{font-size:26px!important}.hire-section-head p{display:none!important}.hire-signal p{display:none!important}.hire-signal{grid-template-rows:auto!important}.hire-signal-symbol{grid-row:1!important}.hire-signal>div{align-self:center}.hire-role-wall span{min-height:40px!important;font-size:8px!important}.hire-faq-item summary{padding:11px 12px!important;font-size:10px!important}.hire-faq-item p{padding:0 12px 12px!important;font-size:9.5px!important}
+          .hire-mobile-hero-tools{padding-top:11px}.hire-mobile-brand-lockup .hire-brand-sublabel{font-size:6px}.hire-mobile-context{font-size:5.4px}.hire-hero-main-v8{padding-top:19px!important}.hire-hero-kicker-v4{font-size:7px!important}.hire-hero-title-v4{font-size:clamp(35px,10.9vw,45px)!important;letter-spacing:-.035em!important}.hire-hero-copy-v4{font-size:11.5px!important}.hire-hero-actions-v4{display:block!important}.hire-hero-actions-v4 .hire-btn{width:100%!important;min-height:42px!important;padding:9px 8px!important;font-size:9.5px!important}.hire-hero-facts{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:5px!important}.hire-hero-facts span{justify-content:center;padding:7px 5px;border-top:1px solid #e8edf1;font-size:7px!important;text-align:center}.hire-route-mobile{width:auto!important;max-width:100%!important;justify-content:flex-start!important;margin-top:12px!important;padding:0!important}.hire-route-mobile b{min-width:36px!important;height:36px!important}.hire-section{padding:30px 0!important}.hire-section-head h2{font-size:26px!important}.hire-section-head p{display:none!important}.hire-signal p{display:none!important}.hire-signal{grid-template-rows:auto!important}.hire-signal-symbol{grid-row:1!important}.hire-signal>div{align-self:center}.hire-role-wall span{min-height:40px!important;font-size:8px!important}.hire-faq-item summary{padding:11px 12px!important;font-size:10px!important}.hire-faq-item p{padding:0 12px 12px!important;font-size:9.5px!important}
         }
 
 `}</style>
 
       <aside className="hire-sidebar" aria-label="Hire navigation">
-        <div className="hire-side-brand"><BrandLogo href="#hire-top" height={42} /></div>
-        <div className="hire-side-context">{t.sidebarLabel}</div>
+        <div className="hire-side-brand"><BrandLogo href="#hire-top" height={42} /><span className="hire-side-context">{t.sidebarLabel}</span></div>
         <nav className="hire-side-nav">
           {navItems.map(([id, label, icon]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`} onClick={() => setActiveSection(id)}><span><HireSideIcon type={icon} /></span>{label}</a>)}
         </nav>
@@ -29102,10 +29102,9 @@ function HirePage() {
 
       <main>
         <section className="hire-hero hire-anchor" id="hire-overview">
-          <div className="hire-shell hire-mobile-hero-tools"><div className="hire-mobile-brand-lockup"><BrandLogo href="#hire-top" height={31} /></div>{languageSelect(true)}</div>
+          <div className="hire-shell hire-mobile-hero-tools"><div className="hire-mobile-brand-lockup"><BrandLogo href="#hire-top" height={31} /><span className="hire-mobile-context">{t.sidebarLabel}</span></div>{languageSelect(true)}</div>
           <div className="hire-shell hire-hero-v8">
             <div className="hire-hero-main-v8">
-              <div className="hire-hero-kicker-v4"><span className="hire-status-dot" /> {c.hero.kicker}</div>
               <h1 className="hire-hero-title-v4"><span className="hire-hero-line-main">{c.hero.title}</span><span className="hire-hero-line-accent">{c.hero.accent}</span></h1>
               <p className="hire-hero-copy-v4">{c.hero.copy}</p>
               <div className="hire-hero-actions-v4"><button type="button" className="hire-btn primary" onClick={openRequest}>{t.hero.cta} <HireArrowIcon /></button></div>
