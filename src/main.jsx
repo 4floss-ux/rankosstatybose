@@ -28480,6 +28480,17 @@ function HireUsersIcon() {
   );
 }
 
+function HireSideIcon({ type }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (type === "overview") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.8 12 4l8 6.8V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.2Z" {...common}/></svg>;
+  if (type === "method") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2" {...common}/><circle cx="18" cy="12" r="2" {...common}/><circle cx="6" cy="18" r="2" {...common}/><path d="M8 6h4a4 4 0 0 1 4 4M8 18h4a4 4 0 0 0 4-4" {...common}/></svg>;
+  if (type === "trades") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11H4Z" {...common}/><path d="M8 20v-6h8v6M8 10h.01M12 10h.01M16 10h.01" {...common}/></svg>;
+  if (type === "conditions") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14a1 1 0 0 1 1 1v7H4v-7a1 1 0 0 1 1-1Z" {...common}/><path d="M8 15h3M14 15h2" {...common}/></svg>;
+  if (type === "request") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7V3Z" {...common}/><path d="M6 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M7 12h10M7 16h7" {...common}/></svg>;
+  if (type === "faq") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" {...common}/><path d="M9.8 9a2.4 2.4 0 1 1 3.3 2.2c-.8.4-1.1.9-1.1 1.8M12 17h.01" {...common}/></svg>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4V6Z" {...common}/><path d="m5 7 7 6 7-6" {...common}/></svg>;
+}
+
 function HireInput({ label, required = false, hint, error, ...props }) {
   return (
     <label className="hire-field">
@@ -28752,37 +28763,112 @@ function HirePage() {
           .hire-shell,.hire-request-shell{width:calc(100% - 22px)}.hire-topbar-inner{height:66px}.hire-private{display:none}.hire-top-meta .hire-btn{display:none}.hire-hero{padding:48px 0 38px}.hire-hero-kicker{font-size:8px}.hire-hero-title{font-size:clamp(48px,17vw,78px);line-height:.84}.hire-hero-bottom{margin-top:32px;gap:34px}.hire-hero-copy p{font-size:14px}.hire-hero-actions{display:grid;grid-template-columns:1fr}.hire-hero-actions .hire-btn{width:100%}.hire-brief-row{grid-template-columns:84px 1fr;gap:10px}.hire-brief-row em{grid-column:2}.hire-brief-foot{display:grid;gap:5px}.hire-section{padding:68px 0}.hire-section-head{grid-template-columns:1fr;gap:10px;margin-bottom:32px}.hire-index{padding-top:0}.hire-section-head h2{font-size:39px}.hire-manifesto article{padding:24px 16px}.hire-manifesto article:first-child{padding-left:16px}.hire-role-wall{grid-template-columns:repeat(2,1fr)}.hire-role-wall span{min-height:72px;padding:12px;font-size:11px}.hire-request-wrap{padding-bottom:70px}.hire-request-head{padding:20px 18px;grid-template-columns:1fr}.hire-request-badge{justify-self:start}.hire-request-head h2{font-size:34px}.hire-step-rail{overflow-x:auto;grid-template-columns:repeat(5,minmax(76px,1fr))}.hire-step-button{min-width:76px}.hire-step-button .l{font-size:7px}.hire-form-panel{padding:24px 16px 20px}.hire-form-top{display:grid;gap:10px}.hire-step-count{grid-row:1}.hire-form-grid{grid-template-columns:1fr;gap:15px}.hire-field.full,.hire-subsection{grid-column:auto}.hire-role-editor-grid{grid-template-columns:1fr;padding:13px}.hire-role-editor-grid .hire-field:first-child{grid-column:auto}.hire-segment{display:grid;grid-template-columns:repeat(2,1fr)}.hire-segment button{border-bottom:1px solid var(--line)}.hire-review-grid{grid-template-columns:1fr}.hire-form-actions{align-items:stretch}.hire-form-actions>.hire-btn,.hire-form-actions .right,.hire-form-actions .right .hire-btn{width:100%}.hire-form-actions>span{display:none}.hire-faq h2{font-size:38px}.hire-faq-item{grid-template-columns:1fr;gap:7px}.hire-final-inner{display:grid;gap:28px}.hire-final .hire-btn{width:100%}.hire-footer-inner{padding:22px 0;display:grid;justify-items:start}
         }
         @media (prefers-reduced-motion:reduce){.hire-marquee-track{animation:none}.hire-btn{transition:none}.hire-btn:hover{transform:none}}
+
+        /* ===== HIRE V4 · SIDEBAR / CLEAR B2B WORKFORCE UI ===== */
+        .hire-v3{--v4-navy:#10283f;--v4-navy-2:#173b5d;--v4-orange:#f08a28;--v4-bg:#f6f8fb;--v4-line:#e5ebf0;--v4-text:#11283d;--v4-muted:#6d7b88;background:var(--v4-bg);padding-left:236px;color:var(--v4-text)}
+        .hire-v3 .hire-shell{width:min(1280px,calc(100% - 48px));margin-inline:auto}.hire-v3 .hire-anchor{scroll-margin-top:92px}
+        .hire-sidebar{position:fixed;left:0;top:0;bottom:0;width:236px;background:#fff;border-right:1px solid var(--v4-line);z-index:520;display:flex;flex-direction:column;padding:24px 18px 18px;box-shadow:7px 0 28px rgba(16,40,63,.025)}
+        .hire-side-brand{padding:0 10px 24px;border-bottom:1px solid #eef2f5}.hire-side-context{padding:19px 12px 9px;color:#98a4ae;font-size:9px;line-height:1.4;font-weight:900;letter-spacing:.12em}
+        .hire-side-nav{display:grid;gap:5px}.hire-side-nav a{min-height:44px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#667785;text-decoration:none;font-size:12px;font-weight:760;transition:.16s ease}.hire-side-nav a span{width:21px;height:21px;display:grid;place-items:center;flex:0 0 21px}.hire-side-nav a svg{width:18px;height:18px;display:block}.hire-side-nav a:hover{background:#f5f8fa;color:var(--v4-navy)}.hire-side-nav a.active{background:var(--v4-navy);color:#fff;box-shadow:0 8px 20px rgba(16,40,63,.12)}.hire-side-nav a.request-link{margin-top:8px;color:#a35412;background:#fff6ed;border:1px solid #f8dfc8}.hire-side-nav a.request-link:hover{background:var(--v4-orange);border-color:var(--v4-orange);color:#fff}
+        .hire-side-foot{margin-top:auto;padding:14px 12px;border-radius:12px;background:#f7f9fb;display:grid;grid-template-columns:8px 1fr;gap:10px;align-items:start}.hire-side-foot .hire-status-dot{margin-top:4px}.hire-side-foot b{display:block;color:var(--v4-navy);font-size:10px}.hire-side-foot small{display:block;margin-top:4px;color:#82909c;font-size:9px;line-height:1.5}.hire-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#44ad79;box-shadow:0 0 0 3px rgba(68,173,121,.11)}
+
+        .hire-topbar{position:sticky;top:0;left:236px;z-index:400;background:rgba(255,255,255,.92);border-bottom:1px solid var(--v4-line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+        .hire-topbar-inner-v4{min-height:72px;width:min(1280px,calc(100% - 48px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}.hire-mobile-brand{display:none}.hire-top-context{display:flex;align-items:center;gap:11px}.hire-top-context .hire-top-icon{width:38px;height:38px;border-radius:10px;background:#f3f6f8;color:var(--v4-navy);display:grid;place-items:center}.hire-top-context b{display:block;font-size:12px}.hire-top-context small{display:block;margin-top:2px;color:#82909b;font-size:10px}.hire-top-actions-v4{display:flex;align-items:center;gap:12px}.hire-route-pill{padding:7px 10px;border-radius:999px;background:#edf8f2;color:#32785c;font-size:9px;font-weight:900;letter-spacing:.04em}
+        .hire-v3 .hire-btn{border-radius:9px;min-height:44px;padding:10px 15px;font-size:11px;letter-spacing:0}.hire-v3 .hire-btn.primary{background:var(--v4-navy);border-color:var(--v4-navy)}.hire-v3 .hire-btn.primary:hover{background:var(--v4-navy-2);border-color:var(--v4-navy-2)}.hire-v3 .hire-btn.ghost{background:#fff;border-color:#dce4ea;color:var(--v4-navy)}
+
+        .hire-hero{padding:46px 0 24px;border:0;background:linear-gradient(180deg,#fff 0,#fbfcfd 100%)}.hire-hero:before{display:none}.hire-hero-grid-v4{display:grid;grid-template-columns:minmax(0,1.03fr) minmax(430px,.97fr);gap:48px;align-items:center}.hire-hero-main-v4{padding:14px 0 10px}.hire-hero-kicker-v4{display:flex;align-items:center;gap:9px;color:#7b8995;font-size:9px;font-weight:900;letter-spacing:.13em}.hire-hero-title-v4{margin:19px 0 0;max-width:760px;font-family:Manrope,Inter,sans-serif;font-size:clamp(43px,5.2vw,72px);line-height:.98;letter-spacing:-.055em;text-transform:none;font-weight:900;color:var(--v4-navy)}.hire-hero-title-v4 span{color:var(--v4-orange)}.hire-hero-copy-v4{max-width:660px;margin:20px 0 0;color:#667684;font-size:14px;line-height:1.7}.hire-hero-copy-v4 b{color:var(--v4-navy)}.hire-hero-actions-v4{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}.hire-lane-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:26px}.hire-lane-tags span{padding:7px 9px;border:1px solid #e1e7ec;border-radius:8px;background:#fff;color:#75838f;font-size:9px;font-weight:800}
+        .hire-route-card{background:#fff;border:1px solid var(--v4-line);border-radius:18px;padding:19px;box-shadow:0 18px 55px rgba(16,40,63,.08)}.hire-route-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:2px 2px 15px}.hire-route-card-head>div>span{color:#9aa6af;font-size:8px;font-weight:900;letter-spacing:.13em}.hire-route-card-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:18px;letter-spacing:-.025em}.hire-live{display:flex;align-items:center;gap:6px;color:#6b887a;font-size:8px;font-weight:800;white-space:nowrap}.hire-live i{width:6px;height:6px;background:#44ad79;border-radius:50%}
+        .hire-route-diagram{position:relative;height:250px;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 22% 48%,rgba(240,138,40,.13),transparent 23%),linear-gradient(135deg,#eef4f8,#f8fafc);border:1px solid #e7edf1}.hire-route-diagram:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(16,40,63,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(16,40,63,.035) 1px,transparent 1px);background-size:26px 26px}.hire-route-diagram svg{position:absolute;inset:18px 12px;width:calc(100% - 24px);height:calc(100% - 36px)}.hire-route-diagram svg path{fill:none;stroke:#9fb5c5;stroke-width:1.5;stroke-dasharray:4 5}.hire-source-node{position:absolute;z-index:2;left:24px;top:83px;width:132px;padding:12px 13px;border-radius:12px;background:var(--v4-navy);color:#fff;box-shadow:0 10px 22px rgba(16,40,63,.18)}.hire-source-node span,.hire-source-node small{display:block;color:#9fb2c1;font-size:7px}.hire-source-node b{display:block;margin:3px 0;font-size:15px}.hire-market-node{position:absolute;z-index:2;right:24px;width:120px;min-height:42px;padding:8px 10px;border-radius:10px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 5px 15px rgba(16,40,63,.06);display:flex;align-items:center;gap:9px}.hire-market-node b{width:27px;height:27px;border-radius:7px;display:grid;place-items:center;background:#edf3f7;color:var(--v4-navy);font-size:9px}.hire-market-node span{font-size:9px;font-weight:850}.hire-market-node.n1{top:20px}.hire-market-node.n2{top:72px}.hire-market-node.n3{top:124px}.hire-market-node.n4{top:176px}.hire-route-card-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 2px 0;color:#677887;font-size:9px;font-weight:800}.hire-route-card-foot span{display:flex;align-items:center;gap:6px}.hire-route-card-foot svg{color:#42a372}
+        .hire-value-row{display:grid;grid-template-columns:repeat(4,1fr);margin-top:30px;border:1px solid var(--v4-line);border-radius:15px;background:#fff;overflow:hidden}.hire-value-row>div{min-height:92px;padding:16px 17px;border-right:1px solid var(--v4-line);display:grid;grid-template-columns:38px 1fr;grid-template-rows:auto auto;column-gap:11px;align-content:center}.hire-value-row>div:last-child{border-right:0}.hire-value-icon{grid-row:1/3;width:36px;height:36px;border-radius:9px;background:#f3f6f8;color:var(--v4-navy);display:grid;place-items:center;font-weight:900}.hire-value-icon svg{width:19px;height:19px}.hire-value-row b{font-size:11px;align-self:end}.hire-value-row small{margin-top:3px;color:#8a97a2;font-size:8.5px;line-height:1.35}
+        .hire-marquee{display:none}
+
+        .hire-section{padding:72px 0;background:var(--v4-bg)}.hire-section.white{background:#fff}.hire-section.dark{background:#f2f6f9;color:var(--v4-text)}.hire-section-head{display:grid;grid-template-columns:130px minmax(0,1fr);gap:26px;margin-bottom:31px}.hire-index{padding-top:5px;color:#a6b0b8;font-size:8px}.hire-section.dark .hire-index{color:#a6b0b8}.hire-section-head h2{max-width:800px;color:var(--v4-navy);font-size:clamp(30px,4vw,47px);line-height:1.03;letter-spacing:-.045em}.hire-section-head p,.hire-section.dark .hire-section-head p{max-width:720px;margin-top:12px;color:#71808d;font-size:13px;line-height:1.65}
+        .hire-manifesto{gap:12px;border:0}.hire-manifesto article,.hire-manifesto article:first-child{padding:20px;border:1px solid var(--v4-line);border-radius:13px;background:#fff}.hire-manifesto article:last-child{border-right:1px solid var(--v4-line)}.hire-manifesto .num{color:var(--v4-orange);font-size:9px}.hire-manifesto h3{margin:17px 0 7px;font-size:18px}.hire-manifesto p{font-size:11px;line-height:1.6;color:#73818d}
+        .hire-signal-grid{gap:12px;border:0}.hire-signal{min-height:220px;padding:22px;border:1px solid var(--v4-line);border-radius:13px;background:#fff;color:var(--v4-text)}.hire-signal:last-child{border-right:1px solid var(--v4-line)}.hire-signal-label{color:#84929d;font-size:8px}.hire-signal-symbol{font-size:48px;color:var(--v4-orange)}.hire-signal h3{font-size:17px;color:var(--v4-navy)}.hire-signal p{color:#75838f;font-size:11px}.hire-role-wall{grid-template-columns:repeat(4,1fr);gap:10px;border:0}.hire-role-wall span{min-height:72px;border:1px solid var(--v4-line);border-radius:11px;background:#fff;padding:14px;font-size:10px;align-items:center}.hire-role-wall span:before{top:50%;right:14px;transform:translateY(-50%);color:#c1cad1;font-size:16px}
+
+        .hire-request-wrap{padding:0 0 78px;background:var(--v4-bg)}.hire-request-shell{width:min(1280px,calc(100% - 48px));border:1px solid var(--v4-line);border-radius:18px;overflow:hidden;box-shadow:0 18px 55px rgba(16,40,63,.06)}.hire-request-head{background:#fff;color:var(--v4-text);border-bottom:1px solid var(--v4-line);padding:25px 28px}.hire-request-head h2{font-size:34px;color:var(--v4-navy)}.hire-request-head p{color:#778692}.hire-request-badge{border:0;border-radius:999px;background:#fff4e8;color:#a85b19;padding:8px 10px}.hire-request-grid{grid-template-columns:220px minmax(0,1fr);min-height:600px}.hire-step-rail{background:#f6f8fa;border-right:1px solid var(--v4-line);padding:11px}.hire-step-button{min-height:58px;border:0;border-radius:10px;padding:10px 12px;grid-template-columns:26px 1fr;gap:10px}.hire-step-button .n{font-size:12px;width:25px;height:25px;border-radius:7px;background:#e9eef2;display:grid;place-items:center;color:#84919b}.hire-step-button .l{font-size:9px;letter-spacing:.04em}.hire-step-button.active{background:#fff;color:var(--v4-navy);box-shadow:0 5px 16px rgba(16,40,63,.07)}.hire-step-button.active .n{background:var(--v4-orange);color:#fff}.hire-step-button.done .n{background:#e7f5ee;color:#398162}.hire-form-panel{padding:30px 34px}.hire-form-top h3{font-size:25px;color:var(--v4-navy)}.hire-form-top p{font-size:11px}.hire-step-count{border-radius:999px;background:#f3f6f8;border:0}.hire-label{font-size:9px}.hire-input{border:1px solid #dce5eb;border-radius:9px;background:#fff;min-height:44px;padding:10px 12px}.hire-input:focus{border-color:#efaa6a;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.hire-select-wrap .hire-input{border-bottom:1px solid #dce5eb}.hire-segment{border:1px solid #dce5eb;border-radius:9px;overflow:hidden;background:#fff}.hire-segment button{border-right:1px solid #e5ebef}.hire-segment button.active{background:var(--v4-navy)}.hire-subsection{border-top:1px solid #edf1f4}.hire-role-editor{border:1px solid #dce5eb;border-radius:11px;overflow:hidden}.hire-role-editor-head{background:#f4f7f9;color:var(--v4-navy)}.hire-role-editor-head button{color:#a65a18}.hire-count{border:1px solid #dce5eb;border-radius:9px;background:#fff;overflow:hidden}.hire-review{border:1px solid #e1e8ed;border-radius:11px;overflow:hidden}.hire-review-card{border-right:0;border-bottom:1px solid #e7edf1}.hire-review-card:last-child{border-bottom:0}.hire-preview-notice{border-radius:8px}.hire-form-actions .hire-btn.primary{background:var(--v4-orange);border-color:var(--v4-orange)}.hire-form-actions .hire-btn.primary:hover{background:#df791c;border-color:#df791c}
+
+        .hire-faq{grid-template-columns:.7fr 1.3fr;gap:55px}.hire-faq h2{color:var(--v4-navy);font-size:36px}.hire-faq-list{border-top:1px solid var(--v4-line)}.hire-faq-item{border-bottom:1px solid var(--v4-line);grid-template-columns:.8fr 1.2fr}.hire-faq-item h3{font-size:11px;color:var(--v4-navy)}.hire-faq-item p{font-size:11px;color:#71808d}.hire-final{padding:46px 0;background:var(--v4-navy)}.hire-final h2{font-size:44px}.hire-final .hire-btn.dark{background:var(--v4-orange);border-color:var(--v4-orange)}.hire-footer{background:#0b1d2d}.hire-footer-inner{min-height:80px}.hire-footer-contact{font-size:10px}
+
+        @media (max-width:1100px){.hire-v3{padding-left:210px}.hire-sidebar{width:210px}.hire-hero-grid-v4{grid-template-columns:1fr}.hire-route-card{max-width:760px}.hire-value-row{grid-template-columns:repeat(2,1fr)}.hire-value-row>div:nth-child(2){border-right:0}.hire-value-row>div:nth-child(-n+2){border-bottom:1px solid var(--v4-line)}.hire-role-wall{grid-template-columns:repeat(3,1fr)}}
+        @media (max-width:820px){
+          .hire-v3{padding-left:0}.hire-sidebar{display:none}.hire-topbar{left:0}.hire-topbar-inner-v4{width:calc(100% - 24px);min-height:66px}.hire-mobile-brand{display:block}.hire-top-context{display:none}.hire-route-pill{display:none}.hire-top-actions-v4 .hire-btn{padding-inline:11px}.hire-shell,.hire-v3 .hire-shell,.hire-request-shell{width:calc(100% - 24px)}.hire-hero{padding-top:34px}.hire-hero-grid-v4{gap:28px}.hire-hero-title-v4{font-size:clamp(38px,11vw,58px)}.hire-hero-copy-v4{font-size:13px}.hire-value-row{grid-template-columns:1fr 1fr}.hire-section{padding:58px 0}.hire-section-head{grid-template-columns:1fr;gap:8px}.hire-section-head h2{font-size:34px}.hire-manifesto,.hire-signal-grid{grid-template-columns:1fr}.hire-manifesto article,.hire-manifesto article:first-child,.hire-signal{border-right:1px solid var(--v4-line);border-bottom:1px solid var(--v4-line)}.hire-role-wall{grid-template-columns:repeat(2,1fr)}.hire-request-grid{grid-template-columns:1fr}.hire-step-rail{border-right:0;border-bottom:1px solid var(--v4-line);display:grid;grid-template-columns:repeat(5,minmax(75px,1fr));overflow-x:auto;padding:8px}.hire-step-button{min-width:75px;grid-template-columns:1fr;justify-items:center;text-align:center;gap:5px}.hire-form-panel{padding:24px 18px}.hire-faq{grid-template-columns:1fr;gap:28px}}
+        @media (max-width:560px){
+          .hire-top-actions-v4 .hire-btn{font-size:0;width:42px;padding:0}.hire-top-actions-v4 .hire-btn svg{width:18px;height:18px}.hire-hero-title-v4{font-size:43px}.hire-hero-actions-v4{display:grid;grid-template-columns:1fr}.hire-hero-actions-v4 .hire-btn{width:100%}.hire-lane-tags{gap:5px}.hire-lane-tags span{font-size:8px}.hire-route-card{padding:13px;border-radius:14px}.hire-route-card-head{display:grid}.hire-route-diagram{height:230px}.hire-source-node{left:13px;width:112px}.hire-market-node{right:12px;width:105px}.hire-route-card-foot{display:grid}.hire-value-row{grid-template-columns:1fr}.hire-value-row>div{border-right:0;border-bottom:1px solid var(--v4-line)}.hire-value-row>div:last-child{border-bottom:0}.hire-role-wall{grid-template-columns:1fr 1fr}.hire-request-head{padding:20px 17px}.hire-request-head h2{font-size:29px}.hire-form-grid{grid-template-columns:1fr}.hire-role-editor-grid{grid-template-columns:1fr}.hire-final h2{font-size:34px}}
       `}</style>
 
+      <aside className="hire-sidebar" aria-label="Hire navigation">
+        <div className="hire-side-brand"><BrandLogo href="#hire-top" height={38} /></div>
+        <div className="hire-side-context">FOR INTERNATIONAL EMPLOYERS</div>
+        <nav className="hire-side-nav">
+          <a className="active" href="#hire-top"><span><HireSideIcon type="overview" /></span>Overview</a>
+          <a href="#hire-method"><span><HireSideIcon type="method" /></span>How it works</a>
+          <a href="#hire-trades"><span><HireSideIcon type="trades" /></span>Specialists</a>
+          <a href="#hire-conditions"><span><HireSideIcon type="conditions" /></span>Employment terms</a>
+          <a className="request-link" href="#hire-request"><span><HireSideIcon type="request" /></span>Request workers</a>
+          <a href="#hire-faq"><span><HireSideIcon type="faq" /></span>FAQ</a>
+          <a href="#hire-contact"><span><HireSideIcon type="contact" /></span>Contact</a>
+        </nav>
+        <div className="hire-side-foot">
+          <span className="hire-status-dot" />
+          <div><b>Private B2B route</b><small>Direct construction recruitment from Lithuania to Europe.</small></div>
+        </div>
+      </aside>
+
       <header className="hire-topbar">
-        <div className="hire-shell hire-topbar-inner">
-          <BrandLogo href="#hire-top" height={34} />
-          <div className="hire-private">Private B2B route</div>
-          <nav className="hire-nav" aria-label="Hire navigation">
-            <a href="#hire-method">Method</a><a href="#hire-trades">Trades</a><a href="#hire-request">Request</a><a href="#hire-faq">FAQ</a>
-          </nav>
-          <div className="hire-top-meta"><button type="button" className="hire-btn primary" onClick={scrollToRequest}>Build a request <HireArrowIcon /></button></div>
+        <div className="hire-topbar-inner-v4">
+          <div className="hire-mobile-brand"><BrandLogo href="#hire-top" height={32} /></div>
+          <div className="hire-top-context">
+            <span className="hire-top-icon"><HireUsersIcon /></span>
+            <div><b>Construction workforce</b><small>Lithuania → European projects</small></div>
+          </div>
+          <div className="hire-top-actions-v4">
+            <span className="hire-route-pill">Direct employment</span>
+            <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Submit workforce request <HireArrowIcon /></button>
+          </div>
         </div>
       </header>
 
       <main>
-        <section className="hire-hero">
-          <div className="hire-shell">
-            <div className="hire-hero-kicker"><span>Construction workforce · direct hire</span><span>Lithuania → Europe</span></div>
-            <h1 className="hire-hero-title"><span className="line">You build</span><span className="line">the project.</span><span className="line">We assemble the <span className="accent">crew.</span></span></h1>
-            <div className="hire-hero-bottom">
-              <div className="hire-hero-copy">
-                <p><strong>One structured brief instead of weeks of scattered sourcing.</strong> Tell us the trade, headcount, timing and conditions. We use that brief to source and pre-screen construction workers for direct employment by your company.</p>
-                <div className="hire-hero-actions"><button type="button" className="hire-btn primary" onClick={scrollToRequest}>Start workforce brief <HireArrowIcon /></button><a className="hire-btn ghost" href="mailto:info@statybos24.lt">Talk to us</a></div>
+        <section className="hire-hero hire-anchor" id="hire-overview">
+          <div className="hire-shell hire-hero-grid-v4">
+            <div className="hire-hero-main-v4">
+              <div className="hire-hero-kicker-v4"><span className="hire-status-dot" /> CONSTRUCTION SPECIALISTS FROM LITHUANIA</div>
+              <h1 className="hire-hero-title-v4">Reliable construction specialists for projects across <span>Europe.</span></h1>
+              <p className="hire-hero-copy-v4">Tell us exactly who you need, when the project starts and what employment package you offer. Statybos24 sources and pre-screens suitable workers for <b>direct employment by your company.</b></p>
+              <div className="hire-hero-actions-v4">
+                <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Request workers <HireArrowIcon /></button>
+                <a className="hire-btn ghost" href="#hire-method">See how it works</a>
               </div>
-              <div className="hire-brief-board" aria-label="Example workforce brief">
-                <div className="hire-brief-row"><span>Trade</span><b>Carpenters</b><em>Example</em></div>
-                <div className="hire-brief-row"><span>Headcount</span><b>06 workers</b><em>Direct hire</em></div>
-                <div className="hire-brief-row"><span>Start</span><b>15 Nov · flexible ±7 days</b><em>Project-led</em></div>
-                <div className="hire-brief-row"><span>Terms</span><b>€21–23 / h gross · housing paid</b><em>Clear offer</em></div>
-                <div className="hire-brief-foot"><span>Example only — not a live vacancy</span><span>01 / workforce brief</span></div>
+              <div className="hire-lane-tags" aria-label="Target markets">
+                <span>Germany</span><span>Netherlands</span><span>Norway</span><span>Sweden</span><span>Denmark</span><span>Other EU / EEA</span>
               </div>
             </div>
+
+            <aside className="hire-route-card" aria-label="Recruitment route overview">
+              <div className="hire-route-card-head"><div><span>WORKFORCE ROUTE</span><h2>One source. Multiple project markets.</h2></div><span className="hire-live"><i /> Structured sourcing</span></div>
+              <div className="hire-route-diagram">
+                <div className="hire-source-node"><span>Source market</span><b>Lithuania</b><small>Construction specialists</small></div>
+                <svg viewBox="0 0 560 230" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M155 112 C245 112 245 42 350 42" />
+                  <path d="M155 112 C250 112 255 92 350 92" />
+                  <path d="M155 112 C250 112 255 142 350 142" />
+                  <path d="M155 112 C245 112 245 192 350 192" />
+                </svg>
+                <div className="hire-market-node n1"><b>DE</b><span>Germany</span></div>
+                <div className="hire-market-node n2"><b>NL</b><span>Netherlands</span></div>
+                <div className="hire-market-node n3"><b>NO</b><span>Norway</span></div>
+                <div className="hire-market-node n4"><b>SE</b><span>Sweden</span></div>
+              </div>
+              <div className="hire-route-card-foot"><span><HireCheckIcon size={15}/> Construction only</span><span><HireCheckIcon size={15}/> Employer-paid recruitment</span></div>
+            </aside>
+          </div>
+
+          <div className="hire-shell hire-value-row">
+            <div><span className="hire-value-icon"><HireUsersIcon /></span><b>Construction only</b><small>Focused on trades and site roles.</small></div>
+            <div><span className="hire-value-icon"><HireBriefcaseIcon /></span><b>Direct employment</b><small>Your company hires the worker.</small></div>
+            <div><span className="hire-value-icon">%</span><b>Success-based</b><small>Recruitment fee tied to a successful start.</small></div>
+            <div><span className="hire-value-icon"><HireShieldIcon /></span><b>Workers pay €0</b><small>No recruitment fee charged to workers.</small></div>
           </div>
         </section>
 
@@ -28790,7 +28876,7 @@ function HirePage() {
 
         <section className="hire-section white hire-anchor" id="hire-method">
           <div className="hire-shell">
-            <div className="hire-section-head"><div className="hire-index">01 / Method</div><div><h2>Less agency theatre. More useful information.</h2><p>The product is designed around one practical question: what does a construction employer need to decide whether a candidate can actually start the job?</p></div></div>
+            <div className="hire-section-head"><div className="hire-index">01 / Method</div><div><h2>A clear process from workforce need to direct hire.</h2><p>You define the job and employment package. We turn it into a structured search for suitable construction specialists.</p></div></div>
             <div className="hire-manifesto">
               <article><span className="num">01</span><h3>Brief the need.</h3><p>Trade, headcount, location, start date, working pattern and required experience — in one place.</p></article>
               <article><span className="num">02</span><h3>Make the offer real.</h3><p>Salary, accommodation, travel and transport are captured as structured conditions, not buried in free text.</p></article>
@@ -28799,9 +28885,9 @@ function HirePage() {
           </div>
         </section>
 
-        <section className="hire-section dark">
+        <section className="hire-section dark hire-anchor" id="hire-conditions">
           <div className="hire-shell">
-            <div className="hire-section-head"><div className="hire-index">02 / Offer signal</div><div><h2>International hiring moves on three signals.</h2><p>Workers compare the complete offer. The strongest briefs remove ambiguity before the first call.</p></div></div>
+            <div className="hire-section-head"><div className="hire-index">02 / Offer signal</div><div><h2>The employment package matters as much as the trade.</h2><p>Clear salary, accommodation and travel terms help us approach the right workers with a credible offer from the start.</p></div></div>
             <div className="hire-signal-grid">
               <article className="hire-signal"><div><div className="hire-signal-label">Compensation</div><div className="hire-signal-symbol">€</div></div><div><h3>Clear salary basis</h3><p>Hourly or monthly, gross or net, expected hours and overtime — no guesswork.</p></div></article>
               <article className="hire-signal"><div><div className="hire-signal-label">Accommodation</div><div className="hire-signal-symbol">⌂</div></div><div><h3>A real place to stay</h3><p>Employer-paid, shared, private, deducted or negotiable. Candidates know the actual package.</p></div></article>
@@ -28812,14 +28898,14 @@ function HirePage() {
 
         <section className="hire-section hire-anchor" id="hire-trades">
           <div className="hire-shell">
-            <div className="hire-section-head"><div className="hire-index">03 / Trades</div><div><h2>Built for construction, not generic hiring.</h2><p>The request can contain several professions and different headcounts, so one project can be briefed as one coordinated workforce need.</p></div></div>
+            <div className="hire-section-head"><div className="hire-index">03 / Trades</div><div><h2>Construction specialists, organised by the work you actually need.</h2><p>Add one trade or build a complete project crew. One request can include several professions and separate headcounts.</p></div></div>
             <div className="hire-role-wall">{HIRE_PROFESSIONS.slice(0,12).map((role)=><span key={role}>{role}</span>)}</div>
           </div>
         </section>
 
         <section className="hire-request-wrap hire-anchor" id="hire-request">
           <div className="hire-request-shell">
-            <div className="hire-request-head"><div><h2>Build your workforce brief.</h2><p>Five short steps. No account required for this preview.</p></div><div className="hire-request-badge">Design prototype · no database write</div></div>
+            <div className="hire-request-head"><div><h2>Submit your workforce request.</h2><p>Five clear steps covering your company, workers, project and employment conditions.</p></div><div className="hire-request-badge">Design prototype · no database write</div></div>
             <div className="hire-request-grid">
               <aside className="hire-step-rail" aria-label="Request steps">{HIRE_STEPS.map((item)=><button type="button" key={item.number} className={`hire-step-button${step===item.number?' active':''}${step>item.number?' done':''}`} onClick={()=>{if(item.number<=step)setStep(item.number)}} disabled={item.number>step}><span className="n">{step>item.number?'✓':String(item.number).padStart(2,'0')}</span><span className="l">{item.label}</span></button>)}</aside>
               <div className="hire-form-panel">
@@ -28848,7 +28934,7 @@ function HirePage() {
         <section className="hire-final"><div className="hire-shell hire-final-inner"><h2>Give us the brief. Keep your project moving.</h2><button type="button" className="hire-btn dark" onClick={scrollToRequest}>Build a request <HireArrowIcon/></button></div></section>
       </main>
 
-      <footer className="hire-footer"><div className="hire-shell hire-footer-inner"><BrandLogo href="#hire-top" height={32}/><div className="hire-footer-copy">© {new Date().getFullYear()} Statybos24 · private direct-hire route</div><a className="hire-footer-contact" href="mailto:info@statybos24.lt">info@statybos24.lt</a></div></footer>
+      <footer className="hire-footer" id="hire-contact"><div className="hire-shell hire-footer-inner"><BrandLogo href="#hire-top" height={32}/><div className="hire-footer-copy">© {new Date().getFullYear()} Statybos24 · private direct-hire route</div><a className="hire-footer-contact" href="mailto:info@statybos24.lt">info@statybos24.lt</a></div></footer>
     </div>
   );
 }
