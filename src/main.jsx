@@ -28734,16 +28734,6 @@ function HirePage() {
     };
   }, [requestOpen]);
 
-  useEffect(() => {
-    const ids = ["hire-overview", "hire-method", "hire-trades", "hire-contact"];
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible?.target?.id) setActiveSection(visible.target.id);
-    }, { rootMargin: "-18% 0px -62% 0px", threshold: [0, .08, .2, .4] });
-    ids.forEach((id) => { const node = document.getElementById(id); if (node) observer.observe(node); });
-    return () => observer.disconnect();
-  }, []);
-
   const changeLanguage = (code) => {
     if (!supportedLanguageCodes.includes(code)) return;
     setLang(code);
@@ -29018,7 +29008,7 @@ function HirePage() {
         /* ===== HIRE V9 · ORBIT HERO + SEPARATE REQUEST WORKSPACE ===== */
         .hire-hero{min-height:520px!important;background:linear-gradient(115deg,#fff 0%,#f8fafc 58%,#f0f5f8 100%)!important}
         .hire-hero-v8{min-height:520px!important}
-        .hire-hero-main-v8{width:min(54%,650px)!important;padding:40px 0!important}
+        .hire-hero-main-v8{width:min(57%,675px)!important;padding:40px 0!important}
         .hire-hero-title-v4{max-width:620px!important;font-size:clamp(50px,5vw,72px)!important;line-height:1.03!important;letter-spacing:-.045em!important}
         .hire-hero-title-v4 .hire-hero-line-main,.hire-hero-title-v4 .hire-hero-line-accent{display:block!important}
         .hire-hero-title-v4 .hire-hero-line-accent{margin-top:7px!important}
@@ -29026,20 +29016,20 @@ function HirePage() {
         .hire-hero-actions-v4{margin-top:22px!important}.hire-hero-actions-v4 .hire-btn{min-width:170px}
         .hire-hero-facts{display:none!important}
 
-        .hire-route-background{right:-1%!important;width:49%!important;height:386px!important;top:50%!important;transform:translateY(-50%)!important}
-        .hire-route-background:before{content:""!important;position:absolute!important;inset:-12px -10px -8px -14px!important;background:radial-gradient(circle at 28% 52%,rgba(240,138,40,.12),transparent 16%),radial-gradient(circle at 62% 20%,rgba(16,40,63,.06),transparent 22%),radial-gradient(circle at 86% 58%,rgba(16,40,63,.05),transparent 18%),radial-gradient(circle at 48% 86%,rgba(16,40,63,.045),transparent 16%)!important;filter:blur(2px)!important}
-        .hire-route-background:after{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 52% 54%,rgba(255,255,255,.54),transparent 38%)!important}
+        .hire-route-background{right:-4%!important;width:60%!important;height:410px!important;top:50%!important;transform:translateY(-50%)!important}
+        .hire-route-background:before{content:""!important;position:absolute!important;inset:-20px -16px -16px -26px!important;background:radial-gradient(circle at 17% 51%,rgba(240,138,40,.12),transparent 14%),radial-gradient(circle at 48% 17%,rgba(16,40,63,.05),transparent 20%),radial-gradient(circle at 82% 48%,rgba(16,40,63,.045),transparent 18%),radial-gradient(circle at 39% 82%,rgba(16,40,63,.04),transparent 18%)!important;filter:blur(2px)!important}
+        .hire-route-background:after{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 42% 52%,rgba(255,255,255,.44),transparent 34%)!important}
         .hire-route-word,.hire-route-lines-v8,.hire-route-source-v8,.hire-route-target-v8{display:none!important}
         .hire-route-cloud{position:absolute;inset:0;z-index:3}
-        .hire-route-origin{position:absolute;left:4%;top:43%;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:rgba(240,138,40,.11);color:#d97e1f;font-size:9.5px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 10px 24px rgba(240,138,40,.12)}
-        .hire-route-origin:before{content:"";width:8px;height:8px;border-radius:50%;background:#f08a28;box-shadow:0 0 0 6px rgba(240,138,40,.10)}
-        .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.92;letter-spacing:-.055em;text-wrap:balance;pointer-events:none}
-        .hire-route-country.c1{right:4%;top:2%;font-size:74px;color:rgba(16,40,63,.12)}
-        .hire-route-country.c2{left:15%;top:-1%;font-size:38px;color:rgba(16,40,63,.42);letter-spacing:-.045em}
-        .hire-route-country.c3{right:0;top:38%;font-size:52px;color:rgba(16,40,63,.24)}
-        .hire-route-country.c4{left:24%;bottom:4%;font-size:48px;color:rgba(16,40,63,.19);letter-spacing:-.045em}
-        .hire-route-country.c5{right:18%;bottom:-1%;font-size:30px;color:rgba(16,40,63,.36);letter-spacing:-.035em}
-        .hire-route-europe{position:absolute;left:7%;bottom:-4%;font-family:Manrope,Inter,sans-serif;font-size:94px;font-weight:950;letter-spacing:-.08em;color:rgba(16,40,63,.025);white-space:nowrap}
+        .hire-route-origin{position:absolute;left:0;top:45%;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:rgba(240,138,40,.10);color:#d97e1f;font-size:9px;font-weight:950;letter-spacing:.15em;text-transform:uppercase;box-shadow:0 9px 22px rgba(240,138,40,.10)}
+        .hire-route-origin:before{content:"";width:8px;height:8px;border-radius:50%;background:#f08a28;box-shadow:0 0 0 6px rgba(240,138,40,.09)}
+        .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.9;letter-spacing:-.055em;text-wrap:balance;pointer-events:none;user-select:none}
+        .hire-route-country.c1{left:28%;top:0;font-size:72px;color:rgba(16,40,63,.105)}
+        .hire-route-country.c2{left:7%;top:8%;font-size:36px;color:rgba(16,40,63,.34);letter-spacing:-.045em}
+        .hire-route-country.c3{right:0;top:35%;font-size:51px;color:rgba(16,40,63,.20)}
+        .hire-route-country.c4{left:20%;bottom:8%;font-size:46px;color:rgba(16,40,63,.16);letter-spacing:-.045em}
+        .hire-route-country.c5{right:17%;bottom:1%;font-size:29px;color:rgba(16,40,63,.31);letter-spacing:-.035em}
+        .hire-route-europe{position:absolute;left:4%;bottom:-6%;font-family:Manrope,Inter,sans-serif;font-size:102px;font-weight:950;letter-spacing:-.08em;color:rgba(16,40,63,.022);white-space:nowrap}
 
         .hire-side-request{width:100%;min-height:46px;margin:10px 0 4px;border:0;border-radius:10px;background:#10283f;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;font:inherit;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(16,40,63,.10)}
         .hire-side-request:hover{background:#173b59}.hire-side-request svg{color:#f08a28}
@@ -29079,7 +29069,7 @@ function HirePage() {
         .hire-faq{gap:30px!important}.hire-faq-list{display:grid!important;gap:7px!important}.hire-faq-item{border:1px solid #e5ebf0!important;border-radius:10px!important;background:#fff!important;padding:0!important;overflow:hidden}.hire-faq-item summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 14px;color:#10283f;font-size:11px;font-weight:850}.hire-faq-item summary::-webkit-details-marker{display:none}.hire-faq-item summary b{font-size:18px;font-weight:500;color:#f08a28;transition:transform .15s ease}.hire-faq-item[open] summary b{transform:rotate(45deg)}.hire-faq-item p{margin:0!important;padding:0 14px 14px!important;color:#71808d!important;font-size:10.5px!important;line-height:1.55!important}.hire-contact-clean{padding:38px 0 18px!important}.hire-contact-card{padding:20px 22px!important}
 
         @media (max-width:1100px){
-          .hire-hero-main-v8{width:53%!important}.hire-route-background{right:-2%!important;width:50%!important;transform:translateY(-50%) scale(.94)!important;transform-origin:center!important}
+          .hire-hero-main-v8{width:56%!important}.hire-route-background{right:-5%!important;width:61%!important;transform:translateY(-50%) scale(.94)!important;transform-origin:center!important}
         }
         @media (max-width:820px){
           .hire-mobile-hero-tools{display:flex!important;align-items:flex-start!important;margin-bottom:0!important;padding-top:14px;padding-bottom:0}.hire-mobile-hero-tools .hire-language-dropdown{width:66px}
@@ -29099,10 +29089,10 @@ function HirePage() {
 `}</style>
 
       <aside className="hire-sidebar" aria-label="Hire navigation">
-        <div className="hire-side-brand"><BrandLogo href="#hire-top" height={42} /><span className="hire-brand-sublabel">{c.brand}</span></div>
+        <div className="hire-side-brand"><BrandLogo href="#hire-top" height={42} /></div>
         <div className="hire-side-context">{t.sidebarLabel}</div>
         <nav className="hire-side-nav">
-          {navItems.map(([id, label, icon]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`}><span><HireSideIcon type={icon} /></span>{label}</a>)}
+          {navItems.map(([id, label, icon]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`} onClick={() => setActiveSection(id)}><span><HireSideIcon type={icon} /></span>{label}</a>)}
         </nav>
         <div className="hire-side-tools">
           <div><span className="hire-side-tool-label">{t.language}</span>{languageSelect(false)}</div>
@@ -29112,7 +29102,7 @@ function HirePage() {
 
       <main>
         <section className="hire-hero hire-anchor" id="hire-overview">
-          <div className="hire-shell hire-mobile-hero-tools"><div className="hire-mobile-brand-lockup"><BrandLogo href="#hire-top" height={31} /><span className="hire-brand-sublabel">{c.brand}</span></div>{languageSelect(true)}</div>
+          <div className="hire-shell hire-mobile-hero-tools"><div className="hire-mobile-brand-lockup"><BrandLogo href="#hire-top" height={31} /></div>{languageSelect(true)}</div>
           <div className="hire-shell hire-hero-v8">
             <div className="hire-hero-main-v8">
               <div className="hire-hero-kicker-v4"><span className="hire-status-dot" /> {c.hero.kicker}</div>
@@ -29135,7 +29125,7 @@ function HirePage() {
           </div>
         </section>
 
-        <nav className="hire-mobile-nav" aria-label="Hire sections">{navItems.map(([id,label]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`}>{label}</a>)}</nav>
+        <nav className="hire-mobile-nav" aria-label="Hire sections">{navItems.map(([id,label]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`} onClick={() => setActiveSection(id)}>{label}</a>)}</nav>
 
         <section className="hire-section white hire-anchor" id="hire-method"><div className="hire-shell"><div className="hire-section-head"><div className="hire-index">{t.process.index}</div><div><h2>{c.process.title}</h2><p>{c.process.intro}</p></div></div><div className="hire-manifesto">{t.process.steps.map(([title,body],index)=><article key={title}><span className="num">0{index+1}</span><h3>{title}</h3><p>{body}</p></article>)}</div></div></section>
 
