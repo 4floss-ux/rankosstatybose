@@ -24375,7 +24375,6 @@ function AdminDashboard({
     ["workers", "Darbuotojai"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
-    ["foreignHire", `Tarptautinė atranka${newForeignHireCount ? ` (${newForeignHireCount})` : ""}`],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Vadovų pokalbiai"],
     ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
@@ -24384,6 +24383,7 @@ function AdminDashboard({
     ["audit", "Veiksmų istorija"],
     ["files", "Failai"],
     ["bugs", `Svetainės klaidos${activeSiteBugCount ? ` (${activeSiteBugCount})` : ""}`],
+    ["foreignHire", `Tarptautinė atranka${newForeignHireCount ? ` (${newForeignHireCount})` : ""}`],
   ];
 
   useEffect(() => {
@@ -24569,6 +24569,7 @@ function AdminDashboard({
       under_review: "Peržiūrima",
       access_preparing: "Ruošiama prieiga",
       waiting_employer: "Laukiama darbdavio",
+      employer_submitted: "Darbdavys pateikė",
       ready_for_sourcing: "Paruošta paieškai",
       sourcing: "Vyksta paieška",
       declined: "Atmesta",
@@ -24718,6 +24719,47 @@ function AdminDashboard({
         } catch (_) {}
       }
       setError(err?.message || "Nepavyko sukurti darbdavio prieigos.");
+    } finally {
+      setForeignHireSetupBusy(false);
+    }
+  }
+
+  async function replaceForeignEmployerAgreement() {
+    const request = foreignHireSetupRequest;
+    if (!request?.request_id || !request?.employer_account_id || foreignHireSetupBusy) return;
+    const fileError = validateForeignHireAgreementFile(foreignHireAgreementFile);
+    if (fileError) { setError(fileError); return; }
+
+    setForeignHireSetupBusy(true);
+    setError("");
+    setNotice("");
+    let storagePath = "";
+    try {
+      storagePath = `${request.request_id}/original/${Date.now()}-${safeStorageFileName(foreignHireAgreementFile.name)}`;
+      const uploadResult = await supabase.storage
+        .from("foreign-hire-contracts")
+        .upload(storagePath, foreignHireAgreementFile, {
+          upsert: false,
+          contentType: foreignHireAgreementFile.type,
+        });
+      if (uploadResult.error) throw uploadResult.error;
+
+      const result = await supabase.rpc("admin_replace_foreign_hire_agreement", {
+        p_request_id: request.request_id,
+        p_agreement_path: storagePath,
+        p_agreement_name: foreignHireAgreementFile.name,
+      });
+      if (result.error) throw result.error;
+
+      setForeignHireAgreementFile(null);
+      setForeignHireSetupRequest(null);
+      setNotice(request.agreement_path ? "Recruitment sutartis pakeista. Darbdavys portale matys naują versiją." : "Recruitment sutartis įkelta. Darbdavys ją jau gali atidaryti portale.");
+      await loadAdminData(true);
+    } catch (err) {
+      if (storagePath) {
+        try { await supabase.storage.from("foreign-hire-contracts").remove([storagePath]); } catch (_) {}
+      }
+      setError(err?.message || "Nepavyko įkelti sutarties.");
     } finally {
       setForeignHireSetupBusy(false);
     }
@@ -25566,9 +25608,9 @@ function AdminDashboard({
         .admin-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:20px}
         .admin-tab{width:100%;min-height:46px;border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;line-height:1.25;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
-        .admin-tab.bug-alert,.admin-tab.dispute-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
-        .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover{background:#b7362d;border-color:#b7362d}
-        .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
+        .admin-tab.bug-alert,.admin-tab.dispute-alert,.admin-tab.foreign-hire-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
+        .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover,.admin-tab.foreign-hire-alert:hover{background:#b7362d;border-color:#b7362d}
+        .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active,.admin-tab.foreign-hire-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
         .admin-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:11px}
         .admin-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:17px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 7px 22px rgba(16,36,56,.035)}
         .admin-kpi span{color:#6c7a88;font-size:12px;line-height:1.35;min-height:33px}.admin-kpi b{font-family:Manrope,Inter,sans-serif;font-size:28px;line-height:1;margin-top:12px}
@@ -25626,8 +25668,9 @@ function AdminDashboard({
         .admin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-wide{grid-column:1/-1}
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
-        .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card{border:1px solid #e2e9ee;border-radius:15px;background:#fff;padding:17px}.admin-foreign-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-foreign-head h3{margin:0;font:800 17px/1.25 Manrope,Inter,sans-serif}.admin-foreign-head p{margin:5px 0 0;color:#6c7a88;font-size:12px}.admin-foreign-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.admin-foreign-fact{padding:11px 12px;border-radius:11px;background:#f8fafb;border:1px solid #edf1f4}.admin-foreign-fact span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:5px}.admin-foreign-fact b,.admin-foreign-fact a{color:#102438;font-size:12px;font-weight:800;overflow-wrap:anywhere}.admin-foreign-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin-foreign-role{padding:7px 9px;border-radius:9px;background:#eef4f8;color:#17344b;font-size:11px;font-weight:800}.admin-foreign-note{margin-top:12px;padding:11px 12px;background:#fff8ef;border:1px solid #f5dfc7;border-radius:10px;color:#6b5846;font-size:12px;line-height:1.5;white-space:pre-wrap}.admin-foreign-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.admin-foreign-status{padding:7px 10px;border-radius:999px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:850}.admin-foreign-status.new{background:#fff3e7;color:#9b5a18}.admin-foreign-status.declined{background:#fff0ec;color:#b64d2a}@media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.admin-foreign-head{flex-direction:column}.admin-foreign-grid{grid-template-columns:1fr}.admin-foreign-card{padding:14px}}
-        .admin-foreign-access-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid #edf1f4}.admin-foreign-access-summary>div{border:1px solid #e4ebf0;border-radius:10px;padding:10px 11px;background:#fbfcfd}.admin-foreign-access-summary span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:4px}.admin-foreign-access-summary b,.admin-foreign-access-summary a{font-size:12px;font-weight:850;color:#102438;overflow-wrap:anywhere}.admin-foreign-credentials{margin-top:12px;border:1px solid #bfe6d3;background:#eff9f4;border-radius:12px;padding:13px}.admin-foreign-credentials strong{display:block;color:#126b4a;font-size:12px;margin-bottom:7px}.admin-foreign-credentials code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#17344b;font:750 12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.admin-foreign-credentials .admin-foreign-actions{margin-top:10px}.admin-foreign-setup{margin-top:14px;border:1px solid #dbe4ea;background:#f8fafb;border-radius:13px;padding:14px}.admin-foreign-setup h4{margin:0;font:850 14px/1.35 Manrope,Inter,sans-serif}.admin-foreign-setup p{margin:5px 0 12px;color:#6c7a88;font-size:11px;line-height:1.45}.admin-foreign-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.admin-foreign-field{display:grid;gap:5px}.admin-foreign-field span{color:#526374;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}.admin-foreign-field input{width:100%;box-sizing:border-box;border:1px solid #d6e0e7;border-radius:9px;background:#fff;color:#102438;padding:10px 11px;font:750 12px/1.3 Inter,system-ui,sans-serif;outline:none}.admin-foreign-field input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.admin-foreign-file{grid-column:1/-1;border:1px dashed #cdd8df;border-radius:10px;padding:11px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}.admin-foreign-file-copy{min-width:0}.admin-foreign-file-copy b{display:block;font-size:12px;color:#102438;overflow-wrap:anywhere}.admin-foreign-file-copy span{display:block;margin-top:3px;color:#7a8996;font-size:10px}.admin-foreign-file input{display:none}.admin-foreign-setup-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.admin-foreign-access-summary{grid-template-columns:1fr 1fr}}@media(max-width:620px){.admin-foreign-access-summary,.admin-foreign-setup-grid{grid-template-columns:1fr}.admin-foreign-file{grid-column:auto;align-items:flex-start;flex-direction:column}}
+        .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card.is-new{border-color:#e6aaa4!important;box-shadow:0 8px 24px rgba(198,63,52,.08)!important}
+        .admin-foreign-card{border:1px solid #e2e9ee;border-radius:15px;background:#fff;padding:17px}.admin-foreign-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-foreign-head h3{margin:0;font:800 17px/1.25 Manrope,Inter,sans-serif}.admin-foreign-head p{margin:5px 0 0;color:#6c7a88;font-size:12px}.admin-foreign-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.admin-foreign-fact{padding:11px 12px;border-radius:11px;background:#f8fafb;border:1px solid #edf1f4}.admin-foreign-fact span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:5px}.admin-foreign-fact b,.admin-foreign-fact a{color:#102438;font-size:12px;font-weight:800;overflow-wrap:anywhere}.admin-foreign-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin-foreign-role{padding:7px 9px;border-radius:9px;background:#eef4f8;color:#17344b;font-size:11px;font-weight:800}.admin-foreign-note{margin-top:12px;padding:11px 12px;background:#fff8ef;border:1px solid #f5dfc7;border-radius:10px;color:#6b5846;font-size:12px;line-height:1.5;white-space:pre-wrap}.admin-foreign-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.admin-foreign-status{padding:7px 10px;border-radius:999px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:850}.admin-foreign-status.new{background:#fff3e7;color:#9b5a18}.admin-foreign-status.declined{background:#fff0ec;color:#b64d2a}@media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.admin-foreign-head{flex-direction:column}.admin-foreign-grid{grid-template-columns:1fr}.admin-foreign-card{padding:14px}}
+        .admin-foreign-access-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid #edf1f4}.admin-foreign-access-summary>div{border:1px solid #e4ebf0;border-radius:10px;padding:10px 11px;background:#fbfcfd}.admin-foreign-access-summary span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:4px}.admin-foreign-access-summary b,.admin-foreign-access-summary a{font-size:12px;font-weight:850;color:#102438;overflow-wrap:anywhere}.admin-foreign-brief{margin-top:12px;border:1px solid #dfe7ec;border-radius:12px;background:#fbfcfd;overflow:hidden}.admin-foreign-brief summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 13px;color:#102438;font-size:12px;font-weight:850}.admin-foreign-brief summary::-webkit-details-marker{display:none}.admin-foreign-brief summary b{color:#b85f0e;font-size:11px}.admin-foreign-brief-body{padding:0 13px 13px;border-top:1px solid #edf1f4}.admin-foreign-brief-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding-top:12px}.admin-foreign-brief-grid>div{padding:10px;border:1px solid #e6edf1;border-radius:9px;background:#fff}.admin-foreign-brief-grid span{display:block;color:#7a8996;font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-foreign-brief-grid b{font-size:11px;line-height:1.4;overflow-wrap:anywhere}.admin-foreign-brief-roles{display:grid;gap:7px;margin-top:10px}.admin-foreign-brief-roles>div{padding:10px 11px;border:1px solid #e6edf1;border-radius:9px;background:#fff}.admin-foreign-brief-roles strong{display:block;font-size:11px}.admin-foreign-brief-roles span{display:block;margin-top:4px;color:#6f7f8b;font-size:10px;line-height:1.45}.admin-foreign-credentials{margin-top:12px;border:1px solid #bfe6d3;background:#eff9f4;border-radius:12px;padding:13px}.admin-foreign-credentials strong{display:block;color:#126b4a;font-size:12px;margin-bottom:7px}.admin-foreign-credentials code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#17344b;font:750 12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.admin-foreign-credentials .admin-foreign-actions{margin-top:10px}.admin-foreign-setup{margin-top:14px;border:1px solid #dbe4ea;background:#f8fafb;border-radius:13px;padding:14px}.admin-foreign-setup h4{margin:0;font:850 14px/1.35 Manrope,Inter,sans-serif}.admin-foreign-setup p{margin:5px 0 12px;color:#6c7a88;font-size:11px;line-height:1.45}.admin-foreign-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.admin-foreign-field{display:grid;gap:5px}.admin-foreign-field span{color:#526374;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}.admin-foreign-field input{width:100%;box-sizing:border-box;border:1px solid #d6e0e7;border-radius:9px;background:#fff;color:#102438;padding:10px 11px;font:750 12px/1.3 Inter,system-ui,sans-serif;outline:none}.admin-foreign-field input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.admin-foreign-file{grid-column:1/-1;border:1px dashed #cdd8df;border-radius:10px;padding:11px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}.admin-foreign-file-copy{min-width:0}.admin-foreign-file-copy b{display:block;font-size:12px;color:#102438;overflow-wrap:anywhere}.admin-foreign-file-copy span{display:block;margin-top:3px;color:#7a8996;font-size:10px}.admin-foreign-file input{display:none}.admin-foreign-setup-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.admin-foreign-access-summary{grid-template-columns:1fr 1fr}.admin-foreign-brief-grid{grid-template-columns:1fr 1fr}}@media(max-width:620px){.admin-foreign-access-summary,.admin-foreign-setup-grid,.admin-foreign-brief-grid{grid-template-columns:1fr}.admin-foreign-file{grid-column:auto;align-items:flex-start;flex-direction:column}}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -25708,6 +25751,8 @@ function AdminDashboard({
                 key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
               } ${
                 key === "disputes" && activeDisputeCount ? "dispute-alert" : ""
+              } ${
+                key === "foreignHire" && newForeignHireCount ? "foreign-hire-alert" : ""
               }`}
               onClick={() => setActiveTab(key)}
             >
@@ -26085,7 +26130,7 @@ function AdminDashboard({
                   )}&body=${encodeURIComponent(mailBody)}`;
 
                   return (
-                    <article className="admin-foreign-card" key={request.request_id}>
+                    <article className={`admin-foreign-card ${request.status === "new" ? "is-new" : ""}`} key={request.request_id}>
                       <div className="admin-foreign-head">
                         <div>
                           <h3>{request.company_name}</h3>
@@ -26142,8 +26187,47 @@ function AdminDashboard({
                                 ? "Reikia pataisyti"
                                 : "Laukiama įmonės parašo"}
                             </b>
+                            {request.signedAgreementUrl ? (
+                              <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:5}}>Atidaryti pasirašytą</a>
+                            ) : null}
                           </div>
                         </div>
+                      ) : null}
+
+                      {request.brief_status ? (
+                        <details className="admin-foreign-brief">
+                          <summary>
+                            <span>Darbdavio pilna informacija</span>
+                            <b>{request.brief_status === "submitted" || request.brief_status === "approved" ? "Pateikta" : "Juodraštis"}</b>
+                          </summary>
+                          <div className="admin-foreign-brief-body">
+                            <div className="admin-foreign-brief-grid">
+                              <div><span>Juridinis pavadinimas</span><b>{request.brief_company_details?.legalName || "—"}</b></div>
+                              <div><span>Registracijos nr.</span><b>{request.brief_company_details?.registrationNumber || "—"}</b></div>
+                              <div><span>VAT</span><b>{request.brief_company_details?.vatNumber || "—"}</b></div>
+                              <div><span>Adresas</span><b>{request.brief_company_details?.billingAddress || "—"}</b></div>
+                              <div><span>Kontaktas</span><b>{request.brief_company_details?.contactName || "—"}</b></div>
+                              <div><span>Business email</span><b>{request.brief_company_details?.businessEmail || "—"}</b></div>
+                              <div><span>Projektas</span><b>{request.brief_workforce_details?.projectLocation || "—"}, {request.brief_workforce_details?.projectCountry || "—"}</b></div>
+                              <div><span>Startas</span><b>{request.brief_workforce_details?.startDate || "—"}</b></div>
+                              <div><span>Atlygis</span><b>{request.brief_workforce_details?.salaryMin || "—"}{request.brief_workforce_details?.salaryMax ? `–${request.brief_workforce_details.salaryMax}` : ""} {request.brief_workforce_details?.salaryCurrency || ""} · {request.brief_workforce_details?.salaryBasis || ""} / {request.brief_workforce_details?.salaryType || ""}</b></div>
+                              <div><span>Valandos</span><b>{request.brief_workforce_details?.hoursPerWeek || "—"} / sav.</b></div>
+                              <div><span>Būstas</span><b>{request.brief_workforce_details?.accommodation || "—"}{request.brief_workforce_details?.roomType ? ` · ${request.brief_workforce_details.roomType}` : ""}</b></div>
+                              <div><span>Rotacija</span><b>{request.brief_workforce_details?.rotation || "—"}</b></div>
+                            </div>
+                            {Array.isArray(request.brief_workforce_details?.roles) ? (
+                              <div className="admin-foreign-brief-roles">
+                                {request.brief_workforce_details.roles.map((role,index)=>(
+                                  <div key={`${request.request_id}-brief-role-${index}`}>
+                                    <strong>{role.profession || "Profesija"} · {Number(role.count || 1)} žm.</strong>
+                                    <span>{[role.experience, role.language, role.skills].filter(Boolean).join(" · ") || "Papildomi reikalavimai nenurodyti"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                            {request.brief_workforce_details?.additionalInfo ? <div className="admin-foreign-note">{request.brief_workforce_details.additionalInfo}</div> : null}
+                          </div>
+                        </details>
                       ) : null}
 
                       {credentials ? (
@@ -26165,36 +26249,33 @@ function AdminDashboard({
                         </div>
                       ) : null}
 
-                      {setupOpen && !request.employer_account_id ? (
+                      {setupOpen ? (
                         <div className="admin-foreign-setup">
-                          <h4>Sukurti privatų darbdavio prisijungimą</h4>
+                          <h4>{request.employer_account_id ? "Įkelti arba pakeisti recruitment sutartį" : "Sukurti privatų darbdavio prisijungimą"}</h4>
                           <p>
-                            Prieiga bus sukurta tik šiai įmonei. Laikinas slaptažodis duomenų bazėje bus saugomas tik užšifruotas, todėl prieš uždarydami šį langą jį nukopijuokite.
+                            {request.employer_account_id
+                              ? "Naujas failas iš karto taps aktyvia sutarties versija darbdavio portale. Jei buvo įkelta pasirašyta kopija, ją reikės įkelti iš naujo pagal naują sutartį."
+                              : "Prieiga bus sukurta tik šiai įmonei. Laikinas slaptažodis duomenų bazėje bus saugomas tik užšifruotas, todėl prieš uždarydami šį langą jį nukopijuokite."}
                           </p>
                           <div className="admin-foreign-setup-grid">
-                            <label className="admin-foreign-field">
-                              <span>Company ID</span>
-                              <input
-                                value={foreignHireSetupLogin}
-                                onChange={(event) =>
-                                  setForeignHireSetupLogin(
-                                    event.target.value
-                                      .toUpperCase()
-                                      .replace(/[^A-Z0-9-]/g, "")
-                                      .slice(0, 40)
-                                  )
-                                }
-                                autoComplete="off"
-                              />
-                            </label>
-                            <label className="admin-foreign-field">
-                              <span>Laikinas slaptažodis</span>
-                              <input
-                                value={foreignHireSetupPassword}
-                                onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))}
-                                autoComplete="off"
-                              />
-                            </label>
+                            {!request.employer_account_id ? <>
+                              <label className="admin-foreign-field">
+                                <span>Company ID</span>
+                                <input
+                                  value={foreignHireSetupLogin}
+                                  onChange={(event) => setForeignHireSetupLogin(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40))}
+                                  autoComplete="off"
+                                />
+                              </label>
+                              <label className="admin-foreign-field">
+                                <span>Laikinas slaptažodis</span>
+                                <input
+                                  value={foreignHireSetupPassword}
+                                  onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))}
+                                  autoComplete="off"
+                                />
+                              </label>
+                            </> : null}
                             <label className="admin-foreign-file">
                               <span className="admin-foreign-file-copy">
                                 <b>{foreignHireAgreementFile?.name || "Recruitment sutartis nepasirinkta"}</b>
@@ -26209,41 +26290,19 @@ function AdminDashboard({
                             </label>
                           </div>
                           <div className="admin-foreign-setup-actions">
+                            {!request.employer_account_id ? <>
+                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}>Naujas Company ID</button>
+                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}>Naujas slaptažodis</button>
+                            </> : null}
+                            <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); }}>Atšaukti</button>
                             <button
                               className="admin-small-btn"
                               type="button"
                               disabled={foreignHireSetupBusy}
-                              onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}
-                            >
-                              Naujas Company ID
-                            </button>
-                            <button
-                              className="admin-small-btn"
-                              type="button"
-                              disabled={foreignHireSetupBusy}
-                              onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}
-                            >
-                              Naujas slaptažodis
-                            </button>
-                            <button
-                              className="admin-small-btn"
-                              type="button"
-                              disabled={foreignHireSetupBusy}
-                              onClick={() => {
-                                setForeignHireSetupRequest(null);
-                                setForeignHireAgreementFile(null);
-                              }}
-                            >
-                              Atšaukti
-                            </button>
-                            <button
-                              className="admin-small-btn"
-                              type="button"
-                              disabled={foreignHireSetupBusy}
-                              onClick={createForeignEmployerAccess}
+                              onClick={request.employer_account_id ? replaceForeignEmployerAgreement : createForeignEmployerAccess}
                               style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}
                             >
-                              {foreignHireSetupBusy ? "Kuriama..." : "Sukurti prieigą ir įkelti sutartį"}
+                              {foreignHireSetupBusy ? "Saugoma..." : request.employer_account_id ? "Įkelti sutartį" : "Sukurti prieigą ir įkelti sutartį"}
                             </button>
                           </div>
                         </div>
@@ -26264,7 +26323,10 @@ function AdminDashboard({
                             Sukurti darbdavio prieigą
                           </button>
                         ) : null}
-                        {request.employer_account_id ? (
+                        {request.employer_account_id ? <>
+                          <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => openForeignHireAccessSetup(request)}>
+                            {request.agreement_path ? "Pakeisti sutartį" : "Įkelti sutartį"}
+                          </button>
                           <button
                             className="admin-small-btn"
                             type="button"
@@ -26272,6 +26334,16 @@ function AdminDashboard({
                             onClick={() => resetForeignEmployerPassword(request)}
                           >
                             Naujas laikinas slaptažodis
+                          </button>
+                        </> : null}
+                        {request.status === "employer_submitted" ? (
+                          <button className="admin-small-btn" type="button" disabled={busy} onClick={() => updateForeignHireRequestStatus(request, "ready_for_sourcing")}>
+                            {busy ? "Saugoma..." : "Patvirtinti informaciją"}
+                          </button>
+                        ) : null}
+                        {request.status === "ready_for_sourcing" ? (
+                          <button className="admin-small-btn" type="button" disabled={busy} onClick={() => updateForeignHireRequestStatus(request, "sourcing")} style={{background:"#102438",color:"#fff",borderColor:"#102438"}}>
+                            {busy ? "Saugoma..." : "Pradėti darbuotojų paiešką"}
                           </button>
                         ) : null}
                         {!['declined','closed'].includes(request.status) ? (
@@ -29773,6 +29845,346 @@ function HirePage() {
   );
 }
 
+
+const FOREIGN_HIRE_PORTAL_SESSION_KEY = "s24_foreign_hire_portal_session";
+
+function getForeignHirePortalToken() {
+  try { return localStorage.getItem(FOREIGN_HIRE_PORTAL_SESSION_KEY) || ""; } catch { return ""; }
+}
+
+function setForeignHirePortalToken(token) {
+  try {
+    if (token) localStorage.setItem(FOREIGN_HIRE_PORTAL_SESSION_KEY, token);
+    else localStorage.removeItem(FOREIGN_HIRE_PORTAL_SESSION_KEY);
+  } catch {}
+}
+
+function HirePortalLogo() {
+  return <BrandLogo href="/hire" height={48} style={{display:"inline-flex",justifyContent:"center"}} imgStyle={{maxWidth:210}} />;
+}
+
+function HireEmployerLoginPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    const existing = document.querySelector('meta[name="robots"]');
+    const previous = existing?.getAttribute("content") ?? null;
+    const robots = existing || document.createElement("meta");
+    if (!existing) { robots.setAttribute("name", "robots"); document.head.appendChild(robots); }
+    robots.setAttribute("content", "noindex,nofollow,noarchive");
+    document.title = "Employer portal login | Statybos24";
+    return () => { document.title = previousTitle; if (existing) { if (previous === null) existing.removeAttribute("content"); else existing.setAttribute("content", previous); } else robots.remove(); };
+  }, []);
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = getForeignHirePortalToken();
+    if (!token || !supabase) return;
+    supabase.rpc("foreign_employer_portal_data", { p_session_token: token }).then(({ data, error }) => {
+      if (!error && data?.request?.id) window.location.replace("/hire/portal");
+      else setForeignHirePortalToken("");
+    });
+  }, []);
+
+  async function submit(event) {
+    event?.preventDefault?.();
+    if (!supabase || busy) return;
+    setError("");
+    if (!loginId.trim() || !password) {
+      setError("Enter your Company ID and password.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("foreign_employer_login", {
+        p_login_id: loginId.trim().toUpperCase(),
+        p_password: password,
+      });
+      if (error) throw error;
+      const row = data?.[0];
+      if (!row?.session_token) throw new Error("Could not create a portal session.");
+      setForeignHirePortalToken(row.session_token);
+      window.location.assign("/hire/portal");
+    } catch (err) {
+      setError(err?.message || "Could not sign in. Check your access details.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="hire-login-page">
+      <style>{`
+        .hire-login-page{min-height:100vh;background:#f5f8fa;color:#10283f;font-family:Inter,system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,.82fr)}
+        .hire-login-brand{position:relative;overflow:hidden;background:#10283f;color:#fff;padding:54px clamp(32px,6vw,90px);display:flex;flex-direction:column;justify-content:space-between;isolation:isolate}.hire-login-brand:before{content:"EUROPE";position:absolute;left:-3%;bottom:5%;font:950 clamp(90px,14vw,220px)/.8 Manrope,Inter,sans-serif;letter-spacing:-.08em;color:rgba(255,255,255,.035);z-index:-1}.hire-login-brand-logo{background:#fff;border-radius:14px;padding:13px 18px;width:max-content}.hire-login-brand-copy{max-width:650px}.hire-login-brand-copy small{display:block;color:#f4a55d;font-size:9px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}.hire-login-brand-copy h1{margin:12px 0 18px;font:900 clamp(42px,5.3vw,76px)/.96 Manrope,Inter,sans-serif;letter-spacing:-.055em}.hire-login-brand-copy p{max-width:570px;margin:0;color:#c4d1da;font-size:14px;line-height:1.7}.hire-login-brand-foot{color:#8296a6;font-size:10px}
+        .hire-login-side{display:grid;place-items:center;padding:34px}.hire-login-card{width:min(100%,470px);background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:34px;box-shadow:0 24px 65px rgba(16,40,63,.08)}.hire-login-card .mobile-logo{display:none;text-align:center;margin-bottom:24px}.hire-login-card small{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.15em;text-transform:uppercase}.hire-login-card h2{margin:8px 0 7px;font:900 30px/1.08 Manrope,Inter,sans-serif;letter-spacing:-.035em}.hire-login-card>p{margin:0 0 25px;color:#72818d;font-size:12px;line-height:1.55}.hire-login-form{display:grid;gap:15px}.hire-login-field{display:grid;gap:7px}.hire-login-field span{font-size:9px;font-weight:900;color:#526575;letter-spacing:.03em}.hire-login-input{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;padding:11px 13px;font:750 13px Inter,sans-serif;outline:0}.hire-login-input:focus{border-color:#ef9d52;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.hire-login-error{padding:11px 12px;border:1px solid #efc2b7;border-radius:10px;background:#fff2ee;color:#a5452d;font-size:10px;line-height:1.45}.hire-login-submit{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;font:900 11px Inter,sans-serif;cursor:pointer}.hire-login-submit:disabled{opacity:.6;cursor:wait}.hire-login-help{margin-top:18px;padding-top:17px;border-top:1px solid #edf1f4;color:#7b8994;font-size:9.5px;line-height:1.55}.hire-login-help a{color:#b96017;font-weight:850;text-decoration:none}
+        @media(max-width:860px){.hire-login-page{grid-template-columns:1fr}.hire-login-brand{display:none}.hire-login-side{padding:22px 14px}.hire-login-card{padding:26px 20px}.hire-login-card .mobile-logo{display:block}.hire-login-card h2{font-size:27px}}
+      `}</style>
+      <section className="hire-login-brand">
+        <div className="hire-login-brand-logo"><HirePortalLogo /></div>
+        <div className="hire-login-brand-copy"><small>FOR INTERNATIONAL EMPLOYERS</small><h1>Your private recruitment workspace.</h1><p>Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.</p></div>
+        <div className="hire-login-brand-foot">Direct construction recruitment from Lithuania.</div>
+      </section>
+      <section className="hire-login-side">
+        <form className="hire-login-card" onSubmit={submit}>
+          <div className="mobile-logo"><HirePortalLogo /></div>
+          <small>EMPLOYER PORTAL</small>
+          <h2>Sign in</h2>
+          <p>Use the private access details sent to you by Statybos24.</p>
+          <div className="hire-login-form">
+            <label className="hire-login-field"><span>COMPANY ID</span><input className="hire-login-input" autoComplete="username" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="e.g. MULLER-4821" /></label>
+            <label className="hire-login-field"><span>PASSWORD</span><input className="hire-login-input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Your password" /></label>
+            {error ? <div className="hire-login-error">{error}</div> : null}
+            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign in to employer portal"}</button>
+          </div>
+          <div className="hire-login-help">Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function HirePortalSegment({ value, onChange, options }) {
+  return <div className="hep-segment">{options.map(item=><button type="button" key={item.value} className={value===item.value?"active":""} onClick={()=>onChange(item.value)}>{item.label}</button>)}</div>;
+}
+
+function HireEmployerPortalPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    const existing = document.querySelector('meta[name="robots"]');
+    const previous = existing?.getAttribute("content") ?? null;
+    const robots = existing || document.createElement("meta");
+    if (!existing) { robots.setAttribute("name", "robots"); document.head.appendChild(robots); }
+    robots.setAttribute("content", "noindex,nofollow,noarchive");
+    document.title = "Employer portal | Statybos24";
+    return () => { document.title = previousTitle; if (existing) { if (previous === null) existing.removeAttribute("content"); else existing.setAttribute("content", previous); } else robots.remove(); };
+  }, []);
+  const [token] = useState(() => getForeignHirePortalToken());
+  const [portal, setPortal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [signedFile, setSignedFile] = useState(null);
+  const [password1, setPassword1] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [company, setCompany] = useState({legalName:"",registrationNumber:"",vatNumber:"",billingAddress:"",website:"",contactName:"",jobTitle:"",businessEmail:"",phone:""});
+  const [workforce, setWorkforce] = useState({
+    projectCountry:"",projectLocation:"",startDate:"",neededBy:"",employmentType:"direct",duration:"",hoursPerWeek:"",overtime:"",rotation:"",
+    salaryCurrency:"EUR",salaryType:"hourly",salaryMin:"",salaryMax:"",salaryBasis:"gross",accommodation:"yes",roomType:"",accommodationCost:"",
+    initialTravel:"",workTransport:"",homeTravel:"",additionalInfo:"",roles:[{profession:"",count:1,experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"}]
+  });
+
+  async function loadPortal(showLoader=true) {
+    if (!supabase || !token) {
+      setLoading(false); setError("Your portal session is not available."); return;
+    }
+    if (showLoader) setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("foreign_employer_portal_data", { p_session_token: token });
+      if (error) throw error;
+      setPortal(data);
+      const req=data?.request||{}; const brief=data?.brief||{};
+      const cd=brief.companyDetails||{}; const wd=brief.workforceDetails||{};
+      setCompany(prev=>({...prev,
+        legalName:cd.legalName ?? req.companyName ?? prev.legalName,
+        registrationNumber:cd.registrationNumber ?? prev.registrationNumber,
+        vatNumber:cd.vatNumber ?? prev.vatNumber,
+        billingAddress:cd.billingAddress ?? prev.billingAddress,
+        website:cd.website ?? prev.website,
+        contactName:cd.contactName ?? req.contactName ?? prev.contactName,
+        jobTitle:cd.jobTitle ?? prev.jobTitle,
+        businessEmail:cd.businessEmail ?? req.businessEmail ?? prev.businessEmail,
+        phone:cd.phone ?? req.phone ?? prev.phone,
+      }));
+      setWorkforce(prev=>({...prev,
+        ...wd,
+        projectCountry:wd.projectCountry ?? req.projectCountry ?? prev.projectCountry,
+        projectLocation:wd.projectLocation ?? req.projectLocation ?? prev.projectLocation,
+        startDate:wd.startDate ?? req.requestedStartDate ?? prev.startDate,
+        roles:Array.isArray(wd.roles)&&wd.roles.length?wd.roles:(Array.isArray(req.roles)&&req.roles.length?req.roles.map(r=>({profession:r.profession||"",count:Number(r.count||1),experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"})):prev.roles),
+      }));
+      setError("");
+    } catch (err) {
+      setError(err?.message || "Could not load the employer portal.");
+      if (/session/i.test(err?.message||"")) setForeignHirePortalToken("");
+    } finally { setLoading(false); }
+  }
+
+  useEffect(()=>{ loadPortal(); },[]);
+
+  function logout() {
+    if (supabase && token) supabase.rpc("foreign_employer_logout", {p_session_token:token}).catch(()=>{});
+    setForeignHirePortalToken("");
+    window.location.assign("/hire/login");
+  }
+
+  async function changePassword() {
+    setError(""); setNotice("");
+    if (password1.length < 12 || !/[A-Z]/.test(password1) || !/[a-z]/.test(password1) || !/[0-9]/.test(password1)) { setError("Use at least 12 characters with uppercase, lowercase and a number."); return; }
+    if (password1 !== password2) { setError("Passwords do not match."); return; }
+    setSaving(true);
+    try {
+      const {error}=await supabase.rpc("foreign_employer_change_password",{p_session_token:token,p_new_password:password1});
+      if(error) throw error;
+      setPassword1(""); setPassword2(""); setNotice("Password updated."); await loadPortal(false);
+    } catch(err){setError(err?.message||"Could not update password.");} finally{setSaving(false);}
+  }
+
+  async function openAgreement() {
+    if (!supabase || !portal?.agreement) return;
+    setError("");
+    try {
+      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:{action:"agreement-url",token}});
+      if(error) throw error;
+      if(!data?.url) throw new Error(data?.error||"Agreement link is not available.");
+      window.open(data.url,"_blank","noopener,noreferrer");
+    } catch(err){setError(err?.message||"Could not open the agreement.");}
+  }
+
+  async function uploadSignedAgreement() {
+    if (!supabase || !signedFile || uploading) return;
+    setError(""); setNotice(""); setUploading(true);
+    try {
+      const fd=new FormData(); fd.append("action","upload-signed"); fd.append("token",token); fd.append("file",signedFile);
+      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:fd});
+      if(error) throw error;
+      if(data?.error) throw new Error(data.error);
+      setSignedFile(null); setNotice("Signed agreement uploaded. Statybos24 will review it."); await loadPortal(false);
+    } catch(err){setError(err?.message||"Could not upload the signed agreement.");} finally{setUploading(false);}
+  }
+
+  function setCompanyField(key,value){setCompany(prev=>({...prev,[key]:value}));}
+  function setWorkforceField(key,value){setWorkforce(prev=>({...prev,[key]:value}));}
+  function setRole(index,key,value){setWorkforce(prev=>({...prev,roles:prev.roles.map((r,i)=>i===index?{...r,[key]:value}:r)}));}
+  function addRole(){setWorkforce(prev=>({...prev,roles:[...prev.roles,{profession:"",count:1,experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"}]}));}
+  function removeRole(index){setWorkforce(prev=>({...prev,roles:prev.roles.length>1?prev.roles.filter((_,i)=>i!==index):prev.roles}));}
+
+  async function saveBrief(submit=false) {
+    if (!supabase || saving) return;
+    setError(""); setNotice(""); setSaving(true);
+    try {
+      const {data,error}=await supabase.rpc("foreign_employer_save_brief",{
+        p_session_token:token,p_company_details:company,p_workforce_details:workforce,p_submit:submit
+      });
+      if(error) throw error;
+      setNotice(submit?"Workforce brief submitted to Statybos24 for review.":"Draft saved.");
+      await loadPortal(false);
+    } catch(err){setError(err?.message||"Could not save the workforce brief.");} finally{setSaving(false);}
+  }
+
+  const requestStatus=portal?.request?.status||"waiting_employer";
+  const agreementStatus=portal?.agreement?.status||"not_ready";
+  const briefStatus=portal?.brief?.status||"draft";
+  const agreementDone=["signed_uploaded","approved"].includes(agreementStatus);
+  const briefDone=["submitted","approved"].includes(briefStatus);
+  const sourcingStarted=["sourcing","closed"].includes(requestStatus);
+  const submittedToReview=requestStatus==="employer_submitted"||requestStatus==="ready_for_sourcing"||sourcingStarted;
+
+  if (!token) return <div className="hep-basic"><HirePortalLogo/><h1>Employer portal</h1><p>Your session is not available.</p><a href="/hire/login">Go to sign in</a></div>;
+  if (loading) return <div className="hep-basic"><HirePortalLogo/><div className="hep-loader"/><p>Loading employer portal…</p></div>;
+  if (!portal) return <div className="hep-basic"><HirePortalLogo/><h1>Could not open portal</h1><p>{error}</p><button onClick={logout}>Back to sign in</button></div>;
+
+  return (
+    <div className="hep-page">
+      <style>{`
+        .hep-page{--navy:#10283f;--orange:#f08a28;min-height:100vh;background:#f5f8fa;color:var(--navy);font-family:Inter,system-ui,sans-serif}.hep-basic{min-height:100vh;display:grid;place-items:center;align-content:center;gap:16px;background:#f5f8fa;color:#10283f;font-family:Inter,sans-serif;text-align:center;padding:24px}.hep-basic h1,.hep-basic p{margin:0}.hep-basic button,.hep-basic a{padding:11px 15px;border:0;border-radius:9px;background:#10283f;color:#fff;text-decoration:none;font-weight:850;cursor:pointer}.hep-loader{width:28px;height:28px;border:3px solid #d9e3e9;border-top-color:#f08a28;border-radius:50%;animation:hepspin .8s linear infinite}@keyframes hepspin{to{transform:rotate(360deg)}}
+        .hep-top{position:sticky;top:0;z-index:120;background:rgba(255,255,255,.96);border-bottom:1px solid #e2e9ee;backdrop-filter:blur(10px)}.hep-top-inner{width:min(1280px,calc(100% - 36px));min-height:74px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.hep-brand{display:flex;align-items:center;gap:15px}.hep-brand-copy{padding-left:15px;border-left:1px solid #e1e8ed}.hep-brand-copy b{display:block;font-size:10px}.hep-brand-copy span{display:block;margin-top:3px;color:#7b8994;font-size:8px;letter-spacing:.07em;text-transform:uppercase}.hep-top-actions{display:flex;align-items:center;gap:8px}.hep-company-id{padding:9px 11px;border:1px solid #e0e7ec;border-radius:9px;background:#f9fbfc;color:#667783;font-size:9px;font-weight:800}.hep-logout{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#526575;font:850 9px Inter,sans-serif;cursor:pointer}
+        .hep-shell{width:min(1280px,calc(100% - 36px));margin:28px auto 70px}.hep-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:26px;align-items:end;margin-bottom:18px}.hep-eyebrow{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.hep-hero h1{margin:6px 0 8px;font:900 clamp(30px,4vw,46px)/1 Manrope,Inter,sans-serif;letter-spacing:-.045em}.hep-hero p{max-width:740px;margin:0;color:#6f7f8c;font-size:12px;line-height:1.6}.hep-status{padding:10px 13px;border-radius:999px;background:#edf3f7;color:#526575;font-size:9px;font-weight:900;white-space:nowrap}.hep-status.sourcing{background:#e9f7f1;color:#14734f}.hep-status.review{background:#fff3e7;color:#a85a16}
+        .hep-alerts{display:grid;gap:8px;margin-bottom:16px}.hep-notice,.hep-error{padding:12px 14px;border-radius:11px;font-size:10px;font-weight:750;line-height:1.5}.hep-notice{border:1px solid #bfe3d2;background:#eef8f4;color:#176e4e}.hep-error{border:1px solid #efc2b7;background:#fff1ed;color:#a5432c}
+        .hep-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}.hep-progress-card{min-height:84px;padding:14px;border:1px solid #e0e8ed;border-radius:13px;background:#fff}.hep-progress-card span{display:block;color:#85929b;font-size:7.5px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.hep-progress-card b{display:block;margin-top:9px;font-size:12px}.hep-progress-card.done{border-color:#bfdfd0;background:#f4fbf8}.hep-progress-card.done b{color:#176f4e}.hep-progress-card.current{border-color:#f0c596;background:#fff9f3}.hep-progress-card.current b{color:#b76018}
+        .hep-grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(300px,.58fr);gap:14px;align-items:start}.hep-main{display:grid;gap:14px}.hep-side{display:grid;gap:14px;position:sticky;top:92px}.hep-card{background:#fff;border:1px solid #e1e8ed;border-radius:16px;padding:21px;box-shadow:0 8px 28px rgba(16,40,63,.035)}.hep-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.hep-card-head h2{margin:0;font:900 20px/1.1 Manrope,Inter,sans-serif;letter-spacing:-.025em}.hep-card-head p{margin:6px 0 0;color:#7a8995;font-size:10px;line-height:1.5}.hep-step{width:31px;height:31px;border-radius:9px;background:#fff2e5;color:#c96a15;display:grid;place-items:center;font-size:8px;font-weight:950;flex:0 0 31px}.hep-card-title{display:flex;gap:11px;align-items:flex-start}
+        .hep-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.hep-field{display:grid;gap:6px;min-width:0}.hep-field.full{grid-column:1/-1}.hep-field>span{color:#5d6f7c;font-size:8px;font-weight:900;letter-spacing:.03em}.hep-input,.hep-textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;padding:10px 11px;font:700 11px Inter,sans-serif;outline:0}.hep-input{min-height:42px}.hep-textarea{min-height:90px;resize:vertical}.hep-input:focus,.hep-textarea:focus{border-color:#efa25b;box-shadow:0 0 0 3px rgba(240,138,40,.10)}.hep-segment{display:flex;gap:6px;flex-wrap:wrap}.hep-segment button{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#647581;font:850 9px Inter,sans-serif;cursor:pointer}.hep-segment button.active{background:#10283f;border-color:#10283f;color:#fff}.hep-section-divider{height:1px;background:#edf1f4;margin:20px 0}.hep-subtitle{margin:0 0 13px;font:900 13px Manrope,Inter,sans-serif}.hep-role{border:1px solid #e1e8ed;border-radius:12px;background:#fafcfd;padding:14px}.hep-role+.hep-role{margin-top:9px}.hep-role-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hep-role-head b{font-size:9px}.hep-role-head button{border:0;background:transparent;color:#b65e17;font:850 9px Inter,sans-serif;cursor:pointer}.hep-add-role{margin-top:9px;min-height:38px;padding:8px 11px;border:1px dashed #ccd9e1;border-radius:9px;background:#fff;color:#a95613;font:850 9px Inter,sans-serif;cursor:pointer}.hep-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:17px;border-top:1px solid #edf1f4}.hep-btn{min-height:42px;padding:9px 13px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;font:900 9px Inter,sans-serif;cursor:pointer}.hep-btn.primary{background:#f08a28;border-color:#f08a28;color:#fff}.hep-btn.dark{background:#10283f;border-color:#10283f;color:#fff}.hep-btn:disabled{opacity:.55;cursor:wait}
+        .hep-agreement-state{padding:13px;border:1px solid #e4ebef;border-radius:11px;background:#f8fafb}.hep-agreement-state b{display:block;font-size:11px}.hep-agreement-state span{display:block;margin-top:4px;color:#7b8994;font-size:9px;line-height:1.45}.hep-file-row{margin-top:12px}.hep-file-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px dashed #cad8e0;border-radius:10px;background:#fff}.hep-file-pick b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.hep-file-pick label{flex:0 0 auto;padding:8px 10px;border-radius:8px;background:#eef3f6;color:#405665;font-size:8px;font-weight:900;cursor:pointer}.hep-file-pick input{display:none}.hep-side-card h3{margin:0 0 9px;font:900 15px Manrope,Inter,sans-serif}.hep-side-card p{margin:0;color:#788895;font-size:10px;line-height:1.6}.hep-side-card a{color:#b95f16;font-weight:850;text-decoration:none}.hep-side-list{display:grid;gap:9px}.hep-side-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #edf1f4}.hep-side-row:last-child{border-bottom:0}.hep-side-row span{color:#7b8994;font-size:9px}.hep-side-row b{font-size:9px;text-align:right}.hep-candidate-placeholder{padding:18px;border:1px dashed #d5e0e6;border-radius:12px;background:#fafcfd;text-align:center}.hep-candidate-placeholder b{display:block;font-size:11px}.hep-candidate-placeholder span{display:block;margin-top:6px;color:#84929c;font-size:9px;line-height:1.5}
+        .hep-password-overlay{position:fixed;inset:0;z-index:900;background:rgba(8,25,39,.72);display:grid;place-items:center;padding:18px}.hep-password-card{width:min(100%,480px);background:#fff;border-radius:18px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.hep-password-card h2{margin:12px 0 8px;font:900 25px Manrope,Inter,sans-serif}.hep-password-card p{margin:0 0 18px;color:#71818d;font-size:11px;line-height:1.55}.hep-password-card .hep-field+.hep-field{margin-top:11px}
+        @media(max-width:980px){.hep-grid{grid-template-columns:1fr}.hep-side{position:static}.hep-progress{grid-template-columns:1fr 1fr}}
+        @media(max-width:680px){.hep-top-inner,.hep-shell{width:calc(100% - 24px)}.hep-top-inner{min-height:68px}.hep-brand-copy,.hep-company-id{display:none}.hep-hero{grid-template-columns:1fr;align-items:start}.hep-progress{grid-template-columns:1fr 1fr}.hep-form-grid{grid-template-columns:1fr}.hep-field.full{grid-column:auto}.hep-card{padding:16px}.hep-actions{display:grid;grid-template-columns:1fr}.hep-actions .hep-btn{width:100%}.hep-top-actions{gap:5px}.hep-logout{padding-inline:9px}}
+      `}</style>
+      <header className="hep-top"><div className="hep-top-inner"><div className="hep-brand"><HirePortalLogo/><div className="hep-brand-copy"><b>EMPLOYER PORTAL</b><span>PRIVATE RECRUITMENT WORKSPACE</span></div></div><div className="hep-top-actions"><div className="hep-company-id">{portal.account?.loginId}</div><button className="hep-logout" type="button" onClick={logout}>Sign out</button></div></div></header>
+      <main className="hep-shell">
+        <div className="hep-hero"><div><div className="hep-eyebrow">STATYBOS24 · INTERNATIONAL HIRE</div><h1>{portal.request?.companyName}</h1><p>Complete the required information below. Candidate sourcing starts only after Statybos24 reviews your signed agreement and workforce brief.</p></div><div className={`hep-status ${sourcingStarted?"sourcing":submittedToReview?"review":""}`}>{sourcingStarted?"Sourcing in progress":submittedToReview?"Submitted for review":"Action required"}</div></div>
+        <div className="hep-alerts">{notice?<div className="hep-notice">{notice}</div>:null}{error?<div className="hep-error">{error}</div>:null}</div>
+        <div className="hep-progress">
+          <div className="hep-progress-card done"><span>01 · ACCESS</span><b>Employer access active</b></div>
+          <div className={`hep-progress-card ${agreementDone?"done":portal.agreement?"current":""}`}><span>02 · AGREEMENT</span><b>{agreementDone?"Signed agreement uploaded":portal.agreement?"Signature required":"Waiting for Statybos24"}</b></div>
+          <div className={`hep-progress-card ${briefDone?"done":"current"}`}><span>03 · WORKFORCE BRIEF</span><b>{briefDone?"Submitted":"Complete the information"}</b></div>
+          <div className={`hep-progress-card ${sourcingStarted?"done":submittedToReview?"current":""}`}><span>04 · SOURCING</span><b>{sourcingStarted?"In progress":submittedToReview?"Statybos24 review":"Not started"}</b></div>
+        </div>
+        <div className="hep-grid"><div className="hep-main">
+          <section className="hep-card" id="agreement"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">01</div><div><h2>Recruitment agreement</h2><p>Read the agreement prepared for your company. If the terms are acceptable, sign it on your side and upload the signed copy.</p></div></div></div>
+            {portal.agreement ? <>
+              <div className="hep-agreement-state"><b>{portal.agreement.name || "Recruitment Agreement"}</b><span>{agreementDone?`Signed copy received${portal.agreement.signedName?`: ${portal.agreement.signedName}`:""}.`:"Please read the agreement before uploading the signed copy."}</span></div>
+              <div className="hep-actions" style={{justifyContent:"flex-start"}}><button className="hep-btn dark" type="button" onClick={openAgreement}>Open agreement</button></div>
+              <div className="hep-file-row"><div className="hep-file-pick"><b>{signedFile?.name || (portal.agreement.signedName ? `Uploaded: ${portal.agreement.signedName}` : "No signed file selected")}</b><label>Choose PDF / DOCX<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e=>setSignedFile(e.target.files?.[0]||null)}/></label></div>{signedFile?<div className="hep-actions"><button className="hep-btn primary" type="button" disabled={uploading} onClick={uploadSignedAgreement}>{uploading?"Uploading...":"Upload signed agreement"}</button></div>:null}</div>
+            </> : <div className="hep-agreement-state"><b>Agreement is being prepared</b><span>Statybos24 will upload your recruitment agreement here. If anything is unclear, reply to the email from which you received your portal access.</span></div>}
+          </section>
+
+          <section className="hep-card" id="company"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">02</div><div><h2>Company information</h2><p>Legal and billing information required before recruitment begins.</p></div></div></div>
+            <div className="hep-form-grid">
+              <label className="hep-field"><span>LEGAL COMPANY NAME *</span><input className="hep-input" value={company.legalName} onChange={e=>setCompanyField('legalName',e.target.value)}/></label>
+              <label className="hep-field"><span>REGISTRATION NUMBER *</span><input className="hep-input" value={company.registrationNumber} onChange={e=>setCompanyField('registrationNumber',e.target.value)}/></label>
+              <label className="hep-field"><span>VAT NUMBER</span><input className="hep-input" value={company.vatNumber} onChange={e=>setCompanyField('vatNumber',e.target.value)}/></label>
+              <label className="hep-field"><span>WEBSITE</span><input className="hep-input" value={company.website} onChange={e=>setCompanyField('website',e.target.value)} placeholder="https://"/></label>
+              <label className="hep-field full"><span>BILLING / LEGAL ADDRESS *</span><input className="hep-input" value={company.billingAddress} onChange={e=>setCompanyField('billingAddress',e.target.value)}/></label>
+              <label className="hep-field"><span>CONTACT PERSON *</span><input className="hep-input" value={company.contactName} onChange={e=>setCompanyField('contactName',e.target.value)}/></label>
+              <label className="hep-field"><span>JOB TITLE</span><input className="hep-input" value={company.jobTitle} onChange={e=>setCompanyField('jobTitle',e.target.value)}/></label>
+              <label className="hep-field"><span>BUSINESS EMAIL *</span><input className="hep-input" type="email" value={company.businessEmail} onChange={e=>setCompanyField('businessEmail',e.target.value)}/></label>
+              <label className="hep-field"><span>PHONE</span><input className="hep-input" value={company.phone} onChange={e=>setCompanyField('phone',e.target.value)}/></label>
+            </div>
+          </section>
+
+          <section className="hep-card" id="workforce"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">03</div><div><h2>Workforce requirements</h2><p>Tell us exactly who you need. This information becomes the sourcing brief used by the Statybos24 recruitment team.</p></div></div></div>
+            <h3 className="hep-subtitle">Trades & competencies</h3>
+            {workforce.roles.map((role,index)=><div className="hep-role" key={`hep-role-${index}`}><div className="hep-role-head"><b>ROLE {String(index+1).padStart(2,'0')}</b>{workforce.roles.length>1?<button type="button" onClick={()=>removeRole(index)}>Remove</button>:null}</div><div className="hep-form-grid">
+              <label className="hep-field"><span>PROFESSION / TRADE *</span><input className="hep-input" value={role.profession||""} onChange={e=>setRole(index,'profession',e.target.value)} placeholder="e.g. Drywall installer"/></label>
+              <label className="hep-field"><span>WORKERS NEEDED *</span><input className="hep-input" inputMode="numeric" value={role.count||1} onChange={e=>setRole(index,'count',Math.max(1,Number(e.target.value||1)))}/></label>
+              <label className="hep-field"><span>MINIMUM EXPERIENCE</span><input className="hep-input" value={role.experience||""} onChange={e=>setRole(index,'experience',e.target.value)} placeholder="e.g. 3+ years"/></label>
+              <label className="hep-field"><span>LANGUAGE / LEVEL</span><input className="hep-input" value={[role.language,role.languageLevel].filter(Boolean).join(' ')} onChange={e=>setRole(index,'language',e.target.value)} placeholder="e.g. English B1"/></label>
+              <label className="hep-field full"><span>REQUIRED SKILLS / TASKS</span><textarea className="hep-textarea" value={role.skills||""} onChange={e=>setRole(index,'skills',e.target.value)} placeholder="Drywall installation, metal framing, ceilings, Q2/Q3 finishing..."/></label>
+              <div className="hep-field full"><span>DRIVING LICENCE</span><HirePortalSegment value={role.drivingLicense||"preferred"} onChange={v=>setRole(index,'drivingLicense',v)} options={[{value:'required',label:'Required'},{value:'preferred',label:'Preferred'},{value:'not_required',label:'Not required'}]}/></div>
+            </div></div>)}
+            <button type="button" className="hep-add-role" onClick={addRole}>+ Add another trade</button>
+            <div className="hep-section-divider"/><h3 className="hep-subtitle">Project & employment</h3><div className="hep-form-grid">
+              <label className="hep-field"><span>PROJECT COUNTRY *</span><input className="hep-input" value={workforce.projectCountry} onChange={e=>setWorkforceField('projectCountry',e.target.value)}/></label>
+              <label className="hep-field"><span>PROJECT LOCATION *</span><input className="hep-input" value={workforce.projectLocation} onChange={e=>setWorkforceField('projectLocation',e.target.value)}/></label>
+              <label className="hep-field"><span>EXPECTED START DATE *</span><input className="hep-input" type="date" value={workforce.startDate||""} onChange={e=>setWorkforceField('startDate',e.target.value)}/></label>
+              <label className="hep-field"><span>ALL WORKERS NEEDED BY</span><input className="hep-input" type="date" value={workforce.neededBy||""} onChange={e=>setWorkforceField('neededBy',e.target.value)}/></label>
+              <div className="hep-field full"><span>EMPLOYMENT TYPE</span><HirePortalSegment value={workforce.employmentType} onChange={v=>setWorkforceField('employmentType',v)} options={[{value:'direct',label:'Direct employment'},{value:'fixed_term',label:'Fixed-term'},{value:'permanent',label:'Permanent'}]}/></div>
+              <label className="hep-field"><span>PROJECT / CONTRACT DURATION</span><input className="hep-input" value={workforce.duration} onChange={e=>setWorkforceField('duration',e.target.value)} placeholder="e.g. 12 months"/></label>
+              <label className="hep-field"><span>HOURS PER WEEK</span><input className="hep-input" inputMode="decimal" value={workforce.hoursPerWeek} onChange={e=>setWorkforceField('hoursPerWeek',e.target.value)} placeholder="e.g. 45"/></label>
+              <label className="hep-field"><span>OVERTIME</span><input className="hep-input" value={workforce.overtime} onChange={e=>setWorkforceField('overtime',e.target.value)} placeholder="Rate / conditions"/></label>
+              <label className="hep-field"><span>ROTATION</span><input className="hep-input" value={workforce.rotation} onChange={e=>setWorkforceField('rotation',e.target.value)} placeholder="e.g. 4/1"/></label>
+            </div>
+            <div className="hep-section-divider"/><h3 className="hep-subtitle">Salary & mobility</h3><div className="hep-form-grid">
+              <label className="hep-field"><span>CURRENCY *</span><input className="hep-input" value={workforce.salaryCurrency} onChange={e=>setWorkforceField('salaryCurrency',e.target.value.toUpperCase())} placeholder="EUR"/></label>
+              <div className="hep-field"><span>SALARY TYPE</span><HirePortalSegment value={workforce.salaryType} onChange={v=>setWorkforceField('salaryType',v)} options={[{value:'hourly',label:'Per hour'},{value:'monthly',label:'Per month'}]}/></div>
+              <label className="hep-field"><span>MINIMUM SALARY *</span><input className="hep-input" inputMode="decimal" value={workforce.salaryMin} onChange={e=>setWorkforceField('salaryMin',e.target.value)} placeholder="e.g. 22"/></label>
+              <label className="hep-field"><span>MAXIMUM SALARY</span><input className="hep-input" inputMode="decimal" value={workforce.salaryMax} onChange={e=>setWorkforceField('salaryMax',e.target.value)} placeholder="e.g. 25"/></label>
+              <div className="hep-field full"><span>SALARY BASIS</span><HirePortalSegment value={workforce.salaryBasis} onChange={v=>setWorkforceField('salaryBasis',v)} options={[{value:'gross',label:'Gross'},{value:'net',label:'Net'}]}/></div>
+              <div className="hep-field full"><span>ACCOMMODATION</span><HirePortalSegment value={workforce.accommodation} onChange={v=>setWorkforceField('accommodation',v)} options={[{value:'yes',label:'Provided by employer'},{value:'no',label:'Not provided'},{value:'shared_cost',label:'Shared / employee cost'}]}/></div>
+              <label className="hep-field"><span>ROOM / ACCOMMODATION TYPE</span><input className="hep-input" value={workforce.roomType} onChange={e=>setWorkforceField('roomType',e.target.value)} placeholder="Single / shared room"/></label>
+              <label className="hep-field"><span>EMPLOYEE ACCOMMODATION COST</span><input className="hep-input" value={workforce.accommodationCost} onChange={e=>setWorkforceField('accommodationCost',e.target.value)} placeholder="0 / amount per month"/></label>
+              <label className="hep-field"><span>INITIAL TRAVEL</span><input className="hep-input" value={workforce.initialTravel} onChange={e=>setWorkforceField('initialTravel',e.target.value)} placeholder="Who pays Lithuania → project"/></label>
+              <label className="hep-field"><span>TRANSPORT TO WORKSITE</span><input className="hep-input" value={workforce.workTransport} onChange={e=>setWorkforceField('workTransport',e.target.value)} placeholder="Company vehicle / public transport..."/></label>
+              <label className="hep-field full"><span>HOME TRAVEL / ROTATION TRAVEL</span><input className="hep-input" value={workforce.homeTravel} onChange={e=>setWorkforceField('homeTravel',e.target.value)} placeholder="Frequency and who covers the cost"/></label>
+              <label className="hep-field full"><span>ADDITIONAL REQUIREMENTS / INFORMATION</span><textarea className="hep-textarea" value={workforce.additionalInfo} onChange={e=>setWorkforceField('additionalInfo',e.target.value)} placeholder="Certificates, tools, shift details, interview process, safety requirements, other important information..."/></label>
+            </div>
+            <div className="hep-actions"><button type="button" className="hep-btn" disabled={saving} onClick={()=>saveBrief(false)}>{saving?"Saving...":"Save draft"}</button><button type="button" className="hep-btn primary" disabled={saving} onClick={()=>saveBrief(true)}>{saving?"Saving...":"Submit workforce brief"}</button></div>
+          </section>
+        </div><aside className="hep-side">
+          <section className="hep-card hep-side-card"><h3>Current request</h3><div className="hep-side-list"><div className="hep-side-row"><span>Project</span><b>{portal.request?.projectLocation}, {portal.request?.projectCountry}</b></div><div className="hep-side-row"><span>Requested start</span><b>{portal.request?.requestedStartDate||"—"}</b></div><div className="hep-side-row"><span>Portal status</span><b>{sourcingStarted?"Sourcing":submittedToReview?"Under Statybos24 review":"Employer action required"}</b></div></div></section>
+          <section className="hep-card hep-side-card"><h3>Need clarification?</h3><p>Please reply to the Statybos24 email from which you received these login details. This keeps all commercial and agreement questions in the same email thread.</p></section>
+          <section className="hep-card hep-side-card" id="candidates"><h3>Candidates</h3><div className="hep-candidate-placeholder"><b>No candidates presented yet</b><span>After sourcing starts, only candidates selected by Statybos24 for your request will appear here.</span></div></section>
+        </aside></div>
+      </main>
+      {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">FIRST SIGN-IN</div><h2>Create your own password</h2><p>The password sent by Statybos24 is temporary. Set a private password before accessing company documents and the workforce brief.</p><label className="hep-field"><span>NEW PASSWORD</span><input className="hep-input" type="password" value={password1} onChange={e=>setPassword1(e.target.value)} placeholder="At least 12 characters"/></label><label className="hep-field"><span>CONFIRM PASSWORD</span><input className="hep-input" type="password" value={password2} onChange={e=>setPassword2(e.target.value)}/></label>{error?<div className="hep-error" style={{marginTop:12}}>{error}</div>:null}<div className="hep-actions"><button className="hep-btn primary" type="button" disabled={saving} onClick={changePassword}>{saving?"Saving...":"Save password & continue"}</button></div></div></div>:null}
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const authUserIdRef = useRef(null);
@@ -33169,13 +33581,18 @@ function FatalAppError() {
 
 applyBrandFavicon();
 
-const isHireRoute =
-  window.location.pathname === "/hire" ||
-  window.location.pathname.startsWith("/hire/");
+const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+const isHireRoute = currentPath === "/hire";
+const isHireLoginRoute = currentPath === "/hire/login";
+const isHirePortalRoute = currentPath === "/hire/portal";
 
 createRoot(document.getElementById("root")).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
-    {isHireRoute ? (
+    {isHireLoginRoute ? (
+      <HireEmployerLoginPage />
+    ) : isHirePortalRoute ? (
+      <HireEmployerPortalPage />
+    ) : isHireRoute ? (
       <HirePage />
     ) : (
       <>
