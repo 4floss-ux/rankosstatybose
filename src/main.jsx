@@ -28906,7 +28906,7 @@ function HirePage() {
         .hire-value-row{display:grid;grid-template-columns:repeat(4,1fr);margin-top:30px;border:1px solid var(--v4-line);border-radius:15px;background:#fff;overflow:hidden}.hire-value-row>div{min-height:92px;padding:16px 17px;border-right:1px solid var(--v4-line);display:grid;grid-template-columns:38px 1fr;grid-template-rows:auto auto;column-gap:11px;align-content:center}.hire-value-row>div:last-child{border-right:0}.hire-value-icon{grid-row:1/3;width:36px;height:36px;border-radius:9px;background:#f3f6f8;color:var(--v4-navy);display:grid;place-items:center;font-weight:900}.hire-value-icon svg{width:19px;height:19px}.hire-value-row b{font-size:11px;align-self:end}.hire-value-row small{margin-top:3px;color:#8a97a2;font-size:8.5px;line-height:1.35}
         .hire-marquee{display:none}
 
-        .hire-section{padding:72px 0;background:var(--v4-bg)}.hire-section.white{background:#fff}.hire-section.dark{background:#f2f6f9;color:var(--v4-text)}.hire-section-head{display:grid;grid-template-columns:130px minmax(0,1fr);gap:26px;margin-bottom:31px}.hire-index{padding-top:5px;color:#a6b0b8;font-size:8px}.hire-section.dark .hire-index{color:#a6b0b8}.hire-section-head h2{max-width:800px;color:var(--v4-navy);font-size:clamp(30px,4vw,47px);line-height:1.03;letter-spacing:-.045em}.hire-section-head p,.hire-section.dark .hire-section-head p{max-width:720px;margin-top:12px;color:#71808d;font-size:13px;line-height:1.65}
+        .hire-section{padding:72px 0;background:var(--v4-bg)}.hire-section.white{background:#fff}.hire-section.dark{background:#f2f6f9;color:var(--v4-text)}.hire-section-head{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-bottom:31px}.hire-index{padding-top:5px;color:#a6b0b8;font-size:8px}.hire-section.dark .hire-index{color:#a6b0b8}.hire-section-head h2{max-width:800px;color:var(--v4-navy);font-size:clamp(30px,4vw,47px);line-height:1.03;letter-spacing:-.045em}.hire-section-head p,.hire-section.dark .hire-section-head p{max-width:720px;margin-top:12px;color:#71808d;font-size:13px;line-height:1.65}
         .hire-manifesto{gap:12px;border:0}.hire-manifesto article,.hire-manifesto article:first-child{padding:20px;border:1px solid var(--v4-line);border-radius:13px;background:#fff}.hire-manifesto article:last-child{border-right:1px solid var(--v4-line)}.hire-manifesto .num{color:var(--v4-orange);font-size:9px}.hire-manifesto h3{margin:17px 0 7px;font-size:18px}.hire-manifesto p{font-size:11px;line-height:1.6;color:#73818d}
         .hire-signal-grid{gap:12px;border:0}.hire-signal{min-height:220px;padding:22px;border:1px solid var(--v4-line);border-radius:13px;background:#fff;color:var(--v4-text)}.hire-signal:last-child{border-right:1px solid var(--v4-line)}.hire-signal-label{color:#84929d;font-size:8px}.hire-signal-symbol{font-size:48px;color:var(--v4-orange)}.hire-signal h3{font-size:17px;color:var(--v4-navy)}.hire-signal p{color:#75838f;font-size:11px}.hire-role-wall{grid-template-columns:repeat(4,1fr);gap:10px;border:0}.hire-role-wall span{min-height:72px;border:1px solid var(--v4-line);border-radius:11px;background:#fff;padding:14px;font-size:10px;align-items:center}.hire-role-wall span:before{top:50%;right:14px;transform:translateY(-50%);color:#c1cad1;font-size:16px}
 
@@ -29025,11 +29025,11 @@ function HirePage() {
         .hire-route-origin{position:absolute;left:0;top:45%;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:rgba(240,138,40,.10);color:#d97e1f;font-size:9px;font-weight:950;letter-spacing:.15em;text-transform:uppercase;box-shadow:0 9px 22px rgba(240,138,40,.10)}
         .hire-route-origin:before{content:"";width:8px;height:8px;border-radius:50%;background:#f08a28;box-shadow:0 0 0 6px rgba(240,138,40,.09)}
         .hire-route-country{position:absolute;display:block;font-family:Manrope,Inter,sans-serif;font-weight:950;line-height:.9;letter-spacing:-.055em;text-wrap:balance;pointer-events:none;user-select:none}
-        .hire-route-country.c1{left:28%;top:0;font-size:72px;color:rgba(16,40,63,.105)}
-        .hire-route-country.c2{left:7%;top:8%;font-size:36px;color:rgba(16,40,63,.34);letter-spacing:-.045em}
-        .hire-route-country.c3{right:7%;top:35%;font-size:49px;color:rgba(16,40,63,.20)}
-        .hire-route-country.c4{left:20%;bottom:8%;font-size:46px;color:rgba(16,40,63,.16);letter-spacing:-.045em}
-        .hire-route-country.c5{right:17%;bottom:1%;font-size:29px;color:rgba(16,40,63,.31);letter-spacing:-.035em}
+        .hire-route-country.c1{right:0;left:auto;top:1%;max-width:68%;text-align:right;font-size:62px;color:rgba(16,40,63,.105)}
+        .hire-route-country.c2{left:2%;top:23%;font-size:33px;color:rgba(16,40,63,.34);letter-spacing:-.045em}
+        .hire-route-country.c3{right:1%;top:44%;font-size:46px;color:rgba(16,40,63,.20)}
+        .hire-route-country.c4{left:19%;bottom:8%;font-size:43px;color:rgba(16,40,63,.16);letter-spacing:-.045em}
+        .hire-route-country.c5{right:10%;bottom:0;font-size:27px;color:rgba(16,40,63,.31);letter-spacing:-.035em}
         .hire-route-europe{position:absolute;left:4%;bottom:-6%;font-family:Manrope,Inter,sans-serif;font-size:102px;font-weight:950;letter-spacing:-.08em;color:rgba(16,40,63,.022);white-space:nowrap}
 
         .hire-side-request{width:100%;min-height:46px;margin:10px 0 4px;border:0;border-radius:10px;background:#10283f;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;font:inherit;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(16,40,63,.10)}
@@ -29126,11 +29126,11 @@ function HirePage() {
 
         <nav className="hire-mobile-nav" aria-label="Hire sections">{navItems.map(([id,label]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`} onClick={() => setActiveSection(id)}>{label}</a>)}</nav>
 
-        <section className="hire-section white hire-anchor" id="hire-method"><div className="hire-shell"><div className="hire-section-head"><div className="hire-index">{t.process.index}</div><div><h2>{c.process.title}</h2><p>{c.process.intro}</p></div></div><div className="hire-manifesto">{t.process.steps.map(([title,body],index)=><article key={title}><span className="num">0{index+1}</span><h3>{title}</h3><p>{body}</p></article>)}</div></div></section>
+        <section className="hire-section white hire-anchor" id="hire-method"><div className="hire-shell"><div className="hire-section-head"><div><h2>{c.process.title}</h2><p>{c.process.intro}</p></div></div><div className="hire-manifesto">{t.process.steps.map(([title,body],index)=><article key={title}><span className="num">0{index+1}</span><h3>{title}</h3><p>{body}</p></article>)}</div></div></section>
 
         <section className="hire-section hire-sourcing-section hire-anchor" id="hire-trades">
           <div className="hire-shell">
-            <div className="hire-section-head hire-sourcing-head"><div className="hire-index">{t.trades.index}</div><div><h2>{c.trades.title}</h2><p>{c.trades.intro}</p></div></div>
+            <div className="hire-section-head hire-sourcing-head"><div><h2>{c.trades.title}</h2><p>{c.trades.intro}</p></div></div>
             <div className="hire-sourcing-grid">
               {t.trades.cards.map(([label,title,body],index)=><article className={`hire-sourcing-card ${index===2?"network":""}`} key={label}><span className="hire-sourcing-label">{label}</span><span className="hire-sourcing-num">0{index+1}</span><h3>{title}</h3><p>{body}</p></article>)}
             </div>
