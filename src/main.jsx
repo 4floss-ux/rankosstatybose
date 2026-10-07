@@ -24306,6 +24306,12 @@ function AdminDashboard({
   const [siteBugReports, setSiteBugReports] = useState([]);
   const [foreignHireRequests, setForeignHireRequests] = useState([]);
   const [foreignHireSavingId, setForeignHireSavingId] = useState(null);
+  const [foreignHireSetupRequest, setForeignHireSetupRequest] = useState(null);
+  const [foreignHireSetupLogin, setForeignHireSetupLogin] = useState("");
+  const [foreignHireSetupPassword, setForeignHireSetupPassword] = useState("");
+  const [foreignHireAgreementFile, setForeignHireAgreementFile] = useState(null);
+  const [foreignHireSetupBusy, setForeignHireSetupBusy] = useState(false);
+  const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [monthlyAwardLeaders, setMonthlyAwardLeaders] = useState([]);
   const [selectedBugReport, setSelectedBugReport] = useState(null);
   const [resolvingBugId, setResolvingBugId] = useState(null);
@@ -24493,6 +24499,18 @@ function AdminDashboard({
         }))
       );
 
+      const foreignHireRows = await Promise.all(
+        (foreignHireRequestsResult.data || []).map(async (row) => ({
+          ...row,
+          agreementUrl: row.agreement_path
+            ? await createSafeFileUrl("foreign-hire-contracts", row.agreement_path)
+            : null,
+          signedAgreementUrl: row.signed_agreement_path
+            ? await createSafeFileUrl("foreign-hire-contracts", row.signed_agreement_path)
+            : null,
+        }))
+      );
+
       setStats(statsResult.data || {});
       if (!visitorAnalyticsResult.error) {
         setVisitorAnalytics(visitorAnalyticsResult.data || {});
@@ -24507,7 +24525,7 @@ function AdminDashboard({
       setLongTermPlacements(longTermPlacementsResult.data || []);
       setAuditLog(auditResult.data || []);
       setSiteBugReports(siteBugReportsResult.data || []);
-      setForeignHireRequests(foreignHireRequestsResult.data || []);
+      setForeignHireRequests(foreignHireRows);
       setMonthlyAwardLeaders(monthlyAwardsResult.data || []);
       setError("");
     } catch (err) {
@@ -24556,6 +24574,188 @@ function AdminDashboard({
       declined: "Atmesta",
       closed: "Uždaryta",
     })[status] || status || "—";
+  }
+
+  function generateForeignHireLogin(request) {
+    const company = String(request?.company_name || "S24")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 14) || "S24";
+    const suffix = String(Math.floor(1000 + Math.random() * 9000));
+    return `${company}-${suffix}`.slice(0, 40);
+  }
+
+  function generateForeignHirePassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+    const bytes = new Uint32Array(16);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+    else {
+      for (let index = 0; index < bytes.length; index += 1) {
+        bytes[index] = Math.floor(Math.random() * 1000000);
+      }
+    }
+    return Array.from(bytes, (value) => chars[value % chars.length]).join("");
+  }
+
+  function openForeignHireAccessSetup(request) {
+    setForeignHireSetupRequest(request);
+    setForeignHireSetupLogin(request?.employer_login_id || generateForeignHireLogin(request));
+    setForeignHireSetupPassword(request?.employer_account_id ? "" : generateForeignHirePassword());
+    setForeignHireAgreementFile(null);
+    setForeignHireCredentials(null);
+    setError("");
+    setNotice("");
+  }
+
+  function validateForeignHireAgreementFile(file) {
+    if (!file) return "Įkelkite recruitment sutartį.";
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(file.type)) return "Sutartis turi būti PDF arba DOCX formato.";
+    if (file.size > 15 * 1024 * 1024) return "Sutarties failas negali būti didesnis nei 15 MB.";
+    return "";
+  }
+
+  async function copyForeignHireText(value, successMessage) {
+    if (!value) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = value;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+      setNotice(successMessage || "Nukopijuota.");
+    } catch {
+      setError("Nepavyko nukopijuoti. Nukopijuokite rankiniu būdu.");
+    }
+  }
+
+  function foreignHireCredentialsText(request, credentials = foreignHireCredentials) {
+    if (!request || !credentials || credentials.requestId !== request.request_id) return "";
+    return [
+      "Statybos24 employer portal",
+      `Login: ${credentials.loginId}`,
+      `Temporary password: ${credentials.password}`,
+      `Portal: ${window.location.origin}/hire/login`,
+      "",
+      "Please use these private credentials to access your company portal. You will find the recruitment agreement and the full workforce requirements form there. If anything is unclear, reply to the email that contained these credentials.",
+    ].join("\n");
+  }
+
+  async function createForeignEmployerAccess() {
+    const request = foreignHireSetupRequest;
+    if (!request?.request_id || foreignHireSetupBusy) return;
+
+    const loginId = foreignHireSetupLogin.trim().toUpperCase();
+    const tempPassword = foreignHireSetupPassword;
+    const fileError = validateForeignHireAgreementFile(foreignHireAgreementFile);
+    if (!/^[A-Z0-9][A-Z0-9-]{4,39}$/.test(loginId)) {
+      setError("Prisijungimo ID turi būti 5–40 simbolių: A-Z, skaičiai arba brūkšnelis.");
+      return;
+    }
+    if (tempPassword.length < 10) {
+      setError("Laikinas slaptažodis turi būti bent 10 simbolių.");
+      return;
+    }
+    if (fileError) {
+      setError(fileError);
+      return;
+    }
+
+    setForeignHireSetupBusy(true);
+    setError("");
+    setNotice("");
+    let storagePath = "";
+
+    try {
+      storagePath = `${request.request_id}/original/${Date.now()}-${safeStorageFileName(
+        foreignHireAgreementFile.name
+      )}`;
+
+      const uploadResult = await supabase.storage
+        .from("foreign-hire-contracts")
+        .upload(storagePath, foreignHireAgreementFile, {
+          upsert: false,
+          contentType: foreignHireAgreementFile.type,
+        });
+      if (uploadResult.error) throw uploadResult.error;
+
+      const result = await supabase.rpc("admin_create_foreign_employer_access", {
+        p_request_id: request.request_id,
+        p_login_id: loginId,
+        p_temp_password: tempPassword,
+        p_agreement_path: storagePath,
+        p_agreement_name: foreignHireAgreementFile.name,
+      });
+      if (result.error) throw result.error;
+
+      setForeignHireCredentials({
+        requestId: request.request_id,
+        loginId,
+        password: tempPassword,
+      });
+      setForeignHireAgreementFile(null);
+      setForeignHireSetupRequest(null);
+      setNotice("Darbdavio prieiga sukurta, sutartis įkelta. Prisijungimo duomenis dabar galite nukopijuoti ir išsiųsti klientui el. paštu.");
+      await loadAdminData(true);
+    } catch (err) {
+      if (storagePath) {
+        try {
+          await supabase.storage.from("foreign-hire-contracts").remove([storagePath]);
+        } catch (_) {}
+      }
+      setError(err?.message || "Nepavyko sukurti darbdavio prieigos.");
+    } finally {
+      setForeignHireSetupBusy(false);
+    }
+  }
+
+  async function resetForeignEmployerPassword(request) {
+    if (!request?.request_id || foreignHireSetupBusy) return;
+    const confirmed = await askConfirm({
+      eyebrow: "TARPTAUTINĖ ATRANKA",
+      title: "Sugeneruoti naują laikiną slaptažodį?",
+      message: "Senas slaptažodis nebeveiks. Naują slaptažodį reikės privačiai išsiųsti darbdaviui.",
+      confirmLabel: "Generuoti",
+    });
+    if (!confirmed) return;
+
+    const password = generateForeignHirePassword();
+    setForeignHireSetupBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await supabase.rpc("admin_reset_foreign_employer_password", {
+        p_request_id: request.request_id,
+        p_temp_password: password,
+      });
+      if (result.error) throw result.error;
+      const loginId = result.data || request.employer_login_id;
+      setForeignHireCredentials({
+        requestId: request.request_id,
+        loginId,
+        password,
+      });
+      setNotice("Naujas laikinas slaptažodis sugeneruotas. Nukopijuokite jį dabar — sistemoje jis saugomas tik užšifruotas.");
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko sugeneruoti naujo slaptažodžio.");
+    } finally {
+      setForeignHireSetupBusy(false);
+    }
   }
 
   async function resolveSiteBug(report) {
@@ -25427,6 +25627,7 @@ function AdminDashboard({
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card{border:1px solid #e2e9ee;border-radius:15px;background:#fff;padding:17px}.admin-foreign-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-foreign-head h3{margin:0;font:800 17px/1.25 Manrope,Inter,sans-serif}.admin-foreign-head p{margin:5px 0 0;color:#6c7a88;font-size:12px}.admin-foreign-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.admin-foreign-fact{padding:11px 12px;border-radius:11px;background:#f8fafb;border:1px solid #edf1f4}.admin-foreign-fact span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:5px}.admin-foreign-fact b,.admin-foreign-fact a{color:#102438;font-size:12px;font-weight:800;overflow-wrap:anywhere}.admin-foreign-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin-foreign-role{padding:7px 9px;border-radius:9px;background:#eef4f8;color:#17344b;font-size:11px;font-weight:800}.admin-foreign-note{margin-top:12px;padding:11px 12px;background:#fff8ef;border:1px solid #f5dfc7;border-radius:10px;color:#6b5846;font-size:12px;line-height:1.5;white-space:pre-wrap}.admin-foreign-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.admin-foreign-status{padding:7px 10px;border-radius:999px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:850}.admin-foreign-status.new{background:#fff3e7;color:#9b5a18}.admin-foreign-status.declined{background:#fff0ec;color:#b64d2a}@media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.admin-foreign-head{flex-direction:column}.admin-foreign-grid{grid-template-columns:1fr}.admin-foreign-card{padding:14px}}
+        .admin-foreign-access-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid #edf1f4}.admin-foreign-access-summary>div{border:1px solid #e4ebf0;border-radius:10px;padding:10px 11px;background:#fbfcfd}.admin-foreign-access-summary span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:4px}.admin-foreign-access-summary b,.admin-foreign-access-summary a{font-size:12px;font-weight:850;color:#102438;overflow-wrap:anywhere}.admin-foreign-credentials{margin-top:12px;border:1px solid #bfe6d3;background:#eff9f4;border-radius:12px;padding:13px}.admin-foreign-credentials strong{display:block;color:#126b4a;font-size:12px;margin-bottom:7px}.admin-foreign-credentials code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#17344b;font:750 12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.admin-foreign-credentials .admin-foreign-actions{margin-top:10px}.admin-foreign-setup{margin-top:14px;border:1px solid #dbe4ea;background:#f8fafb;border-radius:13px;padding:14px}.admin-foreign-setup h4{margin:0;font:850 14px/1.35 Manrope,Inter,sans-serif}.admin-foreign-setup p{margin:5px 0 12px;color:#6c7a88;font-size:11px;line-height:1.45}.admin-foreign-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.admin-foreign-field{display:grid;gap:5px}.admin-foreign-field span{color:#526374;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}.admin-foreign-field input{width:100%;box-sizing:border-box;border:1px solid #d6e0e7;border-radius:9px;background:#fff;color:#102438;padding:10px 11px;font:750 12px/1.3 Inter,system-ui,sans-serif;outline:none}.admin-foreign-field input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.admin-foreign-file{grid-column:1/-1;border:1px dashed #cdd8df;border-radius:10px;padding:11px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}.admin-foreign-file-copy{min-width:0}.admin-foreign-file-copy b{display:block;font-size:12px;color:#102438;overflow-wrap:anywhere}.admin-foreign-file-copy span{display:block;margin-top:3px;color:#7a8996;font-size:10px}.admin-foreign-file input{display:none}.admin-foreign-setup-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.admin-foreign-access-summary{grid-template-columns:1fr 1fr}}@media(max-width:620px){.admin-foreign-access-summary,.admin-foreign-setup-grid{grid-template-columns:1fr}.admin-foreign-file{grid-column:auto;align-items:flex-start;flex-direction:column}}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         @media(max-width:1120px){.admin-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.admin-employment-row{grid-template-columns:1fr 1fr}.admin-employment-row>:last-child{grid-column:1/-1}.admin-employment-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -25858,7 +26059,7 @@ function AdminDashboard({
               <div>
                 <h2>Tarptautinė atranka</h2>
                 <div className="admin-muted">
-                  Pirminės /hire užklausos. Jos matomos tik administratoriui ir pačios darbuotojų paieškos nepradeda.
+                  Pirminės /hire užklausos. Po peržiūros čia sukuriame privatų įmonės prisijungimą ir įkeliame recruitment sutartį.
                 </div>
               </div>
               <b>{foreignHireRequests.length}</b>
@@ -25868,6 +26069,21 @@ function AdminDashboard({
               <div className="admin-foreign-list">
                 {adminPageSlice(foreignHireRequests).map((request) => {
                   const busy = foreignHireSavingId === request.request_id;
+                  const setupOpen = foreignHireSetupRequest?.request_id === request.request_id;
+                  const credentials =
+                    foreignHireCredentials?.requestId === request.request_id
+                      ? foreignHireCredentials
+                      : null;
+                  const credentialsText = credentials
+                    ? foreignHireCredentialsText(request, credentials)
+                    : "";
+                  const mailSubject = `Statybos24 employer portal · ${request.company_name}`;
+                  const mailBody = credentialsText ||
+                    `Hello ${request.contact_name || ""},\n\nRegarding your Statybos24 workforce request.\n\nIf anything is unclear, please reply to this email.`;
+                  const mailHref = `mailto:${request.business_email}?subject=${encodeURIComponent(
+                    mailSubject
+                  )}&body=${encodeURIComponent(mailBody)}`;
+
                   return (
                     <article className="admin-foreign-card" key={request.request_id}>
                       <div className="admin-foreign-head">
@@ -25899,16 +26115,169 @@ function AdminDashboard({
 
                       {request.additional_info ? <div className="admin-foreign-note">{request.additional_info}</div> : null}
 
+                      {request.employer_account_id ? (
+                        <div className="admin-foreign-access-summary">
+                          <div>
+                            <span>Employer login</span>
+                            <b>{request.employer_login_id || "—"}</b>
+                          </div>
+                          <div>
+                            <span>Recruitment sutartis</span>
+                            {request.agreementUrl ? (
+                              <a href={request.agreementUrl} target="_blank" rel="noreferrer">
+                                {request.agreement_name || "Atidaryti sutartį"}
+                              </a>
+                            ) : (
+                              <b>Neįkelta</b>
+                            )}
+                          </div>
+                          <div>
+                            <span>Sutarties būsena</span>
+                            <b>
+                              {request.agreement_status === "approved"
+                                ? "Patvirtinta"
+                                : request.agreement_status === "signed_uploaded"
+                                ? "Įkelta pasirašyta"
+                                : request.agreement_status === "rejected"
+                                ? "Reikia pataisyti"
+                                : "Laukiama įmonės parašo"}
+                            </b>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {credentials ? (
+                        <div className="admin-foreign-credentials">
+                          <strong>Nauji laikini prisijungimo duomenys — nukopijuokite prieš perkraunant puslapį.</strong>
+                          <code>{credentialsText}</code>
+                          <div className="admin-foreign-actions">
+                            <button
+                              className="admin-small-btn"
+                              type="button"
+                              onClick={() => copyForeignHireText(credentialsText, "Prisijungimo duomenys nukopijuoti.")}
+                            >
+                              Kopijuoti prisijungimus
+                            </button>
+                            <a className="admin-small-btn" href={mailHref} style={{ textDecoration: "none" }}>
+                              Atidaryti el. laišką
+                            </a>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {setupOpen && !request.employer_account_id ? (
+                        <div className="admin-foreign-setup">
+                          <h4>Sukurti privatų darbdavio prisijungimą</h4>
+                          <p>
+                            Prieiga bus sukurta tik šiai įmonei. Laikinas slaptažodis duomenų bazėje bus saugomas tik užšifruotas, todėl prieš uždarydami šį langą jį nukopijuokite.
+                          </p>
+                          <div className="admin-foreign-setup-grid">
+                            <label className="admin-foreign-field">
+                              <span>Company ID</span>
+                              <input
+                                value={foreignHireSetupLogin}
+                                onChange={(event) =>
+                                  setForeignHireSetupLogin(
+                                    event.target.value
+                                      .toUpperCase()
+                                      .replace(/[^A-Z0-9-]/g, "")
+                                      .slice(0, 40)
+                                  )
+                                }
+                                autoComplete="off"
+                              />
+                            </label>
+                            <label className="admin-foreign-field">
+                              <span>Laikinas slaptažodis</span>
+                              <input
+                                value={foreignHireSetupPassword}
+                                onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))}
+                                autoComplete="off"
+                              />
+                            </label>
+                            <label className="admin-foreign-file">
+                              <span className="admin-foreign-file-copy">
+                                <b>{foreignHireAgreementFile?.name || "Recruitment sutartis nepasirinkta"}</b>
+                                <span>PDF arba DOCX · iki 15 MB</span>
+                              </span>
+                              <span className="admin-small-btn">Pasirinkti sutartį</span>
+                              <input
+                                type="file"
+                                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={(event) => setForeignHireAgreementFile(event.target.files?.[0] || null)}
+                              />
+                            </label>
+                          </div>
+                          <div className="admin-foreign-setup-actions">
+                            <button
+                              className="admin-small-btn"
+                              type="button"
+                              disabled={foreignHireSetupBusy}
+                              onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}
+                            >
+                              Naujas Company ID
+                            </button>
+                            <button
+                              className="admin-small-btn"
+                              type="button"
+                              disabled={foreignHireSetupBusy}
+                              onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}
+                            >
+                              Naujas slaptažodis
+                            </button>
+                            <button
+                              className="admin-small-btn"
+                              type="button"
+                              disabled={foreignHireSetupBusy}
+                              onClick={() => {
+                                setForeignHireSetupRequest(null);
+                                setForeignHireAgreementFile(null);
+                              }}
+                            >
+                              Atšaukti
+                            </button>
+                            <button
+                              className="admin-small-btn"
+                              type="button"
+                              disabled={foreignHireSetupBusy}
+                              onClick={createForeignEmployerAccess}
+                              style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}
+                            >
+                              {foreignHireSetupBusy ? "Kuriama..." : "Sukurti prieigą ir įkelti sutartį"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="admin-foreign-actions">
                         {request.status === "new" ? (
                           <button className="admin-small-btn" type="button" disabled={busy} onClick={() => updateForeignHireRequestStatus(request, "under_review")}>
                             {busy ? "Saugoma..." : "Pradėti peržiūrą"}
                           </button>
                         ) : null}
-                        {!["declined","closed"].includes(request.status) ? (
+                        {request.status === "under_review" && !request.employer_account_id ? (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            onClick={() => openForeignHireAccessSetup(request)}
+                          >
+                            Sukurti darbdavio prieigą
+                          </button>
+                        ) : null}
+                        {request.employer_account_id ? (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            disabled={foreignHireSetupBusy}
+                            onClick={() => resetForeignEmployerPassword(request)}
+                          >
+                            Naujas laikinas slaptažodis
+                          </button>
+                        ) : null}
+                        {!['declined','closed'].includes(request.status) ? (
                           <button className="admin-small-btn danger" type="button" disabled={busy} onClick={() => updateForeignHireRequestStatus(request, "declined")}>Atmesti</button>
                         ) : null}
-                        <a className="admin-small-btn" href={`mailto:${request.business_email}?subject=${encodeURIComponent(`Statybos24 · ${request.company_name}`)}`} style={{textDecoration:"none"}}>Rašyti el. paštu</a>
+                        <a className="admin-small-btn" href={mailHref} style={{textDecoration:"none"}}>Rašyti el. paštu</a>
                       </div>
                     </article>
                   );
