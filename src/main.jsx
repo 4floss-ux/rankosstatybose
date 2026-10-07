@@ -29047,6 +29047,7 @@ function HireSideIcon({ type }) {
   if (type === "conditions") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14a1 1 0 0 1 1 1v7H4v-7a1 1 0 0 1 1-1Z" {...common}/><path d="M8 15h3M14 15h2" {...common}/></svg>;
   if (type === "request") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7V3Z" {...common}/><path d="M6 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M7 12h10M7 16h7" {...common}/></svg>;
   if (type === "faq") return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" {...common}/><path d="M9.8 9a2.4 2.4 0 1 1 3.3 2.2c-.8.4-1.1.9-1.1 1.8M12 17h.01" {...common}/></svg>;
+  if (type === "login") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" {...common}/><path d="M14 8l4 4-4 4M18 12H9" {...common}/></svg>;
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4V6Z" {...common}/><path d="m5 7 7 6 7-6" {...common}/></svg>;
 }
 
@@ -29529,6 +29530,7 @@ function HirePage() {
         .hire-side-brand>a{width:100%;justify-content:center!important}.hire-side-brand img{margin:0 auto!important}
         .hire-side-context{text-align:center;color:#8996a1;font-size:8px;line-height:1.4;letter-spacing:.13em}
         .hire-side-nav{gap:4px}.hire-side-nav a{min-height:43px;padding:9px 10px;border-radius:9px;font-size:10px}.hire-side-nav a span{width:28px;height:28px;border-radius:7px}.hire-side-nav a.active{background:#10283f;color:#fff}.hire-side-nav a.request-link:not(.active){color:#b86116;background:#fff7ef}.hire-side-nav a.request-link:not(.active) span{background:#fff0e2;color:#e1781c}.hire-side-nav a.request-link.active{background:#f08a28;color:#fff}.hire-side-nav a.request-link.active span{background:rgba(255,255,255,.16);color:#fff}
+        .hire-side-login{display:flex;align-items:center;gap:10px;min-height:43px;margin:10px 0 8px;padding:9px 10px;border:1px solid #f3d3b4;border-radius:9px;background:#fff7ef;color:#b86116;text-decoration:none;font-size:10px;font-weight:850;transition:background .15s ease,border-color .15s ease,color .15s ease}.hire-side-login:hover{background:#fff0e2;border-color:#efb57f;color:#9f4d0f}.hire-side-login span{width:28px;height:28px;border-radius:7px;background:#fff0e2;color:#e1781c;display:grid;place-items:center;flex:0 0 auto}.hire-side-login svg{width:16px;height:16px}
         .hire-side-tools{margin-top:auto;padding:14px 4px 0;border-top:1px solid #edf1f4;display:grid;gap:11px}.hire-side-tool-label{display:block;margin-bottom:5px;color:#9aa5ad;font-size:7.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.hire-language-dropdown .hire-dropdown-trigger{min-height:38px;padding:8px 10px;border:1px solid #dfe7ec;border-radius:9px;background:#fff;color:#10283f;font-size:10px;font-weight:850;box-shadow:none}.hire-language-dropdown .hire-dropdown-trigger:hover{border-color:#cad6de}.hire-language-dropdown.open .hire-dropdown-trigger,.hire-language-dropdown .hire-dropdown-trigger:focus-visible{border-color:#efaa6a;box-shadow:0 0 0 3px rgba(240,138,40,.10)}.hire-language-dropdown .hire-dropdown-menu{min-width:176px}.hire-side-email{display:flex;align-items:center;gap:8px;color:#5f7180;text-decoration:none;font-size:9px;font-weight:800}.hire-side-email:hover{color:#f08a28}.hire-side-email svg{width:17px;height:17px;color:#f08a28}
         .hire-topbar{left:244px;background:rgba(255,255,255,.94);box-shadow:none}.hire-topbar-inner-v4{min-height:70px}.hire-top-context small{font-size:8px}.hire-top-actions-v4{gap:9px}.hire-top-language{display:none}.hire-top-actions-v4 .hire-btn.primary{min-height:40px;padding:9px 14px;border-radius:9px}
         .hire-mobile-nav{display:none}
@@ -29717,6 +29719,7 @@ function HirePage() {
 
       <aside className="hire-sidebar" aria-label="Hire navigation">
         <div className="hire-side-brand"><BrandLogo href="#hire-top" height={42} /><span className="hire-side-context">{t.sidebarLabel}</span></div>
+        <a className="hire-side-login" href="/hire/login"><span><HireSideIcon type="login" /></span>Login</a>
         <nav className="hire-side-nav">
           {navItems.map(([id, label, icon]) => <a key={id} className={activeSection === id ? "active" : ""} href={`#${id}`} onClick={() => setActiveSection(id)}><span><HireSideIcon type={icon} /></span>{label}</a>)}
         </nav>
