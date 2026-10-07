@@ -29803,8 +29803,8 @@ HIRE_COPY.lt = {
 };
 
 HIRE_INITIAL_REQUEST_COPY.lt = {
-  title:"Darbuotojų poreikis",
-  intro:"Užpildykite pagrindinę informaciją. Peržiūrėję užklausą susisieksime su jumis el. paštu.",
+  title:"Pasakykite, kokių darbuotojų reikia.",
+  intro:"Pateikite pagrindinį darbuotojų poreikį. Šią pirminę užklausą pirmiausia peržiūri Statybos24 administratorius — darbuotojų paieška automatiškai neprasideda.",
   badge:"Pirminė darbuotojų poreikio užklausa",
   companySection:"Įmonė ir kontaktas",
   workforceSection:"Darbuotojų poreikis",
@@ -29812,7 +29812,7 @@ HIRE_INITIAL_REQUEST_COPY.lt = {
   companyCountry:"Įmonės šalis",
   contactName:"Kontaktinis asmuo",
   email:"Darbinis el. paštas",
-  emailHint:"Į šį el. paštą vėliau atsiųsime prisijungimo duomenis.",
+  emailHint:"Naudokite el. paštą, į kurį norite gauti privataus darbdavio portalo prisijungimo duomenis.",
   phone:"Telefonas",
   projectCountry:"Projekto šalis",
   projectLocation:"Miestas / projekto vieta",
@@ -29821,20 +29821,20 @@ HIRE_INITIAL_REQUEST_COPY.lt = {
   startDate:"Reikalinga pradžios data",
   addProfession:"+ Pridėti kitą profesiją",
   remove:"Pašalinti",
-  additionalInfo:"Papildoma informacija",
-  additionalPlaceholder:"Pvz. reikalinga patirtis, kalba, sertifikatai ar kita svarbi informacija...",
-  consent:"Patvirtinu pateiktą informaciją ir sutinku, kad Statybos24 su manimi susisiektų.",
-  submit:"Pateikti užklausą",
+  additionalInfo:"Ką dar turėtume žinoti?",
+  additionalPlaceholder:"Projekto tipas, specifiniai įgūdžiai, sertifikatai, kalbos reikalavimai ar kita naudinga informacija...",
+  consent:"Patvirtinu, kad pateikta informacija yra teisinga ir sutinku, kad Statybos24 susisiektų dėl šio darbuotojų poreikio.",
+  submit:"Pateikti darbuotojų poreikį",
   previewBadge:"Saugi užklausa · peržiūri Statybos24",
   successTitle:"Užklausa gauta.",
-  successText:"Užklausą gavome. Ją peržiūrėsime ir, jei tęsime procesą, prisijungimo prie privataus darbdavio portalo duomenis atsiųsime jūsų nurodytu el. paštu.",
+  successText:"Jūsų užklausa išsiųsta Statybos24 ir dabar matoma tik mūsų privačiame administratoriaus lange. Darbuotojų paieška automatiškai neprasideda. Jei patvirtinsime įmonę, privataus portalo prisijungimo duomenis išsiųsime jūsų nurodytu darbiniu el. paštu.",
   reset:"Pateikti kitą užklausą",
-  nextTitle:"Kas toliau?",
-  important:"Paieška pradedama tik po sutarties ir pilno poreikio patvirtinimo.",
-  nextSteps:["Peržiūrime jūsų užklausą.","Patvirtinus įmonę, el. paštu atsiunčiame privataus portalo prisijungimą ir sutartį.","Portale pasirašote sutartį ir užpildote pilną darbuotojų poreikį."],
-  questionsTitle:"Turite klausimų?",
-  questionsText:"Rašykite mums el. paštu.",
-  errors:{companyName:"Įveskite įmonės pavadinimą.",companyCountry:"Pasirinkite įmonės šalį.",contactName:"Įveskite kontaktinį asmenį.",email:"Įveskite el. paštą.",emailValid:"Įveskite galiojantį el. paštą.",roles:"Įrašykite profesiją ir darbuotojų skaičių.",jobCountry:"Pasirinkite projekto šalį.",jobLocation:"Įveskite projekto vietą.",startDate:"Pasirinkite pradžios datą.",consent:"Patvirtinkite prieš pateikdami."}
+  nextTitle:"Kas vyksta pateikus užklausą?",
+  important:"Šios užklausos pateikimas automatiškai nepradeda darbuotojų paieškos.",
+  nextSteps:["Užklausa atsiranda tik Statybos24 administratoriaus lange mūsų peržiūrai.","Jei įmonę patvirtiname, sukuriame privatų darbdavio prisijungimą, įkeliame atrankos sutartį ir prisijungimo duomenis rankiniu būdu išsiunčiame čia nurodytu darbiniu el. paštu.","Prisijungęs darbdavys gali perskaityti sutartį. Jei sąlygos tinka, jis ją pasirašo savo pusėje, įkelia pasirašytą kopiją ir pilnai užpildo įmonės, projekto bei darbuotojų poreikio informaciją.","Kai pasirašytą sutartį ir pilną darbuotojų poreikį peržiūri bei patvirtina Statybos24, užklausa pereina į darbuotojų paieškos etapą."],
+  questionsTitle:"Turite klausimų gavę prisijungimą?",
+  questionsText:"Atsakykite į tą patį Statybos24 el. laišką, iš kurio gavote portalo prisijungimo duomenis.",
+  errors:{companyName:"Įmonės pavadinimas yra privalomas.",companyCountry:"Pasirinkite įmonės šalį.",contactName:"Kontaktinis asmuo yra privalomas.",email:"Darbinis el. paštas yra privalomas.",emailValid:"Įveskite galiojantį darbinį el. pašto adresą.",roles:"Kiekvienai pozicijai pasirinkite profesiją ir darbuotojų skaičių.",jobCountry:"Pasirinkite projekto šalį.",jobLocation:"Projekto vieta yra privaloma.",startDate:"Pasirinkite reikalingą pradžios datą.",consent:"Prieš pateikdami užklausą patvirtinkite."}
 };
 
 HIRE_OPTION_LABELS.lt = {
@@ -30294,10 +30294,10 @@ function HirePage() {
 
         .hire-initial-request-grid{grid-template-columns:1fr!important;min-height:0!important;background:#fff}
         .hire-initial-panel{padding:0!important}
-        .hire-initial-request-head{align-items:center!important;padding:22px 28px!important;background:#fff!important;color:#10283f!important;border:1px solid #dfe7ec!important;border-bottom:0!important}.hire-initial-request-head>div:first-child{max-width:760px}.hire-initial-request-head h2{font-size:28px!important;color:#10283f!important}.hire-initial-request-head p{max-width:680px!important;color:#6d7e8b!important;font-size:11px!important;line-height:1.5!important}
-        .hire-initial-request-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;align-items:start;min-height:0}
-        .hire-initial-form{padding:24px 28px 28px;display:grid;gap:24px;min-width:0;border:1px solid #dfe7ec;border-top:0;border-radius:0 0 0 16px}
-        .hire-initial-section{display:grid;gap:14px}.hire-initial-section+.hire-initial-section{padding-top:20px;border-top:1px solid #e8edf1}
+        .hire-initial-request-head{align-items:center!important}.hire-initial-request-head>div:first-child{max-width:760px}
+        .hire-initial-request-layout{display:grid;grid-template-columns:minmax(0,1fr) 305px;align-items:stretch;min-height:620px}
+        .hire-initial-form{padding:29px 32px 34px;display:grid;gap:30px;min-width:0}
+        .hire-initial-section{display:grid;gap:18px}.hire-initial-section+.hire-initial-section{padding-top:26px;border-top:1px solid #e8edf1}
         .hire-initial-section-title{display:flex;align-items:flex-start;gap:12px}.hire-initial-section-title>span{width:30px;height:30px;flex:0 0 30px;border-radius:9px;background:#fff2e5;color:#cc6e17;display:grid;place-items:center;font-size:8px;font-weight:950}
         .hire-initial-section-title h3{margin:3px 0 0;color:#10283f;font:900 19px/1.15 Manrope,Inter,sans-serif;letter-spacing:-.025em}
         .hire-initial-roles{display:grid;gap:10px}.hire-initial-role{border:1px solid #dfe7ec;border-radius:12px;background:#f9fbfc;overflow:hidden}
@@ -30306,13 +30306,14 @@ function HirePage() {
         .hire-initial-add-role{margin-top:1px}.hire-initial-add-role button{display:inline-flex;align-items:center;min-height:36px;padding:8px 11px;border:1px solid #e1e8ed!important;border-radius:9px!important;background:#fff!important;color:#b75f17!important}
         .hire-initial-notes{margin-top:2px}.hire-initial-notes textarea{min-height:104px;resize:vertical}
         .hire-initial-panel .hire-checkbox-row{margin-top:2px;padding:14px 0 0;border-top:1px solid #edf1f4}.hire-initial-panel .hire-checkbox-row input{-webkit-appearance:none;appearance:none;width:18px;height:18px;flex:0 0 18px;margin:1px 0 0;border:1px solid #cad6de;border-radius:5px;background:#fff;display:grid;place-items:center;cursor:pointer}.hire-initial-panel .hire-checkbox-row input:checked{border-color:#f08a28;background:#f08a28}.hire-initial-panel .hire-checkbox-row input:checked:after{content:"✓";color:#fff;font-size:11px;font-weight:950;line-height:1}
-        .hire-consent-error{margin-top:-9px}.hire-initial-submit-row{display:flex;align-items:center;justify-content:flex-end;padding-top:2px}.hire-initial-submit-row .hire-btn{min-height:46px;border-radius:10px;white-space:nowrap}
-        .hire-initial-next{margin:18px 18px 0 0;padding:20px;background:#10283f;color:#fff;border-radius:14px;position:sticky;top:100px}.hire-initial-next-label{display:block;color:#f2a45f;font-size:7px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.hire-initial-next h3{margin:7px 0 14px;color:#fff;font:900 18px/1.12 Manrope,Inter,sans-serif;letter-spacing:-.025em}
-        .hire-initial-next-steps{display:grid;gap:0}.hire-initial-next-steps>div{display:grid;grid-template-columns:25px minmax(0,1fr);gap:9px;padding:11px 0;border-top:1px solid rgba(255,255,255,.11)}.hire-initial-next-steps>div:first-child{border-top:0;padding-top:0}.hire-initial-next-steps span{width:21px;height:21px;border-radius:7px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#f3a35a;font-size:7px;font-weight:950}.hire-initial-next-steps p{margin:1px 0 0;color:#c8d4dc;font-size:9.5px;line-height:1.45}.hire-initial-contact-note{margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.11)}.hire-initial-contact-note a{color:#ffb46f;text-decoration:none;font-size:9px;font-weight:850}.hire-initial-contact-note a:hover{text-decoration:underline}
+        .hire-consent-error{margin-top:-9px}.hire-initial-submit-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:4px}.hire-initial-submit-note{max-width:390px;color:#7b8994;font-size:9px;line-height:1.5}.hire-initial-submit-row .hire-btn{min-height:46px;border-radius:10px;white-space:nowrap}
+        .hire-initial-next{padding:31px 25px;background:#10283f;color:#fff;border-left:1px solid #1b405d}.hire-initial-next-label{display:block;color:#f2a45f;font-size:7px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}.hire-initial-next h3{margin:8px 0 22px;color:#fff;font:900 24px/1.06 Manrope,Inter,sans-serif;letter-spacing:-.035em}
+        .hire-initial-next-steps{display:grid}.hire-initial-next-steps>div{display:grid;grid-template-columns:31px minmax(0,1fr);gap:10px;padding:14px 0;border-top:1px solid rgba(255,255,255,.11)}.hire-initial-next-steps>div:first-child{border-top:0;padding-top:0}.hire-initial-next-steps span{width:25px;height:25px;border-radius:8px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#f3a35a;font-size:7px;font-weight:950}.hire-initial-next-steps p{margin:2px 0 0;color:#c2cfda;font-size:10px;line-height:1.5}
+        .hire-initial-next-note{display:flex;align-items:flex-start;gap:8px;margin-top:22px;padding:13px;border:1px solid rgba(240,138,40,.28);border-radius:11px;background:rgba(240,138,40,.08);color:#f2c295;font-size:9px;line-height:1.45}.hire-initial-next-note svg{flex:0 0 auto;margin-top:1px;color:#f08a28}.hire-initial-contact-note{margin-top:12px;padding:13px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.045)}.hire-initial-contact-note b{display:block;color:#fff;font-size:9px}.hire-initial-contact-note p{margin:5px 0 0;color:#b8c7d2;font-size:9px;line-height:1.5}
         .hire-initial-success{min-height:560px;display:grid;place-items:center;padding:40px}.hire-initial-success>div{max-width:610px;text-align:center}
-        @media (max-width:980px){.hire-initial-request-layout{grid-template-columns:minmax(0,1fr) 245px}.hire-initial-form{padding:22px 22px 26px}.hire-initial-next{margin-right:14px;padding:18px}}
-        @media (max-width:820px){.hire-initial-request-layout{grid-template-columns:1fr!important;min-height:0}.hire-initial-form{border-radius:0;padding:20px 18px 22px}.hire-initial-next{position:static;margin:0;border-radius:0 0 16px 16px;padding:18px}.hire-initial-next h3{font-size:18px;margin-bottom:12px}.hire-initial-next-steps{grid-template-columns:1fr 1fr;gap:0 16px}.hire-initial-next-steps>div:nth-child(2){border-top:0;padding-top:0}}
-        @media (max-width:560px){.hire-initial-form{padding:16px 14px 18px;gap:20px}.hire-initial-section{gap:12px}.hire-initial-section+.hire-initial-section{padding-top:18px}.hire-initial-role-grid{grid-template-columns:1fr;padding:11px}.hire-initial-submit-row{display:block}.hire-initial-submit-row .hire-btn{width:100%}.hire-initial-next-steps{grid-template-columns:1fr}.hire-initial-next-steps>div:nth-child(2){border-top:1px solid rgba(255,255,255,.11);padding-top:11px}.hire-initial-success{min-height:420px;padding:28px 18px}}
+        @media (max-width:980px){.hire-initial-request-layout{grid-template-columns:minmax(0,1fr) 270px}.hire-initial-form{padding:25px 24px 30px}.hire-initial-next{padding:27px 20px}}
+        @media (max-width:820px){.hire-initial-request-layout{grid-template-columns:1fr!important;min-height:0}.hire-initial-next{border-left:0;border-top:1px solid #1b405d;padding:22px 18px}.hire-initial-next h3{font-size:21px;margin-bottom:16px}.hire-initial-next-steps{grid-template-columns:1fr 1fr;gap:0 18px}.hire-initial-next-steps>div:nth-child(2){border-top:0;padding-top:0}.hire-initial-form{padding:20px 18px 24px}}
+        @media (max-width:560px){.hire-initial-form{padding:17px 14px 20px;gap:23px}.hire-initial-section{gap:14px}.hire-initial-section+.hire-initial-section{padding-top:21px}.hire-initial-role-grid{grid-template-columns:1fr;padding:11px}.hire-initial-submit-row{display:grid;grid-template-columns:1fr}.hire-initial-submit-row .hire-btn{width:100%}.hire-initial-next-steps{grid-template-columns:1fr}.hire-initial-next-steps>div:nth-child(2){border-top:1px solid rgba(255,255,255,.11);padding-top:14px}.hire-initial-success{min-height:420px;padding:28px 18px}}
 
         .hire-section{padding:52px 0!important}.hire-section-head{margin-bottom:20px!important}.hire-section-head h2{font-size:clamp(28px,3.4vw,43px)!important;line-height:1.05!important}.hire-section-head p{margin-top:8px!important;max-width:600px!important;font-size:12px!important;line-height:1.5!important}
         .hire-manifesto article{padding:17px!important}.hire-manifesto h3{margin:11px 0 5px!important;font-size:16px!important}.hire-manifesto p{font-size:10.5px!important;line-height:1.48!important}
@@ -30407,7 +30408,7 @@ function HirePage() {
                   <div className="hire-initial-request-layout">
                     <div className="hire-initial-form">
                       <div className="hire-initial-section">
-                        <div className="hire-initial-section-title"><h3>{ir.companySection}</h3></div>
+                        <div className="hire-initial-section-title"><span>01</span><div><h3>{ir.companySection}</h3></div></div>
                         <div className="hire-form-grid">
                           <HireInput label={ir.companyName} required value={form.companyName} onChange={e=>setField('companyName',e.target.value)} error={errors.companyName}/>
                           <HireSelect label={ir.companyCountry} required value={form.companyCountry} onChange={v=>setField('companyCountry',v)} options={options(countryValues)} placeholder={t.form.common.select} error={errors.companyCountry}/>
@@ -30418,7 +30419,7 @@ function HirePage() {
                       </div>
 
                       <div className="hire-initial-section">
-                        <div className="hire-initial-section-title"><h3>{ir.workforceSection}</h3></div>
+                        <div className="hire-initial-section-title"><span>02</span><div><h3>{ir.workforceSection}</h3></div></div>
                         <div className="hire-form-grid">
                           <HireSelect label={ir.projectCountry} required value={form.jobCountry} onChange={v=>setField('jobCountry',v)} options={options(countryValues)} placeholder={t.form.common.select} error={errors.jobCountry}/>
                           <HireInput label={ir.projectLocation} required value={form.jobLocation} onChange={e=>setField('jobLocation',e.target.value)} error={errors.jobLocation}/>
@@ -30443,6 +30444,7 @@ function HirePage() {
                         {submitError?<div className="hire-request-submit-error">{submitError}</div>:null}
 
                         <div className="hire-initial-submit-row">
+                          <div className="hire-initial-submit-note">{ir.important}</div>
                           <button type="button" className="hire-btn primary" onClick={submitInitialRequest} disabled={submitting}>{submitting ? ({en:"Sending...",lt:"Siunčiama...",de:"Wird gesendet...",nl:"Verzenden...",no:"Sender...",sv:"Skickar...",da:"Sender..."}[lang] || "Sending...") : ir.submit} {!submitting && <HireArrowIcon/>}</button>
                         </div>
                       </div>
@@ -30452,9 +30454,10 @@ function HirePage() {
                       <span className="hire-initial-next-label">STATYBOS24</span>
                       <h3>{ir.nextTitle}</h3>
                       <div className="hire-initial-next-steps">
-                        {ir.nextSteps.slice(0,3).map((item,index)=><div key={item}><span>{index+1}</span><p>{item}</p></div>)}
+                        {ir.nextSteps.map((item,index)=><div key={item}><span>{String(index+1).padStart(2,'0')}</span><p>{item}</p></div>)}
                       </div>
-                      <div className="hire-initial-contact-note"><a href="mailto:info@statybos24.lt">info@statybos24.lt</a></div>
+                      <div className="hire-initial-next-note"><HireCheckIcon size={16}/><span>{ir.important}</span></div>
+                      <div className="hire-initial-contact-note"><b>{ir.questionsTitle}</b><p>{ir.questionsText}</p></div>
                     </aside>
                   </div>
                 }
