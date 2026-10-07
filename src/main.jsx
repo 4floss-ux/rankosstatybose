@@ -30553,8 +30553,12 @@ function HireEmployerPortalPage() {
 
   useEffect(()=>{ loadPortal(); },[]);
 
-  function logout() {
-    if (supabase && token) supabase.rpc("foreign_employer_logout", {p_session_token:token}).catch(()=>{});
+  async function logout() {
+    if (supabase && token) {
+      try {
+        await supabase.rpc("foreign_employer_logout", { p_session_token: token });
+      } catch {}
+    }
     setForeignHirePortalToken("");
     window.location.assign("/hire/login");
   }
