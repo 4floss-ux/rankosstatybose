@@ -28687,471 +28687,168 @@ function HirePage() {
     : "Not specified yet";
 
   return (
-    <div className="hire-page" id="hire-top">
+    <div className="hire-page hire-v3" id="hire-top">
       <style>{`
-        .hire-page{
-          --hire-navy:#102438;--hire-navy-2:#0b1d2d;--hire-orange:#f08a28;--hire-orange-dark:#d87318;
-          --hire-ink:#13283a;--hire-muted:#657687;--hire-line:#e2e9ee;--hire-soft:#f5f7f9;--hire-cream:#fff8f1;
-          min-height:100vh;background:#fff;color:var(--hire-ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        .hire-v3{
+          --ink:#102438;--ink-2:#17344b;--orange:#f08a28;--orange-2:#ff9f45;--paper:#f4f1ea;
+          --paper-2:#ebe7de;--white:#fff;--muted:#6d7881;--line:rgba(16,36,56,.16);--green:#2f7c5d;
+          min-height:100vh;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
           overflow-x:hidden;-webkit-font-smoothing:antialiased;
         }
-        .hire-page *{box-sizing:border-box}
-        .hire-shell{width:min(1180px,calc(100% - 48px));margin:0 auto}
-        .hire-topbar{position:sticky;top:0;z-index:200;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(226,233,238,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
-        .hire-topbar-inner{min-height:78px;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .hire-nav{display:flex;align-items:center;gap:28px}.hire-nav a{color:#526577;text-decoration:none;font-size:13px;font-weight:750}.hire-nav a:hover{color:var(--hire-navy)}
-        .hire-top-actions{display:flex;align-items:center;gap:10px}.hire-lang{height:38px;min-width:42px;border:1px solid var(--hire-line);border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:900;letter-spacing:.08em;color:#526577;background:#fff}
-        .hire-btn{min-height:48px;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease}
-        .hire-btn:hover{transform:translateY(-1px)}.hire-btn.primary{background:var(--hire-orange);color:#fff;box-shadow:0 10px 26px rgba(240,138,40,.25)}.hire-btn.primary:hover{background:var(--hire-orange-dark);box-shadow:0 14px 30px rgba(240,138,40,.3)}
-        .hire-btn.dark{background:var(--hire-navy);color:#fff}.hire-btn.ghost{background:#fff;color:var(--hire-navy);border:1px solid var(--hire-line)}.hire-btn.ghost:hover{border-color:#c8d4dc;background:#fbfcfd}.hire-btn.full{width:100%}
-        .hire-hero{position:relative;background:linear-gradient(135deg,#0a1c2c 0%,#102d44 58%,#173b55 100%);color:#fff;overflow:hidden}
-        .hire-hero:before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;right:-160px;top:-200px;background:radial-gradient(circle,rgba(240,138,40,.18) 0%,rgba(240,138,40,0) 68%)}
-        .hire-hero:after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 82%);pointer-events:none}
-        .hire-hero-inner{position:relative;z-index:1;min-height:650px;display:grid;grid-template-columns:minmax(0,1.06fr) minmax(390px,.94fr);align-items:center;gap:76px;padding:76px 0}
-        .hire-eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#ffb46f}.hire-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--hire-orange);box-shadow:0 0 0 5px rgba(240,138,40,.12)}
-        .hire-hero h1{margin:18px 0 18px;font-family:Manrope,Inter,sans-serif;font-size:clamp(44px,5.2vw,72px);line-height:.99;letter-spacing:-.055em;max-width:760px}.hire-hero h1 span{color:#ff9e45}
-        .hire-hero-lead{margin:0;max-width:650px;font-size:18px;line-height:1.7;color:#c6d4df}.hire-hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}.hire-hero .hire-btn.ghost{background:rgba(255,255,255,.07);color:#fff;border-color:rgba(255,255,255,.18)}.hire-hero .hire-btn.ghost:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28)}
-        .hire-trust-row{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:31px;color:#c2d2de;font-size:12px;font-weight:700}.hire-trust-item{display:inline-flex;align-items:center;gap:7px}.hire-trust-item svg{color:#ff9e45}
-        .hire-hero-card-wrap{position:relative}.hire-hero-card{position:relative;background:rgba(255,255,255,.97);color:var(--hire-ink);border:1px solid rgba(255,255,255,.8);border-radius:24px;padding:26px;box-shadow:0 34px 90px rgba(1,12,22,.28)}
-        .hire-hero-card:before{content:"";position:absolute;inset:-1px;border-radius:24px;padding:1px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(240,138,40,.36),rgba(255,255,255,.2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-        .hire-card-kicker{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#a55a1b}.hire-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-top:8px}.hire-card-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:25px;letter-spacing:-.03em}.hire-status{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#eef8f1;color:#257447;font-size:10px;font-weight:900;white-space:nowrap}.hire-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#35a866}
-        .hire-demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}.hire-demo-item{padding:13px;border:1px solid var(--hire-line);border-radius:13px;background:#fbfcfd}.hire-demo-item span{display:block;color:#84919e;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.hire-demo-item b{display:block;margin-top:6px;color:var(--hire-navy);font-size:13px;line-height:1.35}.hire-demo-item.wide{grid-column:1/-1}
-        .hire-demo-progress{margin-top:18px;padding-top:18px;border-top:1px solid var(--hire-line)}.hire-demo-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#697a89}.hire-demo-progress-head b{color:var(--hire-navy)}.hire-progress-line{height:7px;border-radius:999px;background:#e9eef2;margin-top:10px;overflow:hidden}.hire-progress-line>span{display:block;height:100%;width:58%;border-radius:inherit;background:linear-gradient(90deg,var(--hire-orange),#ffac60)}
-        .hire-float-note{position:absolute;right:-28px;bottom:-35px;width:210px;background:#fff;border:1px solid var(--hire-line);border-radius:16px;padding:14px 15px;box-shadow:0 20px 50px rgba(4,20,34,.18)}.hire-float-note strong{display:block;font-size:12px;color:var(--hire-navy)}.hire-float-note span{display:block;margin-top:4px;font-size:10px;line-height:1.45;color:#718190}
-        .hire-section{padding:92px 0}.hire-section.soft{background:var(--hire-soft)}.hire-section.dark{background:var(--hire-navy);color:#fff}.hire-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:36px;margin-bottom:38px}.hire-section-head-copy{max-width:720px}.hire-mini-label{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#bf681e}.hire-section.dark .hire-mini-label{color:#ff9e45}.hire-section h2{margin:10px 0 0;font-family:Manrope,Inter,sans-serif;font-size:clamp(32px,4vw,48px);line-height:1.08;letter-spacing:-.045em}.hire-section-head p{margin:12px 0 0;max-width:620px;color:var(--hire-muted);font-size:15px;line-height:1.7}.hire-section.dark .hire-section-head p{color:#b9c9d6}
-        .hire-value-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.hire-value-card{border:1px solid var(--hire-line);border-radius:18px;padding:25px;background:#fff}.hire-value-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:var(--hire-cream);color:#c5691d}.hire-value-card h3{margin:18px 0 8px;font-family:Manrope,Inter,sans-serif;font-size:19px;letter-spacing:-.02em}.hire-value-card p{margin:0;color:var(--hire-muted);font-size:13px;line-height:1.65}
-        .hire-process{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#dbe4ea;border:1px solid #dbe4ea;border-radius:20px;overflow:hidden}.hire-process-card{position:relative;background:#fff;padding:30px}.hire-process-number{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--hire-navy);color:#fff;font-size:12px;font-weight:900}.hire-process-card h3{margin:20px 0 8px;font-family:Manrope,Inter,sans-serif;font-size:20px}.hire-process-card p{margin:0;color:var(--hire-muted);font-size:13px;line-height:1.65}
-        .hire-role-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.hire-role-chip{min-height:64px;display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--hire-line);border-radius:14px;background:#fff;color:var(--hire-navy);font-size:12px;font-weight:800}.hire-role-chip span:first-child{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:9px;background:var(--hire-cream);color:#c5691d;font-size:12px}
-        .hire-condition-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}.hire-condition-copy h2{max-width:620px}.hire-condition-copy p{margin:18px 0 0;color:#b9c9d6;line-height:1.7;font-size:15px}.hire-condition-list{display:grid;gap:11px;margin-top:28px}.hire-condition-row{display:flex;gap:11px;align-items:flex-start;color:#e4ecf2;font-size:13px;line-height:1.55}.hire-condition-row span:first-child{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 24px;background:rgba(240,138,40,.15);color:#ff9e45;margin-top:1px}.hire-offer-card{background:#fff;color:var(--hire-ink);border-radius:22px;padding:27px;box-shadow:0 28px 70px rgba(0,0,0,.18)}.hire-offer-card h3{margin:0 0 20px;font-family:Manrope,Inter,sans-serif;font-size:22px;letter-spacing:-.03em}.hire-offer-row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-top:1px solid var(--hire-line);font-size:12px}.hire-offer-row:first-of-type{border-top:0}.hire-offer-row span{color:#758493}.hire-offer-row b{text-align:right;color:var(--hire-navy)}.hire-offer-badge{margin-top:18px;padding:12px 13px;border-radius:12px;background:#eef8f1;color:#257447;font-size:11px;font-weight:800;display:flex;gap:8px;align-items:center}
-        .hire-request-section{padding:96px 0;background:linear-gradient(180deg,#f5f7f9 0%,#fff 100%);scroll-margin-top:78px}.hire-request-layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:30px;align-items:start}.hire-request-side{position:sticky;top:105px}.hire-request-side h2{margin:10px 0 10px;font-family:Manrope,Inter,sans-serif;font-size:34px;line-height:1.08;letter-spacing:-.04em}.hire-request-side>p{margin:0;color:var(--hire-muted);font-size:13px;line-height:1.65}.hire-step-list{display:grid;gap:7px;margin-top:28px}.hire-step-item{display:grid;grid-template-columns:34px 1fr;align-items:center;gap:11px;padding:9px 10px;border-radius:12px;color:#7a8997}.hire-step-item .num{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid #d8e1e7;background:#fff;font-size:11px;font-weight:900}.hire-step-item .text{font-size:12px;font-weight:800}.hire-step-item.active{background:#fff;color:var(--hire-navy);box-shadow:0 8px 24px rgba(16,36,56,.06)}.hire-step-item.active .num{background:var(--hire-orange);border-color:var(--hire-orange);color:#fff}.hire-step-item.done .num{background:var(--hire-navy);border-color:var(--hire-navy);color:#fff}.hire-step-item.done{color:#526577}
-        .hire-form-card{background:#fff;border:1px solid var(--hire-line);border-radius:22px;padding:30px;box-shadow:0 18px 55px rgba(16,36,56,.07);min-width:0}.hire-form-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding-bottom:22px;border-bottom:1px solid var(--hire-line);margin-bottom:24px}.hire-form-top h3{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;letter-spacing:-.035em}.hire-form-top p{margin:7px 0 0;color:var(--hire-muted);font-size:12px;line-height:1.55}.hire-step-count{padding:7px 10px;border-radius:999px;background:var(--hire-soft);color:#697a89;font-size:10px;font-weight:900;white-space:nowrap}
-        .hire-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.hire-field{display:grid;gap:7px;min-width:0}.hire-field.full{grid-column:1/-1}.hire-label{font-size:11px;font-weight:850;color:#34495b}.hire-label b{color:var(--hire-orange);margin-left:3px}.hire-input{width:100%;min-width:0;min-height:48px;border:1px solid #d9e2e8;border-radius:11px;padding:11px 13px;background:#fff;color:var(--hire-navy);font:inherit;font-size:13px;outline:none;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}.hire-input::placeholder{color:#a2adb6}.hire-input:hover{border-color:#c7d3db}.hire-input:focus{border-color:var(--hire-orange);box-shadow:0 0 0 3px rgba(240,138,40,.1)}.hire-input.invalid{border-color:#d65745;box-shadow:0 0 0 3px rgba(214,87,69,.08)}textarea.hire-input{min-height:112px;resize:vertical;line-height:1.55}.hire-hint{color:#8794a0;font-size:10px;line-height:1.45}.hire-error{color:#bd4638;font-size:10px;font-weight:700;line-height:1.4}.hire-select-wrap{position:relative;display:block}.hire-select{appearance:none;-webkit-appearance:none;padding-right:38px}.hire-select-chevron{position:absolute;right:13px;top:50%;transform:translateY(-56%);pointer-events:none;color:#71808e;font-size:16px}
-        .hire-segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:5px;border:1px solid var(--hire-line);border-radius:12px;background:#f7f9fa}.hire-segment button{min-height:38px;border:0;border-radius:8px;background:transparent;color:#6c7c8b;font:inherit;font-size:10px;font-weight:850;cursor:pointer;padding:7px 8px}.hire-segment button.active{background:#fff;color:var(--hire-navy);box-shadow:0 3px 10px rgba(16,36,56,.08)}
-        .hire-subsection{grid-column:1/-1;margin-top:5px;padding-top:20px;border-top:1px solid var(--hire-line)}.hire-subsection-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.hire-subsection-title h4{margin:0;font-size:13px;color:var(--hire-navy)}.hire-subsection-title p{margin:3px 0 0;color:#84919d;font-size:10px}.hire-role-editor{grid-column:1/-1;display:grid;gap:12px}.hire-role-row{position:relative;display:grid;grid-template-columns:minmax(170px,1.4fr) 100px minmax(140px,1fr) minmax(130px,.8fr) 42px;gap:10px;align-items:end;padding:15px;border:1px solid var(--hire-line);border-radius:14px;background:#fbfcfd}.hire-role-row .hire-field{gap:6px}.hire-role-row .hire-input{min-height:44px}.hire-remove-role{width:42px;height:44px;border:1px solid var(--hire-line);border-radius:10px;background:#fff;color:#8b99a5;font-size:18px;cursor:pointer}.hire-remove-role:hover{border-color:#e2b7ad;color:#b84e3d;background:#fff7f5}.hire-add-role{border:0;background:transparent;color:#b75f18;font:inherit;font-size:11px;font-weight:900;cursor:pointer;padding:6px 0}
-        .hire-checkbox-row{grid-column:1/-1;display:flex;align-items:flex-start;gap:10px;padding:13px;border:1px solid var(--hire-line);border-radius:12px;background:#fbfcfd}.hire-checkbox-row input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--hire-orange);flex:0 0 18px}.hire-checkbox-row span{font-size:11px;color:#5f7181;line-height:1.55}.hire-checkbox-row.invalid{border-color:#e0a69d;background:#fff9f7}
-        .hire-form-actions{display:flex;justify-content:space-between;gap:12px;margin-top:28px;padding-top:22px;border-top:1px solid var(--hire-line)}.hire-form-actions .right{display:flex;gap:9px;margin-left:auto}.hire-form-actions .hire-btn{min-width:126px}
-        .hire-review{display:grid;gap:12px}.hire-review-card{border:1px solid var(--hire-line);border-radius:14px;padding:16px}.hire-review-card h4{margin:0 0 12px;font-size:12px;color:var(--hire-navy);display:flex;justify-content:space-between;gap:10px}.hire-review-card h4 button{border:0;background:transparent;padding:0;color:#b75f18;font:inherit;font-size:10px;font-weight:850;cursor:pointer}.hire-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}.hire-review-item span{display:block;color:#8a97a3;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.hire-review-item b{display:block;margin-top:4px;color:#34495b;font-size:11px;line-height:1.5;word-break:break-word}
-        .hire-preview-notice{margin-top:16px;padding:11px 12px;border-radius:11px;background:#fff8f1;border:1px solid #f2d2b5;color:#955118;font-size:10px;line-height:1.5;font-weight:700}
-        .hire-success{text-align:center;padding:28px 12px}.hire-success-mark{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:#eef8f1;color:#2e8654}.hire-success h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:30px;letter-spacing:-.04em}.hire-success p{max-width:550px;margin:10px auto 0;color:var(--hire-muted);font-size:13px;line-height:1.65}.hire-success-box{max-width:560px;margin:22px auto 0;padding:16px;border:1px solid var(--hire-line);border-radius:14px;background:#fbfcfd;text-align:left}.hire-success-box b{display:block;color:var(--hire-navy);font-size:12px}.hire-success-box span{display:block;margin-top:5px;color:#758493;font-size:10px;line-height:1.5}
-        .hire-faq{display:grid;grid-template-columns:.75fr 1.25fr;gap:60px}.hire-faq h2{margin:10px 0 0;font-family:Manrope,Inter,sans-serif;font-size:40px;letter-spacing:-.04em}.hire-faq-list{display:grid}.hire-faq-item{padding:20px 0;border-top:1px solid var(--hire-line)}.hire-faq-item:first-child{border-top:0;padding-top:0}.hire-faq-item h3{margin:0;font-size:14px;color:var(--hire-navy)}.hire-faq-item p{margin:8px 0 0;color:var(--hire-muted);font-size:12px;line-height:1.65}
-        .hire-cta{padding:0 0 92px}.hire-cta-card{position:relative;overflow:hidden;border-radius:26px;padding:42px;background:linear-gradient(135deg,#102438,#163a54);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:30px}.hire-cta-card:after{content:"";position:absolute;width:280px;height:280px;border-radius:50%;right:-80px;top:-100px;background:radial-gradient(circle,rgba(240,138,40,.28),transparent 70%)}.hire-cta-copy{position:relative;z-index:1;max-width:680px}.hire-cta-copy h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:36px;line-height:1.08;letter-spacing:-.04em}.hire-cta-copy p{margin:10px 0 0;color:#c4d3de;font-size:13px;line-height:1.65}.hire-cta-card .hire-btn{position:relative;z-index:1;flex:0 0 auto}
-        .hire-footer{border-top:1px solid var(--hire-line);padding:30px 0;background:#fff}.hire-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:20px}.hire-footer-copy{font-size:10px;color:#7c8995;line-height:1.5}.hire-footer-contact{color:#526577;text-decoration:none;font-size:11px;font-weight:800}.hire-footer-contact:hover{color:var(--hire-navy)}
-        @media (max-width:1020px){
-          .hire-nav{display:none}.hire-hero-inner{grid-template-columns:1fr;min-height:auto;gap:48px;padding:66px 0 82px}.hire-hero-copy{max-width:760px}.hire-hero-card-wrap{width:min(620px,100%)}.hire-float-note{right:18px}.hire-value-grid{grid-template-columns:1fr}.hire-role-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hire-condition-grid{grid-template-columns:1fr;gap:34px}.hire-request-layout{grid-template-columns:1fr}.hire-request-side{position:static}.hire-step-list{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.hire-step-item{display:flex;justify-content:center;padding:8px}.hire-step-item .text{display:none}.hire-faq{grid-template-columns:1fr;gap:30px}.hire-role-row{grid-template-columns:repeat(2,minmax(0,1fr))}.hire-role-row .hire-remove-role{position:absolute;right:10px;top:10px;width:34px;height:34px}.hire-role-row .hire-field:first-child{padding-right:42px}.hire-role-row .hire-field:nth-child(2){padding-right:0}}
-        @media (max-width:720px){
-          .hire-shell{width:min(100% - 28px,1180px)}.hire-topbar-inner{min-height:68px}.hire-topbar .hire-btn{min-height:42px;padding:9px 12px;font-size:11px}.hire-lang{display:none}.hire-hero-inner{padding:54px 0 68px}.hire-hero h1{font-size:clamp(40px,12vw,56px)}.hire-hero-lead{font-size:15px;line-height:1.65}.hire-hero-actions{display:grid;grid-template-columns:1fr}.hire-hero-actions .hire-btn{width:100%}.hire-trust-row{display:grid;gap:8px}.hire-hero-card{padding:19px;border-radius:18px}.hire-card-head{display:grid}.hire-card-head h2{font-size:21px}.hire-demo-grid{grid-template-columns:1fr}.hire-demo-item.wide{grid-column:auto}.hire-float-note{position:static;width:100%;margin-top:10px}.hire-section{padding:68px 0}.hire-section-head{display:block;margin-bottom:28px}.hire-section h2{font-size:34px}.hire-process{grid-template-columns:1fr}.hire-role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hire-condition-grid{gap:26px}.hire-offer-card{padding:20px}.hire-request-section{padding:68px 0}.hire-request-side h2{font-size:31px}.hire-form-card{padding:19px;border-radius:18px}.hire-form-top{display:block}.hire-step-count{display:inline-flex;margin-top:12px}.hire-form-grid{grid-template-columns:1fr}.hire-field.full,.hire-subsection,.hire-role-editor,.hire-checkbox-row{grid-column:auto}.hire-role-row{grid-template-columns:1fr;padding:14px}.hire-role-row .hire-field:first-child{padding-right:40px}.hire-role-row .hire-remove-role{right:9px;top:9px}.hire-segment{grid-template-columns:1fr}.hire-form-actions{display:grid;grid-template-columns:1fr 1fr}.hire-form-actions .right{display:contents}.hire-form-actions .hire-btn{width:100%;min-width:0}.hire-form-actions>.hire-btn:first-child{grid-column:1}.hire-form-actions .hire-btn.primary{grid-column:2}.hire-review-grid{grid-template-columns:1fr}.hire-faq h2{font-size:34px}.hire-cta{padding-bottom:68px}.hire-cta-card{padding:28px 22px;display:grid}.hire-cta-copy h2{font-size:30px}.hire-cta-card .hire-btn{width:100%}.hire-footer-inner{display:grid;justify-items:center;text-align:center}}
-        @media (max-width:420px){.hire-role-grid{grid-template-columns:1fr}.hire-demo-grid{grid-template-columns:1fr}.hire-topbar .hire-btn span{display:none}.hire-topbar .hire-btn{width:44px;padding:0}.hire-step-item{padding:6px}.hire-step-item .num{width:30px;height:30px}.hire-form-actions{grid-template-columns:1fr}.hire-form-actions>.hire-btn:first-child,.hire-form-actions .hire-btn.primary{grid-column:1}.hire-form-actions .hire-btn.ghost{order:2}.hire-form-actions .hire-btn.primary{order:1}}
-      `}</style>
+        .hire-v3 *{box-sizing:border-box}.hire-v3 button,.hire-v3 input,.hire-v3 select,.hire-v3 textarea{font:inherit}
+        .hire-shell{width:min(1240px,calc(100% - 56px));margin:0 auto}.hire-anchor{scroll-margin-top:88px}
 
-      <style>{`
-        /* /hire v1 visual direction — light, premium, construction-led, based on Statybos24 brand */
-        .hire-page{--hire-navy:#102438;--hire-navy-2:#0a1b2a;--hire-orange:#f08a28;--hire-orange-dark:#d87519;--hire-ink:#11273a;--hire-muted:#667788;--hire-line:#e5ebef;--hire-soft:#f5f7f8;--hire-cream:#fff8f1;background:#fff}
-        .hire-topbar{background:rgba(255,255,255,.96);border-bottom:1px solid #edf1f3;box-shadow:0 1px 0 rgba(16,36,56,.025)}
-        .hire-topbar-inner{min-height:86px}.hire-nav{gap:34px}.hire-nav a{font-size:12px;letter-spacing:.02em;color:#5e6d7a}.hire-nav a:hover{color:var(--hire-orange)}
-        .hire-lang{background:#f8fafb;border-color:#e5ebef;color:#6c7a87}.hire-btn.primary{background:var(--hire-orange);box-shadow:0 10px 26px rgba(240,138,40,.20)}
-        .hire-btn.primary:hover{background:var(--hire-orange-dark)}
-        .hire-hero{background:#fff;color:var(--hire-ink);min-height:0;border-bottom:1px solid #f0f3f5}
-        .hire-hero:before,.hire-hero:after{display:none}
-        .hire-hero-inner{min-height:690px;grid-template-columns:minmax(0,1.03fr) minmax(440px,.97fr);gap:72px;padding:74px 0 82px}
-        .hire-hero-copy{padding:22px 0 8px}
-        .hire-eyebrow{color:#c76815;letter-spacing:.15em}.hire-eyebrow-dot{background:var(--hire-orange);box-shadow:0 0 0 5px rgba(240,138,40,.10)}
-        .hire-hero h1{margin:22px 0 22px;max-width:760px;color:var(--hire-navy);font-size:clamp(52px,5.45vw,78px);line-height:1.015;letter-spacing:-.058em}
-        .hire-hero h1 span{color:var(--hire-orange)}
-        .hire-hero-lead{max-width:650px;color:#617383;font-size:17px;line-height:1.72}
-        .hire-hero-actions{margin-top:31px}.hire-hero .hire-btn.ghost{background:#fff;color:var(--hire-navy);border-color:#dfe6ea;box-shadow:none}.hire-hero .hire-btn.ghost:hover{background:#f8fafb;border-color:#cbd6dd}
-        .hire-trust-row{margin-top:30px;color:#6d7c89}.hire-trust-item svg{color:var(--hire-orange)}
-        .hire-visual-wrap{position:relative;min-width:0;padding:20px 0 24px 12px}
-        .hire-photo-panel{position:relative;min-height:530px;border-radius:118px 0 26px 26px;overflow:hidden;background:linear-gradient(150deg,#e7edf1 0%,#d7e1e7 38%,#b8c5cf 100%);box-shadow:0 30px 75px rgba(16,36,56,.16);isolation:isolate}
-        .hire-photo-panel:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,24,37,.04) 0%,rgba(7,24,37,.02) 48%,rgba(7,24,37,.32) 100%);pointer-events:none;z-index:2}
-        .hire-photo-art{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1}
-        .hire-photo-badge{position:absolute;top:26px;right:26px;z-index:4;display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 8px 25px rgba(16,36,56,.10);color:var(--hire-navy);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(8px)}
-        .hire-photo-badge i{width:7px;height:7px;border-radius:50%;background:var(--hire-orange);display:block}
-        .hire-photo-caption{position:absolute;z-index:4;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end;padding:27px 30px 29px;background:linear-gradient(90deg,rgba(240,138,40,.96),rgba(235,125,26,.94));color:#fff}
-        .hire-photo-caption strong{display:block;font-family:Manrope,Inter,sans-serif;font-size:23px;line-height:1.12;letter-spacing:-.03em;max-width:360px}.hire-photo-caption span{display:block;margin-top:7px;color:rgba(255,255,255,.86);font-size:11px;line-height:1.45;max-width:360px}
-        .hire-photo-caption .metric{text-align:right}.hire-photo-caption .metric b{display:block;font-family:Manrope,Inter,sans-serif;font-size:31px;line-height:1}.hire-photo-caption .metric small{display:block;margin-top:5px;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.82)}
-        .hire-visual-note{position:absolute;left:-18px;bottom:84px;z-index:5;width:205px;padding:14px 15px;border:1px solid #e5ebef;border-radius:15px;background:#fff;box-shadow:0 18px 45px rgba(16,36,56,.14)}
-        .hire-visual-note .top{display:flex;align-items:center;gap:8px;color:#8794a0;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.hire-visual-note .top i{width:8px;height:8px;border-radius:50%;background:#37a66b;box-shadow:0 0 0 4px rgba(55,166,107,.10)}
-        .hire-visual-note b{display:block;margin-top:8px;color:var(--hire-navy);font-size:13px}.hire-visual-note span{display:block;margin-top:4px;color:#788793;font-size:10px;line-height:1.45}
-        .hire-section:first-of-type{padding-top:84px}
-        .hire-value-card{border-color:#e7ecef;box-shadow:0 12px 36px rgba(16,36,56,.045)}
-        .hire-process-card{background:#fff;border:1px solid #e7ecef;border-radius:18px;padding:24px}.hire-process-number{color:var(--hire-orange)}
-        .hire-role-chip{background:#fff;border-color:#e6ebef}.hire-role-chip:hover{border-color:#efb57f;background:#fffaf6}
-        .hire-request-section{background:linear-gradient(180deg,#f7f9fa 0%,#fff 100%)}
-        .hire-form-card{box-shadow:0 24px 65px rgba(16,36,56,.075)}
-        .hire-cta-card{background:linear-gradient(135deg,#0c2031,#14334a)}
-        @media (max-width:1020px){.hire-hero-inner{grid-template-columns:1fr;gap:38px;min-height:auto;padding:58px 0 76px}.hire-hero-copy{padding-top:10px;max-width:780px}.hire-visual-wrap{width:min(720px,100%);padding-left:0}.hire-photo-panel{min-height:510px;border-radius:92px 18px 22px 22px}.hire-visual-note{left:18px}}
-        @media (max-width:720px){.hire-topbar-inner{min-height:70px}.hire-hero-inner{padding:44px 0 58px;gap:30px}.hire-hero h1{font-size:clamp(43px,12vw,60px)}.hire-hero-lead{font-size:15px}.hire-visual-wrap{padding:0}.hire-photo-panel{min-height:430px;border-radius:68px 12px 18px 18px}.hire-photo-caption{grid-template-columns:1fr;padding:21px 20px 23px}.hire-photo-caption strong{font-size:20px}.hire-photo-caption .metric{text-align:left;display:flex;align-items:baseline;gap:8px}.hire-photo-caption .metric b{font-size:25px}.hire-visual-note{left:12px;bottom:128px;width:min(190px,calc(100% - 24px));padding:12px}.hire-photo-badge{top:16px;right:16px}.hire-section:first-of-type{padding-top:64px}}
-        @media (max-width:420px){.hire-photo-panel{min-height:395px;border-radius:54px 10px 16px 16px}.hire-visual-note{display:none}.hire-photo-caption{padding:18px}.hire-photo-caption span{font-size:10px}.hire-photo-badge{font-size:9px;padding:8px 10px}}
-      `}</style>
+        .hire-topbar{position:sticky;top:0;z-index:300;background:rgba(244,241,234,.9);border-bottom:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+        .hire-topbar-inner{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.hire-top-meta{display:flex;align-items:center;gap:12px}
+        .hire-private{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;padding:8px 10px;border:1px solid var(--line);background:rgba(255,255,255,.5)}
+        .hire-nav{display:flex;align-items:center;gap:24px;margin-left:auto}.hire-nav a{color:var(--ink);text-decoration:none;font-size:12px;font-weight:800}.hire-nav a:hover{color:var(--orange)}
+        .hire-btn{min-height:48px;padding:12px 18px;border:1px solid transparent;background:none;color:inherit;cursor:pointer;font-weight:900;font-size:12px;letter-spacing:.01em;display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;transition:transform .15s ease,background .15s ease,color .15s ease,border-color .15s ease}
+        .hire-btn:hover{transform:translateY(-1px)}.hire-btn.primary{background:var(--orange);color:#fff;border-color:var(--orange)}.hire-btn.primary:hover{background:#dc7418;border-color:#dc7418}.hire-btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}.hire-btn.ghost{border-color:var(--line);background:rgba(255,255,255,.42)}.hire-btn.ghost:hover{background:#fff}.hire-btn.full{width:100%}
 
-      <style>{`
-        /* /hire v2 — architectural editorial / workforce operating system */
-        .hire-page{
-          --hire-navy:#102438;--hire-deep:#071923;--hire-orange:#f08a28;--hire-orange-dark:#d97317;
-          --hire-paper:#f4f1eb;--hire-paper-2:#ebe7df;--hire-ink:#102438;--hire-muted:#667480;--hire-line:#d8ddd9;
-          background:var(--hire-paper);color:var(--hire-ink);
+        .hire-hero{position:relative;padding:72px 0 54px;border-bottom:1px solid var(--line)}
+        .hire-hero:before{content:"";position:absolute;left:0;right:0;top:46%;height:1px;background:var(--line);pointer-events:none}
+        .hire-hero-kicker{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px;font-size:10px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#6b747c}.hire-hero-kicker span:last-child{color:#b65f17}
+        .hire-hero-title{position:relative;margin:0;max-width:1150px;font-family:Manrope,Inter,sans-serif;font-size:clamp(58px,8.5vw,132px);line-height:.82;letter-spacing:-.075em;text-transform:uppercase;font-weight:900}
+        .hire-hero-title .line{display:block}.hire-hero-title .accent{display:inline-block;color:var(--orange);position:relative}.hire-hero-title .accent:after{content:"";position:absolute;left:-.02em;right:-.05em;bottom:.03em;height:.08em;background:var(--ink);transform:rotate(-1deg);opacity:.9}
+        .hire-hero-bottom{display:grid;grid-template-columns:minmax(0,.78fr) minmax(420px,1.22fr);gap:70px;align-items:end;margin-top:44px}
+        .hire-hero-copy{max-width:500px}.hire-hero-copy p{margin:0;color:#53616c;font-size:16px;line-height:1.72}.hire-hero-copy strong{color:var(--ink)}.hire-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+        .hire-brief-board{position:relative;background:var(--ink);color:#fff;border:1px solid var(--ink);padding:0}.hire-brief-board:before{content:"REQUEST BUILDER";position:absolute;right:14px;top:-24px;color:#7c858b;font-size:9px;letter-spacing:.16em;font-weight:900}
+        .hire-brief-row{display:grid;grid-template-columns:120px 1fr auto;gap:18px;align-items:center;padding:15px 17px;border-bottom:1px solid rgba(255,255,255,.14)}.hire-brief-row:last-child{border-bottom:0}.hire-brief-row span{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#91a2af;font-weight:900}.hire-brief-row b{font-size:14px}.hire-brief-row em{font-style:normal;color:#ffad67;font-size:11px;font-weight:900}
+        .hire-brief-foot{display:flex;justify-content:space-between;gap:18px;padding:13px 17px;background:var(--orange);color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}
+
+        .hire-marquee{overflow:hidden;border-bottom:1px solid var(--line);background:#fff}.hire-marquee-track{display:flex;width:max-content;animation:hire-marquee 34s linear infinite}.hire-marquee-item{display:flex;align-items:center;gap:18px;padding:17px 28px;border-right:1px solid var(--line);white-space:nowrap;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}.hire-marquee-item i{width:8px;height:8px;border-radius:50%;background:var(--orange);display:block}
+        @keyframes hire-marquee{to{transform:translateX(-50%)}}
+
+        .hire-section{padding:96px 0}.hire-section.white{background:#fff}.hire-section.dark{background:var(--ink);color:#fff}.hire-section.orange{background:var(--orange);color:#fff}
+        .hire-section-head{display:grid;grid-template-columns:170px minmax(0,1fr);gap:34px;align-items:start;margin-bottom:54px}.hire-index{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#98602f;padding-top:8px}.hire-section.dark .hire-index{color:#ffad67}
+        .hire-section-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:clamp(38px,5vw,68px);line-height:.98;letter-spacing:-.055em;max-width:900px}.hire-section-head p{margin:18px 0 0;max-width:650px;color:var(--muted);font-size:15px;line-height:1.7}.hire-section.dark .hire-section-head p{color:#afbdc8}
+        .hire-manifesto{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.hire-manifesto article{padding:30px 28px 34px;border-right:1px solid var(--line)}.hire-manifesto article:first-child{padding-left:0}.hire-manifesto article:last-child{border-right:0}.hire-manifesto .num{display:block;color:var(--orange);font-size:11px;font-weight:950;letter-spacing:.14em}.hire-manifesto h3{margin:28px 0 10px;font-family:Manrope,Inter,sans-serif;font-size:24px;letter-spacing:-.035em}.hire-manifesto p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+
+        .hire-signal-grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.2);border-bottom:1px solid rgba(255,255,255,.2)}.hire-signal{min-height:290px;padding:30px;border-right:1px solid rgba(255,255,255,.2);display:flex;flex-direction:column;justify-content:space-between}.hire-signal:last-child{border-right:0}.hire-signal-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#a9bac6;font-weight:900}.hire-signal-symbol{font-family:Manrope,Inter,sans-serif;font-size:72px;line-height:.8;color:var(--orange);font-weight:900;letter-spacing:-.08em}.hire-signal h3{margin:0 0 8px;font-size:20px}.hire-signal p{margin:0;color:#aebcc7;font-size:13px;line-height:1.6}
+
+        .hire-role-wall{display:grid;grid-template-columns:repeat(4,1fr);border-left:1px solid var(--line);border-top:1px solid var(--line)}.hire-role-wall span{min-height:86px;display:flex;align-items:flex-end;padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-weight:850;font-size:12px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.52));position:relative}.hire-role-wall span:before{content:"+";position:absolute;top:12px;right:14px;color:var(--orange);font-size:18px;font-weight:400}
+
+        .hire-request-wrap{padding:0 0 100px;background:var(--paper)}.hire-request-shell{width:min(1240px,calc(100% - 56px));margin:0 auto;border:1px solid var(--ink);background:#fff}.hire-request-head{display:grid;grid-template-columns:1fr auto;gap:24px;padding:26px 30px;border-bottom:1px solid var(--ink);background:var(--ink);color:#fff}.hire-request-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:clamp(32px,4vw,52px);letter-spacing:-.05em}.hire-request-head p{margin:7px 0 0;color:#adbdc9;font-size:13px}.hire-request-badge{align-self:start;padding:8px 10px;border:1px solid rgba(255,255,255,.28);font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#ffb372}
+        .hire-request-grid{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:620px}.hire-step-rail{border-right:1px solid var(--ink);background:var(--paper-2);padding:0}.hire-step-button{width:100%;min-height:96px;border:0;border-bottom:1px solid var(--line);background:transparent;color:#7a838a;text-align:left;padding:17px 20px;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:13px;align-items:center}.hire-step-button:last-child{border-bottom:0}.hire-step-button .n{font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:900;color:#9da3a6}.hire-step-button .l{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.hire-step-button.active{background:var(--orange);color:#fff}.hire-step-button.active .n{color:#fff}.hire-step-button.done .n{color:var(--green)}.hire-step-button:disabled{cursor:default}
+        .hire-form-panel{padding:34px 38px 30px;min-width:0}.hire-form-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:28px;padding-bottom:22px;border-bottom:1px solid var(--line)}.hire-form-top .eyebrow{font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#b56320}.hire-form-top h3{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:28px;letter-spacing:-.035em}.hire-form-top p{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.6;max-width:630px}.hire-step-count{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#7a848c;white-space:nowrap}
+        .hire-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}.hire-field{display:grid;gap:7px;min-width:0}.hire-field.full{grid-column:1/-1}.hire-label{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#53616c}.hire-label b{color:var(--orange);margin-left:3px}.hire-input{width:100%;min-width:0;min-height:48px;border:0;border-bottom:1px solid #aeb7bd;background:#faf9f5;color:var(--ink);padding:11px 12px;border-radius:0;outline:none;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}.hire-input:hover{background:#fff}.hire-input:focus{border-bottom-color:var(--orange);box-shadow:inset 0 -2px 0 var(--orange);background:#fff}.hire-input.invalid{border-bottom-color:#c94737;box-shadow:inset 0 -2px 0 #c94737}.hire-input::placeholder{color:#9aa2a7}.hire-field textarea.hire-input{min-height:120px;resize:vertical;padding-top:13px}.hire-hint{font-size:10px;color:#889197}.hire-error{font-size:10px;color:#b9392b;font-weight:800}.hire-select-wrap{position:relative;display:block}.hire-select{appearance:none;padding-right:38px}.hire-select-chevron{position:absolute;right:13px;top:50%;transform:translateY(-55%);pointer-events:none;color:#66737c}.hire-select:disabled{opacity:.55}
+        .hire-segment{display:flex;flex-wrap:wrap;border-bottom:1px solid #aeb7bd;background:#faf9f5}.hire-segment button{min-height:47px;padding:9px 14px;border:0;border-right:1px solid var(--line);background:transparent;color:#64717a;font-size:11px;font-weight:850;cursor:pointer}.hire-segment button.active{background:var(--ink);color:#fff}.hire-segment button:last-child{border-right:0}
+        .hire-subsection{grid-column:1/-1;margin-top:8px;padding-top:22px;border-top:1px solid var(--line)}.hire-subsection-title{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}.hire-subsection h4{margin:0;font-family:Manrope,Inter,sans-serif;font-size:19px}.hire-subsection p{margin:5px 0 0;color:var(--muted);font-size:11px}
+        .hire-role-editor{grid-column:1/-1;border:1px solid var(--ink);background:#fff}.hire-role-editor-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 15px;background:var(--ink);color:#fff}.hire-role-editor-head b{font-size:12px}.hire-role-editor-head button{border:0;background:transparent;color:#ffb575;font-size:11px;font-weight:900;cursor:pointer}.hire-role-editor-grid{display:grid;grid-template-columns:2fr .65fr 1fr 1fr 1fr;gap:12px;padding:16px}.hire-role-editor-grid .hire-field{gap:5px}
+        .hire-count{display:flex;border-bottom:1px solid #aeb7bd;background:#faf9f5}.hire-count button{width:38px;border:0;background:transparent;color:var(--ink);font-size:18px;cursor:pointer}.hire-count input{width:100%;min-width:0;border:0;background:transparent;text-align:center;font-weight:900;outline:none}.hire-add-role{grid-column:1/-1;display:flex;justify-content:flex-start}.hire-add-role button{border:0;background:transparent;color:#b85f16;padding:0;font-size:11px;font-weight:900;cursor:pointer}
+        .hire-checkbox-row{grid-column:1/-1;display:flex;gap:11px;align-items:flex-start;padding:15px 0;border-top:1px solid var(--line);color:#59666f;font-size:11px;line-height:1.55}.hire-checkbox-row input{margin-top:2px;accent-color:var(--orange)}.hire-checkbox-row.invalid{color:#a73d31}
+        .hire-review{display:grid;gap:0;border-top:1px solid var(--ink);border-left:1px solid var(--ink)}.hire-review-card{border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:18px}.hire-review-card h4{margin:0 0 14px;display:flex;justify-content:space-between;gap:12px;font-size:13px}.hire-review-card h4 button{border:0;background:none;color:#b45e19;font-size:10px;font-weight:900;cursor:pointer}.hire-review-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.hire-review-item span{display:block;color:#7c878e;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.07em}.hire-review-item b{display:block;margin-top:4px;font-size:12px;line-height:1.45}.hire-preview-notice{margin-top:18px;padding:13px 14px;background:#fff6ed;border-left:3px solid var(--orange);color:#7b5a3e;font-size:10px;line-height:1.55}
+        .hire-form-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}.hire-form-actions .right{display:flex;gap:10px;margin-left:auto}
+        .hire-success{min-height:420px;display:grid;place-items:center;text-align:center;padding:60px 24px}.hire-success-mark{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:var(--orange);color:#fff;margin:0 auto 18px}.hire-success h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:34px;letter-spacing:-.04em}.hire-success p{max-width:560px;margin:12px auto 0;color:var(--muted);line-height:1.65}.hire-success .hire-btn{margin-top:24px}
+
+        .hire-faq{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px}.hire-faq h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:44px;line-height:1;letter-spacing:-.05em}.hire-faq-list{border-top:1px solid var(--line)}.hire-faq-item{display:grid;grid-template-columns:1fr 1.35fr;gap:24px;padding:19px 0;border-bottom:1px solid var(--line)}.hire-faq-item h3{margin:0;font-size:13px}.hire-faq-item p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+        .hire-final{padding:62px 0;background:var(--orange);color:#fff}.hire-final-inner{display:flex;align-items:center;justify-content:space-between;gap:40px}.hire-final h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:clamp(38px,5vw,68px);line-height:.95;letter-spacing:-.055em;max-width:800px}.hire-final .hire-btn.dark{flex:0 0 auto}
+        .hire-footer{background:#0b1b28;color:#8ea0ae}.hire-footer-inner{min-height:88px;display:flex;align-items:center;justify-content:space-between;gap:22px}.hire-footer-copy{font-size:10px}.hire-footer-contact{color:#fff;text-decoration:none;font-size:11px;font-weight:850}
+
+        @media (max-width:980px){
+          .hire-shell,.hire-request-shell{width:min(100% - 32px,900px)}.hire-nav{display:none}.hire-hero-title{font-size:clamp(56px,11vw,100px)}.hire-hero-bottom{grid-template-columns:1fr;gap:44px}.hire-brief-board{max-width:760px}.hire-manifesto,.hire-signal-grid{grid-template-columns:1fr}.hire-manifesto article,.hire-signal{border-right:0;border-bottom:1px solid var(--line)}.hire-manifesto article:first-child{padding-left:28px}.hire-signal-grid .hire-signal{border-bottom-color:rgba(255,255,255,.2)}.hire-signal:last-child{border-bottom:0}.hire-role-wall{grid-template-columns:repeat(3,1fr)}.hire-request-grid{grid-template-columns:1fr}.hire-step-rail{border-right:0;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:repeat(5,1fr)}.hire-step-button{min-height:74px;border-bottom:0;border-right:1px solid var(--line);grid-template-columns:1fr;text-align:center;gap:4px;padding:10px 6px}.hire-step-button:last-child{border-right:0}.hire-step-button .n{font-size:18px}.hire-step-button .l{font-size:8px}.hire-role-editor-grid{grid-template-columns:repeat(2,1fr)}.hire-role-editor-grid .hire-field:first-child{grid-column:1/-1}.hire-faq{grid-template-columns:1fr;gap:34px}
         }
-        .hire-shell{width:min(1260px,calc(100% - 64px))}
-        .hire-topbar{position:relative;top:auto;background:var(--hire-paper);border:0;border-bottom:1px solid rgba(16,36,56,.14);box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
-        .hire-topbar-inner{min-height:92px}
-        .hire-brand-lockup{display:flex;align-items:center;gap:17px;min-width:0}.hire-brand-lockup:after{content:"";width:1px;height:28px;background:rgba(16,36,56,.18);order:1}.hire-division{order:2;font-size:9px;font-weight:900;letter-spacing:.18em;line-height:1.45;color:#667480;text-transform:uppercase;white-space:nowrap}
-        .hire-nav{gap:30px}.hire-nav a{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#4e5f6c}.hire-nav a:hover{color:var(--hire-orange)}
-        .hire-top-actions{gap:8px}.hire-lang{border-radius:2px;background:transparent;border-color:rgba(16,36,56,.2);height:42px}.hire-btn{border-radius:3px;min-height:50px;padding:13px 18px;font-size:11px;letter-spacing:.025em;text-transform:none;box-shadow:none!important}.hire-btn:hover{transform:none}
-        .hire-btn.primary{background:var(--hire-orange);color:#fff}.hire-btn.primary:hover{background:var(--hire-orange-dark)}
-        .hire-btn.dark{background:var(--hire-navy)}.hire-btn.ghost{background:transparent;border-color:rgba(16,36,56,.25)}.hire-btn.ghost:hover{background:rgba(16,36,56,.045);border-color:rgba(16,36,56,.45)}
-
-        .hire-hero{position:relative;isolation:isolate;background:var(--hire-paper);color:var(--hire-ink);border-bottom:1px solid rgba(16,36,56,.14);overflow:hidden}
-        .hire-hero:before{display:block;content:"24";position:absolute;z-index:-1;right:-.05em;top:-.18em;font:900 clamp(280px,39vw,620px)/1 Manrope,Inter,sans-serif;letter-spacing:-.13em;color:rgba(16,36,56,.035);pointer-events:none}
-        .hire-hero:after{display:block;content:"";position:absolute;z-index:-1;inset:0;background-image:linear-gradient(rgba(16,36,56,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(16,36,56,.055) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,.08) 52%,transparent 82%);pointer-events:none}
-        .hire-hero-inner{min-height:690px;grid-template-columns:minmax(0,1.12fr) minmax(390px,.88fr);gap:82px;padding:74px 0 66px;align-items:center}
-        .hire-hero-copy{position:relative;padding:0 0 0 30px;max-width:780px}.hire-hero-copy:before{content:"";position:absolute;left:0;top:6px;bottom:7px;width:4px;background:var(--hire-orange)}
-        .hire-eyebrow{color:#6f7b84;font-size:9px;letter-spacing:.22em}.hire-eyebrow-dot{width:7px;height:7px;box-shadow:none;border-radius:0;transform:rotate(45deg)}
-        .hire-hero h1{margin:24px 0 24px;color:var(--hire-navy);font-size:clamp(58px,6vw,88px);line-height:.92;letter-spacing:-.067em;max-width:900px;text-transform:uppercase}
-        .hire-hero h1 span{display:block;color:var(--hire-orange)}
-        .hire-hero-lead{max-width:700px;color:#546572;font-size:16px;line-height:1.72}.hire-hero-actions{margin-top:32px}
-        .hire-hero .hire-btn.ghost{background:transparent;color:var(--hire-navy);border-color:rgba(16,36,56,.25)}
-        .hire-hero .hire-btn.ghost:hover{background:rgba(16,36,56,.045);border-color:rgba(16,36,56,.45)}
-        .hire-hero-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:44px;border-top:1px solid rgba(16,36,56,.18);border-bottom:1px solid rgba(16,36,56,.18)}
-        .hire-hero-fact{padding:15px 18px 15px 0;border-right:1px solid rgba(16,36,56,.18)}.hire-hero-fact+ .hire-hero-fact{padding-left:18px}.hire-hero-fact:last-child{border-right:0}
-        .hire-hero-fact b{display:block;font:900 10px/1 Manrope,Inter,sans-serif;letter-spacing:.16em;color:var(--hire-orange)}.hire-hero-fact span{display:block;margin-top:7px;font-size:11px;line-height:1.45;font-weight:750;color:#455967}
-
-        .hire-visual-wrap{position:relative;min-width:0;padding:0}.hire-blueprint-board{position:relative;min-height:520px;background:var(--hire-deep);color:#fff;clip-path:polygon(0 0,calc(100% - 34px) 0,100% 34px,100% 100%,34px 100%,0 calc(100% - 34px));box-shadow:0 34px 70px rgba(7,25,35,.18);overflow:hidden}
-        .hire-blueprint-board:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:42px 42px;opacity:.5}
-        .hire-blueprint-board:after{content:"";position:absolute;width:210px;height:10px;background:var(--hire-orange);right:-44px;top:108px;transform:rotate(-45deg);transform-origin:center;box-shadow:0 0 0 1px rgba(240,138,40,.12)}
-        .hire-board-inner{position:relative;z-index:2;min-height:520px;padding:28px;display:flex;flex-direction:column}
-        .hire-board-top{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.18)}
-        .hire-board-label{font-size:9px;font-weight:900;letter-spacing:.2em;color:#aab8c1;text-transform:uppercase}.hire-board-status{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:900;letter-spacing:.13em;color:#fff;text-transform:uppercase}.hire-board-status:before{content:"";width:8px;height:8px;background:var(--hire-orange);transform:rotate(45deg)}
-        .hire-board-main{display:grid;grid-template-columns:150px 1fr;gap:26px;padding:34px 0 28px}.hire-board-count{font:900 112px/.76 Manrope,Inter,sans-serif;letter-spacing:-.08em;color:#fff}.hire-board-count small{display:block;margin-top:16px;font:900 9px/1.3 Inter,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#8799a5}.hire-board-role{align-self:end}.hire-board-role span{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8ea0ab}.hire-board-role h2{margin:8px 0 0;font:850 35px/1.02 Manrope,Inter,sans-serif;letter-spacing:-.045em;color:#fff}.hire-board-role p{margin:11px 0 0;color:#9eb0bb;font-size:11px;line-height:1.55}
-        .hire-board-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.18);border-left:1px solid rgba(255,255,255,.18)}.hire-board-cell{min-height:88px;padding:15px 16px;border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.18)}.hire-board-cell span{display:block;font-size:8px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#718794}.hire-board-cell b{display:block;margin-top:8px;font-size:12px;line-height:1.35;color:#fff}
-        .hire-board-foot{margin-top:auto;padding-top:20px;display:flex;align-items:center;justify-content:space-between;gap:18px}.hire-board-foot span{font-size:9px;color:#8094a0;line-height:1.45}.hire-board-foot b{font-size:10px;color:#ffae66;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
-        .hire-side-index{position:absolute;left:-32px;top:50%;transform:translateY(-50%);z-index:5;display:grid;gap:1px}.hire-side-index span{display:grid;place-items:center;width:66px;height:46px;background:var(--hire-paper);border:1px solid rgba(16,36,56,.16);font-size:8px;font-weight:900;letter-spacing:.12em;color:#6c7b86;text-transform:uppercase}.hire-side-index span.active{background:var(--hire-orange);border-color:var(--hire-orange);color:#fff}
-        .hire-trade-ticker{position:relative;z-index:3;border-top:1px solid rgba(16,36,56,.14);background:var(--hire-navy);color:#fff;overflow:hidden}.hire-trade-track{display:flex;gap:0;width:max-content;min-width:100%;align-items:center}.hire-trade-track span{display:flex;align-items:center;min-height:52px;padding:0 28px;border-right:1px solid rgba(255,255,255,.14);font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}.hire-trade-track i{width:7px;height:7px;background:var(--hire-orange);margin-right:12px;transform:rotate(45deg)}
-
-        .hire-section{padding:104px 0;background:var(--hire-paper)}.hire-section.soft{background:var(--hire-navy);color:#fff}.hire-section.dark{background:#fff;color:var(--hire-navy)}
-        .hire-section-head{align-items:flex-start;margin-bottom:46px}.hire-mini-label{color:var(--hire-orange);letter-spacing:.2em;font-size:9px}.hire-section h2{font-size:clamp(38px,4.4vw,58px);line-height:.98;letter-spacing:-.055em;text-transform:uppercase}.hire-section-head p{color:#657480}.hire-section.soft .hire-section-head p{color:#a9b8c1}.hire-section.soft .hire-mini-label{color:#ff9f46}.hire-section.dark .hire-mini-label{color:var(--hire-orange)}
-        .hire-value-grid{gap:0;border-top:1px solid rgba(16,36,56,.2)}.hire-value-card{border:0;border-right:1px solid rgba(16,36,56,.18);border-radius:0;padding:31px 30px 14px 0;background:transparent;box-shadow:none}.hire-value-card+ .hire-value-card{padding-left:30px}.hire-value-card:last-child{border-right:0}.hire-value-icon{width:42px;height:42px;border-radius:0;background:var(--hire-navy);color:#fff}.hire-value-card h3{font-size:20px;text-transform:uppercase}.hire-value-card p{font-size:12px}
-        .hire-process{gap:0;border-top:1px solid rgba(255,255,255,.2)}.hire-process-card{position:relative;border:0;border-right:1px solid rgba(255,255,255,.18);border-radius:0;padding:32px 32px 12px 0;background:transparent;color:#fff}.hire-process-card+ .hire-process-card{padding-left:32px}.hire-process-card:last-child{border-right:0}.hire-process-number{font:900 52px/.9 Manrope,Inter,sans-serif;color:var(--hire-orange);letter-spacing:-.06em}.hire-process-card h3{margin-top:36px;color:#fff;text-transform:uppercase}.hire-process-card p{color:#aebdc6}
-        .hire-role-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:rgba(16,36,56,.18);border:1px solid rgba(16,36,56,.18)}.hire-role-chip{min-height:80px;border:0;border-radius:0;background:var(--hire-paper);padding:17px 16px;transition:background .15s ease,color .15s ease}.hire-role-chip:hover{background:var(--hire-orange);color:#fff}.hire-role-chip span:first-child{color:var(--hire-orange)}.hire-role-chip:hover span:first-child{color:#fff}.hire-role-chip span:last-child{font-size:12px;font-weight:850;text-transform:uppercase}
-        .hire-condition-grid{gap:76px}.hire-section.dark .hire-condition-copy h2{color:var(--hire-navy)}.hire-condition-copy p{color:#687783}.hire-condition-row{border-color:#e0e5e5}.hire-condition-row span{border-radius:0;background:var(--hire-orange);color:#fff}.hire-offer-card{border-radius:0;background:var(--hire-navy);border:0;box-shadow:16px 16px 0 var(--hire-orange);color:#fff}.hire-offer-card h3{color:#fff;text-transform:uppercase}.hire-offer-row{border-color:rgba(255,255,255,.17)}.hire-offer-row span{color:#8ea2af}.hire-offer-row b{color:#fff}.hire-offer-badge{border-radius:0;background:rgba(240,138,40,.12);border-color:rgba(240,138,40,.35);color:#ffc38c}
-        .hire-request-section{background:#e8e5df;padding:110px 0}.hire-request-layout{gap:68px}.hire-request-side{top:32px}.hire-request-side h2{font-size:48px;text-transform:uppercase;line-height:.96}.hire-step-list{border-top:1px solid rgba(16,36,56,.18)}.hire-step-item{border:0;border-bottom:1px solid rgba(16,36,56,.18);border-radius:0;background:transparent;padding:12px 0}.hire-step-item.active{background:transparent;border-color:var(--hire-orange);color:var(--hire-navy)}.hire-step-item .num{border-radius:0;background:var(--hire-navy);color:#fff}.hire-step-item.active .num{background:var(--hire-orange)}.hire-step-item.done .num{background:#577063}.hire-form-card{border-radius:0;border:1px solid rgba(16,36,56,.15);box-shadow:18px 18px 0 rgba(16,36,56,.07);padding:32px}.hire-form-top{border-bottom:1px solid #dde2df;padding-bottom:22px}.hire-form-top h3{text-transform:uppercase}.hire-input{border-radius:2px;background:#faf9f6;border-color:#d4dbd8}.hire-input:focus{border-color:var(--hire-orange);box-shadow:0 0 0 2px rgba(240,138,40,.10)}.hire-segment{border-radius:2px;background:#eceae5}.hire-segment button{border-radius:1px}.hire-segment button.active{box-shadow:none;border:1px solid rgba(16,36,56,.12)}.hire-role-row,.hire-review-card,.hire-checkbox-row,.hire-preview-notice{border-radius:2px}.hire-add-role{color:#ad5b18}.hire-step-count{border-radius:2px}.hire-form-actions{border-top-color:#dfe3e0}
-        .hire-faq{gap:90px}.hire-faq-item{border-color:rgba(16,36,56,.18)}.hire-faq-item h3{text-transform:uppercase;letter-spacing:.01em}.hire-cta{padding:0 0 104px;background:var(--hire-paper)}.hire-cta-card{border-radius:0;background:var(--hire-orange);box-shadow:18px 18px 0 var(--hire-navy);padding:48px}.hire-cta-card:after{display:none}.hire-cta-copy h2{text-transform:uppercase}.hire-cta-copy p{color:#fff4ea}.hire-cta-card .hire-btn.primary{background:var(--hire-navy)}.hire-footer{background:var(--hire-paper);border-top:1px solid rgba(16,36,56,.18)}
-
-        @media (max-width:1080px){
-          .hire-shell{width:min(100% - 40px,1260px)}.hire-hero-inner{grid-template-columns:1fr;gap:50px;min-height:auto;padding:58px 0 72px}.hire-hero-copy{max-width:820px}.hire-visual-wrap{width:min(760px,100%);margin-left:auto;margin-right:auto}.hire-side-index{left:-20px}.hire-role-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hire-condition-grid{gap:44px}.hire-request-layout{gap:44px}
+        @media (max-width:650px){
+          .hire-shell,.hire-request-shell{width:calc(100% - 22px)}.hire-topbar-inner{height:66px}.hire-private{display:none}.hire-top-meta .hire-btn{display:none}.hire-hero{padding:48px 0 38px}.hire-hero-kicker{font-size:8px}.hire-hero-title{font-size:clamp(48px,17vw,78px);line-height:.84}.hire-hero-bottom{margin-top:32px;gap:34px}.hire-hero-copy p{font-size:14px}.hire-hero-actions{display:grid;grid-template-columns:1fr}.hire-hero-actions .hire-btn{width:100%}.hire-brief-row{grid-template-columns:84px 1fr;gap:10px}.hire-brief-row em{grid-column:2}.hire-brief-foot{display:grid;gap:5px}.hire-section{padding:68px 0}.hire-section-head{grid-template-columns:1fr;gap:10px;margin-bottom:32px}.hire-index{padding-top:0}.hire-section-head h2{font-size:39px}.hire-manifesto article{padding:24px 16px}.hire-manifesto article:first-child{padding-left:16px}.hire-role-wall{grid-template-columns:repeat(2,1fr)}.hire-role-wall span{min-height:72px;padding:12px;font-size:11px}.hire-request-wrap{padding-bottom:70px}.hire-request-head{padding:20px 18px;grid-template-columns:1fr}.hire-request-badge{justify-self:start}.hire-request-head h2{font-size:34px}.hire-step-rail{overflow-x:auto;grid-template-columns:repeat(5,minmax(76px,1fr))}.hire-step-button{min-width:76px}.hire-step-button .l{font-size:7px}.hire-form-panel{padding:24px 16px 20px}.hire-form-top{display:grid;gap:10px}.hire-step-count{grid-row:1}.hire-form-grid{grid-template-columns:1fr;gap:15px}.hire-field.full,.hire-subsection{grid-column:auto}.hire-role-editor-grid{grid-template-columns:1fr;padding:13px}.hire-role-editor-grid .hire-field:first-child{grid-column:auto}.hire-segment{display:grid;grid-template-columns:repeat(2,1fr)}.hire-segment button{border-bottom:1px solid var(--line)}.hire-review-grid{grid-template-columns:1fr}.hire-form-actions{align-items:stretch}.hire-form-actions>.hire-btn,.hire-form-actions .right,.hire-form-actions .right .hire-btn{width:100%}.hire-form-actions>span{display:none}.hire-faq h2{font-size:38px}.hire-faq-item{grid-template-columns:1fr;gap:7px}.hire-final-inner{display:grid;gap:28px}.hire-final .hire-btn{width:100%}.hire-footer-inner{padding:22px 0;display:grid;justify-items:start}
         }
-        @media (max-width:760px){
-          .hire-shell{width:min(100% - 28px,1260px)}.hire-topbar-inner{min-height:72px}.hire-brand-lockup:after,.hire-division,.hire-nav,.hire-lang{display:none}.hire-hero-inner{padding:42px 0 54px;gap:32px}.hire-hero-copy{padding-left:18px}.hire-hero h1{font-size:clamp(44px,13vw,64px)}.hire-hero-lead{font-size:14px}.hire-hero-actions{display:grid;grid-template-columns:1fr}.hire-hero-actions .hire-btn{width:100%}.hire-hero-facts{grid-template-columns:1fr}.hire-hero-fact{border-right:0;border-bottom:1px solid rgba(16,36,56,.16);padding:11px 0}.hire-hero-fact+ .hire-hero-fact{padding-left:0}.hire-hero-fact:last-child{border-bottom:0}.hire-blueprint-board,.hire-board-inner{min-height:470px}.hire-board-inner{padding:22px}.hire-board-main{grid-template-columns:112px 1fr;gap:18px}.hire-board-count{font-size:82px}.hire-board-role h2{font-size:28px}.hire-side-index{display:none}.hire-trade-track span{min-height:46px;padding:0 18px}.hire-section{padding:72px 0}.hire-section h2{font-size:38px}.hire-value-grid,.hire-process{display:grid;grid-template-columns:1fr}.hire-value-card,.hire-process-card,.hire-value-card+ .hire-value-card,.hire-process-card+ .hire-process-card{padding:24px 0;border-right:0;border-bottom:1px solid currentColor}.hire-process-card{border-color:rgba(255,255,255,.16)}.hire-role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hire-request-section{padding:72px 0}.hire-request-side h2{font-size:38px}.hire-form-card{padding:20px;box-shadow:10px 10px 0 rgba(16,36,56,.07)}.hire-cta{padding-bottom:72px}.hire-cta-card{padding:30px 22px;box-shadow:10px 10px 0 var(--hire-navy)}
-        }
-        @media (max-width:440px){
-          .hire-topbar .hire-btn{width:auto;padding:0 12px}.hire-topbar .hire-btn span{display:inline}.hire-board-main{grid-template-columns:1fr}.hire-board-count{font-size:76px}.hire-board-role{align-self:auto}.hire-board-grid{grid-template-columns:1fr}.hire-role-grid{grid-template-columns:1fr}.hire-blueprint-board{clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
-        }
+        @media (prefers-reduced-motion:reduce){.hire-marquee-track{animation:none}.hire-btn{transition:none}.hire-btn:hover{transform:none}}
       `}</style>
 
       <header className="hire-topbar">
         <div className="hire-shell hire-topbar-inner">
-          <div className="hire-brand-lockup">
-            <BrandLogo href="#hire-top" height={43} aria-label="Statybos24" />
-            <span className="hire-division">Europe<br/>Direct Hire</span>
-          </div>
-          <nav className="hire-nav" aria-label="Employer page navigation">
-            <a href="#hire-how">Model</a>
-            <a href="#hire-workers">Trades</a>
-            <a href="#hire-faq">Questions</a>
+          <BrandLogo href="#hire-top" height={34} />
+          <div className="hire-private">Private B2B route</div>
+          <nav className="hire-nav" aria-label="Hire navigation">
+            <a href="#hire-method">Method</a><a href="#hire-trades">Trades</a><a href="#hire-request">Request</a><a href="#hire-faq">FAQ</a>
           </nav>
-          <div className="hire-top-actions">
-            <span className="hire-lang">EN</span>
-            <button type="button" className="hire-btn primary" onClick={scrollToRequest}>
-              <span>Start a request</span><HireArrowIcon />
-            </button>
-          </div>
+          <div className="hire-top-meta"><button type="button" className="hire-btn primary" onClick={scrollToRequest}>Build a request <HireArrowIcon /></button></div>
         </div>
       </header>
 
       <main>
         <section className="hire-hero">
-          <div className="hire-shell hire-hero-inner">
-            <div className="hire-hero-copy">
-              <div className="hire-eyebrow"><span className="hire-eyebrow-dot" />Construction workforce / Europe</div>
-              <h1>Build the project.<span>We’ll build the crew.</span></h1>
-              <p className="hire-hero-lead">
-                One structured brief for direct construction recruitment across Europe. You define the trade, timing and employment package. Statybos24 finds and pre-screens suitable people from Lithuania.
-              </p>
-              <div className="hire-hero-actions">
-                <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Create workforce brief <HireArrowIcon /></button>
-                <a className="hire-btn ghost" href="#hire-how">Explore the model</a>
+          <div className="hire-shell">
+            <div className="hire-hero-kicker"><span>Construction workforce · direct hire</span><span>Lithuania → Europe</span></div>
+            <h1 className="hire-hero-title"><span className="line">You build</span><span className="line">the project.</span><span className="line">We assemble the <span className="accent">crew.</span></span></h1>
+            <div className="hire-hero-bottom">
+              <div className="hire-hero-copy">
+                <p><strong>One structured brief instead of weeks of scattered sourcing.</strong> Tell us the trade, headcount, timing and conditions. We use that brief to source and pre-screen construction workers for direct employment by your company.</p>
+                <div className="hire-hero-actions"><button type="button" className="hire-btn primary" onClick={scrollToRequest}>Start workforce brief <HireArrowIcon /></button><a className="hire-btn ghost" href="mailto:info@statybos24.lt">Talk to us</a></div>
               </div>
-              <div className="hire-hero-facts" aria-label="Service model">
-                <div className="hire-hero-fact"><b>01</b><span>Direct employment by your company</span></div>
-                <div className="hire-hero-fact"><b>02</b><span>Employer-paid, success-based recruitment</span></div>
-                <div className="hire-hero-fact"><b>03</b><span>Construction specialists from Lithuania</span></div>
+              <div className="hire-brief-board" aria-label="Example workforce brief">
+                <div className="hire-brief-row"><span>Trade</span><b>Carpenters</b><em>Example</em></div>
+                <div className="hire-brief-row"><span>Headcount</span><b>06 workers</b><em>Direct hire</em></div>
+                <div className="hire-brief-row"><span>Start</span><b>15 Nov · flexible ±7 days</b><em>Project-led</em></div>
+                <div className="hire-brief-row"><span>Terms</span><b>€21–23 / h gross · housing paid</b><em>Clear offer</em></div>
+                <div className="hire-brief-foot"><span>Example only — not a live vacancy</span><span>01 / workforce brief</span></div>
               </div>
-            </div>
-
-            <div className="hire-visual-wrap" aria-label="Example workforce brief">
-              <div className="hire-side-index" aria-hidden="true"><span className="active">Brief</span><span>Match</span><span>Hire</span></div>
-              <div className="hire-blueprint-board">
-                <div className="hire-board-inner">
-                  <div className="hire-board-top">
-                    <span className="hire-board-label">Example workforce brief / 001</span>
-                    <span className="hire-board-status">Direct hire</span>
-                  </div>
-                  <div className="hire-board-main">
-                    <div className="hire-board-count">06<small>workers required</small></div>
-                    <div className="hire-board-role"><span>Primary trade</span><h2>Carpenters</h2><p>One clear brief turns an international hiring need into a structured recruitment process.</p></div>
-                  </div>
-                  <div className="hire-board-grid">
-                    <div className="hire-board-cell"><span>Project</span><b>Germany · Hamburg</b></div>
-                    <div className="hire-board-cell"><span>Start</span><b>15 Nov · flexible</b></div>
-                    <div className="hire-board-cell"><span>Offer</span><b>€21–23 / hour gross</b></div>
-                    <div className="hire-board-cell"><span>Package</span><b>Accommodation + travel</b></div>
-                  </div>
-                  <div className="hire-board-foot"><span>Illustrative request — not a live vacancy.</span><b>Request → Match → Hire</b></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="hire-trade-ticker" aria-hidden="true">
-            <div className="hire-trade-track">
-              {['Carpenters','Concrete workers','Electricians','Plumbers','Welders','Machine operators','Roofers','Site supervisors'].map((trade) => <span key={trade}><i />{trade}</span>)}
             </div>
           </div>
         </section>
 
-        <section className="hire-section" id="hire-how">
-          <div className="hire-shell">
-            <div className="hire-section-head">
-              <div className="hire-section-head-copy">
-                <div className="hire-mini-label">A simpler way to recruit</div>
-                <h2>Built around the way construction employers actually hire.</h2>
-                <p>Clear requirements, real availability and direct employment — without turning the process into another job board.</p>
-              </div>
-            </div>
-            <div className="hire-value-grid">
-              <article className="hire-value-card"><div className="hire-value-icon"><HireBriefcaseIcon /></div><h3>Construction focused</h3><p>Requests are structured around trade, experience, certificates, availability, rotation and project conditions.</p></article>
-              <article className="hire-value-card"><div className="hire-value-icon"><HireUsersIcon /></div><h3>Relevant candidates</h3><p>We focus on workers who fit the requirement and confirm interest before their profile is introduced.</p></article>
-              <article className="hire-value-card"><div className="hire-value-icon"><HireShieldIcon /></div><h3>Direct employment</h3><p>Your company hires the worker directly. The recruitment service is employer-paid and success-based.</p></article>
-            </div>
-          </div>
-        </section>
+        <div className="hire-marquee" aria-hidden="true"><div className="hire-marquee-track">{[...HIRE_PROFESSIONS.slice(0,11), ...HIRE_PROFESSIONS.slice(0,11)].map((role,index)=><div className="hire-marquee-item" key={`${role}-${index}`}><i />{role}</div>)}</div></div>
 
-        <section className="hire-section soft">
+        <section className="hire-section white hire-anchor" id="hire-method">
           <div className="hire-shell">
-            <div className="hire-section-head">
-              <div className="hire-section-head-copy"><div className="hire-mini-label">How it works</div><h2>From workforce need to a direct hire.</h2></div>
-            </div>
-            <div className="hire-process">
-              <article className="hire-process-card"><div className="hire-process-number">01</div><h3>Tell us what you need</h3><p>Profession, worker count, start date, project location, salary and employment conditions.</p></article>
-              <article className="hire-process-card"><div className="hire-process-number">02</div><h3>We source and pre-screen</h3><p>We identify suitable workers and confirm relevant experience, availability and interest in the offer.</p></article>
-              <article className="hire-process-card"><div className="hire-process-number">03</div><h3>You hire directly</h3><p>You choose who to interview and employ. A recruitment fee becomes applicable only under the agreed success terms.</p></article>
-            </div>
-          </div>
-        </section>
-
-        <section className="hire-section" id="hire-workers">
-          <div className="hire-shell">
-            <div className="hire-section-head">
-              <div className="hire-section-head-copy"><div className="hire-mini-label">Construction trades</div><h2>Tell us the team you need.</h2><p>The request form supports several professions in one project, so you can describe the whole workforce need at once.</p></div>
-              <button type="button" className="hire-btn ghost" onClick={scrollToRequest}>Create a request <HireArrowIcon /></button>
-            </div>
-            <div className="hire-role-grid">
-              {HIRE_PROFESSIONS.filter((item) => item !== "Other").map((profession, index) => <div className="hire-role-chip" key={profession}><span>{String(index + 1).padStart(2, "0")}</span><span>{profession}</span></div>)}
+            <div className="hire-section-head"><div className="hire-index">01 / Method</div><div><h2>Less agency theatre. More useful information.</h2><p>The product is designed around one practical question: what does a construction employer need to decide whether a candidate can actually start the job?</p></div></div>
+            <div className="hire-manifesto">
+              <article><span className="num">01</span><h3>Brief the need.</h3><p>Trade, headcount, location, start date, working pattern and required experience — in one place.</p></article>
+              <article><span className="num">02</span><h3>Make the offer real.</h3><p>Salary, accommodation, travel and transport are captured as structured conditions, not buried in free text.</p></article>
+              <article><span className="num">03</span><h3>Hire directly.</h3><p>The employment relationship is between your company and the worker. Recruitment stays focused on the successful placement.</p></article>
             </div>
           </div>
         </section>
 
         <section className="hire-section dark">
-          <div className="hire-shell hire-condition-grid">
-            <div className="hire-condition-copy">
-              <div className="hire-mini-label">International hiring</div>
-              <h2>A strong offer is more than an hourly rate.</h2>
-              <p>For cross-border recruitment, workers need to understand the complete package before they commit. We collect these conditions separately so there are fewer surprises later.</p>
-              <div className="hire-condition-list">
-                <div className="hire-condition-row"><span><HireCheckIcon size={15} /></span><div>Gross or net salary, working hours and overtime.</div></div>
-                <div className="hire-condition-row"><span><HireCheckIcon size={15} /></span><div>Accommodation type, cost and who pays for it.</div></div>
-                <div className="hire-condition-row"><span><HireCheckIcon size={15} /></span><div>Travel to the country and transport between accommodation and site.</div></div>
-                <div className="hire-condition-row"><span><HireCheckIcon size={15} /></span><div>Rotation and periodic travel home where applicable.</div></div>
-              </div>
-            </div>
-            <aside className="hire-offer-card">
-              <h3>Example offer snapshot</h3>
-              <div className="hire-offer-row"><span>Profession</span><b>Concrete worker</b></div>
-              <div className="hire-offer-row"><span>Employment</span><b>Direct · Permanent</b></div>
-              <div className="hire-offer-row"><span>Salary</span><b>€22.50 / hour gross</b></div>
-              <div className="hire-offer-row"><span>Accommodation</span><b>Fully paid</b></div>
-              <div className="hire-offer-row"><span>Initial travel</span><b>Paid by employer</b></div>
-              <div className="hire-offer-row"><span>Transport to site</span><b>Company vehicle</b></div>
-              <div className="hire-offer-badge"><HireCheckIcon size={16} /> Clear conditions help us source faster and more accurately.</div>
-            </aside>
-          </div>
-        </section>
-
-        <section className="hire-request-section" id="hire-request">
-          <div className="hire-shell hire-request-layout">
-            <aside className="hire-request-side">
-              <div className="hire-mini-label">Workforce request</div>
-              <h2>Tell us what your project needs.</h2>
-              <p>Complete the request in a few focused steps. You can add several professions to the same project.</p>
-              <div className="hire-step-list" aria-label="Request progress">
-                {HIRE_STEPS.map((item) => (
-                  <div key={item.number} className={`hire-step-item${step === item.number ? " active" : ""}${step > item.number ? " done" : ""}`}>
-                    <span className="num">{step > item.number ? <HireCheckIcon size={14} /> : item.number}</span>
-                    <span className="text">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </aside>
-
-            <div className="hire-form-card">
-              {submitted ? (
-                <div className="hire-success">
-                  <div className="hire-success-mark"><HireCheckIcon size={30} /></div>
-                  <h3>Request preview is ready.</h3>
-                  <p>The complete flow and design are working. Database submission is intentionally not connected in this first design version.</p>
-                  <div className="hire-success-box"><b>{form.companyName || "Your company"} · {form.roles.reduce((total, role) => total + Number(role.count || 0), 0)} workers</b><span>{form.jobCountry || "Job country"} · {form.jobLocation || "Project location"} · {salarySummary}</span></div>
-                  <div style={{ marginTop: 20, display: "flex", justifyContent: "center", gap: 9, flexWrap: "wrap" }}>
-                    <button type="button" className="hire-btn ghost" onClick={() => { setSubmitted(false); setStep(5); }}>Back to review</button>
-                    <button type="button" className="hire-btn dark" onClick={() => { setSubmitted(false); setStep(1); setErrors({}); }}>Start another</button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {step === 1 && (
-                    <>
-                      <div className="hire-form-top"><div><div className="hire-mini-label">Company</div><h3>Who are we recruiting for?</h3><p>Business contact details used for this workforce request.</p></div><span className="hire-step-count">Step 1 of 5</span></div>
-                      <div className="hire-form-grid">
-                        <HireInput label="Company name" required value={form.companyName} onChange={(e) => setField("companyName", e.target.value)} placeholder="Company legal or trading name" error={errors.companyName} />
-                        <HireSelect label="Company country" required value={form.companyCountry} onChange={(value) => setField("companyCountry", value)} options={HIRE_COUNTRIES} error={errors.companyCountry} />
-                        <HireInput label="Company website" value={form.companyWebsite} onChange={(e) => setField("companyWebsite", e.target.value)} placeholder="https://" />
-                        <HireInput label="VAT / registration number" value={form.vatNumber} onChange={(e) => setField("vatNumber", e.target.value)} placeholder="Optional at this stage" />
-                        <HireInput label="Contact person" required value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} placeholder="First and last name" error={errors.contactName} />
-                        <HireInput label="Role / position" value={form.contactRole} onChange={(e) => setField("contactRole", e.target.value)} placeholder="HR, Recruitment, Operations..." />
-                        <HireInput label="Business email" required type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} placeholder="name@company.com" error={errors.email} />
-                        <HireInput label="Phone" type="tel" value={form.phone} onChange={(e) => setField("phone", e.target.value)} placeholder="+49 ..." />
-                        <div className="hire-field full"><span className="hire-label">Preferred contact</span><HireSegment value={form.preferredContact} onChange={(value) => setField("preferredContact", value)} ariaLabel="Preferred contact method" options={[{ value: "Email", label: "Email" }, { value: "Phone", label: "Phone" }, { value: "WhatsApp", label: "WhatsApp" }]} /></div>
-                      </div>
-                    </>
-                  )}
-
-                  {step === 2 && (
-                    <>
-                      <div className="hire-form-top"><div><div className="hire-mini-label">Workers</div><h3>Who do you need?</h3><p>Add one or several construction professions to the same request.</p></div><span className="hire-step-count">Step 2 of 5</span></div>
-                      <div className="hire-role-editor">
-                        {form.roles.map((role, index) => (
-                          <div className="hire-role-row" key={`hire-role-${index}`}>
-                            <HireSelect label="Profession" required value={role.profession} onChange={(value) => updateRole(index, "profession", value)} options={HIRE_PROFESSIONS} placeholder="Choose profession" />
-                            <HireInput label="Workers" required type="number" min="1" max="250" value={role.count} onChange={(e) => updateRole(index, "count", e.target.value)} />
-                            <HireSelect label="Experience" value={role.experience} onChange={(value) => updateRole(index, "experience", value)} options={["No minimum", "1+ years", "3+ years", "5+ years", "8+ years"]} />
-                            <HireSelect label="Driving licence" value={role.drivingLicence} onChange={(value) => updateRole(index, "drivingLicence", value)} options={["Required", "Preferred", "Not required"]} />
-                            <button className="hire-remove-role" type="button" aria-label="Remove profession" disabled={form.roles.length === 1} onClick={() => removeRole(index)}>×</button>
-                            <div className="hire-field" style={{ gridColumn: "1 / span 2" }}><span className="hire-label">Language</span><div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8 }}><HireSelect label="" value={role.language} onChange={(value) => updateRole(index, "language", value)} options={["No foreign language required", "English", "German", "Dutch", "Norwegian", "Swedish", "Other"]} /><HireSelect label="" value={role.languageLevel} onChange={(value) => updateRole(index, "languageLevel", value)} options={["A1", "A2", "B1", "B2", "C1"]} disabled={role.language === "No foreign language required"} /></div></div>
-                          </div>
-                        ))}
-                        {errors.roles ? <span className="hire-error">{errors.roles}</span> : null}
-                        <button type="button" className="hire-add-role" onClick={addRole}>+ Add another profession</button>
-                      </div>
-                    </>
-                  )}
-
-                  {step === 3 && (
-                    <>
-                      <div className="hire-form-top"><div><div className="hire-mini-label">Job</div><h3>Where and when?</h3><p>Project timing and employment structure.</p></div><span className="hire-step-count">Step 3 of 5</span></div>
-                      <div className="hire-form-grid">
-                        <HireSelect label="Job country" required value={form.jobCountry} onChange={(value) => setField("jobCountry", value)} options={HIRE_COUNTRIES} error={errors.jobCountry} />
-                        <HireInput label="City / project location" required value={form.jobLocation} onChange={(e) => setField("jobLocation", e.target.value)} placeholder="City, region or project" error={errors.jobLocation} />
-                        <HireInput label="Expected start date" required type="date" value={form.startDate} onChange={(e) => setField("startDate", e.target.value)} error={errors.startDate} />
-                        <HireInput label="Workers needed by" type="date" value={form.neededBy} onChange={(e) => setField("neededBy", e.target.value)} hint="Useful if candidates must be confirmed before the start date." />
-                        <HireSelect label="Employment type" value={form.employmentType} onChange={(value) => setField("employmentType", value)} options={["Permanent", "Fixed-term", "Project-based", "Seasonal"]} />
-                        <HireSelect label="Expected duration" value={form.duration} onChange={(value) => setField("duration", value)} options={["Permanent", "Less than 3 months", "3–6 months", "6–12 months", "12+ months"]} />
-                        <HireInput label="Working hours / week" type="number" min="1" max="80" value={form.weeklyHours} onChange={(e) => setField("weeklyHours", e.target.value)} />
-                        <HireSelect label="Overtime" value={form.overtime} onChange={(value) => setField("overtime", value)} options={["Available", "Sometimes", "Not available"]} />
-                        <HireSelect label="Rotation" value={form.rotation} onChange={(value) => setField("rotation", value)} options={["No rotation", "2 weeks on / 1 off", "3 weeks on / 1 off", "4 weeks on / 1 off", "6 weeks on / 2 off", "Custom / to discuss"]} />
-                        <div className="hire-field"><span className="hire-label">Start date flexibility</span><HireSegment value={form.flexibleStart ? "Flexible" : "Fixed"} onChange={(value) => setField("flexibleStart", value === "Flexible")} ariaLabel="Start date flexibility" options={[{ value: "Fixed", label: "Fixed" }, { value: "Flexible", label: "Flexible" }]} /></div>
-                      </div>
-                    </>
-                  )}
-
-                  {step === 4 && (
-                    <>
-                      <div className="hire-form-top"><div><div className="hire-mini-label">Conditions</div><h3>What are you offering?</h3><p>Clear conditions help us find workers who are ready to accept the job.</p></div><span className="hire-step-count">Step 4 of 5</span></div>
-                      <div className="hire-form-grid">
-                        <HireSelect label="Salary type" value={form.salaryType} onChange={(value) => setField("salaryType", value)} options={["Hourly", "Monthly"]} />
-                        <HireSelect label="Currency" value={form.currency} onChange={(value) => setField("currency", value)} options={["EUR", "NOK", "SEK", "DKK", "CHF"]} />
-                        <HireInput label="Salary from" required inputMode="decimal" value={form.salaryMin} onChange={(e) => setField("salaryMin", e.target.value)} placeholder={form.salaryType === "Hourly" ? "21.00" : "3800"} error={errors.salaryMin} />
-                        <HireInput label="Salary to" inputMode="decimal" value={form.salaryMax} onChange={(e) => setField("salaryMax", e.target.value)} placeholder="Optional" />
-                        <div className="hire-field full"><span className="hire-label">Salary basis</span><HireSegment value={form.grossNet} onChange={(value) => setField("grossNet", value)} ariaLabel="Salary basis" options={[{ value: "Gross", label: "Gross" }, { value: "Net", label: "Net" }]} /></div>
-                        <div className="hire-subsection"><div className="hire-subsection-title"><div><h4>Accommodation & travel</h4><p>International workers will see these conditions as part of the offer.</p></div></div></div>
-                        <HireSelect label="Accommodation" value={form.accommodation} onChange={(value) => setField("accommodation", value)} options={["Employer paid", "Partially paid by employer", "Deducted from salary", "Employee responsible", "To be discussed"]} />
-                        <HireSelect label="Room type" value={form.roomType} onChange={(value) => setField("roomType", value)} options={["Private room preferred", "Private room guaranteed", "Shared room", "Apartment", "Depends on project"]} />
-                        {!["Employer paid", "Employee responsible", "To be discussed"].includes(form.accommodation) ? <HireInput label="Employee accommodation cost / month" value={form.accommodationCost} onChange={(e) => setField("accommodationCost", e.target.value)} placeholder={`${form.currency} amount`} /> : null}
-                        <HireSelect label="Initial travel to country" value={form.initialTravel} onChange={(value) => setField("initialTravel", value)} options={["Employer paid", "Partially reimbursed", "Employee responsible", "Negotiable"]} />
-                        <HireSelect label="Transport to worksite" value={form.workTransport} onChange={(value) => setField("workTransport", value)} options={["Company transport", "Company vehicle", "Mileage reimbursed", "Public transport reimbursed", "Employee responsible"]} />
-                        <HireSelect label="Periodic travel home" value={form.homeTravel} onChange={(value) => setField("homeTravel", value)} options={["Employer paid", "Partially reimbursed", "Not covered", "Negotiable"]} />
-                      </div>
-                    </>
-                  )}
-
-                  {step === 5 && (
-                    <>
-                      <div className="hire-form-top"><div><div className="hire-mini-label">Review</div><h3>Review your workforce request.</h3><p>Make sure the key information is correct before we connect submission to the live recruitment workflow.</p></div><span className="hire-step-count">Step 5 of 5</span></div>
-                      <div className="hire-review">
-                        <div className="hire-review-card"><h4>Company <button type="button" onClick={() => setStep(1)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Company</span><b>{form.companyName || "—"}</b></div><div className="hire-review-item"><span>Country</span><b>{form.companyCountry || "—"}</b></div><div className="hire-review-item"><span>Contact</span><b>{form.contactName || "—"}</b></div><div className="hire-review-item"><span>Email</span><b>{form.email || "—"}</b></div></div></div>
-                        <div className="hire-review-card"><h4>Workers <button type="button" onClick={() => setStep(2)}>Edit</button></h4><div className="hire-review-grid">{form.roles.map((role, index) => <div className="hire-review-item" key={`review-role-${index}`}><span>Role {index + 1}</span><b>{role.count} × {role.profession || "Profession"} · {role.experience}</b></div>)}</div></div>
-                        <div className="hire-review-card"><h4>Job <button type="button" onClick={() => setStep(3)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Location</span><b>{form.jobLocation || "—"}, {form.jobCountry || "—"}</b></div><div className="hire-review-item"><span>Start</span><b>{form.startDate || "—"}{form.flexibleStart ? " · flexible" : ""}</b></div><div className="hire-review-item"><span>Employment</span><b>{form.employmentType} · {form.duration}</b></div><div className="hire-review-item"><span>Schedule</span><b>{form.weeklyHours} h/week · {form.rotation}</b></div></div></div>
-                        <div className="hire-review-card"><h4>Conditions <button type="button" onClick={() => setStep(4)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Salary</span><b>{salarySummary}</b></div><div className="hire-review-item"><span>Accommodation</span><b>{form.accommodation} · {form.roomType}</b></div><div className="hire-review-item"><span>Initial travel</span><b>{form.initialTravel}</b></div><div className="hire-review-item"><span>Transport</span><b>{form.workTransport}</b></div></div></div>
-                        <div className="hire-form-grid" style={{ marginTop: 4 }}>
-                          <HireSelect label="Expected hires in next 12 months" value={form.hiringVolume} onChange={(value) => setField("hiringVolume", value)} options={["1–5", "6–20", "21–50", "51–100", "100+"]} />
-                          <HireSelect label="Recruitment need" value={form.recruitmentNeed} onChange={(value) => setField("recruitmentNeed", value)} options={["One-time project", "Recurring need", "Continuous hiring"]} />
-                          <label className="hire-field full"><span className="hire-label">Additional information</span><textarea className="hire-input" value={form.additionalInfo} onChange={(e) => setField("additionalInfo", e.target.value)} placeholder="Certificates, project details, special requirements, interview process..." /></label>
-                          <label className={`hire-checkbox-row${errors.consent ? " invalid" : ""}`}><input type="checkbox" checked={form.consent} onChange={(e) => setField("consent", e.target.checked)} /><span>I confirm that the information provided is accurate and I agree to be contacted by Statybos24 regarding this workforce request.</span></label>
-                          {errors.consent ? <span className="hire-error" style={{ gridColumn: "1 / -1" }}>{errors.consent}</span> : null}
-                        </div>
-                        <div className="hire-preview-notice">Design preview: this version intentionally does not write data to Supabase yet. After you approve the look and flow, the final submit action can be connected to the employer request database.</div>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="hire-form-actions">
-                    {step > 1 ? <button type="button" className="hire-btn ghost" onClick={goBack}><HireArrowIcon direction="left" /> Back</button> : <span />}
-                    <div className="right">
-                      {step < 5 ? <button type="button" className="hire-btn primary" onClick={goNext}>Continue <HireArrowIcon /></button> : <button type="button" className="hire-btn primary" onClick={previewSubmit}>Preview submission <HireArrowIcon /></button>}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="hire-section" id="hire-faq">
-          <div className="hire-shell hire-faq">
-            <div><div className="hire-mini-label">FAQ</div><h2>Before you submit a request.</h2></div>
-            <div className="hire-faq-list">
-              <div className="hire-faq-item"><h3>Do you employ the workers?</h3><p>No. The model is designed for direct employment by the hiring company.</p></div>
-              <div className="hire-faq-item"><h3>Who pays the recruitment fee?</h3><p>The employer pays the recruitment service fee. Workers are not charged for recruitment.</p></div>
-              <div className="hire-faq-item"><h3>Can we request several professions?</h3><p>Yes. One workforce request can contain several construction trades and different worker counts.</p></div>
-              <div className="hire-faq-item"><h3>Is accommodation mandatory?</h3><p>Not in every case, but a clear accommodation solution can significantly improve international candidate availability.</p></div>
-              <div className="hire-faq-item"><h3>Can you support recurring hiring?</h3><p>Yes. The request captures whether your need is one-time, recurring or continuous so the recruitment process can be planned accordingly.</p></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="hire-cta">
           <div className="hire-shell">
-            <div className="hire-cta-card">
-              <div className="hire-cta-copy"><h2>Have a workforce need already?</h2><p>Send the project requirements in one structured request and make the next conversation concrete from the start.</p></div>
-              <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Request workers <HireArrowIcon /></button>
+            <div className="hire-section-head"><div className="hire-index">02 / Offer signal</div><div><h2>International hiring moves on three signals.</h2><p>Workers compare the complete offer. The strongest briefs remove ambiguity before the first call.</p></div></div>
+            <div className="hire-signal-grid">
+              <article className="hire-signal"><div><div className="hire-signal-label">Compensation</div><div className="hire-signal-symbol">€</div></div><div><h3>Clear salary basis</h3><p>Hourly or monthly, gross or net, expected hours and overtime — no guesswork.</p></div></article>
+              <article className="hire-signal"><div><div className="hire-signal-label">Accommodation</div><div className="hire-signal-symbol">⌂</div></div><div><h3>A real place to stay</h3><p>Employer-paid, shared, private, deducted or negotiable. Candidates know the actual package.</p></div></article>
+              <article className="hire-signal"><div><div className="hire-signal-label">Mobility</div><div className="hire-signal-symbol">→</div></div><div><h3>Travel that works</h3><p>Initial travel, transport to site and periodic home travel can be defined before sourcing begins.</p></div></article>
             </div>
           </div>
         </section>
+
+        <section className="hire-section hire-anchor" id="hire-trades">
+          <div className="hire-shell">
+            <div className="hire-section-head"><div className="hire-index">03 / Trades</div><div><h2>Built for construction, not generic hiring.</h2><p>The request can contain several professions and different headcounts, so one project can be briefed as one coordinated workforce need.</p></div></div>
+            <div className="hire-role-wall">{HIRE_PROFESSIONS.slice(0,12).map((role)=><span key={role}>{role}</span>)}</div>
+          </div>
+        </section>
+
+        <section className="hire-request-wrap hire-anchor" id="hire-request">
+          <div className="hire-request-shell">
+            <div className="hire-request-head"><div><h2>Build your workforce brief.</h2><p>Five short steps. No account required for this preview.</p></div><div className="hire-request-badge">Design prototype · no database write</div></div>
+            <div className="hire-request-grid">
+              <aside className="hire-step-rail" aria-label="Request steps">{HIRE_STEPS.map((item)=><button type="button" key={item.number} className={`hire-step-button${step===item.number?' active':''}${step>item.number?' done':''}`} onClick={()=>{if(item.number<=step)setStep(item.number)}} disabled={item.number>step}><span className="n">{step>item.number?'✓':String(item.number).padStart(2,'0')}</span><span className="l">{item.label}</span></button>)}</aside>
+              <div className="hire-form-panel">
+                {submitted ? (
+                  <div className="hire-success"><div><div className="hire-success-mark"><HireCheckIcon size={28}/></div><h3>Brief ready.</h3><p>This is still a design preview, so nothing has been sent or saved. The next phase can connect this exact flow to Supabase and the private employer dashboard.</p><button type="button" className="hire-btn dark" onClick={()=>{setSubmitted(false);setStep(1);}}>Create another preview</button></div></div>
+                ) : (<>
+                  {step===1 && <><div className="hire-form-top"><div><div className="eyebrow">Company</div><h3>Who is hiring?</h3><p>Start with the legal company and the person responsible for this workforce need.</p></div><span className="hire-step-count">Step 1 / 5</span></div><div className="hire-form-grid"><HireInput label="Company name" required value={form.companyName} onChange={e=>setField('companyName',e.target.value)} error={errors.companyName}/><HireSelect label="Company country" required value={form.companyCountry} onChange={v=>setField('companyCountry',v)} options={["Germany","Netherlands","Norway","Sweden","Denmark","Finland","Belgium","Austria","Other"]} error={errors.companyCountry}/><HireInput label="Company website" value={form.companyWebsite} onChange={e=>setField('companyWebsite',e.target.value)} placeholder="https://"/><HireInput label="VAT / registration number" value={form.vatNumber} onChange={e=>setField('vatNumber',e.target.value)}/><div className="hire-subsection"><div className="hire-subsection-title"><div><h4>Contact</h4><p>The person we should speak with about hiring.</p></div></div></div><HireInput label="Contact person" required value={form.contactName} onChange={e=>setField('contactName',e.target.value)} error={errors.contactName}/><HireInput label="Job title" value={form.contactRole} onChange={e=>setField('contactRole',e.target.value)}/><HireInput label="Business email" required type="email" value={form.email} onChange={e=>setField('email',e.target.value)} error={errors.email}/><HireInput label="Phone" value={form.phone} onChange={e=>setField('phone',e.target.value)}/><div className="hire-field full"><span className="hire-label">Preferred contact</span><HireSegment value={form.preferredContact} onChange={v=>setField('preferredContact',v)} ariaLabel="Preferred contact" options={[{value:'Email',label:'Email'},{value:'Phone',label:'Phone'},{value:'WhatsApp',label:'WhatsApp'},{value:'Teams',label:'Teams'}]}/></div></div></>}
+
+                  {step===2 && <><div className="hire-form-top"><div><div className="eyebrow">Workers</div><h3>What crew do you need?</h3><p>Add one or several construction trades. Each role can carry its own experience and language requirement.</p></div><span className="hire-step-count">Step 2 / 5</span></div><div className="hire-form-grid">{form.roles.map((role,index)=><div className="hire-role-editor" key={`role-${index}`}><div className="hire-role-editor-head"><b>Role {String(index+1).padStart(2,'0')}</b>{form.roles.length>1?<button type="button" onClick={()=>removeRole(index)}>Remove</button>:<span/>}</div><div className="hire-role-editor-grid"><HireSelect label="Profession" required value={role.profession} onChange={v=>updateRole(index,'profession',v)} options={HIRE_PROFESSIONS}/><label className="hire-field"><span className="hire-label">Workers</span><span className="hire-count"><button type="button" onClick={()=>updateRole(index,'count',Math.max(1,Number(role.count||1)-1))}>−</button><input inputMode="numeric" value={role.count} onChange={e=>updateRole(index,'count',Math.max(1,Number(e.target.value||1)))}/><button type="button" onClick={()=>updateRole(index,'count',Number(role.count||1)+1)}>+</button></span></label><HireSelect label="Experience" value={role.experience} onChange={v=>updateRole(index,'experience',v)} options={["No minimum","1+ years","3+ years","5+ years","10+ years"]}/><HireSelect label="Language" value={role.language} onChange={v=>updateRole(index,'language',v)} options={["No foreign language required","English","German","Dutch","Norwegian","Swedish","Danish","Other"]}/><HireSelect label="Driving licence" value={role.drivingLicence} onChange={v=>updateRole(index,'drivingLicence',v)} options={["Required","Preferred","Not required"]}/></div></div>)}{errors.roles?<span className="hire-error" style={{gridColumn:'1/-1'}}>{errors.roles}</span>:null}<div className="hire-add-role"><button type="button" onClick={addRole}>+ Add another profession</button></div></div></>}
+
+                  {step===3 && <><div className="hire-form-top"><div><div className="eyebrow">Job</div><h3>Where and when?</h3><p>Project timing is what turns a candidate match into an available candidate.</p></div><span className="hire-step-count">Step 3 / 5</span></div><div className="hire-form-grid"><HireSelect label="Job country" required value={form.jobCountry} onChange={v=>setField('jobCountry',v)} options={["Germany","Netherlands","Norway","Sweden","Denmark","Finland","Belgium","Austria","Other"]} error={errors.jobCountry}/><HireInput label="City / project location" required value={form.jobLocation} onChange={e=>setField('jobLocation',e.target.value)} error={errors.jobLocation}/><HireInput label="Expected start date" required type="date" value={form.startDate} onChange={e=>setField('startDate',e.target.value)} error={errors.startDate}/><HireInput label="Workers needed by" type="date" value={form.neededBy} onChange={e=>setField('neededBy',e.target.value)}/><label className="hire-checkbox-row"><input type="checkbox" checked={form.flexibleStart} onChange={e=>setField('flexibleStart',e.target.checked)}/><span>Start date is flexible.</span></label><div className="hire-subsection"><div className="hire-subsection-title"><div><h4>Work pattern</h4><p>Define the contract and the practical project rhythm.</p></div></div></div><HireSelect label="Employment type" value={form.employmentType} onChange={v=>setField('employmentType',v)} options={["Permanent","Fixed-term","Project-based","Seasonal"]}/><HireSelect label="Expected duration" value={form.duration} onChange={v=>setField('duration',v)} options={["Permanent","Less than 3 months","3–6 months","6–12 months","12+ months"]}/><HireInput label="Hours per week" inputMode="numeric" value={form.weeklyHours} onChange={e=>setField('weeklyHours',e.target.value)}/><HireSelect label="Overtime" value={form.overtime} onChange={v=>setField('overtime',v)} options={["Available","Sometimes","Not available","To be discussed"]}/><HireSelect label="Rotation" value={form.rotation} onChange={v=>setField('rotation',v)} options={["No rotation","3 weeks on / 1 off","4 weeks on / 1 off","6 weeks on / 2 off","Custom"]}/></div></>}
+
+                  {step===4 && <><div className="hire-form-top"><div><div className="eyebrow">Conditions</div><h3>Make the offer concrete.</h3><p>Salary, housing and mobility are separated so candidates can understand the real package.</p></div><span className="hire-step-count">Step 4 / 5</span></div><div className="hire-form-grid"><HireSelect label="Salary type" value={form.salaryType} onChange={v=>setField('salaryType',v)} options={["Hourly","Monthly"]}/><HireSelect label="Currency" value={form.currency} onChange={v=>setField('currency',v)} options={["EUR","NOK","SEK","DKK"]}/><HireInput label="Salary from" required inputMode="decimal" value={form.salaryMin} onChange={e=>setField('salaryMin',e.target.value)} error={errors.salaryMin} placeholder="e.g. 21"/><HireInput label="Salary to" inputMode="decimal" value={form.salaryMax} onChange={e=>setField('salaryMax',e.target.value)} placeholder="optional"/><div className="hire-field full"><span className="hire-label">Salary basis</span><HireSegment value={form.grossNet} onChange={v=>setField('grossNet',v)} ariaLabel="Salary basis" options={[{value:'Gross',label:'Gross'},{value:'Net',label:'Net'}]}/></div><div className="hire-subsection"><div className="hire-subsection-title"><div><h4>Accommodation & mobility</h4><p>These terms can materially change international candidate interest.</p></div></div></div><HireSelect label="Accommodation" value={form.accommodation} onChange={v=>setField('accommodation',v)} options={["Employer paid","Partially paid by employer","Deducted from salary","Employee responsible","To be discussed"]}/><HireSelect label="Room type" value={form.roomType} onChange={v=>setField('roomType',v)} options={["Private room preferred","Private room guaranteed","Shared room","Apartment","Depends on project"]}/>{!["Employer paid","Employee responsible","To be discussed"].includes(form.accommodation)?<HireInput label="Employee accommodation cost / month" value={form.accommodationCost} onChange={e=>setField('accommodationCost',e.target.value)} placeholder={`${form.currency} amount`}/>:null}<HireSelect label="Initial travel to country" value={form.initialTravel} onChange={v=>setField('initialTravel',v)} options={["Employer paid","Partially reimbursed","Employee responsible","Negotiable"]}/><HireSelect label="Transport to worksite" value={form.workTransport} onChange={v=>setField('workTransport',v)} options={["Company transport","Company vehicle","Mileage reimbursed","Public transport reimbursed","Employee responsible"]}/><HireSelect label="Periodic travel home" value={form.homeTravel} onChange={v=>setField('homeTravel',v)} options={["Employer paid","Partially reimbursed","Not covered","Negotiable"]}/></div></>}
+
+                  {step===5 && <><div className="hire-form-top"><div><div className="eyebrow">Review</div><h3>One brief. Ready to source.</h3><p>Review the commercial and practical information before this becomes a live employer request.</p></div><span className="hire-step-count">Step 5 / 5</span></div><div className="hire-review"><div className="hire-review-card"><h4>Company <button type="button" onClick={()=>setStep(1)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Company</span><b>{form.companyName||'—'}</b></div><div className="hire-review-item"><span>Country</span><b>{form.companyCountry||'—'}</b></div><div className="hire-review-item"><span>Contact</span><b>{form.contactName||'—'}</b></div><div className="hire-review-item"><span>Email</span><b>{form.email||'—'}</b></div></div></div><div className="hire-review-card"><h4>Workers <button type="button" onClick={()=>setStep(2)}>Edit</button></h4><div className="hire-review-grid">{form.roles.map((role,index)=><div className="hire-review-item" key={`review-role-${index}`}><span>Role {index+1}</span><b>{role.count} × {role.profession||'Profession'} · {role.experience}</b></div>)}</div></div><div className="hire-review-card"><h4>Job <button type="button" onClick={()=>setStep(3)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Location</span><b>{form.jobLocation||'—'}, {form.jobCountry||'—'}</b></div><div className="hire-review-item"><span>Start</span><b>{form.startDate||'—'}{form.flexibleStart?' · flexible':''}</b></div><div className="hire-review-item"><span>Employment</span><b>{form.employmentType} · {form.duration}</b></div><div className="hire-review-item"><span>Schedule</span><b>{form.weeklyHours} h/week · {form.rotation}</b></div></div></div><div className="hire-review-card"><h4>Conditions <button type="button" onClick={()=>setStep(4)}>Edit</button></h4><div className="hire-review-grid"><div className="hire-review-item"><span>Salary</span><b>{salarySummary}</b></div><div className="hire-review-item"><span>Accommodation</span><b>{form.accommodation} · {form.roomType}</b></div><div className="hire-review-item"><span>Initial travel</span><b>{form.initialTravel}</b></div><div className="hire-review-item"><span>Transport</span><b>{form.workTransport}</b></div></div></div></div><div className="hire-form-grid" style={{marginTop:20}}><HireSelect label="Expected hires in next 12 months" value={form.hiringVolume} onChange={v=>setField('hiringVolume',v)} options={["1–5","6–20","21–50","51–100","100+"]}/><HireSelect label="Recruitment need" value={form.recruitmentNeed} onChange={v=>setField('recruitmentNeed',v)} options={["One-time project","Recurring need","Continuous hiring"]}/><label className="hire-field full"><span className="hire-label">Additional information</span><textarea className="hire-input" value={form.additionalInfo} onChange={e=>setField('additionalInfo',e.target.value)} placeholder="Certificates, project details, special requirements, interview process..."/></label><label className={`hire-checkbox-row${errors.consent?' invalid':''}`}><input type="checkbox" checked={form.consent} onChange={e=>setField('consent',e.target.checked)}/><span>I confirm that the information provided is accurate and I agree to be contacted by Statybos24 regarding this workforce request.</span></label>{errors.consent?<span className="hire-error" style={{gridColumn:'1/-1'}}>{errors.consent}</span>:null}<div className="hire-preview-notice">Design preview only: this version does not write data to Supabase. After the visual direction is approved, the submit action can be connected to the live employer-request workflow.</div></div></>}
+
+                  <div className="hire-form-actions">{step>1?<button type="button" className="hire-btn ghost" onClick={goBack}><HireArrowIcon direction="left"/> Back</button>:<span/>}<div className="right">{step<5?<button type="button" className="hire-btn primary" onClick={goNext}>Continue <HireArrowIcon/></button>:<button type="button" className="hire-btn primary" onClick={previewSubmit}>Preview submission <HireArrowIcon/></button>}</div></div>
+                </>)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="hire-section white hire-anchor" id="hire-faq"><div className="hire-shell hire-faq"><div><div className="hire-index">04 / FAQ</div><h2>Before the first brief.</h2></div><div className="hire-faq-list"><div className="hire-faq-item"><h3>Do you employ the workers?</h3><p>No. The intended model is direct employment by the hiring company.</p></div><div className="hire-faq-item"><h3>Who pays the recruitment fee?</h3><p>The employer pays the recruitment service fee. Workers are not charged for recruitment.</p></div><div className="hire-faq-item"><h3>Can one request include several trades?</h3><p>Yes. Add several professions and separate headcounts inside one project brief.</p></div><div className="hire-faq-item"><h3>Is accommodation mandatory?</h3><p>Not in every case, but clear accommodation and travel terms materially improve international candidate availability.</p></div><div className="hire-faq-item"><h3>Can the need be ongoing?</h3><p>Yes. The brief records whether hiring is one-time, recurring or continuous.</p></div></div></div></section>
+
+        <section className="hire-final"><div className="hire-shell hire-final-inner"><h2>Give us the brief. Keep your project moving.</h2><button type="button" className="hire-btn dark" onClick={scrollToRequest}>Build a request <HireArrowIcon/></button></div></section>
       </main>
 
-      <footer className="hire-footer">
-        <div className="hire-shell hire-footer-inner">
-          <BrandLogo href="#hire-top" height={34} />
-          <div className="hire-footer-copy">© {new Date().getFullYear()} Statybos24 · Direct-hire construction recruitment</div>
-          <a className="hire-footer-contact" href="mailto:info@statybos24.lt">info@statybos24.lt</a>
-        </div>
-      </footer>
+      <footer className="hire-footer"><div className="hire-shell hire-footer-inner"><BrandLogo href="#hire-top" height={32}/><div className="hire-footer-copy">© {new Date().getFullYear()} Statybos24 · private direct-hire route</div><a className="hire-footer-contact" href="mailto:info@statybos24.lt">info@statybos24.lt</a></div></footer>
     </div>
   );
 }
