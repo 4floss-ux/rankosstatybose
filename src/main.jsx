@@ -142,16 +142,21 @@ function BrandLogo({ href = "#", className = "brand", height = 38, style, imgSty
       onClick={(event) => {
         event.preventDefault();
 
-        if (href === "/") {
-          window.location.assign("/");
+        if (href && href.startsWith("/") && !href.startsWith("/#")) {
+          window.location.assign(href);
           return;
         }
 
-        const target =
-          href && href !== "#" ? document.querySelector(href) : null;
+        const selector = href && href.startsWith("#") ? href : null;
+        const target = selector ? document.querySelector(selector) : null;
 
         if (target) {
           target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+
+        if (href && href !== "#") {
+          window.location.assign(href);
           return;
         }
 
