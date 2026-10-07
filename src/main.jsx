@@ -28784,18 +28784,84 @@ function HirePage() {
         @media (max-width:420px){.hire-photo-panel{min-height:395px;border-radius:54px 10px 16px 16px}.hire-visual-note{display:none}.hire-photo-caption{padding:18px}.hire-photo-caption span{font-size:10px}.hire-photo-badge{font-size:9px;padding:8px 10px}}
       `}</style>
 
+      <style>{`
+        /* /hire v2 — architectural editorial / workforce operating system */
+        .hire-page{
+          --hire-navy:#102438;--hire-deep:#071923;--hire-orange:#f08a28;--hire-orange-dark:#d97317;
+          --hire-paper:#f4f1eb;--hire-paper-2:#ebe7df;--hire-ink:#102438;--hire-muted:#667480;--hire-line:#d8ddd9;
+          background:var(--hire-paper);color:var(--hire-ink);
+        }
+        .hire-shell{width:min(1260px,calc(100% - 64px))}
+        .hire-topbar{position:relative;top:auto;background:var(--hire-paper);border:0;border-bottom:1px solid rgba(16,36,56,.14);box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+        .hire-topbar-inner{min-height:92px}
+        .hire-brand-lockup{display:flex;align-items:center;gap:17px;min-width:0}.hire-brand-lockup:after{content:"";width:1px;height:28px;background:rgba(16,36,56,.18);order:1}.hire-division{order:2;font-size:9px;font-weight:900;letter-spacing:.18em;line-height:1.45;color:#667480;text-transform:uppercase;white-space:nowrap}
+        .hire-nav{gap:30px}.hire-nav a{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#4e5f6c}.hire-nav a:hover{color:var(--hire-orange)}
+        .hire-top-actions{gap:8px}.hire-lang{border-radius:2px;background:transparent;border-color:rgba(16,36,56,.2);height:42px}.hire-btn{border-radius:3px;min-height:50px;padding:13px 18px;font-size:11px;letter-spacing:.025em;text-transform:none;box-shadow:none!important}.hire-btn:hover{transform:none}
+        .hire-btn.primary{background:var(--hire-orange);color:#fff}.hire-btn.primary:hover{background:var(--hire-orange-dark)}
+        .hire-btn.dark{background:var(--hire-navy)}.hire-btn.ghost{background:transparent;border-color:rgba(16,36,56,.25)}.hire-btn.ghost:hover{background:rgba(16,36,56,.045);border-color:rgba(16,36,56,.45)}
+
+        .hire-hero{position:relative;isolation:isolate;background:var(--hire-paper);color:var(--hire-ink);border-bottom:1px solid rgba(16,36,56,.14);overflow:hidden}
+        .hire-hero:before{display:block;content:"24";position:absolute;z-index:-1;right:-.05em;top:-.18em;font:900 clamp(280px,39vw,620px)/1 Manrope,Inter,sans-serif;letter-spacing:-.13em;color:rgba(16,36,56,.035);pointer-events:none}
+        .hire-hero:after{display:block;content:"";position:absolute;z-index:-1;inset:0;background-image:linear-gradient(rgba(16,36,56,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(16,36,56,.055) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,.08) 52%,transparent 82%);pointer-events:none}
+        .hire-hero-inner{min-height:690px;grid-template-columns:minmax(0,1.12fr) minmax(390px,.88fr);gap:82px;padding:74px 0 66px;align-items:center}
+        .hire-hero-copy{position:relative;padding:0 0 0 30px;max-width:780px}.hire-hero-copy:before{content:"";position:absolute;left:0;top:6px;bottom:7px;width:4px;background:var(--hire-orange)}
+        .hire-eyebrow{color:#6f7b84;font-size:9px;letter-spacing:.22em}.hire-eyebrow-dot{width:7px;height:7px;box-shadow:none;border-radius:0;transform:rotate(45deg)}
+        .hire-hero h1{margin:24px 0 24px;color:var(--hire-navy);font-size:clamp(58px,6vw,88px);line-height:.92;letter-spacing:-.067em;max-width:900px;text-transform:uppercase}
+        .hire-hero h1 span{display:block;color:var(--hire-orange)}
+        .hire-hero-lead{max-width:700px;color:#546572;font-size:16px;line-height:1.72}.hire-hero-actions{margin-top:32px}
+        .hire-hero .hire-btn.ghost{background:transparent;color:var(--hire-navy);border-color:rgba(16,36,56,.25)}
+        .hire-hero .hire-btn.ghost:hover{background:rgba(16,36,56,.045);border-color:rgba(16,36,56,.45)}
+        .hire-hero-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:44px;border-top:1px solid rgba(16,36,56,.18);border-bottom:1px solid rgba(16,36,56,.18)}
+        .hire-hero-fact{padding:15px 18px 15px 0;border-right:1px solid rgba(16,36,56,.18)}.hire-hero-fact+ .hire-hero-fact{padding-left:18px}.hire-hero-fact:last-child{border-right:0}
+        .hire-hero-fact b{display:block;font:900 10px/1 Manrope,Inter,sans-serif;letter-spacing:.16em;color:var(--hire-orange)}.hire-hero-fact span{display:block;margin-top:7px;font-size:11px;line-height:1.45;font-weight:750;color:#455967}
+
+        .hire-visual-wrap{position:relative;min-width:0;padding:0}.hire-blueprint-board{position:relative;min-height:520px;background:var(--hire-deep);color:#fff;clip-path:polygon(0 0,calc(100% - 34px) 0,100% 34px,100% 100%,34px 100%,0 calc(100% - 34px));box-shadow:0 34px 70px rgba(7,25,35,.18);overflow:hidden}
+        .hire-blueprint-board:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:42px 42px;opacity:.5}
+        .hire-blueprint-board:after{content:"";position:absolute;width:210px;height:10px;background:var(--hire-orange);right:-44px;top:108px;transform:rotate(-45deg);transform-origin:center;box-shadow:0 0 0 1px rgba(240,138,40,.12)}
+        .hire-board-inner{position:relative;z-index:2;min-height:520px;padding:28px;display:flex;flex-direction:column}
+        .hire-board-top{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.18)}
+        .hire-board-label{font-size:9px;font-weight:900;letter-spacing:.2em;color:#aab8c1;text-transform:uppercase}.hire-board-status{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:900;letter-spacing:.13em;color:#fff;text-transform:uppercase}.hire-board-status:before{content:"";width:8px;height:8px;background:var(--hire-orange);transform:rotate(45deg)}
+        .hire-board-main{display:grid;grid-template-columns:150px 1fr;gap:26px;padding:34px 0 28px}.hire-board-count{font:900 112px/.76 Manrope,Inter,sans-serif;letter-spacing:-.08em;color:#fff}.hire-board-count small{display:block;margin-top:16px;font:900 9px/1.3 Inter,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#8799a5}.hire-board-role{align-self:end}.hire-board-role span{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8ea0ab}.hire-board-role h2{margin:8px 0 0;font:850 35px/1.02 Manrope,Inter,sans-serif;letter-spacing:-.045em;color:#fff}.hire-board-role p{margin:11px 0 0;color:#9eb0bb;font-size:11px;line-height:1.55}
+        .hire-board-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.18);border-left:1px solid rgba(255,255,255,.18)}.hire-board-cell{min-height:88px;padding:15px 16px;border-right:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.18)}.hire-board-cell span{display:block;font-size:8px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#718794}.hire-board-cell b{display:block;margin-top:8px;font-size:12px;line-height:1.35;color:#fff}
+        .hire-board-foot{margin-top:auto;padding-top:20px;display:flex;align-items:center;justify-content:space-between;gap:18px}.hire-board-foot span{font-size:9px;color:#8094a0;line-height:1.45}.hire-board-foot b{font-size:10px;color:#ffae66;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+        .hire-side-index{position:absolute;left:-32px;top:50%;transform:translateY(-50%);z-index:5;display:grid;gap:1px}.hire-side-index span{display:grid;place-items:center;width:66px;height:46px;background:var(--hire-paper);border:1px solid rgba(16,36,56,.16);font-size:8px;font-weight:900;letter-spacing:.12em;color:#6c7b86;text-transform:uppercase}.hire-side-index span.active{background:var(--hire-orange);border-color:var(--hire-orange);color:#fff}
+        .hire-trade-ticker{position:relative;z-index:3;border-top:1px solid rgba(16,36,56,.14);background:var(--hire-navy);color:#fff;overflow:hidden}.hire-trade-track{display:flex;gap:0;width:max-content;min-width:100%;align-items:center}.hire-trade-track span{display:flex;align-items:center;min-height:52px;padding:0 28px;border-right:1px solid rgba(255,255,255,.14);font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}.hire-trade-track i{width:7px;height:7px;background:var(--hire-orange);margin-right:12px;transform:rotate(45deg)}
+
+        .hire-section{padding:104px 0;background:var(--hire-paper)}.hire-section.soft{background:var(--hire-navy);color:#fff}.hire-section.dark{background:#fff;color:var(--hire-navy)}
+        .hire-section-head{align-items:flex-start;margin-bottom:46px}.hire-mini-label{color:var(--hire-orange);letter-spacing:.2em;font-size:9px}.hire-section h2{font-size:clamp(38px,4.4vw,58px);line-height:.98;letter-spacing:-.055em;text-transform:uppercase}.hire-section-head p{color:#657480}.hire-section.soft .hire-section-head p{color:#a9b8c1}.hire-section.soft .hire-mini-label{color:#ff9f46}.hire-section.dark .hire-mini-label{color:var(--hire-orange)}
+        .hire-value-grid{gap:0;border-top:1px solid rgba(16,36,56,.2)}.hire-value-card{border:0;border-right:1px solid rgba(16,36,56,.18);border-radius:0;padding:31px 30px 14px 0;background:transparent;box-shadow:none}.hire-value-card+ .hire-value-card{padding-left:30px}.hire-value-card:last-child{border-right:0}.hire-value-icon{width:42px;height:42px;border-radius:0;background:var(--hire-navy);color:#fff}.hire-value-card h3{font-size:20px;text-transform:uppercase}.hire-value-card p{font-size:12px}
+        .hire-process{gap:0;border-top:1px solid rgba(255,255,255,.2)}.hire-process-card{position:relative;border:0;border-right:1px solid rgba(255,255,255,.18);border-radius:0;padding:32px 32px 12px 0;background:transparent;color:#fff}.hire-process-card+ .hire-process-card{padding-left:32px}.hire-process-card:last-child{border-right:0}.hire-process-number{font:900 52px/.9 Manrope,Inter,sans-serif;color:var(--hire-orange);letter-spacing:-.06em}.hire-process-card h3{margin-top:36px;color:#fff;text-transform:uppercase}.hire-process-card p{color:#aebdc6}
+        .hire-role-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:rgba(16,36,56,.18);border:1px solid rgba(16,36,56,.18)}.hire-role-chip{min-height:80px;border:0;border-radius:0;background:var(--hire-paper);padding:17px 16px;transition:background .15s ease,color .15s ease}.hire-role-chip:hover{background:var(--hire-orange);color:#fff}.hire-role-chip span:first-child{color:var(--hire-orange)}.hire-role-chip:hover span:first-child{color:#fff}.hire-role-chip span:last-child{font-size:12px;font-weight:850;text-transform:uppercase}
+        .hire-condition-grid{gap:76px}.hire-section.dark .hire-condition-copy h2{color:var(--hire-navy)}.hire-condition-copy p{color:#687783}.hire-condition-row{border-color:#e0e5e5}.hire-condition-row span{border-radius:0;background:var(--hire-orange);color:#fff}.hire-offer-card{border-radius:0;background:var(--hire-navy);border:0;box-shadow:16px 16px 0 var(--hire-orange);color:#fff}.hire-offer-card h3{color:#fff;text-transform:uppercase}.hire-offer-row{border-color:rgba(255,255,255,.17)}.hire-offer-row span{color:#8ea2af}.hire-offer-row b{color:#fff}.hire-offer-badge{border-radius:0;background:rgba(240,138,40,.12);border-color:rgba(240,138,40,.35);color:#ffc38c}
+        .hire-request-section{background:#e8e5df;padding:110px 0}.hire-request-layout{gap:68px}.hire-request-side{top:32px}.hire-request-side h2{font-size:48px;text-transform:uppercase;line-height:.96}.hire-step-list{border-top:1px solid rgba(16,36,56,.18)}.hire-step-item{border:0;border-bottom:1px solid rgba(16,36,56,.18);border-radius:0;background:transparent;padding:12px 0}.hire-step-item.active{background:transparent;border-color:var(--hire-orange);color:var(--hire-navy)}.hire-step-item .num{border-radius:0;background:var(--hire-navy);color:#fff}.hire-step-item.active .num{background:var(--hire-orange)}.hire-step-item.done .num{background:#577063}.hire-form-card{border-radius:0;border:1px solid rgba(16,36,56,.15);box-shadow:18px 18px 0 rgba(16,36,56,.07);padding:32px}.hire-form-top{border-bottom:1px solid #dde2df;padding-bottom:22px}.hire-form-top h3{text-transform:uppercase}.hire-input{border-radius:2px;background:#faf9f6;border-color:#d4dbd8}.hire-input:focus{border-color:var(--hire-orange);box-shadow:0 0 0 2px rgba(240,138,40,.10)}.hire-segment{border-radius:2px;background:#eceae5}.hire-segment button{border-radius:1px}.hire-segment button.active{box-shadow:none;border:1px solid rgba(16,36,56,.12)}.hire-role-row,.hire-review-card,.hire-checkbox-row,.hire-preview-notice{border-radius:2px}.hire-add-role{color:#ad5b18}.hire-step-count{border-radius:2px}.hire-form-actions{border-top-color:#dfe3e0}
+        .hire-faq{gap:90px}.hire-faq-item{border-color:rgba(16,36,56,.18)}.hire-faq-item h3{text-transform:uppercase;letter-spacing:.01em}.hire-cta{padding:0 0 104px;background:var(--hire-paper)}.hire-cta-card{border-radius:0;background:var(--hire-orange);box-shadow:18px 18px 0 var(--hire-navy);padding:48px}.hire-cta-card:after{display:none}.hire-cta-copy h2{text-transform:uppercase}.hire-cta-copy p{color:#fff4ea}.hire-cta-card .hire-btn.primary{background:var(--hire-navy)}.hire-footer{background:var(--hire-paper);border-top:1px solid rgba(16,36,56,.18)}
+
+        @media (max-width:1080px){
+          .hire-shell{width:min(100% - 40px,1260px)}.hire-hero-inner{grid-template-columns:1fr;gap:50px;min-height:auto;padding:58px 0 72px}.hire-hero-copy{max-width:820px}.hire-visual-wrap{width:min(760px,100%);margin-left:auto;margin-right:auto}.hire-side-index{left:-20px}.hire-role-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hire-condition-grid{gap:44px}.hire-request-layout{gap:44px}
+        }
+        @media (max-width:760px){
+          .hire-shell{width:min(100% - 28px,1260px)}.hire-topbar-inner{min-height:72px}.hire-brand-lockup:after,.hire-division,.hire-nav,.hire-lang{display:none}.hire-hero-inner{padding:42px 0 54px;gap:32px}.hire-hero-copy{padding-left:18px}.hire-hero h1{font-size:clamp(44px,13vw,64px)}.hire-hero-lead{font-size:14px}.hire-hero-actions{display:grid;grid-template-columns:1fr}.hire-hero-actions .hire-btn{width:100%}.hire-hero-facts{grid-template-columns:1fr}.hire-hero-fact{border-right:0;border-bottom:1px solid rgba(16,36,56,.16);padding:11px 0}.hire-hero-fact+ .hire-hero-fact{padding-left:0}.hire-hero-fact:last-child{border-bottom:0}.hire-blueprint-board,.hire-board-inner{min-height:470px}.hire-board-inner{padding:22px}.hire-board-main{grid-template-columns:112px 1fr;gap:18px}.hire-board-count{font-size:82px}.hire-board-role h2{font-size:28px}.hire-side-index{display:none}.hire-trade-track span{min-height:46px;padding:0 18px}.hire-section{padding:72px 0}.hire-section h2{font-size:38px}.hire-value-grid,.hire-process{display:grid;grid-template-columns:1fr}.hire-value-card,.hire-process-card,.hire-value-card+ .hire-value-card,.hire-process-card+ .hire-process-card{padding:24px 0;border-right:0;border-bottom:1px solid currentColor}.hire-process-card{border-color:rgba(255,255,255,.16)}.hire-role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hire-request-section{padding:72px 0}.hire-request-side h2{font-size:38px}.hire-form-card{padding:20px;box-shadow:10px 10px 0 rgba(16,36,56,.07)}.hire-cta{padding-bottom:72px}.hire-cta-card{padding:30px 22px;box-shadow:10px 10px 0 var(--hire-navy)}
+        }
+        @media (max-width:440px){
+          .hire-topbar .hire-btn{width:auto;padding:0 12px}.hire-topbar .hire-btn span{display:inline}.hire-board-main{grid-template-columns:1fr}.hire-board-count{font-size:76px}.hire-board-role{align-self:auto}.hire-board-grid{grid-template-columns:1fr}.hire-role-grid{grid-template-columns:1fr}.hire-blueprint-board{clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+        }
+      `}</style>
+
       <header className="hire-topbar">
         <div className="hire-shell hire-topbar-inner">
-          <BrandLogo href="#hire-top" height={44} aria-label="Statybos24" />
+          <div className="hire-brand-lockup">
+            <BrandLogo href="#hire-top" height={43} aria-label="Statybos24" />
+            <span className="hire-division">Europe<br/>Direct Hire</span>
+          </div>
           <nav className="hire-nav" aria-label="Employer page navigation">
-            <a href="#hire-how">How it works</a>
-            <a href="#hire-workers">Construction trades</a>
-            <a href="#hire-faq">FAQ</a>
+            <a href="#hire-how">Model</a>
+            <a href="#hire-workers">Trades</a>
+            <a href="#hire-faq">Questions</a>
           </nav>
           <div className="hire-top-actions">
             <span className="hire-lang">EN</span>
             <button type="button" className="hire-btn primary" onClick={scrollToRequest}>
-              <span>Request workers</span><HireArrowIcon />
+              <span>Start a request</span><HireArrowIcon />
             </button>
           </div>
         </div>
@@ -28805,74 +28871,48 @@ function HirePage() {
         <section className="hire-hero">
           <div className="hire-shell hire-hero-inner">
             <div className="hire-hero-copy">
-              <div className="hire-eyebrow"><span className="hire-eyebrow-dot" />Direct recruitment for construction</div>
-              <h1>Great projects start with the <span>right people.</span> We bring them together.</h1>
+              <div className="hire-eyebrow"><span className="hire-eyebrow-dot" />Construction workforce / Europe</div>
+              <h1>Build the project.<span>We’ll build the crew.</span></h1>
               <p className="hire-hero-lead">
-                Pre-screened construction professionals from Lithuania for direct employment across Europe. Tell us who you need, when you need them and what you offer — we handle the search.
+                One structured brief for direct construction recruitment across Europe. You define the trade, timing and employment package. Statybos24 finds and pre-screens suitable people from Lithuania.
               </p>
               <div className="hire-hero-actions">
-                <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Submit workforce request <HireArrowIcon /></button>
-                <a className="hire-btn ghost" href="#hire-how">See how it works</a>
+                <button type="button" className="hire-btn primary" onClick={scrollToRequest}>Create workforce brief <HireArrowIcon /></button>
+                <a className="hire-btn ghost" href="#hire-how">Explore the model</a>
               </div>
-              <div className="hire-trust-row" aria-label="Service highlights">
-                <span className="hire-trust-item"><HireCheckIcon size={16} /> Construction only</span>
-                <span className="hire-trust-item"><HireCheckIcon size={16} /> Direct employment</span>
-                <span className="hire-trust-item"><HireCheckIcon size={16} /> Success-based recruitment</span>
+              <div className="hire-hero-facts" aria-label="Service model">
+                <div className="hire-hero-fact"><b>01</b><span>Direct employment by your company</span></div>
+                <div className="hire-hero-fact"><b>02</b><span>Employer-paid, success-based recruitment</span></div>
+                <div className="hire-hero-fact"><b>03</b><span>Construction specialists from Lithuania</span></div>
               </div>
             </div>
 
-            <div className="hire-visual-wrap" aria-label="Construction recruitment visual">
-              <div className="hire-photo-panel">
-                <svg className="hire-photo-art" viewBox="0 0 720 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-                  <defs>
-                    <linearGradient id="hireSky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#e8eef2"/><stop offset=".58" stopColor="#cfd9df"/><stop offset="1" stopColor="#aebcc6"/></linearGradient>
-                    <linearGradient id="hireGlass" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#9eafba"/><stop offset="1" stopColor="#647886"/></linearGradient>
-                    <linearGradient id="hireGround" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#7d8c96"/><stop offset="1" stopColor="#4b5e6b"/></linearGradient>
-                    <filter id="hireSoftShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="13" stdDeviation="10" floodColor="#0b2132" floodOpacity=".20"/></filter>
-                  </defs>
-                  <rect width="720" height="760" fill="url(#hireSky)"/>
-                  <circle cx="598" cy="122" r="76" fill="#fff" opacity=".34"/>
-                  <g opacity=".22" stroke="#fff" strokeWidth="2"><path d="M0 160h720M0 230h720M0 300h720"/><path d="M110 0v420M270 0v420M430 0v420M590 0v420"/></g>
-                  <g fill="none" stroke="#536a79" strokeWidth="8" strokeLinecap="round">
-                    <path d="M105 502V108"/><path d="M105 122h390"/><path d="M400 122 105 206"/><path d="M425 122v345"/>
-                  </g>
-                  <g fill="#f08a28"><rect x="96" y="94" width="18" height="36" rx="3"/><rect x="418" y="452" width="14" height="46" rx="3"/></g>
-                  <g filter="url(#hireSoftShadow)">
-                    <rect x="205" y="245" width="340" height="350" rx="8" fill="#718692"/>
-                    <rect x="235" y="274" width="280" height="320" rx="4" fill="url(#hireGlass)"/>
-                    <g stroke="#cfd8de" strokeWidth="5" opacity=".9"><path d="M305 275v319M375 275v319M445 275v319"/><path d="M236 342h279M236 410h279M236 478h279M236 546h279"/></g>
-                    <rect x="174" y="535" width="404" height="58" fill="#536875"/>
-                  </g>
-                  <g opacity=".88"><path d="M0 515c105-41 184-24 265 8 82 32 183 49 455-1v238H0Z" fill="url(#hireGround)"/><path d="M0 605c135-35 244-20 338 19 87 36 196 39 382-13v149H0Z" fill="#344a58"/></g>
-                  <g transform="translate(104 515)" filter="url(#hireSoftShadow)">
-                    <circle cx="82" cy="57" r="24" fill="#e4a06b"/>
-                    <path d="M53 45c4-28 17-42 31-42 15 0 31 15 34 42Z" fill="#f08a28"/>
-                    <rect x="53" y="81" width="60" height="105" rx="18" fill="#132d40"/>
-                    <path d="m52 101-35 67M112 104l43 53" stroke="#132d40" strokeWidth="22" strokeLinecap="round"/>
-                    <path d="M68 181 48 246M101 182l21 64" stroke="#263f50" strokeWidth="24" strokeLinecap="round"/>
-                    <path d="M42 246h38M108 246h38" stroke="#0e2231" strokeWidth="13" strokeLinecap="round"/>
-                    <path d="M55 91h55v35H55Z" fill="#f08a28" opacity=".88"/>
-                    <path d="M58 99h49M58 110h49" stroke="#fff" strokeWidth="4" opacity=".9"/>
-                  </g>
-                  <g transform="translate(485 545) scale(.82)" opacity=".92">
-                    <circle cx="78" cy="53" r="22" fill="#df9b66"/>
-                    <path d="M51 42c5-25 16-37 29-37 13 0 26 14 31 37Z" fill="#f08a28"/>
-                    <rect x="52" y="76" width="56" height="95" rx="17" fill="#243e4f"/>
-                    <path d="M65 168 46 228M97 169l18 59" stroke="#243e4f" strokeWidth="22" strokeLinecap="round"/>
-                  </g>
-                  <g opacity=".65" stroke="#dce4e8" strokeWidth="4"><path d="M18 479h646"/><path d="M32 499h611"/></g>
-                </svg>
-                <div className="hire-photo-badge"><i /> Europe-wide direct hire</div>
-                <div className="hire-photo-caption">
-                  <div><strong>Construction talent for real project needs.</strong><span>Structured requirements, clear employment conditions and candidates who know what the offer includes.</span></div>
-                  <div className="metric"><b>100%</b><small>construction focus</small></div>
+            <div className="hire-visual-wrap" aria-label="Example workforce brief">
+              <div className="hire-side-index" aria-hidden="true"><span className="active">Brief</span><span>Match</span><span>Hire</span></div>
+              <div className="hire-blueprint-board">
+                <div className="hire-board-inner">
+                  <div className="hire-board-top">
+                    <span className="hire-board-label">Example workforce brief / 001</span>
+                    <span className="hire-board-status">Direct hire</span>
+                  </div>
+                  <div className="hire-board-main">
+                    <div className="hire-board-count">06<small>workers required</small></div>
+                    <div className="hire-board-role"><span>Primary trade</span><h2>Carpenters</h2><p>One clear brief turns an international hiring need into a structured recruitment process.</p></div>
+                  </div>
+                  <div className="hire-board-grid">
+                    <div className="hire-board-cell"><span>Project</span><b>Germany · Hamburg</b></div>
+                    <div className="hire-board-cell"><span>Start</span><b>15 Nov · flexible</b></div>
+                    <div className="hire-board-cell"><span>Offer</span><b>€21–23 / hour gross</b></div>
+                    <div className="hire-board-cell"><span>Package</span><b>Accommodation + travel</b></div>
+                  </div>
+                  <div className="hire-board-foot"><span>Illustrative request — not a live vacancy.</span><b>Request → Match → Hire</b></div>
                 </div>
               </div>
-              <div className="hire-visual-note">
-                <div className="top"><i /> Candidate matching</div>
-                <b>Clear needs. Better matches.</b>
-                <span>Trade, start date, salary, accommodation and travel in one request.</span>
-              </div>
+            </div>
+          </div>
+          <div className="hire-trade-ticker" aria-hidden="true">
+            <div className="hire-trade-track">
+              {['Carpenters','Concrete workers','Electricians','Plumbers','Welders','Machine operators','Roofers','Site supervisors'].map((trade) => <span key={trade}><i />{trade}</span>)}
             </div>
           </div>
         </section>
