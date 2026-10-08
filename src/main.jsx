@@ -24318,6 +24318,7 @@ function AdminDashboard({
   const [foreignHireSetupBusy, setForeignHireSetupBusy] = useState(false);
   const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [foreignHireCandidateOpenId, setForeignHireCandidateOpenId] = useState(null);
+  const [foreignHireExpandedId, setForeignHireExpandedId] = useState(null);
   const [foreignHireCandidatesByRequest, setForeignHireCandidatesByRequest] = useState({});
   const [foreignHireCandidateLoadingId, setForeignHireCandidateLoadingId] = useState(null);
   const [foreignHireCandidateBusyId, setForeignHireCandidateBusyId] = useState(null);
@@ -24998,96 +24999,28 @@ function AdminDashboard({
       <div className="admin-candidate-zone">
         <div className="admin-candidate-zone-head">
           <div>
-            <strong>Darbuotojų atranka</strong>
-            <span>Rankinė paieška Statybos24 bazėje arba kandidato pridėjimas iš socialinių tinklų, rekomendacijų ir kitų šaltinių.</span>
+            <strong>Kandidatai</strong>
+            <span>Čia kandidatą tiesiog pridedame rankiniu būdu ir toliau valdome jo eigą.</span>
           </div>
           <button className="admin-small-btn" type="button" onClick={() => toggleForeignHireCandidates(request)}>
-            {foreignHireCandidateOpenId === request.request_id ? "Uždaryti" : "Atidaryti atranką"}
+            {foreignHireCandidateOpenId === request.request_id ? "Uždaryti" : "Atidaryti"}
           </button>
         </div>
 
         {foreignHireCandidateOpenId === request.request_id ? (
           <div className="admin-candidate-tools">
-            <div className="admin-candidate-search">
-              <div className="admin-candidate-field">
-                <label>Paieška Statybos24 bazėje</label>
-                <input
-                  value={foreignHireWorkerQuery}
-                  onChange={(event) => setForeignHireWorkerQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      searchForeignHireWorkers();
-                    }
-                  }}
-                  placeholder="Pvz. gipsas, stogai, betonas..."
-                />
-              </div>
-              <div className="admin-candidate-field">
-                <label>Priskirti profesijai</label>
-                <input
-                  value={foreignHireCandidateProfession}
-                  onChange={(event) => setForeignHireCandidateProfession(event.target.value)}
-                  placeholder="Pvz. Drywall installer"
-                />
-              </div>
-              <button
-                className="admin-small-btn"
-                type="button"
-                disabled={foreignHireWorkerSearchBusy}
-                onClick={searchForeignHireWorkers}
-                style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}
-              >
-                {foreignHireWorkerSearchBusy ? "Ieškoma..." : "Ieškoti bazėje"}
-              </button>
-              <button className="admin-small-btn" type="button" onClick={() => openExternalForeignHireCandidate(request)}>
-                + Išorinis kandidatas
+            <div className="admin-candidate-simple-actions">
+              <button className="admin-small-btn" type="button" onClick={() => openExternalForeignHireCandidate(request)} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
+                + Pridėti kandidatą
               </button>
             </div>
-
-            {foreignHireWorkerResults.length ? (
-              <div className="admin-worker-results">
-                {foreignHireWorkerResults.map((worker) => {
-                  const alreadyAdded = candidates.some((candidate) => candidate.worker_id === worker.user_id);
-                  return (
-                    <div className="admin-worker-result" key={worker.user_id}>
-                      <div>
-                        <strong>{worker.display_name || worker.email || "Darbuotojas"}</strong>
-                        <small>
-                          {[worker.city, worker.years_experience !== null ? `${Number(worker.years_experience || 0)} m. patirtis` : null, worker.has_driving_license_b ? "B kategorija" : null]
-                            .filter(Boolean)
-                            .join(" · ") || "Profilio informacija ribota"}
-                        </small>
-                        <small>
-                          Reitingas {worker.rating_average === null ? "—" : Number(worker.rating_average).toFixed(1)} · patikimumas {Math.round(Number(worker.attendance_rate ?? 100))}% · atlikta darbų {Number(worker.completed_jobs || 0)}
-                        </small>
-                      </div>
-                      <div className="admin-worker-skill">
-                        {(Array.isArray(worker.skills) ? worker.skills : []).slice(0, 8).map((skill) => (
-                          <span key={`${worker.user_id}-${skill.id || skill.name}`}>{skill.name}</span>
-                        ))}
-                        {!(Array.isArray(worker.skills) && worker.skills.length) ? <span>Skills nenurodyti</span> : null}
-                      </div>
-                      <button
-                        className="admin-small-btn"
-                        type="button"
-                        disabled={alreadyAdded || foreignHireCandidateBusyId === worker.user_id}
-                        onClick={() => addPlatformForeignHireCandidate(worker)}
-                      >
-                        {alreadyAdded ? "Jau pridėtas" : foreignHireCandidateBusyId === worker.user_id ? "Pridedama..." : "Pridėti"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
 
             {externalOpen ? (
               <div className="admin-external-form">
                 <div className="admin-candidate-zone-head">
                   <div>
-                    <strong>Pridėti išorinį kandidatą</strong>
-                    <span>Žmogus rastas Facebook, LinkedIn, grupėje, per rekomendaciją ar kitu kanalu.</span>
+                    <strong>Pridėti kandidatą</strong>
+                    <span>Įveskite kandidato informaciją. Šaltinį galite nurodyti, jei norite.</span>
                   </div>
                 </div>
                 <div className="admin-external-grid" style={{ marginTop: 10 }}>
@@ -25100,7 +25033,7 @@ function AdminDashboard({
                   <div className="admin-external-field wide"><label>Kompetencijos / skills</label><input value={foreignHireExternalForm.skills} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, skills: event.target.value }))} placeholder="Pvz. metal framing, ceilings, Q2/Q3" /></div>
                   <div className="admin-external-field"><label>Kalba</label><input value={foreignHireExternalForm.languageDetails} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, languageDetails: event.target.value }))} placeholder="Pvz. English B1" /></div>
                   <div className="admin-external-field"><label>Atlygio lūkestis</label><input value={foreignHireExternalForm.salaryExpectation} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, salaryExpectation: event.target.value }))} placeholder="Pvz. 22 EUR gross/h" /></div>
-                  <div className="admin-external-field"><label>Šaltinis</label><input value={foreignHireExternalForm.sourceDetail} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, sourceDetail: event.target.value }))} placeholder="Facebook grupė / referral..." /></div>
+                  <div className="admin-external-field"><label>Šaltinis (nebūtina)</label><input value={foreignHireExternalForm.sourceDetail} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, sourceDetail: event.target.value }))} placeholder="Facebook grupė / referral..." /></div>
                   <div className="admin-external-field">
                     <label>Vairuotojo pažymėjimas</label>
                     <button type="button" className={`admin-toggle-button ${foreignHireExternalForm.hasDrivingLicenseB ? "active" : ""}`} onClick={() => setForeignHireExternalForm((current) => ({ ...current, hasDrivingLicenseB: !current.hasDrivingLicenseB }))}>
@@ -26347,7 +26280,7 @@ function AdminDashboard({
         .admin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-wide{grid-column:1/-1}
         .admin-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#526374}.admin-input{width:100%;border:1px solid #dbe4ea;border-radius:9px;padding:10px 11px;font:inherit;color:#102438;background:#fff}.admin-textarea{min-height:100px;resize:vertical}
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
-        .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card.is-new{border-color:#e6aaa4!important;box-shadow:0 8px 24px rgba(198,63,52,.08)!important}
+        .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card.is-new{border-color:#e6aaa4!important;box-shadow:0 8px 24px rgba(198,63,52,.08)!important}.admin-foreign-summary{width:100%;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer}.admin-foreign-summary-id{font:900 13px/1.2 Manrope,Inter,sans-serif;letter-spacing:.06em;color:#102438}.admin-foreign-summary-id small{display:block;margin-top:4px;color:#80909c;font:750 9px/1.2 Inter,sans-serif;letter-spacing:.03em}.admin-foreign-summary-toggle{width:32px;height:32px;flex:0 0 32px;border:1px solid #dfe7ec;border-radius:9px;display:grid;place-items:center;color:#102438;font-size:16px;font-weight:900;background:#f8fafb}.admin-foreign-expanded{margin-top:14px;padding-top:14px;border-top:1px solid #e8edf1}.admin-candidate-simple-actions{display:flex;justify-content:flex-end;margin-bottom:10px}
         .admin-foreign-card{border:1px solid #e2e9ee;border-radius:15px;background:#fff;padding:17px}.admin-foreign-card.has-employer-action{border-color:#f0b58c;box-shadow:0 10px 28px rgba(240,138,40,.10)}.admin-foreign-employer-alert{margin-top:12px;padding:11px 12px;border:1px solid #f1c39f;border-radius:11px;background:#fff6ed;display:flex;align-items:center;justify-content:space-between;gap:12px}.admin-foreign-employer-alert.interview{border-color:#efb0aa;background:#fff1ef}.admin-foreign-employer-alert>div{min-width:0}.admin-foreign-employer-alert strong{display:block;color:#102438;font-size:11px}.admin-foreign-employer-alert span{display:block;margin-top:3px;color:#6f7d88;font-size:10px;line-height:1.4}.admin-foreign-employer-alert .admin-small-btn{flex:0 0 auto}.admin-foreign-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-foreign-head h3{margin:0;font:800 17px/1.25 Manrope,Inter,sans-serif}.admin-foreign-head p{margin:5px 0 0;color:#6c7a88;font-size:12px}.admin-foreign-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.admin-foreign-fact{padding:11px 12px;border-radius:11px;background:#f8fafb;border:1px solid #edf1f4}.admin-foreign-fact span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:5px}.admin-foreign-fact b,.admin-foreign-fact a{color:#102438;font-size:12px;font-weight:800;overflow-wrap:anywhere}.admin-foreign-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin-foreign-role{padding:7px 9px;border-radius:9px;background:#eef4f8;color:#17344b;font-size:11px;font-weight:800}.admin-foreign-note{margin-top:12px;padding:11px 12px;background:#fff8ef;border:1px solid #f5dfc7;border-radius:10px;color:#6b5846;font-size:12px;line-height:1.5;white-space:pre-wrap}.admin-foreign-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.admin-foreign-status{padding:7px 10px;border-radius:999px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:850}.admin-foreign-status.new{background:#fff3e7;color:#9b5a18}.admin-foreign-status.declined{background:#fff0ec;color:#b64d2a}
         .admin-candidate-zone{margin-top:16px;border-top:1px solid #e6edf2;padding-top:16px}.admin-candidate-zone-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.admin-candidate-zone-head strong{font:850 14px/1.25 Manrope,Inter,sans-serif;color:#102438}.admin-candidate-zone-head span{display:block;margin-top:3px;color:#71808d;font-size:11px}.admin-candidate-tools{margin-top:12px;padding:13px;border:1px solid #e2e9ee;border-radius:13px;background:#f8fafb}.admin-candidate-search{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(160px,1fr) auto auto;gap:8px;align-items:end}.admin-candidate-field label,.admin-external-field label{display:block;margin:0 0 5px;color:#768694;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.admin-candidate-field input,.admin-external-field input,.admin-external-field textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;background:#fff;border-radius:9px;padding:9px 10px;color:#102438;font:700 12px/1.3 Manrope,Inter,sans-serif;outline:none}.admin-candidate-field input:focus,.admin-external-field input:focus,.admin-external-field textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.09)}.admin-worker-results{display:grid;gap:8px;margin-top:10px}.admin-worker-result{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px;border:1px solid #e3e9ed;border-radius:11px;background:#fff}.admin-worker-result strong{display:block;color:#102438;font-size:12px}.admin-worker-result small{display:block;color:#71808d;font-size:10px;line-height:1.45;margin-top:3px}.admin-worker-skill{display:flex;flex-wrap:wrap;gap:4px}.admin-worker-skill span{padding:4px 6px;border-radius:7px;background:#eef4f8;color:#29465d;font-size:9px;font-weight:800}.admin-candidates-list{display:grid;gap:9px;margin-top:12px}.admin-candidate-card{border:1px solid #dfe7ec;border-radius:12px;background:#fff;padding:13px}.admin-candidate-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.admin-candidate-card-head h4{margin:0;font:850 14px/1.25 Manrope,Inter,sans-serif}.admin-candidate-card-head p{margin:4px 0 0;color:#71808d;font-size:10px}.admin-candidate-chip{padding:6px 8px;border-radius:999px;background:#eef4f8;color:#27465e;font-size:9px;font-weight:850;white-space:nowrap}.admin-candidate-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}.admin-candidate-meta>div{padding:8px 9px;border-radius:9px;background:#f8fafb}.admin-candidate-meta span{display:block;color:#80909c;font-size:8px;text-transform:uppercase;letter-spacing:.06em}.admin-candidate-meta b{display:block;margin-top:3px;color:#102438;font-size:10px;overflow-wrap:anywhere}.admin-candidate-docs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.admin-candidate-doc{display:inline-flex;align-items:center;gap:5px;padding:7px 8px;border:1px solid #dce5eb;border-radius:8px;background:#fff;color:#17364e;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.admin-candidate-doc input{display:none}.admin-candidate-consent{margin-top:9px;padding:9px 10px;border-radius:9px;background:#fff8ef;border:1px solid #f5dfc7;color:#6b5846;font-size:10px;line-height:1.45}.admin-candidate-consent.ok{background:#eef8f4;border-color:#cfe9dc;color:#236649}.admin-candidate-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.admin-external-form{margin-top:12px;padding:13px;border:1px solid #dfe7ec;border-radius:12px;background:#fff}.admin-external-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.admin-external-field.wide{grid-column:span 2}.admin-external-field.full{grid-column:1/-1}.admin-external-field textarea{min-height:72px;resize:vertical}.admin-toggle-button{width:100%;border:1px solid #dce5eb;border-radius:9px;background:#fff;padding:9px 10px;text-align:left;color:#526675;font-size:11px;font-weight:800;cursor:pointer}.admin-toggle-button.active{border-color:#102438;background:#102438;color:#fff}.admin-candidate-legal-note{margin-top:12px;padding:10px 11px;border-left:3px solid #f08a28;background:#fffaf4;color:#6b5846;font-size:10px;line-height:1.5}.admin-candidate-job-confirmation{margin-top:11px;padding-top:11px;border-top:1px solid #edf1f4}.admin-candidate-job-note{margin-top:8px;padding:8px 9px;border-radius:8px;background:#f7f9fb;color:#73828d;font-size:9.5px;line-height:1.45}.admin-job-confirm-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:9px}.admin-job-confirm-summary>div{padding:8px 9px;border-radius:8px;background:#f8fafb}.admin-job-confirm-summary span{display:block;color:#82919c;font-size:7.5px;text-transform:uppercase;letter-spacing:.06em}.admin-job-confirm-summary b{display:block;margin-top:3px;color:#102438;font-size:9.5px;overflow-wrap:anywhere}.admin-job-confirm-form{margin-top:10px;padding:11px;border:1px solid #e1e8ed;border-radius:11px;background:#f9fbfc}
         @media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-candidate-search{grid-template-columns:1fr 1fr}.admin-worker-result{grid-template-columns:1fr}.admin-candidate-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-external-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-job-confirm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -26786,7 +26719,7 @@ function AdminDashboard({
               <div>
                 <h2>Tarptautinė atranka</h2>
                 <div className="admin-muted">
-                  Pirminės /hire užklausos. Po peržiūros čia sukuriame privatų įmonės prisijungimą ir įkeliame recruitment sutartį.
+                  Užklausos rodomos kompaktiškai. Išskleiskite ID, kad matytumėte visą informaciją ir veiksmus.
                 </div>
               </div>
               <b>{foreignHireRequests.length}</b>
@@ -26812,9 +26745,17 @@ function AdminDashboard({
                   )}&body=${encodeURIComponent(mailBody)}`;
                   const candidatePanelOpen = foreignHireCandidateOpenId === request.request_id;
                   const requestCandidates = foreignHireCandidatesByRequest[request.request_id] || [];
+                  const expanded = foreignHireExpandedId === request.request_id;
+                  const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
 
                   return (
                     <article className={`admin-foreign-card ${request.status === "new" ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
+                      <button type="button" className="admin-foreign-summary" onClick={() => setForeignHireExpandedId(expanded ? null : request.request_id)} aria-expanded={expanded}>
+                        <span className="admin-foreign-summary-id">#{shortRequestId}</span>
+                        <span className="admin-foreign-summary-toggle" aria-hidden="true">{expanded ? "−" : "+"}</span>
+                      </button>
+
+                      {expanded ? <div className="admin-foreign-expanded">
                       <div className="admin-foreign-head">
                         <div>
                           <h3>{request.company_name}</h3>
@@ -26844,6 +26785,7 @@ function AdminDashboard({
                       ) : null}
 
                       <div className="admin-foreign-grid">
+                        <div className="admin-foreign-fact"><span>Užklausos ID</span><b>{request.request_id}</b></div>
                         <div className="admin-foreign-fact"><span>Kontaktas</span><b>{request.contact_name}</b></div>
                         <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.business_email}`}>{request.business_email}</a></div>
                         <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
@@ -27055,6 +26997,7 @@ function AdminDashboard({
                       </div>
 
                       {(request.status === "sourcing" || Number(request.candidate_count || 0) > 0) ? renderForeignHireCandidatePanel(request, requestCandidates) : null}
+                      </div> : null}
                     </article>
                   );
                 })}
