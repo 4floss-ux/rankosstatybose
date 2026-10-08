@@ -25538,27 +25538,6 @@ function AdminDashboard({
     }
   }
 
-  async function downloadForeignHireSignedAgreement(request) {
-    if (!request?.signed_agreement_path || !supabase) return;
-    setError("");
-    try {
-      const result = await supabase.storage
-        .from("foreign-hire-contracts")
-        .download(request.signed_agreement_path);
-      if (result.error) throw result.error;
-      if (!result.data) throw new Error("Pasirašytos sutarties failas nerastas.");
-      const url = URL.createObjectURL(result.data);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = request.signed_agreement_name || "pasirasyta-tarpininkavimo-sutartis";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-    } catch (err) {
-      setError(err?.message || "Nepavyko parsisiųsti pasirašytos sutarties.");
-    }
-  }
 
   async function lockForeignHireSubmission(request) {
     if (!request?.request_id || foreignHireSavingId) return;
@@ -27032,7 +27011,7 @@ function AdminDashboard({
                         <div className="admin-foreign-access-summary" style={{marginTop:12}}>
                           <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
                           <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">Atidaryti sutartį</a> : <b>Neįkelta</b>}</div>
-                          <div><span>Pasirašyta sutartis</span>{request.signedAgreementUrl ? <><a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a><button className="admin-small-btn" type="button" onClick={() => downloadForeignHireSignedAgreement(request)} style={{marginTop:8,width:"max-content"}}>Parsisiųsti kopiją</button></> : <b>Dar negauta</b>}</div>
+                          <div><span>Pasirašyta sutartis</span>{request.signedAgreementUrl ? <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a> : <b>Dar negauta</b>}</div>
                         </div>
                       </> : <>
                         <div className="admin-foreign-grid">
@@ -27044,7 +27023,7 @@ function AdminDashboard({
                         {request.employer_account_id ? <div className="admin-foreign-access-summary" style={{marginTop:12}}>
                           <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
                           <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">{request.agreement_name || "Atidaryti sutartį"}</a> : <b>Dar neįkelta</b>}</div>
-                          <div><span>Būsena</span><b>{request.agreement_path ? (request.signed_agreement_path ? "Pasirašyta kopija gauta" : "Laukiama darbdavio parašo") : "Laukiama sutarties"}</b>{request.signed_agreement_path ? <button className="admin-small-btn" type="button" onClick={() => downloadForeignHireSignedAgreement(request)} style={{marginTop:8,width:"max-content"}}>Parsisiųsti kopiją</button> : null}</div>
+                          <div><span>Būsena</span><b>{request.agreement_path ? (request.signed_agreement_path ? "Pasirašyta kopija gauta" : "Laukiama darbdavio parašo") : "Laukiama sutarties"}</b></div>
                         </div> : null}
                       </>}
 
@@ -30862,6 +30841,7 @@ const HIRE_EMPLOYER_PORTAL_I18N = {
   "Click the document to read the agreement.":{de:"Klicken Sie auf das Dokument, um die Vereinbarung zu lesen.",nl:"Klik op het document om de overeenkomst te lezen.",no:"Klikk på dokumentet for å lese avtalen.",sv:"Klicka på dokumentet för att läsa avtalet.",da:"Klik på dokumentet for at læse aftalen."},
   "Upload signed agreement":{de:"Unterschriebene Vereinbarung hochladen",nl:"Ondertekende overeenkomst uploaden",no:"Last opp signert avtale",sv:"Ladda upp signerat avtal",da:"Upload underskrevet aftale"},
   "Contact by email":{de:"Per E-Mail kontaktieren",nl:"Contact per e-mail",no:"Kontakt på e-post",sv:"Kontakta via e-post",da:"Kontakt via e-mail"},
+  "Download signed copy":{de:"Unterschriebene Kopie herunterladen",nl:"Ondertekende kopie downloaden",no:"Last ned signert kopi",sv:"Ladda ner signerad kopia",da:"Download underskrevet kopi"},
   "Uploading...":{de:"Wird hochgeladen...",nl:"Uploaden...",no:"Laster opp...",sv:"Laddar upp...",da:"Uploader..."},
   "The signed agreement is locked in the portal. Corrections are handled through Statybos24.":{de:"Der unterschriebene Vertrag ist im Portal gesperrt. Korrekturen erfolgen über Statybos24.",nl:"De ondertekende overeenkomst is vergrendeld in het portaal. Correcties verlopen via Statybos24.",no:"Den signerte avtalen er låst i portalen. Endringer håndteres gjennom Statybos24.",sv:"Det signerade avtalet är låst i portalen. Ändringar hanteras via Statybos24.",da:"Den underskrevne aftale er låst i portalen. Rettelser håndteres gennem Statybos24."},
   "Back":{de:"Zurück",nl:"Terug",no:"Tilbake",sv:"Tillbaka",da:"Tilbage"},
@@ -31170,6 +31150,25 @@ function HireEmployerPortalPage() {
     }
   }
 
+  async function downloadSignedAgreement() {
+    if (!supabase || !portal?.agreement || !agreementDone) return;
+    setError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("foreign-hire-portal-files", { body:{ action:"signed-agreement-url", token } });
+      if (error) throw error;
+      if (!data?.url) throw new Error(data?.error || tr("Could not download the signed agreement.", "Nepavyko parsisiųsti pasirašytos sutarties."));
+      const anchor = document.createElement("a");
+      anchor.href = data.url;
+      anchor.download = data.name || "signed-recruitment-agreement";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (err) {
+      setError(err?.message || tr("Could not download the signed agreement.", "Nepavyko parsisiųsti pasirašytos sutarties."));
+    }
+  }
+
   async function uploadSignedAgreement(file = signedFile) {
     if (!supabase || !file || uploading) return;
     setError(""); setNotice(""); setUploading(true);
@@ -31379,7 +31378,10 @@ function HireEmployerPortalPage() {
               <div className="hep-agreement-box"><div><h3>{tr("Recruitment agreement", "Tarpininkavimo sutartis")}</h3></div>
                 {portal.agreement ? (agreementDone ? <>
                   <div className="hep-agreement-locked">{tr("Your signed agreement has been accepted.", "Jūsų pasirašyta sutartis priimta.")}</div>
-                  <a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a>
+                  <div className="hep-agreement-actions">
+                    <button className="hep-agreement-email" type="button" onClick={downloadSignedAgreement}>{tr("Download signed copy", "Parsisiųsti pasirašytą kopiją")}</button>
+                    <a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a>
+                  </div>
                 </> : <>
                   <button className="hep-agreement-document" type="button" onClick={openAgreement}>
                     <b>{portal.agreement.name || tr("Recruitment agreement", "Tarpininkavimo sutartis")}</b>
