@@ -27006,13 +27006,12 @@ function AdminDashboard({
                       </button>
 
                       {expanded ? <div className="admin-foreign-expanded">
-                      <div className="admin-foreign-head">
+                      {!hasFullBrief ? <div className="admin-foreign-head">
                         <div>
-                          <h3>{hasFullBrief ? fullNeedTitle : request.company_name}</h3>
-                          <p>{hasFullBrief ? `${request.company_name} · ${request.company_country || "—"}` : `${request.company_country || "—"} · pateikta ${formatAdminDate(request.created_at)}`}</p>
+                          <h3>{request.company_name}</h3>
+                          <p>{request.company_country || "—"} · pateikta {formatAdminDate(request.created_at)}</p>
                         </div>
-                        {hasFullBrief ? <span className={`admin-foreign-status ${request.status || "new"}`}>{foreignHireStatusLabel(request.status)}</span> : null}
-                      </div>
+                      </div> : null}
 
                       {Number(request.employer_interview_requested_count || 0) > 0 ? (
                         <div className="admin-foreign-employer-alert interview">
@@ -27040,16 +27039,16 @@ function AdminDashboard({
                           gap: 12,
                           flexWrap: "wrap",
                           padding: "14px 16px",
-                          border: "1px solid #f2c28f",
+                          border: "1px solid #d8e1e8",
                           borderRadius: 16,
-                          background: "linear-gradient(110deg, #fff0dc 0%, #fff9f0 100%)",
+                          background: "#f7f9fb",
                           marginBottom: detailsMinimized ? 0 : 12,
                         }}>
-                          <div style={{ minWidth: 0 }}>
-                            <strong style={{ display: "block", color: "#754411" }}>Visi poreikio duomenys</strong>
-                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#8a6138", lineHeight: 1.5 }}>
-                              {detailsMinimized ? "Išskleiskite, kad matytumėte visas darbo sąlygas, kontaktus ir dokumentus." : "Visi įmonės pateikti duomenys suskirstyti pagal temas."}
-                            </span>
+                          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7 }}>
+                            <strong style={{ color: "#102438", fontSize: 17, lineHeight: 1.35 }}>
+                              {fullNeedTitle} – poreikio duomenys
+                            </strong>
+                            <span className={`admin-foreign-status ${request.status || "new"}`}>{foreignHireStatusLabel(request.status)}</span>
                           </div>
                           <button
                             className="admin-small-btn"
