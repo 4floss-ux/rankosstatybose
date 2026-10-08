@@ -24320,6 +24320,7 @@ function AdminDashboard({
   const [foreignHireAgreementFile, setForeignHireAgreementFile] = useState(null);
   const [foreignHireInvoices, setForeignHireInvoices] = useState({});
   const [foreignHireInvoiceBusyId, setForeignHireInvoiceBusyId] = useState(null);
+  const [foreignHireInvoiceFeedback, setForeignHireInvoiceFeedback] = useState({});
   const [foreignHireSetupBusy, setForeignHireSetupBusy] = useState(false);
   const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [foreignHireCandidateOpenId, setForeignHireCandidateOpenId] = useState(null);
@@ -25044,6 +25045,11 @@ function AdminDashboard({
 
   async function saveExternalForeignHireCandidate() {
     if (!foreignHireExternalRequestId || foreignHireCandidateBusyId) return;
+    const activeRequest = foreignHireRequests.find((request) => request.request_id === foreignHireExternalRequestId);
+    if (!activeRequest || activeRequest.status === "closed") {
+      setError("Paieška uždaryta. Naujo kandidato pridėti negalima.");
+      return;
+    }
     if (!foreignHireExternalForm.fullName.trim() || !foreignHireExternalForm.profession.trim()) {
       setError("Nurodykite kandidato vardą, pavardę ir profesiją.");
       return;
@@ -25250,6 +25256,10 @@ function AdminDashboard({
   function renderForeignHireCandidatePanel(request, candidates) {
     const loadingCandidates = foreignHireCandidateLoadingId === request.request_id;
     const externalOpen = foreignHireExternalRequestId === request.request_id;
+    const roles = request.brief_workforce_details?.roles || [];
+    const required = Array.isArray(roles) ? roles.reduce((total, role) => total + Math.max(1, Number(role?.count) || 1), 0) : 0;
+    const hired = candidates.filter((candidate) => ["hired", "started"].includes(candidate.status)).length;
+    const hiringComplete = request.status === "closed" || (required > 0 && hired >= required);
 
     return (
       <div className="admin-candidate-zone" id={`foreign-hire-candidates-${request.request_id}`} style={{ scrollMarginTop: 100 }}>
@@ -25258,13 +25268,13 @@ function AdminDashboard({
             <strong>Kandidatai</strong>
             <span>Čia kandidatą tiesiog pridedame rankiniu būdu ir toliau valdome jo eigą.</span>
           </div>
-          <button className="admin-small-btn" type="button" onClick={() => openExternalForeignHireCandidate(request)} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
-            + Pridėti kandidatą
+          <button className="admin-small-btn" type="button" disabled={hiringComplete} title={hiringComplete ? "Visi reikalingi darbuotojai įdarbinti. Paieška uždaryta." : undefined} onClick={() => { if (!hiringComplete) openExternalForeignHireCandidate(request); }} style={{ background: hiringComplete ? "#e8eef0" : "#102438", color: hiringComplete ? "#647583" : "#fff", borderColor: hiringComplete ? "#d5dfe4" : "#102438", cursor: hiringComplete ? "not-allowed" : "pointer" }}>
+            {hiringComplete ? "Darbuotojai surinkti" : "+ Pridėti kandidatą"}
           </button>
         </div>
 
         <div className="admin-candidate-tools">
-            {externalOpen ? (
+            {externalOpen && !hiringComplete ? (
               <div className="admin-external-form">
                 <div className="admin-candidate-zone-head">
                   <div>
@@ -25529,35 +25539,45 @@ function AdminDashboard({
 
   async function uploadForeignHireInvoice(request, file) {
     if (!request?.request_id || !file || foreignHireInvoiceBusyId) return;
+    const requestId = request.request_id;
+    const feedback = (message, kind = "error") => setForeignHireInvoiceFeedback((previous) => ({ ...previous, [requestId]: { message, kind } }));
     const ext = file.name.toLowerCase().split(".").pop();
     if (!["pdf", "docx"].includes(ext) || file.size < 1 || file.size > 15 * 1024 * 1024) {
-      setError("Sąskaita turi būti PDF arba DOCX, iki 15 MB."); return;
+      feedback("Sąskaita turi būti PDF arba DOCX, iki 15 MB."); return;
     }
-    if (request.status !== "closed") { setError("Sąskaitą galima įkelti tik uždarius paiešką."); return; }
-    setForeignHireInvoiceBusyId(request.request_id); setError(""); setNotice("");
-    const storagePath = `${request.request_id}/${Date.now()}-${window.crypto.randomUUID()}-${safeStorageFileName(file.name)}`;
+    if (request.status !== "closed") {
+      feedback("Sąskaitą galima įkelti tik uždarius paiešką. Perkraukite puslapį ir bandykite vėl."); return;
+    }
+    setForeignHireInvoiceBusyId(requestId);
+    feedback(`Įkeliamas dokumentas: ${file.name}`, "progress");
+    setError(""); setNotice("");
+    const storagePath = `${requestId}/${Date.now()}-${window.crypto.randomUUID()}-${safeStorageFileName(file.name)}`;
     try {
       const uploaded = await supabase.storage.from("foreign-hire-invoices").upload(storagePath, file, {
         contentType: ext === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document", upsert: false,
       });
       if (uploaded.error) throw uploaded.error;
       const saved = await supabase.rpc("admin_set_foreign_hire_invoice", {
-        p_request_id: request.request_id, p_path: storagePath, p_name: file.name,
+        p_request_id: requestId, p_path: storagePath, p_name: file.name,
       });
       if (saved.error) {
         await supabase.storage.from("foreign-hire-invoices").remove([storagePath]);
         throw saved.error;
       }
-      setForeignHireInvoices((previous) => ({ ...previous, [request.request_id]: {
-        request_id: request.request_id, file_name: file.name, storage_path: storagePath,
+      const oldPath = foreignHireInvoices[requestId]?.storage_path;
+      setForeignHireInvoices((previous) => ({ ...previous, [requestId]: {
+        request_id: requestId, file_name: file.name, storage_path: storagePath,
       } }));
-      const oldPath = foreignHireInvoices[request.request_id]?.storage_path;
+      feedback(`Sąskaita įkelta: ${file.name}`, "success");
       if (oldPath && oldPath !== storagePath) {
         await supabase.storage.from("foreign-hire-invoices").remove([oldPath]);
       }
       setNotice("Sąskaita faktūra įkelta. Darbdavys gali ją atsisiųsti.");
-    } catch (err) { setError(err?.message || "Nepavyko įkelti sąskaitos."); }
-    finally { setForeignHireInvoiceBusyId(null); }
+    } catch (err) {
+      const message = err?.message || "Nepavyko įkelti sąskaitos.";
+      feedback(`Nepavyko įkelti „${file.name}“: ${message}`);
+      setError(message);
+    } finally { setForeignHireInvoiceBusyId(null); }
   }
 
   async function viewForeignHireInvoice(invoice) {
@@ -27429,6 +27449,7 @@ function AdminDashboard({
                             <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={!!foreignHireInvoiceBusyId} style={{display:"none"}} onChange={(event) => { const file=event.target.files?.[0]; if (file) uploadForeignHireInvoice(request,file); event.target.value=""; }} />
                           </label>
                           {foreignHireInvoices[request.request_id] ? <button className="admin-small-btn" type="button" onClick={() => viewForeignHireInvoice(foreignHireInvoices[request.request_id])}>Sąskaita: {foreignHireInvoices[request.request_id].file_name}</button> : null}
+                          {foreignHireInvoiceFeedback[request.request_id] ? <span role="status" style={{width:"100%",fontSize:12,fontWeight:700,color:foreignHireInvoiceFeedback[request.request_id].kind === "success" ? "#16734a" : foreignHireInvoiceFeedback[request.request_id].kind === "progress" ? "#526779" : "#b52b28"}}>{foreignHireInvoiceFeedback[request.request_id].message}</span> : null}
                         </> : null}
                         <button className="admin-small-btn danger" type="button" disabled={busy} onClick={() => deleteForeignHireRequest(request)}>Ištrinti visam laikui</button>
                       </div>
