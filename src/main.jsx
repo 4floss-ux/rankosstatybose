@@ -1739,7 +1739,7 @@ function PasswordRecoveryPage({ user, checking, authorized, error, onDone }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(() => new URLSearchParams(window.location.search).get("request") === "1");
   const submitting = useRef(false);
   const requestGeneration = useRef(0);
 
@@ -31417,7 +31417,41 @@ function HireEmployerPortalPage() {
   }
 
   if (loading) return <div className="hep-loading">{tr("Loading employer portal...", "Kraunamas darbdavio portalas...")}</div>;
-  if (!portal) return <div className="hep-loading">{error || tr("Portal is not available.", "Portalas nepasiekiamas.")}</div>;
+  if (!portal) {
+    const removedCopy = ({
+      en:{title:"Your employer profile has been removed",body:"The administrator has removed your employer profile, so this private portal access is no longer active. If this was unexpected, contact Statybos24. You can also submit a new workforce need and start again.",contact:"Contact by email",request:"Submit workforce need"},
+      lt:{title:"Administratorius pašalino jūsų profilį",body:"Jūsų darbdavio profilis buvo pašalintas, todėl ši privati portalo prieiga nebeaktyvi. Jei tai netikėta, susisiekite su Statybos24. Taip pat galite iš naujo pateikti darbuotojų poreikį.",contact:"Susisiekti el. paštu",request:"Pateikti poreikį"},
+      de:{title:"Ihr Arbeitgeberprofil wurde entfernt",body:"Der Administrator hat Ihr Arbeitgeberprofil entfernt. Dieser private Portalzugang ist daher nicht mehr aktiv. Wenn dies unerwartet ist, kontaktieren Sie Statybos24. Sie können auch einen neuen Personalbedarf senden.",contact:"Per E-Mail kontaktieren",request:"Personalbedarf senden"},
+      nl:{title:"Uw werkgeversprofiel is verwijderd",body:"De beheerder heeft uw werkgeversprofiel verwijderd. Deze privétoegang tot het portaal is daarom niet meer actief. Neem contact op met Statybos24 als dit onverwacht is. U kunt ook opnieuw een personeelsbehoefte indienen.",contact:"Contact via e-mail",request:"Personeelsbehoefte indienen"},
+      no:{title:"Arbeidsgiverprofilen din er fjernet",body:"Administratoren har fjernet arbeidsgiverprofilen din, og den private portaltilgangen er derfor ikke lenger aktiv. Kontakt Statybos24 hvis dette var uventet. Du kan også sende inn et nytt bemanningsbehov.",contact:"Kontakt på e-post",request:"Send bemanningsbehov"},
+      sv:{title:"Er arbetsgivarprofil har tagits bort",body:"Administratören har tagit bort er arbetsgivarprofil och den privata portalåtkomsten är därför inte längre aktiv. Kontakta Statybos24 om detta var oväntat. Ni kan också skicka in ett nytt bemanningsbehov.",contact:"Kontakta via e-post",request:"Skicka bemanningsbehov"},
+      da:{title:"Jeres arbejdsgiverprofil er blevet fjernet",body:"Administratoren har fjernet jeres arbejdsgiverprofil, så den private portaladgang ikke længere er aktiv. Kontakt Statybos24, hvis dette var uventet. I kan også indsende et nyt bemandingsbehov.",contact:"Kontakt via e-mail",request:"Indsend bemandingsbehov"}
+    })[lang] || null;
+    const copy = removedCopy || {title:"Your employer profile has been removed",body:"This private portal access is no longer active.",contact:"Contact by email",request:"Submit workforce need"};
+    return <div className="hep-access-removed-page">
+      <style>{`
+        .hep-access-removed-page{min-height:100vh;background:#f4f7f9;color:#10283f;font-family:Inter,system-ui,sans-serif;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+        .hep-access-removed-card{width:min(100%,620px);background:#fff;border:1px solid #dfe7ec;border-radius:22px;padding:34px;box-shadow:0 28px 80px rgba(16,40,63,.10);text-align:center}
+        .hep-access-removed-logo{display:flex;justify-content:center;margin-bottom:24px}.hep-access-removed-eyebrow{color:#d56d16;font-size:8px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
+        .hep-access-removed-card h1{margin:0;font:900 clamp(28px,5vw,42px)/1.04 Manrope,Inter,sans-serif;letter-spacing:-.04em}.hep-access-removed-card p{margin:16px auto 0;max-width:500px;color:#6f808c;font-size:12px;line-height:1.7}
+        .hep-access-removed-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:24px}.hep-access-removed-actions a{min-height:46px;padding:0 18px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:10px;font-weight:950}
+        .hep-access-removed-mail{border:1px solid #dbe5eb;background:#fff;color:#10283f}.hep-access-removed-request{border:1px solid #f08a28;background:#f08a28;color:#fff}
+        .hep-access-removed-lang{display:flex;justify-content:center;margin-top:20px}.hep-access-removed-lang .hire-portal-lang-switch{position:relative}.hep-access-removed-lang .hire-portal-lang-trigger{width:74px;height:40px;padding:0 11px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;display:flex;align-items:center;justify-content:space-between;gap:10px;font:900 9px Inter,sans-serif;cursor:pointer}.hep-access-removed-lang .hire-portal-lang-menu{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 8px);z-index:10;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:12px;background:#fff;box-shadow:0 18px 45px rgba(16,40,63,.16)}.hep-access-removed-lang .hire-portal-lang-menu button{width:100%;min-height:37px;padding:7px 9px;border:0;border-radius:8px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hep-access-removed-lang .hire-portal-lang-menu button.active{background:#10283f;color:#fff}
+        @media(max-width:560px){.hep-access-removed-card{padding:28px 20px}.hep-access-removed-actions{display:grid}.hep-access-removed-actions a{width:100%;box-sizing:border-box}}
+      `}</style>
+      <section className="hep-access-removed-card">
+        <div className="hep-access-removed-logo"><HirePortalLogo/></div>
+        <div className="hep-access-removed-eyebrow">{tr("EMPLOYER PORTAL", "DARBDAVIO PORTALAS")}</div>
+        <h1>{copy.title}</h1>
+        <p>{copy.body}</p>
+        <div className="hep-access-removed-actions">
+          <a className="hep-access-removed-mail" href="mailto:info@statybos24.lt">{copy.contact}</a>
+          <a className="hep-access-removed-request" href={`/hire?request=1&lang=${encodeURIComponent(lang)}`}>{copy.request}</a>
+        </div>
+        <div className="hep-access-removed-lang"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/></div>
+      </section>
+    </div>;
+  }
 
   const wf = selectedNeed?.workforceDetails || {};
   const selectedCandidates = Array.isArray(selectedNeed?.candidates) ? selectedNeed.candidates : [];
