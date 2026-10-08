@@ -24909,7 +24909,7 @@ function AdminDashboard({
     setForeignHireExternalRequestId(null);
     const rows = await loadForeignHireCandidates(request.request_id);
     if (Array.isArray(rows)) {
-      const matching = rows.filter((candidate) => candidate.employer_response === "interview_requested");
+      const matching = rows.filter((candidate) => candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at);
       if (matching.length) {
         setForeignHireExpandedCandidateIds((current) => ({
           ...current,
@@ -25333,7 +25333,7 @@ function AdminDashboard({
                     <div className="admin-candidate-card" key={candidate.candidate_id}>
                       <button
                         type="button"
-                        className={`admin-candidate-card-head ${candidate.employer_response === "interview_requested" ? "is-interview-requested" : ""}`}
+                        className={`admin-candidate-card-head ${candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at ? "is-interview-requested" : ""}`}
                         aria-expanded={candidateExpanded}
                         onClick={() => setForeignHireExpandedCandidateIds((current) => ({ ...current, [candidate.candidate_id]: !current[candidate.candidate_id] }))}
                         style={{ width: "100%", border: 0, background: "transparent", padding: 0, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
@@ -27045,6 +27045,10 @@ function AdminDashboard({
                   )}&body=${encodeURIComponent(mailBody)}`;
                   const candidatePanelOpen = foreignHireCandidateOpenId === request.request_id;
                   const requestCandidates = foreignHireCandidatesByRequest[request.request_id] || [];
+                  const hasLoadedRequestCandidates = Object.prototype.hasOwnProperty.call(foreignHireCandidatesByRequest, request.request_id);
+                  const pendingInterviewCount = hasLoadedRequestCandidates
+                    ? requestCandidates.filter((candidate) => candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at).length
+                    : Number(request.employer_interview_requested_count || 0);
                   const expanded = foreignHireExpandedId === request.request_id;
                   const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
                   const hasFullBrief = ["submitted", "approved"].includes(request.brief_status) && !!request.brief_workforce_details;
@@ -27070,7 +27074,7 @@ function AdminDashboard({
                       : (fullNeed.homeTravel || "—");
 
                   return (
-                    <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
+                    <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(pendingInterviewCount+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
                       <button type="button" className="admin-foreign-summary" onClick={() => {
                         setForeignHireExpandedId(expanded ? null : request.request_id);
                         if (!expanded && (request.status === "sourcing" || Number(request.candidate_count || 0) > 0)) {
@@ -27098,11 +27102,11 @@ function AdminDashboard({
                         </div>
                       </div> : null}
 
-                      {Number(request.employer_interview_requested_count || 0) > 0 ? (
+                      {pendingInterviewCount > 0 ? (
                         <div className="admin-foreign-employer-alert interview">
                           <div>
                             <strong>Darbdavys paprašė interviu</strong>
-                            <span>{Number(request.employer_interview_requested_count)} {Number(request.employer_interview_requested_count) === 1 ? "kandidatui reikia suderinti interviu" : "kandidatams reikia suderinti interviu"}.</span>
+                            <span>{pendingInterviewCount} {pendingInterviewCount === 1 ? "kandidatui reikia suderinti interviu" : "kandidatams reikia suderinti interviu"}.</span>
                           </div>
                           <button className="admin-small-btn" type="button" onClick={() => openForeignHireInterviewCandidates(request)}>Peržiūrėti kandidatus</button>
                         </div>
