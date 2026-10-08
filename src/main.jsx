@@ -24326,6 +24326,11 @@ function AdminDashboard({
   const [foreignHireWorkerSearchBusy, setForeignHireWorkerSearchBusy] = useState(false);
   const [foreignHireCandidateProfession, setForeignHireCandidateProfession] = useState("");
   const [foreignHireExternalRequestId, setForeignHireExternalRequestId] = useState(null);
+  const [foreignHireJobConfirmationOpenId, setForeignHireJobConfirmationOpenId] = useState(null);
+  const [foreignHireJobConfirmationForm, setForeignHireJobConfirmationForm] = useState({
+    employerName: "", projectLocation: "", profession: "", startDate: "", salary: "",
+    schedule: "", accommodation: "", travel: "", notes: "",
+  });
   const [foreignHireExternalForm, setForeignHireExternalForm] = useState({
     fullName: "",
     email: "",
@@ -24630,6 +24635,82 @@ function AdminDashboard({
       approved: "Patvirtinta",
       rejected: "Reikia pataisyti",
     })[status] || status || "—";
+  }
+
+  function foreignHireEmployerResponseLabel(response) {
+    return ({
+      interested: "Domina",
+      interview_requested: "Prašo interviu",
+      accepted: "Kandidatas patvirtintas",
+      not_suitable: "Netinka",
+    })[response] || "Laukiama atsakymo";
+  }
+
+  function openForeignHireJobConfirmation(request, candidate) {
+    const wd = request?.brief_workforce_details || {};
+    const salaryParts = [
+      wd.salaryCurrency || "EUR",
+      wd.salaryMin ? `${wd.salaryMin}${wd.salaryMax ? `–${wd.salaryMax}` : ""}` : "",
+      wd.salaryBasis === "net" ? "net" : wd.salaryBasis === "gross" ? "gross" : "",
+      wd.salaryType === "monthly" ? "/ month" : wd.salaryType === "hourly" ? "/ hour" : "",
+    ].filter(Boolean);
+    setForeignHireJobConfirmationOpenId(candidate.candidate_id);
+    setForeignHireJobConfirmationForm({
+      employerName: candidate.job_confirmation?.employerName || request?.company_name || "",
+      projectLocation: candidate.job_confirmation?.projectLocation || [wd.projectLocation || request?.project_location, wd.projectCountry || request?.project_country].filter(Boolean).join(", "),
+      profession: candidate.job_confirmation?.profession || candidate.profession || "",
+      startDate: candidate.job_confirmation?.startDate || candidate.available_from || wd.startDate || request?.requested_start_date || "",
+      salary: candidate.job_confirmation?.salary || salaryParts.join(" "),
+      schedule: candidate.job_confirmation?.schedule || [wd.hoursPerWeek ? `${wd.hoursPerWeek} h/week` : "", wd.rotation ? `Rotation ${wd.rotation}` : "", wd.overtime ? `Overtime: ${wd.overtime}` : ""].filter(Boolean).join(" · "),
+      accommodation: candidate.job_confirmation?.accommodation || [wd.accommodation, wd.roomType, wd.accommodationCost ? `Cost: ${wd.accommodationCost}` : ""].filter(Boolean).join(" · "),
+      travel: candidate.job_confirmation?.travel || [wd.initialTravel, wd.workTransport, wd.homeTravel].filter(Boolean).join(" · "),
+      notes: candidate.job_confirmation?.notes || "",
+    });
+  }
+
+  async function saveForeignHireJobConfirmation(candidate) {
+    if (!candidate?.candidate_id || foreignHireCandidateBusyId) return;
+    setForeignHireCandidateBusyId(candidate.candidate_id);
+    setError("");
+    try {
+      const result = await supabase.rpc("admin_prepare_foreign_candidate_job_confirmation", {
+        p_candidate_id: candidate.candidate_id,
+        p_confirmation: foreignHireJobConfirmationForm,
+      });
+      if (result.error) throw result.error;
+      setNotice("Galutinis darbo sąlygų patvirtinimas išsaugotas. Dabar jį galima aptarti su kandidatu.");
+      setForeignHireJobConfirmationOpenId(null);
+      await loadForeignHireCandidates(candidate.request_id, true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti galutinių darbo sąlygų.");
+    } finally {
+      setForeignHireCandidateBusyId(null);
+    }
+  }
+
+  async function confirmForeignHireJobConfirmation(candidate) {
+    if (!candidate?.candidate_id || foreignHireCandidateBusyId) return;
+    const ok = await askConfirm({
+      title: "Patvirtinti kandidato sutikimą",
+      message: "Patvirtinkite tik tada, kai kandidatas gavo galutines darbo sąlygas, jas perskaitė ir aiškiai sutiko vykti dirbti pagal šį pasiūlymą.",
+      confirmLabel: "Taip, kandidatas sutiko",
+      tone: "default",
+    });
+    if (!ok) return;
+    setForeignHireCandidateBusyId(candidate.candidate_id);
+    setError("");
+    try {
+      const result = await supabase.rpc("admin_confirm_foreign_candidate_job_confirmation", {
+        p_candidate_id: candidate.candidate_id,
+      });
+      if (result.error) throw result.error;
+      setNotice("Pažymėta, kad kandidatas susipažino su galutinėmis darbo sąlygomis ir sutiko.");
+      await loadForeignHireCandidates(candidate.request_id, true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti kandidato sutikimo.");
+    } finally {
+      setForeignHireCandidateBusyId(null);
+    }
   }
 
   function foreignHireCandidateNext(status) {
@@ -25035,6 +25116,8 @@ function AdminDashboard({
                   const candidateBusy = foreignHireCandidateBusyId === candidate.candidate_id;
                   const needsConsent = next?.[0] === "presented" && !candidate.candidate_consent_at;
                   const needsSignedAgreement = ["hired", "started"].includes(next?.[0]) && !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
+                  const needsEmployerAcceptance = ["hired", "started"].includes(next?.[0]) && candidate.employer_response !== "accepted";
+                  const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
                   return (
                     <div className="admin-candidate-card" key={candidate.candidate_id}>
                       <div className="admin-candidate-card-head">
@@ -25054,6 +25137,8 @@ function AdminDashboard({
                         <div><span>Telefonas</span><b>{candidate.phone || "—"}</b></div>
                         <div><span>El. paštas</span><b>{candidate.email || "—"}</b></div>
                         <div><span>Susitarimas</span><b>{foreignHireCandidateAgreementLabel(candidate.candidate_agreement_status)}</b></div>
+                        <div><span>Darbdavio atsakymas</span><b>{foreignHireEmployerResponseLabel(candidate.employer_response)}</b></div>
+                        <div><span>Galutinės sąlygos</span><b>{candidate.candidate_job_confirmed_at ? "Kandidatas sutiko" : candidate.job_confirmation_prepared_at ? "Paruoštos" : "Neparuoštos"}</b></div>
                       </div>
 
                       {candidate.skills ? <div className="admin-foreign-note" style={{ marginTop: 8 }}>{candidate.skills}</div> : null}
@@ -25074,6 +25159,53 @@ function AdminDashboard({
                         {candidate.candidate_agreement_path ? <label className="admin-candidate-doc">+ Įkelti pasirašytą<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label> : null}
                       </div>
 
+                      <div className="admin-candidate-job-confirmation">
+                        <div className="admin-candidate-zone-head">
+                          <div>
+                            <strong>Galutinis darbo patvirtinimas</strong>
+                            <span>Prieš kandidatui išvykstant užfiksuokite konkrečią įmonę, darbo vietą, profesiją, startą, atlyginimą ir praktines sąlygas.</span>
+                          </div>
+                          <button className="admin-small-btn" type="button" disabled={candidateBusy || candidate.employer_response !== "accepted"} onClick={() => openForeignHireJobConfirmation(request, candidate)}>
+                            {candidate.job_confirmation_prepared_at ? "Redaguoti" : "Paruošti"}
+                          </button>
+                        </div>
+                        {candidate.employer_response !== "accepted" ? <div className="admin-candidate-job-note">Galutinį patvirtinimą ruošiame tik tada, kai darbdavys patvirtina kandidatą.</div> : null}
+                        {candidate.job_confirmation_prepared_at ? (
+                          <div className="admin-job-confirm-summary">
+                            <div><span>Darbdavys</span><b>{candidate.job_confirmation?.employerName || "—"}</b></div>
+                            <div><span>Vieta</span><b>{candidate.job_confirmation?.projectLocation || "—"}</b></div>
+                            <div><span>Profesija</span><b>{candidate.job_confirmation?.profession || "—"}</b></div>
+                            <div><span>Startas</span><b>{candidate.job_confirmation?.startDate || "—"}</b></div>
+                            <div><span>Atlyginimas</span><b>{candidate.job_confirmation?.salary || "—"}</b></div>
+                          </div>
+                        ) : null}
+                        {foreignHireJobConfirmationOpenId === candidate.candidate_id ? (
+                          <div className="admin-job-confirm-form">
+                            <div className="admin-external-grid">
+                              <div className="admin-external-field"><label>Darbdavys *</label><input value={foreignHireJobConfirmationForm.employerName} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,employerName:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Projekto vieta *</label><input value={foreignHireJobConfirmationForm.projectLocation} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,projectLocation:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Profesija *</label><input value={foreignHireJobConfirmationForm.profession} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,profession:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Starto data *</label><input type="date" value={foreignHireJobConfirmationForm.startDate} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,startDate:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Atlyginimas *</label><input value={foreignHireJobConfirmationForm.salary} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,salary:e.target.value}))} placeholder="Pvz. EUR 22–25 gross / hour"/></div>
+                              <div className="admin-external-field"><label>Grafikas</label><input value={foreignHireJobConfirmationForm.schedule} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,schedule:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Apgyvendinimas</label><input value={foreignHireJobConfirmationForm.accommodation} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,accommodation:e.target.value}))}/></div>
+                              <div className="admin-external-field"><label>Kelionė / transportas</label><input value={foreignHireJobConfirmationForm.travel} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,travel:e.target.value}))}/></div>
+                              <div className="admin-external-field full"><label>Papildomos sąlygos</label><textarea value={foreignHireJobConfirmationForm.notes} onChange={e=>setForeignHireJobConfirmationForm(v=>({...v,notes:e.target.value}))}/></div>
+                            </div>
+                            <div className="admin-candidate-actions">
+                              <button className="admin-small-btn" type="button" onClick={()=>setForeignHireJobConfirmationOpenId(null)}>Atšaukti</button>
+                              <button className="admin-small-btn" type="button" disabled={candidateBusy} onClick={()=>saveForeignHireJobConfirmation(candidate)} style={{background:"#102438",color:"#fff",borderColor:"#102438"}}>Išsaugoti sąlygas</button>
+                            </div>
+                          </div>
+                        ) : null}
+                        {candidate.job_confirmation_prepared_at ? (
+                          <div className={`admin-candidate-consent ${candidate.candidate_job_confirmed_at ? "ok" : ""}`}>
+                            {candidate.candidate_job_confirmed_at ? `✓ Kandidatas patvirtino galutines darbo sąlygas ${formatAdminDate(candidate.candidate_job_confirmed_at)}.` : "Dar reikia kandidato aiškaus patvirtinimo, kad jis perskaitė sąlygas ir sutinka vykti dirbti pagal šį pasiūlymą."}
+                            {!candidate.candidate_job_confirmed_at ? <div style={{marginTop:8}}><button className="admin-small-btn" type="button" disabled={candidateBusy} onClick={()=>confirmForeignHireJobConfirmation(candidate)}>Pažymėti, kad kandidatas sutiko</button></div> : null}
+                          </div>
+                        ) : null}
+                      </div>
+
                       <div className="admin-candidate-actions">
                         {!candidate.candidate_consent_at ? (
                           <button className="admin-small-btn" type="button" disabled={candidateBusy} onClick={() => updateForeignHireCandidateStatus(candidate, candidate.status, true)}>
@@ -25084,10 +25216,10 @@ function AdminDashboard({
                           <button
                             className="admin-small-btn"
                             type="button"
-                            disabled={candidateBusy || needsConsent || needsSignedAgreement}
+                            disabled={candidateBusy || needsConsent || needsSignedAgreement || needsEmployerAcceptance || needsJobConfirmation}
                             onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}
                             style={next[0] === "presented" || next[0] === "started" ? { background: "#102438", color: "#fff", borderColor: "#102438" } : undefined}
-                            title={needsConsent ? "Pirmiausia patvirtinkite kandidato sutikimą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą susitarimą." : ""}
+                            title={needsConsent ? "Pirmiausia patvirtinkite kandidato sutikimą." : needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą susitarimą." : needsJobConfirmation ? "Pirmiausia kandidatas turi patvirtinti galutines darbo sąlygas." : ""}
                           >
                             {candidateBusy ? "Saugoma..." : next[1]}
                           </button>
@@ -26202,9 +26334,9 @@ function AdminDashboard({
         .admin-empty{padding:24px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
         .admin-foreign-list{display:grid;gap:12px}.admin-foreign-card.is-new{border-color:#e6aaa4!important;box-shadow:0 8px 24px rgba(198,63,52,.08)!important}
         .admin-foreign-card{border:1px solid #e2e9ee;border-radius:15px;background:#fff;padding:17px}.admin-foreign-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-foreign-head h3{margin:0;font:800 17px/1.25 Manrope,Inter,sans-serif}.admin-foreign-head p{margin:5px 0 0;color:#6c7a88;font-size:12px}.admin-foreign-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.admin-foreign-fact{padding:11px 12px;border-radius:11px;background:#f8fafb;border:1px solid #edf1f4}.admin-foreign-fact span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:5px}.admin-foreign-fact b,.admin-foreign-fact a{color:#102438;font-size:12px;font-weight:800;overflow-wrap:anywhere}.admin-foreign-roles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin-foreign-role{padding:7px 9px;border-radius:9px;background:#eef4f8;color:#17344b;font-size:11px;font-weight:800}.admin-foreign-note{margin-top:12px;padding:11px 12px;background:#fff8ef;border:1px solid #f5dfc7;border-radius:10px;color:#6b5846;font-size:12px;line-height:1.5;white-space:pre-wrap}.admin-foreign-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.admin-foreign-status{padding:7px 10px;border-radius:999px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:850}.admin-foreign-status.new{background:#fff3e7;color:#9b5a18}.admin-foreign-status.declined{background:#fff0ec;color:#b64d2a}
-        .admin-candidate-zone{margin-top:16px;border-top:1px solid #e6edf2;padding-top:16px}.admin-candidate-zone-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.admin-candidate-zone-head strong{font:850 14px/1.25 Manrope,Inter,sans-serif;color:#102438}.admin-candidate-zone-head span{display:block;margin-top:3px;color:#71808d;font-size:11px}.admin-candidate-tools{margin-top:12px;padding:13px;border:1px solid #e2e9ee;border-radius:13px;background:#f8fafb}.admin-candidate-search{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(160px,1fr) auto auto;gap:8px;align-items:end}.admin-candidate-field label,.admin-external-field label{display:block;margin:0 0 5px;color:#768694;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.admin-candidate-field input,.admin-external-field input,.admin-external-field textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;background:#fff;border-radius:9px;padding:9px 10px;color:#102438;font:700 12px/1.3 Manrope,Inter,sans-serif;outline:none}.admin-candidate-field input:focus,.admin-external-field input:focus,.admin-external-field textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.09)}.admin-worker-results{display:grid;gap:8px;margin-top:10px}.admin-worker-result{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px;border:1px solid #e3e9ed;border-radius:11px;background:#fff}.admin-worker-result strong{display:block;color:#102438;font-size:12px}.admin-worker-result small{display:block;color:#71808d;font-size:10px;line-height:1.45;margin-top:3px}.admin-worker-skill{display:flex;flex-wrap:wrap;gap:4px}.admin-worker-skill span{padding:4px 6px;border-radius:7px;background:#eef4f8;color:#29465d;font-size:9px;font-weight:800}.admin-candidates-list{display:grid;gap:9px;margin-top:12px}.admin-candidate-card{border:1px solid #dfe7ec;border-radius:12px;background:#fff;padding:13px}.admin-candidate-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.admin-candidate-card-head h4{margin:0;font:850 14px/1.25 Manrope,Inter,sans-serif}.admin-candidate-card-head p{margin:4px 0 0;color:#71808d;font-size:10px}.admin-candidate-chip{padding:6px 8px;border-radius:999px;background:#eef4f8;color:#27465e;font-size:9px;font-weight:850;white-space:nowrap}.admin-candidate-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}.admin-candidate-meta>div{padding:8px 9px;border-radius:9px;background:#f8fafb}.admin-candidate-meta span{display:block;color:#80909c;font-size:8px;text-transform:uppercase;letter-spacing:.06em}.admin-candidate-meta b{display:block;margin-top:3px;color:#102438;font-size:10px;overflow-wrap:anywhere}.admin-candidate-docs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.admin-candidate-doc{display:inline-flex;align-items:center;gap:5px;padding:7px 8px;border:1px solid #dce5eb;border-radius:8px;background:#fff;color:#17364e;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.admin-candidate-doc input{display:none}.admin-candidate-consent{margin-top:9px;padding:9px 10px;border-radius:9px;background:#fff8ef;border:1px solid #f5dfc7;color:#6b5846;font-size:10px;line-height:1.45}.admin-candidate-consent.ok{background:#eef8f4;border-color:#cfe9dc;color:#236649}.admin-candidate-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.admin-external-form{margin-top:12px;padding:13px;border:1px solid #dfe7ec;border-radius:12px;background:#fff}.admin-external-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.admin-external-field.wide{grid-column:span 2}.admin-external-field.full{grid-column:1/-1}.admin-external-field textarea{min-height:72px;resize:vertical}.admin-toggle-button{width:100%;border:1px solid #dce5eb;border-radius:9px;background:#fff;padding:9px 10px;text-align:left;color:#526675;font-size:11px;font-weight:800;cursor:pointer}.admin-toggle-button.active{border-color:#102438;background:#102438;color:#fff}.admin-candidate-legal-note{margin-top:12px;padding:10px 11px;border-left:3px solid #f08a28;background:#fffaf4;color:#6b5846;font-size:10px;line-height:1.5}
-        @media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-candidate-search{grid-template-columns:1fr 1fr}.admin-worker-result{grid-template-columns:1fr}.admin-candidate-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-external-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media(max-width:620px){.admin-foreign-head{flex-direction:column}.admin-foreign-grid{grid-template-columns:1fr}.admin-foreign-card{padding:14px}.admin-candidate-search,.admin-external-grid{grid-template-columns:1fr}.admin-external-field.wide{grid-column:auto}.admin-candidate-meta{grid-template-columns:1fr}.admin-candidate-zone-head{align-items:flex-start;flex-direction:column}}
+        .admin-candidate-zone{margin-top:16px;border-top:1px solid #e6edf2;padding-top:16px}.admin-candidate-zone-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.admin-candidate-zone-head strong{font:850 14px/1.25 Manrope,Inter,sans-serif;color:#102438}.admin-candidate-zone-head span{display:block;margin-top:3px;color:#71808d;font-size:11px}.admin-candidate-tools{margin-top:12px;padding:13px;border:1px solid #e2e9ee;border-radius:13px;background:#f8fafb}.admin-candidate-search{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(160px,1fr) auto auto;gap:8px;align-items:end}.admin-candidate-field label,.admin-external-field label{display:block;margin:0 0 5px;color:#768694;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.admin-candidate-field input,.admin-external-field input,.admin-external-field textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;background:#fff;border-radius:9px;padding:9px 10px;color:#102438;font:700 12px/1.3 Manrope,Inter,sans-serif;outline:none}.admin-candidate-field input:focus,.admin-external-field input:focus,.admin-external-field textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.09)}.admin-worker-results{display:grid;gap:8px;margin-top:10px}.admin-worker-result{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px;border:1px solid #e3e9ed;border-radius:11px;background:#fff}.admin-worker-result strong{display:block;color:#102438;font-size:12px}.admin-worker-result small{display:block;color:#71808d;font-size:10px;line-height:1.45;margin-top:3px}.admin-worker-skill{display:flex;flex-wrap:wrap;gap:4px}.admin-worker-skill span{padding:4px 6px;border-radius:7px;background:#eef4f8;color:#29465d;font-size:9px;font-weight:800}.admin-candidates-list{display:grid;gap:9px;margin-top:12px}.admin-candidate-card{border:1px solid #dfe7ec;border-radius:12px;background:#fff;padding:13px}.admin-candidate-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.admin-candidate-card-head h4{margin:0;font:850 14px/1.25 Manrope,Inter,sans-serif}.admin-candidate-card-head p{margin:4px 0 0;color:#71808d;font-size:10px}.admin-candidate-chip{padding:6px 8px;border-radius:999px;background:#eef4f8;color:#27465e;font-size:9px;font-weight:850;white-space:nowrap}.admin-candidate-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}.admin-candidate-meta>div{padding:8px 9px;border-radius:9px;background:#f8fafb}.admin-candidate-meta span{display:block;color:#80909c;font-size:8px;text-transform:uppercase;letter-spacing:.06em}.admin-candidate-meta b{display:block;margin-top:3px;color:#102438;font-size:10px;overflow-wrap:anywhere}.admin-candidate-docs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.admin-candidate-doc{display:inline-flex;align-items:center;gap:5px;padding:7px 8px;border:1px solid #dce5eb;border-radius:8px;background:#fff;color:#17364e;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}.admin-candidate-doc input{display:none}.admin-candidate-consent{margin-top:9px;padding:9px 10px;border-radius:9px;background:#fff8ef;border:1px solid #f5dfc7;color:#6b5846;font-size:10px;line-height:1.45}.admin-candidate-consent.ok{background:#eef8f4;border-color:#cfe9dc;color:#236649}.admin-candidate-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.admin-external-form{margin-top:12px;padding:13px;border:1px solid #dfe7ec;border-radius:12px;background:#fff}.admin-external-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.admin-external-field.wide{grid-column:span 2}.admin-external-field.full{grid-column:1/-1}.admin-external-field textarea{min-height:72px;resize:vertical}.admin-toggle-button{width:100%;border:1px solid #dce5eb;border-radius:9px;background:#fff;padding:9px 10px;text-align:left;color:#526675;font-size:11px;font-weight:800;cursor:pointer}.admin-toggle-button.active{border-color:#102438;background:#102438;color:#fff}.admin-candidate-legal-note{margin-top:12px;padding:10px 11px;border-left:3px solid #f08a28;background:#fffaf4;color:#6b5846;font-size:10px;line-height:1.5}.admin-candidate-job-confirmation{margin-top:11px;padding-top:11px;border-top:1px solid #edf1f4}.admin-candidate-job-note{margin-top:8px;padding:8px 9px;border-radius:8px;background:#f7f9fb;color:#73828d;font-size:9.5px;line-height:1.45}.admin-job-confirm-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:9px}.admin-job-confirm-summary>div{padding:8px 9px;border-radius:8px;background:#f8fafb}.admin-job-confirm-summary span{display:block;color:#82919c;font-size:7.5px;text-transform:uppercase;letter-spacing:.06em}.admin-job-confirm-summary b{display:block;margin-top:3px;color:#102438;font-size:9.5px;overflow-wrap:anywhere}.admin-job-confirm-form{margin-top:10px;padding:11px;border:1px solid #e1e8ed;border-radius:11px;background:#f9fbfc}
+        @media(max-width:900px){.admin-foreign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-candidate-search{grid-template-columns:1fr 1fr}.admin-worker-result{grid-template-columns:1fr}.admin-candidate-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-external-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-job-confirm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:620px){.admin-foreign-head{flex-direction:column}.admin-foreign-grid{grid-template-columns:1fr}.admin-foreign-card{padding:14px}.admin-candidate-search,.admin-external-grid{grid-template-columns:1fr}.admin-external-field.wide{grid-column:auto}.admin-candidate-meta{grid-template-columns:1fr}.admin-candidate-zone-head{align-items:flex-start;flex-direction:column}.admin-job-confirm-summary{grid-template-columns:1fr}}
         .admin-foreign-access-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px;padding-top:13px;border-top:1px solid #edf1f4}.admin-foreign-access-summary>div{border:1px solid #e4ebf0;border-radius:10px;padding:10px 11px;background:#fbfcfd}.admin-foreign-access-summary span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.045em;margin-bottom:4px}.admin-foreign-access-summary b,.admin-foreign-access-summary a{font-size:12px;font-weight:850;color:#102438;overflow-wrap:anywhere}.admin-foreign-brief{margin-top:12px;border:1px solid #dfe7ec;border-radius:12px;background:#fbfcfd;overflow:hidden}.admin-foreign-brief summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 13px;color:#102438;font-size:12px;font-weight:850}.admin-foreign-brief summary::-webkit-details-marker{display:none}.admin-foreign-brief summary b{color:#b85f0e;font-size:11px}.admin-foreign-brief-body{padding:0 13px 13px;border-top:1px solid #edf1f4}.admin-foreign-brief-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding-top:12px}.admin-foreign-brief-grid>div{padding:10px;border:1px solid #e6edf1;border-radius:9px;background:#fff}.admin-foreign-brief-grid span{display:block;color:#7a8996;font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-foreign-brief-grid b{font-size:11px;line-height:1.4;overflow-wrap:anywhere}.admin-foreign-brief-roles{display:grid;gap:7px;margin-top:10px}.admin-foreign-brief-roles>div{padding:10px 11px;border:1px solid #e6edf1;border-radius:9px;background:#fff}.admin-foreign-brief-roles strong{display:block;font-size:11px}.admin-foreign-brief-roles span{display:block;margin-top:4px;color:#6f7f8b;font-size:10px;line-height:1.45}.admin-foreign-credentials{margin-top:12px;border:1px solid #bfe6d3;background:#eff9f4;border-radius:12px;padding:13px}.admin-foreign-credentials strong{display:block;color:#126b4a;font-size:12px;margin-bottom:7px}.admin-foreign-credentials code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#17344b;font:750 12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.admin-foreign-credentials .admin-foreign-actions{margin-top:10px}.admin-foreign-setup{margin-top:14px;border:1px solid #dbe4ea;background:#f8fafb;border-radius:13px;padding:14px}.admin-foreign-setup h4{margin:0;font:850 14px/1.35 Manrope,Inter,sans-serif}.admin-foreign-setup p{margin:5px 0 12px;color:#6c7a88;font-size:11px;line-height:1.45}.admin-foreign-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.admin-foreign-field{display:grid;gap:5px}.admin-foreign-field span{color:#526374;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}.admin-foreign-field input{width:100%;box-sizing:border-box;border:1px solid #d6e0e7;border-radius:9px;background:#fff;color:#102438;padding:10px 11px;font:750 12px/1.3 Inter,system-ui,sans-serif;outline:none}.admin-foreign-field input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.admin-foreign-file{grid-column:1/-1;border:1px dashed #cdd8df;border-radius:10px;padding:11px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}.admin-foreign-file-copy{min-width:0}.admin-foreign-file-copy b{display:block;font-size:12px;color:#102438;overflow-wrap:anywhere}.admin-foreign-file-copy span{display:block;margin-top:3px;color:#7a8996;font-size:10px}.admin-foreign-file input{display:none}.admin-foreign-setup-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px}@media(max-width:900px){.admin-foreign-access-summary{grid-template-columns:1fr 1fr}.admin-foreign-brief-grid{grid-template-columns:1fr 1fr}}@media(max-width:620px){.admin-foreign-access-summary,.admin-foreign-setup-grid,.admin-foreign-brief-grid{grid-template-columns:1fr}.admin-foreign-file{grid-column:auto;align-items:flex-start;flex-direction:column}}
         .admin-file-link{color:#102438;font-weight:800;text-decoration:underline}
         .admin-employment-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.admin-employment-stat{border:1px solid #e4ebf0;border-radius:12px;padding:14px;background:#f8fafb}.admin-employment-stat span{display:block;color:#6c7a88;font-size:11px;margin-bottom:7px}.admin-employment-stat b{font-family:Manrope,Inter,sans-serif;font-size:24px}.admin-employment-list{display:grid;gap:9px}.admin-employment-row{display:grid;grid-template-columns:minmax(220px,1.25fr) minmax(200px,1fr) minmax(160px,.75fr) minmax(150px,.72fr) minmax(130px,.65fr);gap:14px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 15px}.admin-employment-person b{display:block;font-size:14px}.admin-employment-person span{display:block;margin-top:3px;color:#6c7a88;font-size:12px;line-height:1.4}.admin-employment-cell span{display:block;color:#7a8996;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.admin-employment-cell b{font-size:13px}.admin-employment-contract{color:#526374;font-size:12px;line-height:1.45}.admin-employment-empty{padding:28px;border:1px dashed #d7e0e6;border-radius:12px;color:#6c7a88;text-align:center}
@@ -30661,6 +30793,7 @@ function HireEmployerPortalPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [signedFile, setSignedFile] = useState(null);
+  const [candidateBusyId, setCandidateBusyId] = useState(null);
   const [password1, setPassword1] = useState("");
   const [password2, setPassword2] = useState("");
   const [company, setCompany] = useState({legalName:"",registrationNumber:"",vatNumber:"",billingAddress:"",website:"",contactName:"",jobTitle:"",businessEmail:"",phone:""});
@@ -30753,6 +30886,47 @@ function HireEmployerPortalPage() {
     } catch(err){setError(err?.message||tr("Could not upload the signed agreement.", "Nepavyko įkelti pasirašytos sutarties."));} finally{setUploading(false);}
   }
 
+  async function openCandidateCv(candidate) {
+    if (!supabase || !candidate?.id || candidateBusyId) return;
+    setError("");
+    setCandidateBusyId(candidate.id);
+    try {
+      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:{action:"candidate-cv-url",token,candidateId:candidate.id}});
+      if(error) throw error;
+      if(!data?.url) throw new Error(data?.error||tr("Candidate CV is not available.", "Kandidato CV nepasiekiamas."));
+      window.open(data.url,"_blank","noopener,noreferrer");
+    } catch(err){setError(err?.message||tr("Could not open candidate CV.", "Nepavyko atidaryti kandidato CV."));} finally{setCandidateBusyId(null);}
+  }
+
+  async function respondToCandidate(candidate,response) {
+    if (!supabase || !candidate?.id || candidateBusyId) return;
+    setError(""); setNotice(""); setCandidateBusyId(candidate.id);
+    try {
+      const {error}=await supabase.rpc("foreign_employer_candidate_response",{
+        p_session_token:token,p_candidate_id:candidate.id,p_response:response
+      });
+      if(error) throw error;
+      const message = response==="interested"
+        ? tr("Marked as interested. Statybos24 will continue with you.","Pažymėta, kad kandidatas domina. Statybos24 susisieks dėl kito žingsnio.")
+        : response==="interview_requested"
+        ? tr("Interview requested. Statybos24 will coordinate the next step.","Paprašytas interviu. Statybos24 suderins kitą žingsnį.")
+        : response==="accepted"
+        ? tr("Candidate approved. Statybos24 will confirm final conditions with the candidate before travel.","Kandidatas patvirtintas. Prieš kelionę Statybos24 su kandidatu patvirtins galutines darbo sąlygas.")
+        : tr("Candidate marked as not suitable.","Pažymėta, kad kandidatas netinka.");
+      setNotice(message);
+      await loadPortal(false);
+    } catch(err){setError(err?.message||tr("Could not save your candidate decision.","Nepavyko išsaugoti sprendimo dėl kandidato."));} finally{setCandidateBusyId(null);}
+  }
+
+  function candidateResponseLabel(response) {
+    return ({
+      interested:tr("Interested","Domina"),
+      interview_requested:tr("Interview requested","Paprašytas interviu"),
+      accepted:tr("Candidate approved","Kandidatas patvirtintas"),
+      not_suitable:tr("Not suitable","Netinka"),
+    })[response] || tr("Awaiting your decision","Laukiama jūsų sprendimo");
+  }
+
   function setCompanyField(key,value){setCompany(prev=>({...prev,[key]:value}));}
   function setWorkforceField(key,value){setWorkforce(prev=>({...prev,[key]:value}));}
   function setRole(index,key,value){setWorkforce(prev=>({...prev,roles:prev.roles.map((r,i)=>i===index?{...r,[key]:value}:r)}));}
@@ -30777,6 +30951,7 @@ function HireEmployerPortalPage() {
   const briefStatus=portal?.brief?.status||"draft";
   const agreementDone=["signed_uploaded","approved"].includes(agreementStatus);
   const briefDone=["submitted","approved"].includes(briefStatus);
+  const presentedCandidates=Array.isArray(portal?.candidates)?portal.candidates:[];
   const sourcingStarted=["sourcing","closed"].includes(requestStatus);
   const submittedToReview=requestStatus==="employer_submitted"||requestStatus==="ready_for_sourcing"||sourcingStarted;
 
@@ -30794,7 +30969,7 @@ function HireEmployerPortalPage() {
         .hep-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}.hep-progress-card{min-height:84px;padding:14px;border:1px solid #e0e8ed;border-radius:13px;background:#fff}.hep-progress-card span{display:block;color:#85929b;font-size:7.5px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.hep-progress-card b{display:block;margin-top:9px;font-size:12px}.hep-progress-card.done{border-color:#bfdfd0;background:#f4fbf8}.hep-progress-card.done b{color:#176f4e}.hep-progress-card.current{border-color:#f0c596;background:#fff9f3}.hep-progress-card.current b{color:#b76018}
         .hep-grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(300px,.58fr);gap:14px;align-items:start}.hep-main{display:grid;gap:14px}.hep-side{display:grid;gap:14px;position:sticky;top:92px}.hep-card{background:#fff;border:1px solid #e1e8ed;border-radius:16px;padding:21px;box-shadow:0 8px 28px rgba(16,40,63,.035)}.hep-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.hep-card-head h2{margin:0;font:900 20px/1.1 Manrope,Inter,sans-serif;letter-spacing:-.025em}.hep-card-head p{margin:6px 0 0;color:#7a8995;font-size:10px;line-height:1.5}.hep-step{width:31px;height:31px;border-radius:9px;background:#fff2e5;color:#c96a15;display:grid;place-items:center;font-size:8px;font-weight:950;flex:0 0 31px}.hep-card-title{display:flex;gap:11px;align-items:flex-start}
         .hep-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.hep-field{display:grid;gap:6px;min-width:0}.hep-field.full{grid-column:1/-1}.hep-field>span{color:#5d6f7c;font-size:8px;font-weight:900;letter-spacing:.03em}.hep-input,.hep-textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;padding:10px 11px;font:700 11px Inter,sans-serif;outline:0}.hep-input{min-height:42px}.hep-textarea{min-height:90px;resize:vertical}.hep-input:focus,.hep-textarea:focus{border-color:#efa25b;box-shadow:0 0 0 3px rgba(240,138,40,.10)}.hep-segment{display:flex;gap:6px;flex-wrap:wrap}.hep-segment button{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#647581;font:850 9px Inter,sans-serif;cursor:pointer}.hep-segment button.active{background:#10283f;border-color:#10283f;color:#fff}.hep-section-divider{height:1px;background:#edf1f4;margin:20px 0}.hep-subtitle{margin:0 0 13px;font:900 13px Manrope,Inter,sans-serif}.hep-role{border:1px solid #e1e8ed;border-radius:12px;background:#fafcfd;padding:14px}.hep-role+.hep-role{margin-top:9px}.hep-role-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hep-role-head b{font-size:9px}.hep-role-head button{border:0;background:transparent;color:#b65e17;font:850 9px Inter,sans-serif;cursor:pointer}.hep-add-role{margin-top:9px;min-height:38px;padding:8px 11px;border:1px dashed #ccd9e1;border-radius:9px;background:#fff;color:#a95613;font:850 9px Inter,sans-serif;cursor:pointer}.hep-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:17px;border-top:1px solid #edf1f4}.hep-btn{min-height:42px;padding:9px 13px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;font:900 9px Inter,sans-serif;cursor:pointer}.hep-btn.primary{background:#f08a28;border-color:#f08a28;color:#fff}.hep-btn.dark{background:#10283f;border-color:#10283f;color:#fff}.hep-btn:disabled{opacity:.55;cursor:wait}
-        .hep-agreement-state{padding:13px;border:1px solid #e4ebef;border-radius:11px;background:#f8fafb}.hep-agreement-state b{display:block;font-size:11px}.hep-agreement-state span{display:block;margin-top:4px;color:#7b8994;font-size:9px;line-height:1.45}.hep-file-row{margin-top:12px}.hep-file-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px dashed #cad8e0;border-radius:10px;background:#fff}.hep-file-pick b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.hep-file-pick label{flex:0 0 auto;padding:8px 10px;border-radius:8px;background:#eef3f6;color:#405665;font-size:8px;font-weight:900;cursor:pointer}.hep-file-pick input{display:none}.hep-side-card h3{margin:0 0 9px;font:900 15px Manrope,Inter,sans-serif}.hep-side-card p{margin:0;color:#788895;font-size:10px;line-height:1.6}.hep-side-card a{color:#b95f16;font-weight:850;text-decoration:none}.hep-side-list{display:grid;gap:9px}.hep-side-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #edf1f4}.hep-side-row:last-child{border-bottom:0}.hep-side-row span{color:#7b8994;font-size:9px}.hep-side-row b{font-size:9px;text-align:right}.hep-candidate-placeholder{padding:18px;border:1px dashed #d5e0e6;border-radius:12px;background:#fafcfd;text-align:center}.hep-candidate-placeholder b{display:block;font-size:11px}.hep-candidate-placeholder span{display:block;margin-top:6px;color:#84929c;font-size:9px;line-height:1.5}
+        .hep-agreement-state{padding:13px;border:1px solid #e4ebef;border-radius:11px;background:#f8fafb}.hep-agreement-state b{display:block;font-size:11px}.hep-agreement-state span{display:block;margin-top:4px;color:#7b8994;font-size:9px;line-height:1.45}.hep-file-row{margin-top:12px}.hep-file-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px dashed #cad8e0;border-radius:10px;background:#fff}.hep-file-pick b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.hep-file-pick label{flex:0 0 auto;padding:8px 10px;border-radius:8px;background:#eef3f6;color:#405665;font-size:8px;font-weight:900;cursor:pointer}.hep-file-pick input{display:none}.hep-side-card h3{margin:0 0 9px;font:900 15px Manrope,Inter,sans-serif}.hep-side-card p{margin:0;color:#788895;font-size:10px;line-height:1.6}.hep-side-card a{color:#b95f16;font-weight:850;text-decoration:none}.hep-side-list{display:grid;gap:9px}.hep-side-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #edf1f4}.hep-side-row:last-child{border-bottom:0}.hep-side-row span{color:#7b8994;font-size:9px}.hep-side-row b{font-size:9px;text-align:right}.hep-candidate-placeholder{padding:18px;border:1px dashed #d5e0e6;border-radius:12px;background:#fafcfd;text-align:center}.hep-candidate-placeholder b{display:block;font-size:11px}.hep-candidate-placeholder span{display:block;margin-top:6px;color:#84929c;font-size:9px;line-height:1.5}.hep-candidates-list{display:grid;gap:11px}.hep-candidate-card{padding:15px;border:1px solid #e1e8ed;border-radius:13px;background:#fbfcfd}.hep-candidate-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.hep-candidate-head h3{margin:0;font:900 15px/1.25 Manrope,Inter,sans-serif}.hep-candidate-head p{margin:4px 0 0;color:#74838f;font-size:9.5px}.hep-candidate-response{padding:6px 8px;border-radius:999px;background:#eef3f6;color:#4d6272;font-size:8px;font-weight:900;white-space:nowrap}.hep-candidate-response.accepted{background:#e9f7f1;color:#176e4e}.hep-candidate-response.interview_requested{background:#fff3e7;color:#a85a16}.hep-candidate-response.not_suitable{background:#fff0ed;color:#9f432e}.hep-candidate-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:11px}.hep-candidate-meta>div{padding:8px 9px;border-radius:9px;background:#fff;border:1px solid #edf1f4}.hep-candidate-meta span{display:block;color:#87959f;font-size:7.5px;font-weight:850;text-transform:uppercase;letter-spacing:.06em}.hep-candidate-meta b{display:block;margin-top:4px;font-size:9.5px;overflow-wrap:anywhere}.hep-candidate-skills{margin-top:9px;padding:9px 10px;border-radius:9px;background:#f2f6f8;color:#4e6372;font-size:9.5px;line-height:1.5}.hep-candidate-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}.hep-candidate-btn{min-height:36px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#334d60;font-size:8.5px;font-weight:900;cursor:pointer}.hep-candidate-btn:hover{border-color:#bdcbd4;background:#f8fafb}.hep-candidate-btn.active{border-color:#10283f;background:#10283f;color:#fff}.hep-candidate-btn.primary{border-color:#f08a28;background:#f08a28;color:#fff}.hep-candidate-btn.danger{color:#9e452f}.hep-candidate-btn:disabled{opacity:.55;cursor:wait}.hep-candidate-privacy{margin-top:10px;color:#7d8b96;font-size:8.5px;line-height:1.5}.hep-candidate-summary-count{font:900 28px/1 Manrope,Inter,sans-serif;color:#10283f}.hep-candidate-summary-label{display:block;margin-top:4px;color:#7d8b96;font-size:9px}
         .hep-password-overlay{position:fixed;inset:0;z-index:900;background:rgba(8,25,39,.72);display:grid;place-items:center;padding:18px}.hep-password-card{width:min(100%,480px);background:#fff;border-radius:18px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.hep-password-card h2{margin:12px 0 8px;font:900 25px Manrope,Inter,sans-serif}.hep-password-card p{margin:0 0 18px;color:#71818d;font-size:11px;line-height:1.55}.hep-password-card .hep-field+.hep-field{margin-top:11px}
         @media(max-width:980px){.hep-grid{grid-template-columns:1fr}.hep-side{position:static}.hep-progress{grid-template-columns:1fr 1fr}}
         @media(max-width:680px){.hep-top-inner,.hep-shell{width:calc(100% - 24px)}.hep-top-inner{min-height:68px}.hep-brand-copy,.hep-company-id{display:none}.hep-hero{grid-template-columns:1fr;align-items:start}.hep-progress{grid-template-columns:1fr 1fr}.hep-form-grid{grid-template-columns:1fr}.hep-field.full{grid-column:auto}.hep-card{padding:16px}.hep-actions{display:grid;grid-template-columns:1fr}.hep-actions .hep-btn{width:100%}.hep-top-actions{gap:5px}.hep-logout{padding-inline:9px}}
@@ -30870,10 +31045,39 @@ function HireEmployerPortalPage() {
             </div>
             <div className="hep-actions"><button type="button" className="hep-btn" disabled={saving} onClick={()=>saveBrief(false)}>{saving?tr("Saving...", "Saugoma..."):tr("Save draft", "Išsaugoti juodraštį")}</button><button type="button" className="hep-btn primary" disabled={saving} onClick={()=>saveBrief(true)}>{saving?tr("Saving...", "Saugoma..."):tr("Submit workforce brief", "Pateikti darbuotojų poreikį")}</button></div>
           </section>
+
+          <section className="hep-card" id="candidates">
+            <div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">04</div><div><h2>{tr("Candidates introduced by Statybos24", "Statybos24 pateikti kandidatai")}</h2><p>{tr("Only candidates selected for your request and who agreed to be introduced to your company appear here.", "Čia matysite tik jūsų užklausai atrinktus kandidatus, kurie sutiko būti pristatyti jūsų įmonei.")}</p></div></div></div>
+            {presentedCandidates.length ? <div className="hep-candidates-list">
+              {presentedCandidates.map(candidate=>{
+                const busy=candidateBusyId===candidate.id;
+                const response=candidate.employerResponse||"";
+                return <article className="hep-candidate-card" key={candidate.id}>
+                  <div className="hep-candidate-head"><div><h3>{candidate.name}</h3><p>{candidate.profession||tr("Construction specialist","Statybų specialistas")}</p></div><span className={`hep-candidate-response ${response}`}>{candidateResponseLabel(response)}</span></div>
+                  <div className="hep-candidate-meta">
+                    <div><span>{tr("Experience","Patirtis")}</span><b>{candidate.yearsExperience===null||candidate.yearsExperience===undefined?"—":`${Number(candidate.yearsExperience)} ${tr("yrs","m.")}`}</b></div>
+                    <div><span>{tr("Language","Kalba")}</span><b>{candidate.languageDetails||"—"}</b></div>
+                    <div><span>{tr("Driving licence","Vairuotojo paž.")}</span><b>{candidate.hasDrivingLicenseB===true?tr("B category","B kategorija"):candidate.hasDrivingLicenseB===false?tr("No / not confirmed","Ne / nepatvirtinta"):"—"}</b></div>
+                    <div><span>{tr("Available from","Galimas nuo")}</span><b>{candidate.availableFrom||"—"}</b></div>
+                    <div><span>{tr("Salary expectation","Atlygio lūkestis")}</span><b>{candidate.salaryExpectation||"—"}</b></div>
+                  </div>
+                  {candidate.skills?<div className="hep-candidate-skills"><b>{tr("Skills:","Įgūdžiai:")}</b> {candidate.skills}</div>:null}
+                  <div className="hep-candidate-actions">
+                    {candidate.cvAvailable?<button className="hep-candidate-btn" type="button" disabled={busy} onClick={()=>openCandidateCv(candidate)}>{tr("View CV","Peržiūrėti CV")}</button>:null}
+                    <button className={`hep-candidate-btn ${response==="interested"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"interested")}>{tr("Interested","Domina")}</button>
+                    <button className={`hep-candidate-btn ${response==="interview_requested"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"interview_requested")}>{tr("Request interview","Prašyti interviu")}</button>
+                    <button className={`hep-candidate-btn primary ${response==="accepted"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"accepted")}>{tr("Approve candidate","Patvirtinti kandidatą")}</button>
+                    <button className={`hep-candidate-btn danger ${response==="not_suitable"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"not_suitable")}>{tr("Not suitable","Netinka")}</button>
+                  </div>
+                  <div className="hep-candidate-privacy">{tr("Candidate contact details are coordinated by Statybos24. After approval, we confirm the final job conditions with the candidate before travel.","Kandidato kontaktus ir tolimesnį procesą koordinuoja Statybos24. Patvirtinus kandidatą, prieš kelionę su juo užfiksuojame galutines darbo sąlygas.")}</div>
+                </article>;
+              })}
+            </div>:<div className="hep-candidate-placeholder"><b>{tr("No candidates presented yet", "Kandidatų dar nepateikta")}</b><span>{tr("Once sourcing is active, candidates selected by Statybos24 for this exact request will appear here.", "Prasidėjus paieškai čia atsiras tik šiai konkrečiai užklausai Statybos24 atrinkti kandidatai.")}</span></div>}
+          </section>
         </div><aside className="hep-side">
           <section className="hep-card hep-side-card"><h3>{tr("Current request", "Dabartinė užklausa")}</h3><div className="hep-side-list"><div className="hep-side-row"><span>{tr("Project", "Projektas")}</span><b>{portal.request?.projectLocation}, {portal.request?.projectCountry}</b></div><div className="hep-side-row"><span>{tr("Requested start", "Prašoma pradžia")}</span><b>{portal.request?.requestedStartDate||"—"}</b></div><div className="hep-side-row"><span>{tr("Portal status", "Portalo būsena")}</span><b>{sourcingStarted?tr("Sourcing", "Vyksta paieška"):submittedToReview?tr("Under Statybos24 review", "Statybos24 peržiūri"):tr("Employer action required", "Reikia darbdavio veiksmo")}</b></div></div></section>
           <section className="hep-card hep-side-card"><h3>{tr("Need clarification?", "Reikia paaiškinimo?")}</h3><p>{tr("Please reply to the Statybos24 email from which you received these login details. This keeps all commercial and agreement questions in the same email thread.", "Atsakykite į Statybos24 el. laišką, iš kurio gavote šiuos prisijungimo duomenis. Taip visi komerciniai ir sutarties klausimai liks vienoje el. pašto gijoje.")}</p></section>
-          <section className="hep-card hep-side-card" id="candidates"><h3>{tr("Candidates", "Kandidatai")}</h3><div className="hep-candidate-placeholder"><b>{tr("No candidates presented yet", "Kandidatų dar nepateikta")}</b><span>{tr("After sourcing starts, only candidates selected by Statybos24 for your request will appear here.", "Prasidėjus paieškai čia matysite tik tuos kandidatus, kuriuos Statybos24 atrinko būtent jūsų užklausai.")}</span></div></section>
+          <section className="hep-card hep-side-card"><h3>{tr("Candidates", "Kandidatai")}</h3><div className="hep-candidate-summary-count">{presentedCandidates.length}</div><span className="hep-candidate-summary-label">{presentedCandidates.length===1?tr("candidate presented", "pateiktas kandidatas"):tr("candidates presented", "pateikti kandidatai")}</span>{presentedCandidates.length?<a href="#candidates" style={{display:"inline-block",marginTop:10}}>{tr("Review candidates", "Peržiūrėti kandidatus")} →</a>:null}</section>
         </aside></div>
       </main>
       {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">{tr("FIRST SIGN-IN", "PIRMAS PRISIJUNGIMAS")}</div><h2>{tr("Create your own password", "Susikurkite savo slaptažodį")}</h2><p>{tr("The password sent by Statybos24 is temporary. Set a private password before accessing company documents and the workforce brief.", "Statybos24 atsiųstas slaptažodis yra laikinas. Prieš atidarant įmonės dokumentus ir darbuotojų poreikį susikurkite savo privatų slaptažodį.")}</p><label className="hep-field"><span>{tr("NEW PASSWORD", "NAUJAS SLAPTAŽODIS")}</span><input className="hep-input" type="password" value={password1} onChange={e=>setPassword1(e.target.value)} placeholder={tr("At least 12 characters", "Bent 12 simbolių")}/></label><label className="hep-field"><span>{tr("CONFIRM PASSWORD", "PAKARTOKITE SLAPTAŽODĮ")}</span><input className="hep-input" type="password" value={password2} onChange={e=>setPassword2(e.target.value)}/></label>{error?<div className="hep-error" style={{marginTop:12}}>{error}</div>:null}<div className="hep-actions"><button className="hep-btn primary" type="button" disabled={saving} onClick={changePassword}>{saving?tr("Saving...", "Saugoma..."):tr("Save password & continue", "Išsaugoti slaptažodį ir tęsti")}</button></div></div></div>:null}
