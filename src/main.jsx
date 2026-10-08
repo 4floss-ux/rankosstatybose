@@ -25040,8 +25040,8 @@ function AdminDashboard({
         documentType === "cv"
           ? "Kandidato CV įkeltas."
           : documentType === "agreement"
-          ? "Kandidato sutikimas dėl tarpininkavimo įkeltas."
-          : "Kandidato pasirašytas sutikimas dėl tarpininkavimo įkeltas."
+          ? "Kandidato sutartis įkelta."
+          : "Kandidato pasirašyta sutartis įkelta."
       );
       await loadForeignHireCandidates(candidate.request_id, true);
     } catch (err) {
@@ -25116,10 +25116,6 @@ function AdminDashboard({
               </div>
             ) : null}
 
-            <div className="admin-candidate-legal-note">
-              Kandidato sutikimas dėl tarpininkavimo su Statybos24 nėra darbo sutartis. Darbo sutartį kandidatas sudaro tiesiogiai su užsienio darbdaviu, o Statybos24 tarpininkavimo paslauga kandidatui yra nemokama. Prieš perduodant profilį konkrečiai įmonei pažymime kandidato sutikimą; prieš statusus „Įdarbintas“ ir „Pradėjo dirbti“ sistema reikalauja įkelto kandidato pasirašyto sutikimo dėl tarpininkavimo.
-            </div>
-
             {loadingCandidates ? (
               <div className="admin-empty" style={{ marginTop: 12 }}>Kraunami kandidatai...</div>
             ) : candidates.length ? (
@@ -25149,7 +25145,6 @@ function AdminDashboard({
                         <div><span>B kategorija</span><b>{candidate.has_driving_license_b === true ? "Taip" : candidate.has_driving_license_b === false ? "Ne" : "—"}</b></div>
                         <div><span>Telefonas</span><b>{candidate.phone || "—"}</b></div>
                         <div><span>El. paštas</span><b>{candidate.email || "—"}</b></div>
-                        <div><span>Tarpininkavimo sutikimas</span><b>{foreignHireCandidateAgreementLabel(candidate.candidate_agreement_status)}</b></div>
                         <div><span>Darbdavio atsakymas</span><b>{foreignHireEmployerResponseLabel(candidate.employer_response)}</b></div>
                         <div><span>Galutinės sąlygos</span><b>{candidate.candidate_job_confirmed_at ? "Kandidatas sutiko" : candidate.job_confirmation_prepared_at ? "Paruoštos" : "Neparuoštos"}</b></div>
                       </div>
@@ -25166,10 +25161,10 @@ function AdminDashboard({
                       <div className="admin-candidate-docs">
                         {candidate.cvUrl ? <a className="admin-candidate-doc" href={candidate.cvUrl} target="_blank" rel="noreferrer">CV · {candidate.cv_name || "Atidaryti"}</a> : null}
                         <label className="admin-candidate-doc">{candidate.cv_path ? "Pakeisti CV" : "+ Įkelti CV"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "cv", file); event.target.value = ""; }} /></label>
-                        {candidate.candidateAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateAgreementUrl} target="_blank" rel="noreferrer">Tarpininkavimo sutikimas · {candidate.candidate_agreement_name || "Atidaryti"}</a> : null}
-                        <label className="admin-candidate-doc">{candidate.candidate_agreement_path ? "Pakeisti sutikimą" : "+ Tarpininkavimo sutikimas"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "agreement", file); event.target.value = ""; }} /></label>
-                        {candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Pasirašyta · {candidate.candidate_signed_agreement_name || "Atidaryti"}</a> : null}
-                        {candidate.candidate_agreement_path ? <label className="admin-candidate-doc">+ Įkelti pasirašytą<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label> : null}
+                        {candidate.candidateAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateAgreementUrl} target="_blank" rel="noreferrer">Sutartis · {candidate.candidate_agreement_name || "Atidaryti"}</a> : null}
+                        {!candidate.candidate_agreement_path ? <label className="admin-candidate-doc">+ Įkelti sutartį<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "agreement", file); event.target.value = ""; }} /></label> : null}
+                        {candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Pasirašyta sutartis · {candidate.candidate_signed_agreement_name || "Atidaryti"}</a> : null}
+                        {candidate.candidate_agreement_path && !candidate.candidate_signed_agreement_path ? <label className="admin-candidate-doc">+ Įkelti pasirašytą sutartį<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label> : null}
                       </div>
 
                       {candidate.employer_contact_shared_at ? (
@@ -25241,7 +25236,7 @@ function AdminDashboard({
                             disabled={candidateBusy || needsConsent || needsSignedAgreement || needsEmployerAcceptance || needsJobConfirmation}
                             onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}
                             style={next[0] === "presented" || next[0] === "started" ? { background: "#102438", color: "#fff", borderColor: "#102438" } : undefined}
-                            title={needsConsent ? "Pirmiausia patvirtinkite kandidato sutikimą." : needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutikimą dėl tarpininkavimo." : needsJobConfirmation ? "Pirmiausia kandidatas turi patvirtinti galutines darbo sąlygas." : ""}
+                            title={needsConsent ? "Pirmiausia patvirtinkite kandidato sutikimą." : needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutartį." : needsJobConfirmation ? "Pirmiausia kandidatas turi patvirtinti galutines darbo sąlygas." : ""}
                           >
                             {candidateBusy ? "Saugoma..." : next[1]}
                           </button>
