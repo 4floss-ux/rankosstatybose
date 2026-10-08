@@ -31974,8 +31974,8 @@ function HireEmployerPortalPage() {
           <div><span>{tr("Available from", "Gali vykti nuo")}</span><b>{activeCandidate.availableFrom || "—"}</b></div>
           <div><span>{tr("Needs accommodation", "Reikalingas būstas")}</span><b>{activeCandidate.needsAccommodation === true ? tr("Yes", "Taip") : activeCandidate.needsAccommodation === false ? tr("No", "Ne") : "—"}</b></div>
           <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse, !!activeCandidate.contactEmail)}</b></div>
+          {activeCandidate.skills ? <div><span>{tr("Skills", "Įgūdžiai")}</span><b style={{whiteSpace:"pre-wrap"}}>{activeCandidate.skills}</b></div> : null}
         </div>
-        {activeCandidate.skills ? <div className="hep-candidate-skills"><b>{tr("Skills", "Įgūdžiai")}:</b> {activeCandidate.skills}</div> : null}
         {activeCandidate.recruiterComment ? <div className="hep-candidate-comment"><b>{tr("Statybos24 comment", "Statybos24 komentaras")}</b>{activeCandidate.recruiterComment}</div> : null}
         {activeCandidate.cvAvailable ? <div className="hep-candidate-cv"><div className="hep-candidate-cv-copy"><span>{tr("Candidate CV", "Kandidato CV")}</span><b>{activeCandidate.cvName || tr("Candidate CV", "Kandidato CV")}</b></div><button className="hep-candidate-btn" type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => openCandidateCv(activeCandidate)}>{tr("Open full CV", "Atidaryti pilną CV")}</button></div> : null}
         {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("We share the candidate email so you can contact them about the interview.", "Perduodame kandidato el. paštą, kad galėtumėte susisiekti dėl interviu.")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
