@@ -25224,19 +25224,12 @@ function AdminDashboard({
             <strong>Kandidatai</strong>
             <span>Čia kandidatą tiesiog pridedame rankiniu būdu ir toliau valdome jo eigą.</span>
           </div>
-          <button className="admin-small-btn" type="button" onClick={() => toggleForeignHireCandidates(request)}>
-            {foreignHireCandidateOpenId === request.request_id ? "Uždaryti" : "Atidaryti"}
+          <button className="admin-small-btn" type="button" onClick={() => openExternalForeignHireCandidate(request)} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
+            + Pridėti kandidatą
           </button>
         </div>
 
-        {foreignHireCandidateOpenId === request.request_id ? (
-          <div className="admin-candidate-tools">
-            <div className="admin-candidate-simple-actions">
-              <button className="admin-small-btn" type="button" onClick={() => openExternalForeignHireCandidate(request)} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
-                + Pridėti kandidatą
-              </button>
-            </div>
-
+        <div className="admin-candidate-tools">
             {externalOpen ? (
               <div className="admin-external-form">
                 <div className="admin-candidate-zone-head">
@@ -25461,7 +25454,6 @@ function AdminDashboard({
               <div className="admin-empty" style={{ marginTop: 12 }}>Prie šios užklausos kandidatų dar nepridėta.</div>
             )}
           </div>
-        ) : null}
       </div>
     );
   }
@@ -27079,7 +27071,18 @@ function AdminDashboard({
 
                   return (
                     <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
-                      <button type="button" className="admin-foreign-summary" onClick={() => setForeignHireExpandedId(expanded ? null : request.request_id)} aria-expanded={expanded}>
+                      <button type="button" className="admin-foreign-summary" onClick={() => {
+                        setForeignHireExpandedId(expanded ? null : request.request_id);
+                        if (!expanded && (request.status === "sourcing" || Number(request.candidate_count || 0) > 0)) {
+                          // Show candidates with their current data when opening the workforce request.
+                          if (foreignHireCandidateOpenId !== request.request_id) {
+                            setForeignHireCandidateOpenId(request.request_id);
+                            setForeignHireExternalRequestId(null);
+                            setForeignHireWorkerResults([]);
+                          }
+                          loadForeignHireCandidates(request.request_id).catch(() => {});
+                        }
+                      }} aria-expanded={expanded}>
                         <span className="admin-foreign-summary-info">
                           <span className="admin-foreign-summary-id">#{shortRequestId}</span>
                           <span className="admin-foreign-summary-company" title={request.brief_company_details?.legalName || request.company_name || ""}>{request.brief_company_details?.legalName || request.company_name || "Įmonė nenurodyta"}</span>
