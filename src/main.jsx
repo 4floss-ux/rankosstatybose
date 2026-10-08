@@ -30964,6 +30964,7 @@ const HIRE_EMPLOYER_PORTAL_I18N = {
   "PRIVATE RECRUITMENT WORKSPACE":{de:"PRIVATER RECRUITING-BEREICH",nl:"PRIVÉ WERVINGSOMGEVING",no:"PRIVAT REKRUTTERINGSOMRÅDE",sv:"PRIVAT REKRYTERINGSYTA",da:"PRIVAT REKRUTTERINGSOMRÅDE"},
   "Sign out":{de:"Abmelden",nl:"Uitloggen",no:"Logg ut",sv:"Logga ut",da:"Log ud"},
   "STATYBOS24 · INTERNATIONAL HIRE":{de:"STATYBOS24 · INTERNATIONALE REKRUTIERUNG",nl:"STATYBOS24 · INTERNATIONALE WERVING",no:"STATYBOS24 · INTERNASJONAL REKRUTTERING",sv:"STATYBOS24 · INTERNATIONELL REKRYTERING",da:"STATYBOS24 · INTERNATIONAL REKRUTTERING"},
+  "Hello":{de:"Hallo",nl:"Hallo",no:"Hei",sv:"Hej",da:"Hej"},
   "Submit workforce needs and review the candidates Statybos24 introduces for each specific job.":{de:"Übermitteln Sie Ihren Personalbedarf und prüfen Sie die Kandidaten, die Statybos24 für jede konkrete Stelle vorstellt.",nl:"Dien personeelsbehoeften in en bekijk de kandidaten die Statybos24 voor elke specifieke functie voorstelt.",no:"Send inn bemanningsbehov og vurder kandidatene Statybos24 presenterer for hver konkrete stilling.",sv:"Skicka in bemanningsbehov och granska kandidaterna som Statybos24 presenterar för varje specifikt jobb.",da:"Indsend bemandingsbehov og gennemgå de kandidater, Statybos24 præsenterer til hver konkret stilling."},
   "Submit workforce need":{de:"Personalbedarf einreichen",nl:"Personeelsbehoefte indienen",no:"Send inn bemanningsbehov",sv:"Skicka in bemanningsbehov",da:"Indsend bemandingsbehov"},
   "Your workforce needs":{de:"Ihre Personalbedarfe",nl:"Uw personeelsbehoeften",no:"Dine bemanningsbehov",sv:"Era bemanningsbehov",da:"Jeres bemandingsbehov"},
@@ -31165,6 +31166,7 @@ function HireEmployerPortalPage() {
     ? (needs.find((need) => need.id === selectedCandidate.needId)?.candidates || []).find((candidate) => candidate.id === selectedCandidate.candidateId) || null
     : null;
   const agreementDone = ["signed_uploaded", "approved"].includes(portal?.agreement?.status);
+  const portalContactName = portal?.request?.contactName || "";
 
   function needStatusLabel(status) {
     return ({
@@ -31440,7 +31442,7 @@ function HireEmployerPortalPage() {
 
         {screen === "dashboard" ? <>
           <section className="hep-dashboard-hero">
-            <div><div className="hep-eyebrow">{tr("STATYBOS24 · INTERNATIONAL HIRE", "STATYBOS24 · TARPTAUTINĖ ATRANKA")}</div><h1>{portal.company?.name || portal.request?.companyName}</h1><p>{tr("Submit workforce needs and review the candidates Statybos24 introduces for each specific job.", "Pateikite darbuotojų poreikius ir kiekvienam konkrečiam darbui peržiūrėkite Statybos24 pateiktus kandidatus.")}</p></div>
+            <div><div className="hep-eyebrow">{tr("STATYBOS24 · INTERNATIONAL HIRE", "STATYBOS24 · TARPTAUTINĖ ATRANKA")}</div><h1>{tr("Hello", "Sveiki")}{portalContactName ? `, ${portalContactName}` : ""}</h1><p>{tr("Submit workforce needs and review the candidates Statybos24 introduces for each specific job.", "Pateikite darbuotojų poreikius ir kiekvienam konkrečiam darbui peržiūrėkite Statybos24 pateiktus kandidatus.")}</p></div>
             <button className="hep-primary" type="button" onClick={openNewNeed}>+ {tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</button>
           </section>
 
