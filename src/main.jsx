@@ -24322,6 +24322,7 @@ function AdminDashboard({
   const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [foreignHireCandidateOpenId, setForeignHireCandidateOpenId] = useState(null);
   const [foreignHireExpandedId, setForeignHireExpandedId] = useState(null);
+  const [foreignHireMinimized, setForeignHireMinimized] = useState({});
   const [foreignHireCandidatesByRequest, setForeignHireCandidatesByRequest] = useState({});
   const [foreignHireCandidateLoadingId, setForeignHireCandidateLoadingId] = useState(null);
   const [foreignHireCandidateBusyId, setForeignHireCandidateBusyId] = useState(null);
@@ -26943,6 +26944,24 @@ function AdminDashboard({
                   const hasFullBrief = ["submitted", "approved"].includes(request.brief_status) && !!request.brief_workforce_details;
                   const fullNeed = request.brief_workforce_details || {};
                   const fullNeedTitle = fullNeed.needTitle || fullNeed.roles?.[0]?.profession || request.company_name;
+                  const roleList = Array.isArray(fullNeed.roles) ? fullNeed.roles : [];
+                  const detailsMinimized = !!foreignHireMinimized[request.request_id];
+                  const totalRequestedWorkers = roleList.reduce((sum, role) => sum + Math.max(1, Number(role?.count || 0) || 0), 0);
+                  const projectSummary = [fullNeed.projectCountry, fullNeed.projectLocation].filter(Boolean).join(" · ") || "—";
+                  const salaryValue = `${fullNeed.salaryAmount || fullNeed.salaryMin || "—"}${fullNeed.salaryCurrency ? ` ${fullNeed.salaryCurrency}` : ""}`.trim();
+                  const salarySummary = [salaryValue, fullNeed.salaryBasis].filter(Boolean).join(" · ") || "—";
+                  const accommodationSummary = fullNeed.accommodation === "provided"
+                    ? "Suteikia darbdavys"
+                    : fullNeed.accommodation === "not_provided"
+                      ? "Nesuteikiama"
+                      : fullNeed.accommodation === "employee_contributes"
+                        ? "Moka / prisideda darbuotojas"
+                        : (fullNeed.accommodation || "—");
+                  const homeTravelSummary = fullNeed.homeTravelPaid === "yes"
+                    ? "Apmoka darbdavys"
+                    : fullNeed.homeTravelPaid === "no"
+                      ? "Darbdavys neapmoka"
+                      : (fullNeed.homeTravel || "—");
 
                   return (
                     <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
@@ -26979,56 +26998,186 @@ function AdminDashboard({
                       ) : null}
 
                       {hasFullBrief ? <>
-                        <div className="admin-foreign-grid">
-                          <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.brief_company_details?.legalName || request.company_name || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Pildė</span><b>{request.brief_company_details?.contactName || request.contact_name || "—"}</b></div><div className="admin-foreign-fact"><span>Pareigos</span><b>{request.brief_company_details?.jobTitle || request.contact_job_title || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.brief_company_details?.businessEmail || request.business_email}`}>{request.brief_company_details?.businessEmail || request.business_email || "—"}</a></div>
-                          <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Darbo / poreikio pavadinimas</span><b>{fullNeedTitle || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Projektas</span><b>{fullNeed.projectLocation || "—"}, {fullNeed.projectCountry || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Darbo pradžia</span><b>{fullNeed.startDate || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Surinkti iki</span><b>{fullNeed.neededBy || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Įdarbinimo tipas</span><b>{fullNeed.employmentType || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Sutarties trukmė</span><b>{fullNeed.duration || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Viršvalandžiai</span><b>{fullNeed.overtimeAllowed === "yes" ? "Taip" : fullNeed.overtimeAllowed === "no" ? "Ne" : (fullNeed.overtime || "—")}</b></div>
-                          <div className="admin-foreign-fact"><span>Viršvalandžių apmokėjimas</span><b>{fullNeed.overtimePay || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Atlygis</span><b>{fullNeed.salaryAmount || fullNeed.salaryMin || "—"} {fullNeed.salaryCurrency || ""} · {fullNeed.salaryBasis || ""}</b></div>
-                          <div className="admin-foreign-fact"><span>Mokėjimo dažnumas</span><b>{fullNeed.salaryPayFrequency || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Apgyvendinimas</span><b>{fullNeed.accommodation === "provided" ? "Suteikia darbdavys" : fullNeed.accommodation === "not_provided" ? "Nesuteikiama" : fullNeed.accommodation === "employee_contributes" ? "Moka / prisideda darbuotojas" : (fullNeed.accommodation || "—")}</b></div>
-                          <div className="admin-foreign-fact"><span>Kambarys</span><b>{fullNeed.roomType || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Būsto kaina</span><b>{fullNeed.accommodationCost || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Kelionės namo</span><b>{fullNeed.homeTravelPaid === "yes" ? "Apmoka darbdavys" : fullNeed.homeTravelPaid === "no" ? "Darbdavys neapmoka" : (fullNeed.homeTravel || "—")}</b></div>
-                          <div className="admin-foreign-fact"><span>Atostogos</span><b>{fullNeed.vacationTerms || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Atostogų apmokėjimas</span><b>{fullNeed.vacationPay || "—"}</b></div>
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                          gap: 12,
+                          marginBottom: 14,
+                        }}>
+                          {[
+                            { label: "Pozicija", value: fullNeedTitle || "—" },
+                            { label: "Darbuotojai", value: `${totalRequestedWorkers || 0} žm.` },
+                            { label: "Projektas", value: projectSummary },
+                            { label: "Atlygis", value: salarySummary },
+                            { label: "Darbo pradžia", value: fullNeed.startDate || "—" },
+                            { label: "Sutartis", value: request.signed_agreement_path ? "Pasirašyta" : "Laukiama parašo" },
+                          ].map((item) => (
+                            <div
+                              key={`${request.request_id}-${item.label}`}
+                              style={{
+                                border: "1px solid #d8e1e8",
+                                borderRadius: 16,
+                                background: "linear-gradient(180deg,#ffffff 0%,#f7fafc 100%)",
+                                padding: "12px 14px",
+                                boxShadow: "0 8px 24px rgba(16,36,56,.05)",
+                                minWidth: 0,
+                              }}
+                            >
+                              <div style={{ fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "#7d8b97", marginBottom: 6 }}>{item.label}</div>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: "#102438", lineHeight: 1.4, wordBreak: "break-word" }}>{item.value}</div>
+                            </div>
+                          ))}
                         </div>
 
-                        {Array.isArray(fullNeed.roles) && fullNeed.roles.length ? (
-                          <div className="admin-foreign-grid">
-                            {fullNeed.roles.map((role, index) => (
-                              <React.Fragment key={`${request.request_id}-full-role-${index}`}>
-                                {fullNeed.roles.length > 1 ? <div className="admin-foreign-role-heading">Profesija {index + 1}</div> : null}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          flexWrap: "wrap",
+                          padding: "14px 16px",
+                          border: "1px solid #d8e1e8",
+                          borderRadius: 16,
+                          background: "#f8fafc",
+                          marginBottom: detailsMinimized ? 0 : 12,
+                        }}>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ display: "block", color: "#102438" }}>Pilna workforce need informacija</strong>
+                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#607180", lineHeight: 1.5 }}>
+                              Viršuje rodoma trumpa santrauka. Jei reikia, išskleiskite pilnas poreikio detales.
+                            </span>
+                          </div>
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            onClick={() => setForeignHireMinimized((current) => ({ ...current, [request.request_id]: !current[request.request_id] }))}
+                            style={{ background: "#fff", color: "#102438", borderColor: "#d8e1e8" }}
+                          >
+                            {detailsMinimized ? "Išskleisti informaciją" : "Suskleisti informaciją"}
+                          </button>
+                        </div>
+
+                        {!detailsMinimized ? <>
+                          <div style={{
+                            border: "1px solid #d8e1e8",
+                            borderRadius: 18,
+                            background: "#fff",
+                            padding: 14,
+                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            marginBottom: 12,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Kontaktinė informacija</h4>
+                              <span style={{ fontSize: 12, color: "#607180" }}>Įmonė ir atsakingas kontaktas</span>
+                            </div>
+                            <div className="admin-foreign-grid">
+                              <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.brief_company_details?.legalName || request.company_name || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Įmonės šalis</span><b>{request.company_country || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Pildė</span><b>{request.brief_company_details?.contactName || request.contact_name || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Pareigos</span><b>{request.brief_company_details?.jobTitle || request.contact_job_title || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.brief_company_details?.businessEmail || request.business_email}`}>{request.brief_company_details?.businessEmail || request.business_email || "—"}</a></div>
+                              <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
+                            </div>
+                          </div>
+
+                          <div style={{
+                            border: "1px solid #d8e1e8",
+                            borderRadius: 18,
+                            background: "#fff",
+                            padding: 14,
+                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            marginBottom: 12,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Poreikio ir darbo sąlygos</h4>
+                              <span style={{ fontSize: 12, color: "#607180" }}>Pagrindinė suvestinė apie projektą ir sąlygas</span>
+                            </div>
+                            <div className="admin-foreign-grid">
+                              <div className="admin-foreign-fact"><span>Darbo / poreikio pavadinimas</span><b>{fullNeedTitle || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Projektas</span><b>{[fullNeed.projectLocation, fullNeed.projectCountry].filter(Boolean).join(", ") || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Darbo pradžia</span><b>{fullNeed.startDate || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Surinkti iki</span><b>{fullNeed.neededBy || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Įdarbinimo tipas</span><b>{fullNeed.employmentType || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Sutarties trukmė</span><b>{fullNeed.duration || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Viršvalandžiai</span><b>{fullNeed.overtimeAllowed === "yes" ? "Taip" : fullNeed.overtimeAllowed === "no" ? "Ne" : (fullNeed.overtime || "—")}</b></div>
+                              <div className="admin-foreign-fact"><span>Viršvalandžių apmokėjimas</span><b>{fullNeed.overtimePay || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Atlygis</span><b>{salarySummary}</b></div>
+                              <div className="admin-foreign-fact"><span>Mokėjimo dažnumas</span><b>{fullNeed.salaryPayFrequency || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Apgyvendinimas</span><b>{accommodationSummary}</b></div>
+                              <div className="admin-foreign-fact"><span>Kambarys</span><b>{fullNeed.roomType || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Būsto kaina</span><b>{fullNeed.accommodationCost || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Kelionės namo</span><b>{homeTravelSummary}</b></div>
+                              <div className="admin-foreign-fact"><span>Atostogos</span><b>{fullNeed.vacationTerms || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Atostogų apmokėjimas</span><b>{fullNeed.vacationPay || "—"}</b></div>
+                            </div>
+                          </div>
+
+                          {roleList.length ? roleList.map((role, index) => (
+                            <div
+                              key={`${request.request_id}-full-role-${index}`}
+                              style={{
+                                border: "1px solid #d8e1e8",
+                                borderRadius: 18,
+                                background: "#fff",
+                                padding: 14,
+                                boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                                marginBottom: 12,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                                <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>{roleList.length > 1 ? `Profesija ${index + 1}` : "Reikalinga profesija"}</h4>
+                                <span style={{ fontSize: 12, color: "#607180" }}>{role.profession || "Profesija nenurodyta"}</span>
+                              </div>
+                              <div className="admin-foreign-grid">
                                 <div className="admin-foreign-fact"><span>Profesija / specialybė</span><b>{role.profession || "—"}</b></div>
                                 <div className="admin-foreign-fact"><span>Darbuotojų skaičius</span><b>{Number(role.count || 1)} žm.</b></div>
                                 <div className="admin-foreign-fact"><span>Minimali patirtis</span><b>{role.experience || "—"}</b></div>
                                 <div className="admin-foreign-fact"><span>Kalba / lygis</span><b>{role.language || "—"}</b></div>
                                 <div className="admin-foreign-fact"><span>Vairuotojo pažymėjimas</span><b>{({required:"Privalomas", advantage:"Privalumas", not_required:"Nereikalingas"})[role.drivingLicense] || role.drivingLicense || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Reikalingi įgūdžiai / darbai</span><b>{role.skills || "—"}</b></div>
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        ) : null}
-                        {fullNeed.additionalInfo ? (
-                          <div className="admin-foreign-grid">
-                            <div className="admin-foreign-fact" style={{gridColumn:"1 / -1"}}><span>Papildomi reikalavimai / informacija</span><b style={{whiteSpace:"pre-wrap"}}>{fullNeed.additionalInfo}</b></div>
-                          </div>
-                        ) : null}
+                                <div className="admin-foreign-fact"><span>Reikalingi įgūdžiai / darbai</span><b style={{ whiteSpace: "pre-wrap" }}>{role.skills || "—"}</b></div>
+                              </div>
+                            </div>
+                          )) : null}
 
-                        <div className="admin-foreign-access-summary" style={{marginTop:12}}>
-                          <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
-                          <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">Atidaryti sutartį</a> : <b>Neįkelta</b>}</div>
-                          <div><span>Pasirašyta tarpininkavimo sutartis</span>{request.signedAgreementUrl ? <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a> : <b>Dar negauta</b>}</div>
-                          <div><span>Darbo sutartis susipažinimui</span>{request.employmentContractUrl ? <a href={request.employmentContractUrl} target="_blank" rel="noreferrer">{request.employment_contract_name || "Atidaryti darbo sutartį"}</a> : <b>Neįkelta</b>}</div>
-                        </div>
+                          {fullNeed.additionalInfo ? (
+                            <div style={{
+                              border: "1px solid #d8e1e8",
+                              borderRadius: 18,
+                              background: "#fff",
+                              padding: 14,
+                              boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                              marginBottom: 12,
+                            }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                                <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Papildoma informacija</h4>
+                                <span style={{ fontSize: 12, color: "#607180" }}>Papildomi reikalavimai ir pastabos</span>
+                              </div>
+                              <div className="admin-foreign-grid">
+                                <div className="admin-foreign-fact" style={{ gridColumn: "1 / -1" }}><span>Papildomi reikalavimai / informacija</span><b style={{ whiteSpace: "pre-wrap" }}>{fullNeed.additionalInfo}</b></div>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div style={{
+                            border: "1px solid #d8e1e8",
+                            borderRadius: 18,
+                            background: "#fff",
+                            padding: 14,
+                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            marginBottom: 12,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Portalas ir dokumentai</h4>
+                              <span style={{ fontSize: 12, color: "#607180" }}>Prisijungimas, sutartys ir prisegti failai</span>
+                            </div>
+                            <div className="admin-foreign-access-summary" style={{ marginTop: 0 }}>
+                              <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
+                              <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">Atidaryti sutartį</a> : <b>Neįkelta</b>}</div>
+                              <div><span>Pasirašyta tarpininkavimo sutartis</span>{request.signedAgreementUrl ? <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a> : <b>Dar negauta</b>}</div>
+                              <div><span>Darbo sutartis susipažinimui</span>{request.employmentContractUrl ? <a href={request.employmentContractUrl} target="_blank" rel="noreferrer">{request.employment_contract_name || "Atidaryti darbo sutartį"}</a> : <b>Neįkelta</b>}</div>
+                            </div>
+                          </div>
+                        </> : null}
                       </> : <>
                         <div className="admin-foreign-grid">
                           <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.company_name || "—"}</b></div>
