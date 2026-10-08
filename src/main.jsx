@@ -25373,16 +25373,15 @@ function AdminDashboard({
     );
   }
 
-  function generateForeignHireLogin(request) {
-    const company = String(request?.company_name || "S24")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 14) || "S24";
-    const suffix = String(Math.floor(1000 + Math.random() * 9000));
-    return `${company}-${suffix}`.slice(0, 40);
+  function generateForeignHireLogin() {
+    const bytes = new Uint32Array(2);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+    else {
+      bytes[0] = Math.floor(Math.random() * 1000000);
+      bytes[1] = Math.floor(Math.random() * 1000000);
+    }
+    const number = String(((bytes[0] ^ bytes[1]) % 900000) + 100000);
+    return `ID-${number}`;
   }
 
   function generateForeignHirePassword() {
@@ -27049,7 +27048,7 @@ function AdminDashboard({
                           <p>{request.employer_account_id ? "Įkelta sutartis iš karto atsiras darbdavio portale. Darbdavys galės ją perskaityti, pasirašyti ir įkelti pasirašytą kopiją." : "Sukurkite privatų Company ID ir laikiną slaptažodį. Prisijungimo duomenis nukopijuokite prieš perkraudami puslapį."}</p>
                           <div className="admin-foreign-setup-grid">
                             {!request.employer_account_id ? <>
-                              <label className="admin-foreign-field"><span>Company ID</span><input value={foreignHireSetupLogin} onChange={(event) => setForeignHireSetupLogin(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40))} autoComplete="off" /></label>
+                              <label className="admin-foreign-field"><span>Company ID</span><input value={foreignHireSetupLogin} onChange={(event) => { const digits = event.target.value.replace(/\D/g, "").slice(0, 6); setForeignHireSetupLogin(`ID-${digits}`); }} inputMode="numeric" autoComplete="off" /></label>
                               <label className="admin-foreign-field"><span>Laikinas slaptažodis</span><input value={foreignHireSetupPassword} onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))} autoComplete="off" /></label>
                             </> : <label className="admin-foreign-file">
                               <span className="admin-foreign-file-copy"><b>{foreignHireAgreementFile?.name || "Tarpininkavimo sutartis nepasirinkta"}</b><span>PDF arba DOCX · iki 15 MB</span></span>
@@ -27059,7 +27058,7 @@ function AdminDashboard({
                           </div>
                           <div className="admin-foreign-setup-actions">
                             {!request.employer_account_id ? <>
-                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}>Naujas Company ID</button>
+                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}>Sugeneruoti naują ID</button>
                               <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}>Naujas slaptažodis</button>
                             </> : null}
                             <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); }}>Atšaukti</button>
@@ -30874,6 +30873,7 @@ const HIRE_EMPLOYER_PORTAL_I18N = {
   "Use “Submit workforce need” when you are ready to provide full job, salary, accommodation and project information.":{de:"Nutzen Sie „Personalbedarf einreichen“, sobald Sie vollständige Angaben zu Stelle, Lohn, Unterkunft und Projekt machen können.",nl:"Gebruik ‘Personeelsbehoefte indienen’ zodra u volledige informatie over functie, salaris, huisvesting en project kunt geven.",no:"Bruk «Send inn bemanningsbehov» når du er klar til å oppgi full informasjon om jobb, lønn, bolig og prosjekt.",sv:"Använd ”Skicka in bemanningsbehov” när ni är redo att lämna fullständig information om jobb, lön, boende och projekt.",da:"Brug “Indsend bemandingsbehov”, når I er klar til at oplyse alle detaljer om job, løn, bolig og projekt."},
   "Recruitment agreement":{de:"Vermittlungsvereinbarung",nl:"Wervingsovereenkomst",no:"Rekrutteringsavtale",sv:"Rekryteringsavtal",da:"Rekrutteringsaftale"},
   "Signed copy received.":{de:"Unterschriebene Kopie erhalten.",nl:"Ondertekende kopie ontvangen.",no:"Signert kopi mottatt.",sv:"Signerad kopia mottagen.",da:"Underskrevet kopi modtaget."},
+  "Your signed agreement has been accepted.":{de:"Ihre unterschriebene Vereinbarung wurde angenommen.",nl:"Uw ondertekende overeenkomst is geaccepteerd.",no:"Den signerte avtalen deres er mottatt og godkjent.",sv:"Ert signerade avtal har tagits emot och godkänts.",da:"Jeres underskrevne aftale er modtaget og godkendt."},
   "Open agreement":{de:"Vertrag öffnen",nl:"Overeenkomst openen",no:"Åpne avtale",sv:"Öppna avtal",da:"Åbn aftale"},
   "Please read the agreement carefully. If everything is acceptable, sign it and upload the signed copy. If you have questions, contact Statybos24 by email.":{de:"Bitte lesen Sie die Vereinbarung sorgfältig. Wenn alles passt, unterschreiben Sie sie und laden Sie die unterschriebene Kopie hoch. Bei Fragen kontaktieren Sie Statybos24 per E-Mail.",nl:"Lees de overeenkomst zorgvuldig. Als alles akkoord is, onderteken deze en upload de ondertekende kopie. Neem bij vragen per e-mail contact op met Statybos24.",no:"Les avtalen nøye. Hvis alt er i orden, signer den og last opp den signerte kopien. Kontakt Statybos24 på e-post hvis dere har spørsmål.",sv:"Läs avtalet noggrant. Om allt är i sin ordning, signera det och ladda upp den signerade kopian. Kontakta Statybos24 via e-post om ni har frågor.",da:"Læs aftalen grundigt. Hvis alt er i orden, underskriv den og upload den underskrevne kopi. Kontakt Statybos24 via e-mail, hvis I har spørgsmål."},
   "Click the document to read the agreement.":{de:"Klicken Sie auf das Dokument, um die Vereinbarung zu lesen.",nl:"Klik op het document om de overeenkomst te lezen.",no:"Klikk på dokumentet for å lese avtalen.",sv:"Klicka på dokumentet för att läsa avtalet.",da:"Klik på dokumentet for at læse aftalen."},
@@ -31394,17 +31394,20 @@ function HireEmployerPortalPage() {
 
             <aside className="hep-panel hep-panel-pad">
               <div className="hep-agreement-box"><div><h3>{tr("Recruitment agreement", "Tarpininkavimo sutartis")}</h3></div>
-                {portal.agreement ? <>
+                {portal.agreement ? (agreementDone ? <>
+                  <div className="hep-agreement-locked">{tr("Your signed agreement has been accepted.", "Jūsų pasirašyta sutartis priimta.")}</div>
+                  <a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a>
+                </> : <>
                   <button className="hep-agreement-document" type="button" onClick={openAgreement}>
                     <b>{portal.agreement.name || tr("Recruitment agreement", "Tarpininkavimo sutartis")}</b>
                     <span>{tr("Click the document to read the agreement.", "Paspauskite dokumentą ir perskaitykite sutartį.")}</span>
                   </button>
-                  {agreementDone ? <div className="hep-agreement-locked">{tr("Signed copy received.", "Pasirašyta sutartis gauta.")}</div> : <div className="hep-agreement-state"><span>{tr("Please read the agreement carefully. If everything is acceptable, sign it and upload the signed copy. If you have questions, contact Statybos24 by email.", "Prašome atidžiai perskaityti ir susipažinti su sutartimi. Jeigu viskas tinka, pasirašykite ją ir įkelkite pasirašytą kopiją. Jeigu turite klausimų, susisiekite su Statybos24 el. paštu.")}</span></div>}
+                  <div className="hep-agreement-state"><span>{tr("Please read the agreement carefully. If everything is acceptable, sign it and upload the signed copy. If you have questions, contact Statybos24 by email.", "Prašome atidžiai perskaityti ir susipažinti su sutartimi. Jeigu viskas tinka, pasirašykite ją ir įkelkite pasirašytą kopiją. Jeigu turite klausimų, susisiekite su Statybos24 el. paštu.")}</span></div>
                   <div className="hep-agreement-actions">
-                    {!agreementDone ? <label className="hep-agreement-upload" aria-disabled={uploading}>{uploading ? tr("Uploading...", "Įkeliama...") : tr("Upload signed agreement", "Įkelti pasirašytą sutartį")}<input type="file" disabled={uploading} accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.target.files?.[0] || null; if (file) { setSignedFile(file); uploadSignedAgreement(file); } event.target.value = ""; }}/></label> : null}
+                    <label className="hep-agreement-upload" aria-disabled={uploading}>{uploading ? tr("Uploading...", "Įkeliama...") : tr("Upload signed agreement", "Įkelti pasirašytą sutartį")}<input type="file" disabled={uploading} accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.target.files?.[0] || null; if (file) { setSignedFile(file); uploadSignedAgreement(file); } event.target.value = ""; }}/></label>
                     <a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a>
                   </div>
-                </> : <><div className="hep-agreement-state"><b>{tr("Agreement is being prepared", "Sutartis ruošiama")}</b><span>{tr("Statybos24 will place the company agreement here.", "Statybos24 čia įkels įmonės sutartį.")}</span></div><a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a></>}
+                </>) : <><div className="hep-agreement-state"><b>{tr("Agreement is being prepared", "Sutartis ruošiama")}</b><span>{tr("Statybos24 will place the company agreement here.", "Statybos24 čia įkels įmonės sutartį.")}</span></div><a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a></>}
               </div>
             </aside>
           </div>
