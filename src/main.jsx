@@ -24375,7 +24375,7 @@ function AdminDashboard({
   const activeDisputeCount = disputes.filter(
     (dispute) => !dispute?.dispute_status || dispute.dispute_status === "disputed"
   ).length;
-  const newForeignHireCount = foreignHireRequests.filter((request) => request.status === "new").length;
+  const newForeignHireCount = foreignHireRequests.filter((request) => ["new", "employer_submitted"].includes(request.status)).length;
   const foreignHireEmployerActionCount = foreignHireRequests.reduce((sum, request) =>
     sum + Number(request.employer_interview_requested_count || 0) + Number(request.employer_accepted_count || 0), 0);
   const foreignHireAlertCount = newForeignHireCount + foreignHireEmployerActionCount;
@@ -26805,7 +26805,7 @@ function AdminDashboard({
                   const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
 
                   return (
-                    <article className={`admin-foreign-card ${request.status === "new" ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
+                    <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(Number(request.employer_interview_requested_count||0)+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
                       <button type="button" className="admin-foreign-summary" onClick={() => setForeignHireExpandedId(expanded ? null : request.request_id)} aria-expanded={expanded}>
                         <span className="admin-foreign-summary-id">#{shortRequestId}</span>
                         <span className="admin-foreign-summary-toggle" aria-hidden="true">{expanded ? "−" : "+"}</span>
@@ -30817,8 +30817,42 @@ function HireEmployerPortalPage() {
     robots.setAttribute("content", "noindex,nofollow,noarchive");
     document.title = tr("Employer portal | Statybos24", "Darbdavio portalas | Statybos24");
     document.documentElement.lang = lang;
-    return () => { document.title = previousTitle; if (existing) { if (previous === null) existing.removeAttribute("content"); else existing.setAttribute("content", previous); } else robots.remove(); };
+    return () => {
+      document.title = previousTitle;
+      if (existing) {
+        if (previous === null) existing.removeAttribute("content");
+        else existing.setAttribute("content", previous);
+      } else robots.remove();
+    };
   }, [lang]);
+
+  const blankRole = () => ({ profession:"", count:1, experience:"", skills:"", language:"", languageLevel:"", drivingLicense:"preferred" });
+  const blankNeed = () => ({
+    needTitle:"",
+    projectCountry:"",
+    projectLocation:"",
+    startDate:"",
+    neededBy:"",
+    employmentType:"direct",
+    duration:"",
+    hoursPerWeek:"",
+    overtime:"",
+    rotation:"",
+    salaryCurrency:"EUR",
+    salaryType:"hourly",
+    salaryMin:"",
+    salaryMax:"",
+    salaryBasis:"gross",
+    accommodation:"yes",
+    roomType:"",
+    accommodationCost:"",
+    initialTravel:"",
+    workTransport:"",
+    homeTravel:"",
+    additionalInfo:"",
+    roles:[blankRole()],
+  });
+
   const [token] = useState(() => getForeignHirePortalToken());
   const [portal, setPortal] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30830,56 +30864,92 @@ function HireEmployerPortalPage() {
   const [candidateBusyId, setCandidateBusyId] = useState(null);
   const [password1, setPassword1] = useState("");
   const [password2, setPassword2] = useState("");
-  const [company, setCompany] = useState({legalName:"",registrationNumber:"",vatNumber:"",billingAddress:"",website:"",contactName:"",jobTitle:"",businessEmail:"",phone:""});
-  const [workforce, setWorkforce] = useState({
-    projectCountry:"",projectLocation:"",startDate:"",neededBy:"",employmentType:"direct",duration:"",hoursPerWeek:"",overtime:"",rotation:"",
-    salaryCurrency:"EUR",salaryType:"hourly",salaryMin:"",salaryMax:"",salaryBasis:"gross",accommodation:"yes",roomType:"",accommodationCost:"",
-    initialTravel:"",workTransport:"",homeTravel:"",additionalInfo:"",roles:[{profession:"",count:1,experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"}]
-  });
+  const [screen, setScreen] = useState("dashboard");
+  const [selectedNeedId, setSelectedNeedId] = useState(null);
+  const [needInfoOpen, setNeedInfoOpen] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [needForm, setNeedForm] = useState(blankNeed);
+
+  const needs = Array.isArray(portal?.needs) ? portal.needs : [];
+  const selectedNeed = needs.find((need) => need.id === selectedNeedId) || null;
+  const activeCandidate = selectedCandidate
+    ? (needs.find((need) => need.id === selectedCandidate.needId)?.candidates || []).find((candidate) => candidate.id === selectedCandidate.candidateId) || null
+    : null;
+  const agreementDone = ["signed_uploaded", "approved"].includes(portal?.agreement?.status);
+
+  function needStatusLabel(status) {
+    return ({
+      new:tr("New", "Naujas"),
+      under_review:tr("Under review", "Peržiūrima"),
+      access_preparing:tr("Preparing", "Ruošiama"),
+      waiting_employer:tr("Waiting for employer", "Laukiama darbdavio"),
+      employer_submitted:tr("Submitted", "Pateikta"),
+      ready_for_sourcing:tr("Approved", "Patvirtinta"),
+      sourcing:tr("Sourcing", "Vyksta paieška"),
+      declined:tr("Declined", "Atmesta"),
+      closed:tr("Completed", "Užbaigta"),
+    })[status] || tr("Submitted", "Pateikta");
+  }
+
+  function candidateResponseLabel(response) {
+    return ({
+      interview_requested:tr("Interview requested", "Paprašytas interviu"),
+      accepted:tr("Candidate approved", "Kandidatas patvirtintas"),
+      not_suitable:tr("Not suitable", "Netinka"),
+    })[response] || tr("Awaiting decision", "Laukiama sprendimo");
+  }
+
+  function employmentTypeLabel(value) {
+    return ({ direct:tr("Direct employment", "Tiesioginis įdarbinimas"), fixed_term:tr("Fixed-term", "Terminuota sutartis"), permanent:tr("Permanent", "Neterminuota sutartis") })[value] || value || "—";
+  }
+
+  function salaryTypeLabel(value) {
+    return ({ hourly:tr("Per hour", "Valandinis"), monthly:tr("Per month", "Mėnesinis") })[value] || value || "—";
+  }
+
+  function salaryBasisLabel(value) {
+    return ({ gross:tr("Gross", "Bruto"), net:tr("Net", "Neto") })[value] || value || "—";
+  }
+
+  function accommodationLabel(value) {
+    return ({ yes:tr("Provided by employer", "Suteikia darbdavys"), no:tr("Not provided", "Nesuteikiama"), shared_cost:tr("Employee contributes", "Dalinai moka darbuotojas") })[value] || value || "—";
+  }
+
+  function drivingLabel(value) {
+    return ({ required:tr("Required", "Privalomas"), preferred:tr("Preferred", "Pageidautinas"), not_required:tr("Not required", "Nereikalingas") })[value] || value || "—";
+  }
+
+  function totalWorkers(need) {
+    const roles = need?.workforceDetails?.roles;
+    if (!Array.isArray(roles)) return 0;
+    return roles.reduce((sum, role) => sum + Math.max(0, Number(role?.count || 0)), 0);
+  }
 
   async function loadPortal(showLoader=true) {
     if (!supabase || !token) {
-      setLoading(false); setError(tr("Your portal session is not available.", "Jūsų portalo sesija nepasiekiama.")); return;
+      setLoading(false);
+      setError(tr("Your portal session is not available.", "Jūsų portalo sesija nepasiekiama."));
+      return;
     }
     if (showLoader) setLoading(true);
     try {
       const { data, error } = await supabase.rpc("foreign_employer_portal_data", { p_session_token: token });
       if (error) throw error;
       setPortal(data);
-      const req=data?.request||{}; const brief=data?.brief||{};
-      const cd=brief.companyDetails||{}; const wd=brief.workforceDetails||{};
-      setCompany(prev=>({...prev,
-        legalName:cd.legalName ?? req.companyName ?? prev.legalName,
-        registrationNumber:cd.registrationNumber ?? prev.registrationNumber,
-        vatNumber:cd.vatNumber ?? prev.vatNumber,
-        billingAddress:cd.billingAddress ?? prev.billingAddress,
-        website:cd.website ?? prev.website,
-        contactName:cd.contactName ?? req.contactName ?? prev.contactName,
-        jobTitle:cd.jobTitle ?? prev.jobTitle,
-        businessEmail:cd.businessEmail ?? req.businessEmail ?? prev.businessEmail,
-        phone:cd.phone ?? req.phone ?? prev.phone,
-      }));
-      setWorkforce(prev=>({...prev,
-        ...wd,
-        projectCountry:wd.projectCountry ?? req.projectCountry ?? prev.projectCountry,
-        projectLocation:wd.projectLocation ?? req.projectLocation ?? prev.projectLocation,
-        startDate:wd.startDate ?? req.requestedStartDate ?? prev.startDate,
-        roles:Array.isArray(wd.roles)&&wd.roles.length?wd.roles:(Array.isArray(req.roles)&&req.roles.length?req.roles.map(r=>({profession:r.profession||"",count:Number(r.count||1),experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"})):prev.roles),
-      }));
       setError("");
     } catch (err) {
       setError(err?.message || tr("Could not load the employer portal.", "Nepavyko įkelti darbdavio portalo."));
-      if (/session/i.test(err?.message||"")) setForeignHirePortalToken("");
-    } finally { setLoading(false); }
+      if (/session/i.test(err?.message || "")) setForeignHirePortalToken("");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(()=>{ loadPortal(); },[]);
+  useEffect(() => { loadPortal(); }, []);
 
   async function logout() {
     if (supabase && token) {
-      try {
-        await supabase.rpc("foreign_employer_logout", { p_session_token: token });
-      } catch {}
+      try { await supabase.rpc("foreign_employer_logout", { p_session_token: token }); } catch {}
     }
     setForeignHirePortalToken("");
     window.location.assign("/hire/login");
@@ -30887,236 +30957,305 @@ function HireEmployerPortalPage() {
 
   async function changePassword() {
     setError(""); setNotice("");
-    if (password1.length < 12 || !/[A-Z]/.test(password1) || !/[a-z]/.test(password1) || !/[0-9]/.test(password1)) { setError(tr("Use at least 12 characters with uppercase, lowercase and a number.", "Naudokite bent 12 simbolių, didžiąją raidę, mažąją raidę ir skaičių.")); return; }
-    if (password1 !== password2) { setError(tr("Passwords do not match.", "Slaptažodžiai nesutampa.")); return; }
+    if (password1.length < 12 || !/[A-Z]/.test(password1) || !/[a-z]/.test(password1) || !/[0-9]/.test(password1)) {
+      setError(tr("Use at least 12 characters with uppercase, lowercase and a number.", "Naudokite bent 12 simbolių, didžiąją raidę, mažąją raidę ir skaičių."));
+      return;
+    }
+    if (password1 !== password2) {
+      setError(tr("Passwords do not match.", "Slaptažodžiai nesutampa."));
+      return;
+    }
     setSaving(true);
     try {
-      const {error}=await supabase.rpc("foreign_employer_change_password",{p_session_token:token,p_new_password:password1});
-      if(error) throw error;
-      setPassword1(""); setPassword2(""); setNotice(tr("Password updated.", "Slaptažodis atnaujintas.")); await loadPortal(false);
-    } catch(err){setError(err?.message||tr("Could not update password.", "Nepavyko atnaujinti slaptažodžio."));} finally{setSaving(false);}
+      const { error } = await supabase.rpc("foreign_employer_change_password", { p_session_token:token, p_new_password:password1 });
+      if (error) throw error;
+      setPassword1(""); setPassword2("");
+      setNotice(tr("Password updated.", "Slaptažodis atnaujintas."));
+      await loadPortal(false);
+    } catch (err) {
+      setError(err?.message || tr("Could not update password.", "Nepavyko atnaujinti slaptažodžio."));
+    } finally { setSaving(false); }
   }
 
   async function openAgreement() {
     if (!supabase || !portal?.agreement) return;
     setError("");
     try {
-      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:{action:"agreement-url",token}});
-      if(error) throw error;
-      if(!data?.url) throw new Error(data?.error||tr("Agreement link is not available.", "Sutarties nuoroda nepasiekiama."));
-      window.open(data.url,"_blank","noopener,noreferrer");
-    } catch(err){setError(err?.message||tr("Could not open the agreement.", "Nepavyko atidaryti sutarties."));}
+      const { data, error } = await supabase.functions.invoke("foreign-hire-portal-files", { body:{ action:"agreement-url", token } });
+      if (error) throw error;
+      if (!data?.url) throw new Error(data?.error || tr("Agreement link is not available.", "Sutarties nuoroda nepasiekiama."));
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err?.message || tr("Could not open the agreement.", "Nepavyko atidaryti sutarties."));
+    }
   }
 
   async function uploadSignedAgreement() {
     if (!supabase || !signedFile || uploading) return;
     setError(""); setNotice(""); setUploading(true);
     try {
-      const fd=new FormData(); fd.append("action","upload-signed"); fd.append("token",token); fd.append("file",signedFile);
-      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:fd});
-      if(error) throw error;
-      if(data?.error) throw new Error(data.error);
-      setSignedFile(null); setNotice(tr("Signed agreement uploaded. Statybos24 will review it.", "Pasirašyta sutartis įkelta. Statybos24 ją peržiūrės.")); await loadPortal(false);
-    } catch(err){setError(err?.message||tr("Could not upload the signed agreement.", "Nepavyko įkelti pasirašytos sutarties."));} finally{setUploading(false);}
+      const fd = new FormData();
+      fd.append("action", "upload-signed");
+      fd.append("token", token);
+      fd.append("file", signedFile);
+      const { data, error } = await supabase.functions.invoke("foreign-hire-portal-files", { body:fd });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSignedFile(null);
+      setNotice(tr("Signed agreement uploaded. Statybos24 will review it.", "Pasirašyta sutartis įkelta. Statybos24 ją peržiūrės."));
+      await loadPortal(false);
+    } catch (err) {
+      setError(err?.message || tr("Could not upload the signed agreement.", "Nepavyko įkelti pasirašytos sutarties."));
+    } finally { setUploading(false); }
   }
 
   async function openCandidateCv(candidate) {
     if (!supabase || !candidate?.id || candidateBusyId) return;
-    setError("");
-    setCandidateBusyId(candidate.id);
+    setError(""); setCandidateBusyId(candidate.id);
     try {
-      const {data,error}=await supabase.functions.invoke("foreign-hire-portal-files",{body:{action:"candidate-cv-url",token,candidateId:candidate.id}});
-      if(error) throw error;
-      if(!data?.url) throw new Error(data?.error||tr("Candidate CV is not available.", "Kandidato CV nepasiekiamas."));
-      window.open(data.url,"_blank","noopener,noreferrer");
-    } catch(err){setError(err?.message||tr("Could not open candidate CV.", "Nepavyko atidaryti kandidato CV."));} finally{setCandidateBusyId(null);}
+      const { data, error } = await supabase.functions.invoke("foreign-hire-portal-files", { body:{ action:"candidate-cv-url", token, candidateId:candidate.id } });
+      if (error) throw error;
+      if (!data?.url) throw new Error(data?.error || tr("Candidate CV is not available.", "Kandidato CV nepasiekiamas."));
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err?.message || tr("Could not open candidate CV.", "Nepavyko atidaryti kandidato CV."));
+    } finally { setCandidateBusyId(null); }
   }
 
-  async function respondToCandidate(candidate,response) {
+  async function respondToCandidate(candidate, response) {
     if (!supabase || !candidate?.id || candidateBusyId) return;
     setError(""); setNotice(""); setCandidateBusyId(candidate.id);
     try {
-      const {error}=await supabase.rpc("foreign_employer_candidate_response",{
-        p_session_token:token,p_candidate_id:candidate.id,p_response:response
+      const { error } = await supabase.rpc("foreign_employer_candidate_response", {
+        p_session_token:token,
+        p_candidate_id:candidate.id,
+        p_response:response,
       });
-      if(error) throw error;
-      const message = response==="interview_requested"
-        ? tr("Interview requested. Statybos24 will coordinate the next step.","Paprašytas interviu. Statybos24 suderins kitą žingsnį.")
-        : response==="accepted"
-        ? tr("Candidate approved. Statybos24 will confirm final conditions with the candidate before travel.","Kandidatas patvirtintas. Prieš kelionę Statybos24 su kandidatu patvirtins galutines darbo sąlygas.")
-        : tr("Candidate marked as not suitable.","Pažymėta, kad kandidatas netinka.");
+      if (error) throw error;
+      const message = response === "interview_requested"
+        ? tr("Interview requested. Statybos24 will coordinate the next step.", "Paprašytas interviu. Statybos24 suderins kitą žingsnį.")
+        : response === "accepted"
+        ? tr("Candidate approved. Statybos24 will coordinate the next step.", "Kandidatas patvirtintas. Statybos24 suderins kitą žingsnį.")
+        : tr("Candidate marked as not suitable.", "Pažymėta, kad kandidatas netinka.");
       setNotice(message);
       await loadPortal(false);
-    } catch(err){setError(err?.message||tr("Could not save your candidate decision.","Nepavyko išsaugoti sprendimo dėl kandidato."));} finally{setCandidateBusyId(null);}
+    } catch (err) {
+      setError(err?.message || tr("Could not save your candidate decision.", "Nepavyko išsaugoti sprendimo dėl kandidato."));
+    } finally { setCandidateBusyId(null); }
   }
 
-  function candidateResponseLabel(response) {
-    return ({
-      interview_requested:tr("Interview requested","Paprašytas interviu"),
-      accepted:tr("Candidate approved","Kandidatas patvirtintas"),
-      not_suitable:tr("Not suitable","Netinka"),
-    })[response] || tr("Awaiting your decision","Laukiama jūsų sprendimo");
+  function setNeedField(key, value) {
+    setNeedForm((current) => ({ ...current, [key]:value }));
   }
 
-  function setCompanyField(key,value){setCompany(prev=>({...prev,[key]:value}));}
-  function setWorkforceField(key,value){setWorkforce(prev=>({...prev,[key]:value}));}
-  function setRole(index,key,value){setWorkforce(prev=>({...prev,roles:prev.roles.map((r,i)=>i===index?{...r,[key]:value}:r)}));}
-  function addRole(){setWorkforce(prev=>({...prev,roles:[...prev.roles,{profession:"",count:1,experience:"",skills:"",language:"",languageLevel:"",drivingLicense:"preferred"}]}));}
-  function removeRole(index){setWorkforce(prev=>({...prev,roles:prev.roles.length>1?prev.roles.filter((_,i)=>i!==index):prev.roles}));}
+  function setNeedRole(index, key, value) {
+    setNeedForm((current) => ({
+      ...current,
+      roles:current.roles.map((role, roleIndex) => roleIndex === index ? { ...role, [key]:value } : role),
+    }));
+  }
 
-  async function saveBrief(submit=false) {
+  function addNeedRole() {
+    setNeedForm((current) => ({ ...current, roles:[...current.roles, blankRole()] }));
+  }
+
+  function removeNeedRole(index) {
+    setNeedForm((current) => ({
+      ...current,
+      roles:current.roles.length > 1 ? current.roles.filter((_, roleIndex) => roleIndex !== index) : current.roles,
+    }));
+  }
+
+  function openNewNeed() {
+    setNeedForm(blankNeed());
+    setError(""); setNotice("");
+    setScreen("new");
+    setSelectedNeedId(null);
+    setNeedInfoOpen(false);
+    setSelectedCandidate(null);
+  }
+
+  function openNeed(need) {
+    setSelectedNeedId(need.id);
+    setNeedInfoOpen(false);
+    setSelectedCandidate(null);
+    setScreen("need");
+    setError("");
+  }
+
+  async function submitNeed() {
     if (!supabase || saving) return;
-    setError(""); setNotice(""); setSaving(true);
+    setError(""); setNotice("");
+    const firstInvalidRole = needForm.roles.find((role) => !role.profession.trim() || Number(role.count || 0) < 1);
+    if (!needForm.needTitle.trim()) { setError(tr("Enter a job / workforce need title.", "Įrašykite darbo / poreikio pavadinimą.")); return; }
+    if (!needForm.projectCountry.trim() || !needForm.projectLocation.trim() || !needForm.startDate) { setError(tr("Enter project country, location and start date.", "Nurodykite projekto šalį, vietą ir darbo pradžios datą.")); return; }
+    if (firstInvalidRole) { setError(tr("Complete profession and worker count for every role.", "Kiekvienai pozicijai nurodykite profesiją ir darbuotojų skaičių.")); return; }
+    if (!String(needForm.hoursPerWeek).trim()) { setError(tr("Enter working hours per week.", "Nurodykite darbo valandas per savaitę.")); return; }
+    if (!String(needForm.salaryMin).trim()) { setError(tr("Enter the offered salary.", "Nurodykite siūlomą atlyginimą.")); return; }
+
+    setSaving(true);
     try {
-      const {data,error}=await supabase.rpc("foreign_employer_save_brief",{
-        p_session_token:token,p_company_details:company,p_workforce_details:workforce,p_submit:submit
+      const workforceDetails = { ...needForm };
+      delete workforceDetails.needTitle;
+      const { data, error } = await supabase.rpc("foreign_employer_submit_need", {
+        p_session_token:token,
+        p_need_title:needForm.needTitle.trim(),
+        p_workforce_details:workforceDetails,
       });
-      if(error) throw error;
-      setNotice(submit?tr("Workforce brief submitted to Statybos24 for review.", "Darbuotojų poreikis pateiktas Statybos24 peržiūrai."):tr("Draft saved.", "Juodraštis išsaugotas."));
+      if (error) throw error;
       await loadPortal(false);
-    } catch(err){setError(err?.message||tr("Could not save the workforce brief.", "Nepavyko išsaugoti darbuotojų poreikio."));} finally{setSaving(false);}
+      setScreen("dashboard");
+      setSelectedNeedId(null);
+      setNeedForm(blankNeed());
+      setNotice(tr("Workforce need submitted to Statybos24.", "Darbuotojų poreikis pateiktas Statybos24."));
+    } catch (err) {
+      setError(err?.message || tr("Could not submit the workforce need.", "Nepavyko pateikti darbuotojų poreikio."));
+    } finally { setSaving(false); }
   }
 
-  const requestStatus=portal?.request?.status||"waiting_employer";
-  const agreementStatus=portal?.agreement?.status||"not_ready";
-  const briefStatus=portal?.brief?.status||"draft";
-  const agreementDone=["signed_uploaded","approved"].includes(agreementStatus);
-  const briefDone=["submitted","approved"].includes(briefStatus);
-  const presentedCandidates=Array.isArray(portal?.candidates)?portal.candidates:[];
-  const sourcingStarted=["sourcing","closed"].includes(requestStatus);
-  const submittedToReview=requestStatus==="employer_submitted"||requestStatus==="ready_for_sourcing"||sourcingStarted;
+  if (loading) return <div className="hep-loading">{tr("Loading employer portal...", "Kraunamas darbdavio portalas...")}</div>;
+  if (!portal) return <div className="hep-loading">{error || tr("Portal is not available.", "Portalas nepasiekiamas.")}</div>;
 
-  if (!token) return <div className="hep-basic"><HirePortalLogo/><h1>{tr("Employer portal", "Darbdavio portalas")}</h1><p>{tr("Your session is not available.", "Jūsų sesija nepasiekiama.")}</p><a href="/hire/login">{tr("Go to sign in", "Eiti į prisijungimą")}</a></div>;
-  if (loading) return <div className="hep-basic"><HirePortalLogo/><div className="hep-loader"/><p>{tr("Loading employer portal…", "Kraunamas darbdavio portalas…")}</p></div>;
-  if (!portal) return <div className="hep-basic"><HirePortalLogo/><h1>{tr("Could not open portal", "Nepavyko atidaryti portalo")}</h1><p>{error}</p><button onClick={logout}>{tr("Back to sign in", "Grįžti į prisijungimą")}</button></div>;
+  const wf = selectedNeed?.workforceDetails || {};
+  const selectedCandidates = Array.isArray(selectedNeed?.candidates) ? selectedNeed.candidates : [];
 
   return (
     <div className="hep-page">
       <style>{`
-        .hep-page{--navy:#10283f;--orange:#f08a28;min-height:100vh;background:#f5f8fa;color:var(--navy);font-family:Inter,system-ui,sans-serif}.hep-basic{min-height:100vh;display:grid;place-items:center;align-content:center;gap:16px;background:#f5f8fa;color:#10283f;font-family:Inter,sans-serif;text-align:center;padding:24px}.hep-basic h1,.hep-basic p{margin:0}.hep-basic button,.hep-basic a{padding:11px 15px;border:0;border-radius:9px;background:#10283f;color:#fff;text-decoration:none;font-weight:850;cursor:pointer}.hep-loader{width:28px;height:28px;border:3px solid #d9e3e9;border-top-color:#f08a28;border-radius:50%;animation:hepspin .8s linear infinite}@keyframes hepspin{to{transform:rotate(360deg)}}
-        .hep-top{position:sticky;top:0;z-index:120;background:rgba(255,255,255,.96);border-bottom:1px solid #e2e9ee;backdrop-filter:blur(10px)}.hep-top-inner{width:min(1280px,calc(100% - 36px));min-height:74px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.hep-brand{display:flex;align-items:center;gap:15px}.hep-brand-copy{padding-left:15px;border-left:1px solid #e1e8ed}.hep-brand-copy b{display:block;font-size:10px}.hep-brand-copy span{display:block;margin-top:3px;color:#7b8994;font-size:8px;letter-spacing:.07em;text-transform:uppercase}.hep-top-actions{display:flex;align-items:center;gap:8px}.hire-portal-lang-switch{position:relative;display:inline-block}.hire-portal-lang-trigger{min-width:68px;height:38px;padding:0 10px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;display:flex;align-items:center;justify-content:space-between;gap:9px;font:900 8.5px Inter,sans-serif;cursor:pointer}.hire-portal-lang-trigger svg{width:15px;height:15px}.hire-portal-lang-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:180;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:11px;background:#fff;box-shadow:0 18px 45px rgba(16,40,63,.14)}.hire-portal-lang-menu button{width:100%;min-height:36px;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hire-portal-lang-menu button:hover{background:#f5f8fa}.hire-portal-lang-menu button.active{background:#10283f;color:#fff}.hire-portal-lang-menu button b{font-size:8px;letter-spacing:.08em}.hep-company-id{padding:9px 11px;border:1px solid #e0e7ec;border-radius:9px;background:#f9fbfc;color:#667783;font-size:9px;font-weight:800}.hep-logout{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#526575;font:850 9px Inter,sans-serif;cursor:pointer}
-        .hep-shell{width:min(1280px,calc(100% - 36px));margin:28px auto 70px}.hep-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:26px;align-items:end;margin-bottom:18px}.hep-eyebrow{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.hep-hero h1{margin:6px 0 8px;font:900 clamp(30px,4vw,46px)/1 Manrope,Inter,sans-serif;letter-spacing:-.045em}.hep-hero p{max-width:740px;margin:0;color:#6f7f8c;font-size:12px;line-height:1.6}.hep-status{padding:10px 13px;border-radius:999px;background:#edf3f7;color:#526575;font-size:9px;font-weight:900;white-space:nowrap}.hep-status.sourcing{background:#e9f7f1;color:#14734f}.hep-status.review{background:#fff3e7;color:#a85a16}
-        .hep-alerts{display:grid;gap:8px;margin-bottom:16px}.hep-notice,.hep-error{padding:12px 14px;border-radius:11px;font-size:10px;font-weight:750;line-height:1.5}.hep-notice{border:1px solid #bfe3d2;background:#eef8f4;color:#176e4e}.hep-error{border:1px solid #efc2b7;background:#fff1ed;color:#a5432c}
-        .hep-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}.hep-progress-card{min-height:84px;padding:14px;border:1px solid #e0e8ed;border-radius:13px;background:#fff}.hep-progress-card span{display:block;color:#85929b;font-size:7.5px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.hep-progress-card b{display:block;margin-top:9px;font-size:12px}.hep-progress-card.done{border-color:#bfdfd0;background:#f4fbf8}.hep-progress-card.done b{color:#176f4e}.hep-progress-card.current{border-color:#f0c596;background:#fff9f3}.hep-progress-card.current b{color:#b76018}
-        .hep-grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(300px,.58fr);gap:14px;align-items:start}.hep-main{display:grid;gap:14px}.hep-side{display:grid;gap:14px;position:sticky;top:92px}.hep-card{background:#fff;border:1px solid #e1e8ed;border-radius:16px;padding:21px;box-shadow:0 8px 28px rgba(16,40,63,.035)}.hep-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.hep-card-head h2{margin:0;font:900 20px/1.1 Manrope,Inter,sans-serif;letter-spacing:-.025em}.hep-card-head p{margin:6px 0 0;color:#7a8995;font-size:10px;line-height:1.5}.hep-step{width:31px;height:31px;border-radius:9px;background:#fff2e5;color:#c96a15;display:grid;place-items:center;font-size:8px;font-weight:950;flex:0 0 31px}.hep-card-title{display:flex;gap:11px;align-items:flex-start}
-        .hep-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.hep-field{display:grid;gap:6px;min-width:0}.hep-field.full{grid-column:1/-1}.hep-field>span{color:#5d6f7c;font-size:8px;font-weight:900;letter-spacing:.03em}.hep-input,.hep-textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;padding:10px 11px;font:700 11px Inter,sans-serif;outline:0}.hep-input{min-height:42px}.hep-textarea{min-height:90px;resize:vertical}.hep-input:focus,.hep-textarea:focus{border-color:#efa25b;box-shadow:0 0 0 3px rgba(240,138,40,.10)}.hep-segment{display:flex;gap:6px;flex-wrap:wrap}.hep-segment button{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#647581;font:850 9px Inter,sans-serif;cursor:pointer}.hep-segment button.active{background:#10283f;border-color:#10283f;color:#fff}.hep-section-divider{height:1px;background:#edf1f4;margin:20px 0}.hep-subtitle{margin:0 0 13px;font:900 13px Manrope,Inter,sans-serif}.hep-role{border:1px solid #e1e8ed;border-radius:12px;background:#fafcfd;padding:14px}.hep-role+.hep-role{margin-top:9px}.hep-role-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.hep-role-head b{font-size:9px}.hep-role-head button{border:0;background:transparent;color:#b65e17;font:850 9px Inter,sans-serif;cursor:pointer}.hep-add-role{margin-top:9px;min-height:38px;padding:8px 11px;border:1px dashed #ccd9e1;border-radius:9px;background:#fff;color:#a95613;font:850 9px Inter,sans-serif;cursor:pointer}.hep-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:17px;border-top:1px solid #edf1f4}.hep-btn{min-height:42px;padding:9px 13px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;font:900 9px Inter,sans-serif;cursor:pointer}.hep-btn.primary{background:#f08a28;border-color:#f08a28;color:#fff}.hep-btn.dark{background:#10283f;border-color:#10283f;color:#fff}.hep-btn:disabled{opacity:.55;cursor:wait}
-        .hep-agreement-state{padding:13px;border:1px solid #e4ebef;border-radius:11px;background:#f8fafb}.hep-agreement-state b{display:block;font-size:11px}.hep-agreement-state span{display:block;margin-top:4px;color:#7b8994;font-size:9px;line-height:1.45}.hep-file-row{margin-top:12px}.hep-file-pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px dashed #cad8e0;border-radius:10px;background:#fff}.hep-file-pick b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.hep-file-pick label{flex:0 0 auto;padding:8px 10px;border-radius:8px;background:#eef3f6;color:#405665;font-size:8px;font-weight:900;cursor:pointer}.hep-file-pick input{display:none}.hep-side-card h3{margin:0 0 9px;font:900 15px Manrope,Inter,sans-serif}.hep-side-card p{margin:0;color:#788895;font-size:10px;line-height:1.6}.hep-side-card a{color:#b95f16;font-weight:850;text-decoration:none}.hep-side-list{display:grid;gap:9px}.hep-side-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #edf1f4}.hep-side-row:last-child{border-bottom:0}.hep-side-row span{color:#7b8994;font-size:9px}.hep-side-row b{font-size:9px;text-align:right}.hep-candidate-placeholder{padding:18px;border:1px dashed #d5e0e6;border-radius:12px;background:#fafcfd;text-align:center}.hep-candidate-placeholder b{display:block;font-size:11px}.hep-candidate-placeholder span{display:block;margin-top:6px;color:#84929c;font-size:9px;line-height:1.5}.hep-candidates-list{display:grid;gap:11px}.hep-candidate-card{padding:15px;border:1px solid #e1e8ed;border-radius:13px;background:#fbfcfd}.hep-candidate-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.hep-candidate-head h3{margin:0;font:900 15px/1.25 Manrope,Inter,sans-serif}.hep-candidate-head p{margin:4px 0 0;color:#74838f;font-size:9.5px}.hep-candidate-response{padding:6px 8px;border-radius:999px;background:#eef3f6;color:#4d6272;font-size:8px;font-weight:900;white-space:nowrap}.hep-candidate-response.accepted{background:#e9f7f1;color:#176e4e}.hep-candidate-response.interview_requested{background:#fff3e7;color:#a85a16}.hep-candidate-response.not_suitable{background:#fff0ed;color:#9f432e}.hep-candidate-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:11px}.hep-candidate-meta>div{padding:8px 9px;border-radius:9px;background:#fff;border:1px solid #edf1f4}.hep-candidate-meta span{display:block;color:#87959f;font-size:7.5px;font-weight:850;text-transform:uppercase;letter-spacing:.06em}.hep-candidate-meta b{display:block;margin-top:4px;font-size:9.5px;overflow-wrap:anywhere}.hep-candidate-skills{margin-top:9px;padding:9px 10px;border-radius:9px;background:#f2f6f8;color:#4e6372;font-size:9.5px;line-height:1.5}.hep-candidate-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}.hep-candidate-btn{min-height:36px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#334d60;font-size:8.5px;font-weight:900;cursor:pointer}.hep-candidate-btn:hover{border-color:#bdcbd4;background:#f8fafb}.hep-candidate-btn.active{border-color:#10283f;background:#10283f;color:#fff}.hep-candidate-btn.primary{border-color:#f08a28;background:#f08a28;color:#fff}.hep-candidate-btn.danger{color:#9e452f}.hep-candidate-btn:disabled{opacity:.55;cursor:wait}.hep-candidate-contact{margin-top:11px;padding:10px 11px;border:1px solid #cfe9dc;border-radius:10px;background:#eef8f4}.hep-candidate-contact span{display:block;color:#5f8073;font-size:8px;font-weight:900;letter-spacing:.07em}.hep-candidate-contact a{display:inline-block;margin-top:4px;color:#1d654b;font-size:11px;font-weight:900;text-decoration:none}.hep-candidate-privacy{margin-top:10px;color:#7d8b96;font-size:8.5px;line-height:1.5}.hep-candidate-summary-count{font:900 28px/1 Manrope,Inter,sans-serif;color:#10283f}.hep-candidate-summary-label{display:block;margin-top:4px;color:#7d8b96;font-size:9px}
-        .hep-password-overlay{position:fixed;inset:0;z-index:900;background:rgba(8,25,39,.72);display:grid;place-items:center;padding:18px}.hep-password-card{width:min(100%,480px);background:#fff;border-radius:18px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.hep-password-card h2{margin:12px 0 8px;font:900 25px Manrope,Inter,sans-serif}.hep-password-card p{margin:0 0 18px;color:#71818d;font-size:11px;line-height:1.55}.hep-password-card .hep-field+.hep-field{margin-top:11px}
-        .hep-agreement-locked{margin-top:12px;padding:12px 13px;border:1px solid #cfe9dc;border-radius:11px;background:#eef8f4}.hep-agreement-locked b{display:block;color:#236649;font-size:11px}.hep-agreement-locked span{display:block;margin-top:4px;color:#527568;font-size:10px;line-height:1.5}
-        @media(max-width:980px){.hep-grid{grid-template-columns:1fr}.hep-side{position:static}.hep-progress{grid-template-columns:1fr 1fr}}
-        @media(max-width:680px){.hep-top-inner,.hep-shell{width:calc(100% - 24px)}.hep-top-inner{min-height:68px}.hep-brand-copy,.hep-company-id{display:none}.hep-hero{grid-template-columns:1fr;align-items:start}.hep-progress{grid-template-columns:1fr 1fr}.hep-form-grid{grid-template-columns:1fr}.hep-field.full{grid-column:auto}.hep-card{padding:16px}.hep-actions{display:grid;grid-template-columns:1fr}.hep-actions .hep-btn{width:100%}.hep-top-actions{gap:5px}.hep-logout{padding-inline:9px}}
+        .hep-page{min-height:100vh;background:#f4f7f9;color:#10283f;font-family:Inter,system-ui,sans-serif}.hep-top{position:sticky;top:0;z-index:80;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-bottom:1px solid #dde6ec}.hep-top-inner{width:min(1180px,calc(100% - 36px));min-height:72px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.hep-brand{display:flex;align-items:center;gap:15px}.hep-brand-copy{display:grid;gap:2px}.hep-brand-copy b{font-size:9px;letter-spacing:.11em}.hep-brand-copy span{font-size:8px;color:#7a8a96}.hep-top-actions{display:flex;align-items:center;gap:8px}.hep-company-id{height:40px;padding:0 12px;border:1px solid #dce5eb;border-radius:10px;background:#f8fafb;display:flex;align-items:center;font-size:9px;font-weight:900}.hep-logout,.hep-back{height:40px;padding:0 13px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;font-size:9px;font-weight:900;cursor:pointer}.hep-shell{width:min(1180px,calc(100% - 36px));margin:0 auto;padding:34px 0 60px}.hep-alerts{display:grid;gap:8px;margin-bottom:18px}.hep-notice,.hep-error{padding:11px 13px;border-radius:10px;font-size:10px;line-height:1.5}.hep-notice{border:1px solid #bfe3d2;background:#edf8f3;color:#1f6d50}.hep-error{border:1px solid #efc2b7;background:#fff2ee;color:#a5452d}.hep-dashboard-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:22px 0 28px}.hep-eyebrow{color:#d56d16;font-size:8px;font-weight:950;letter-spacing:.15em;text-transform:uppercase}.hep-dashboard-hero h1,.hep-view-head h1{margin:8px 0 8px;font:900 clamp(30px,4vw,48px)/1 Manrope,Inter,sans-serif;letter-spacing:-.045em}.hep-dashboard-hero p,.hep-view-head p{max-width:720px;margin:0;color:#6f808c;font-size:11px;line-height:1.65}.hep-primary{min-height:46px;padding:0 18px;border:0;border-radius:11px;background:#f08a28;color:#fff;font-size:10px;font-weight:950;cursor:pointer;white-space:nowrap}.hep-primary:disabled{opacity:.55;cursor:wait}.hep-secondary{min-height:40px;padding:0 13px;border:1px solid #dbe5eb;border-radius:10px;background:#fff;color:#10283f;font-size:9px;font-weight:900;cursor:pointer}.hep-secondary:hover{background:#f8fafb}.hep-danger{color:#9c432f}.hep-dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}.hep-panel{background:#fff;border:1px solid #dfe7ec;border-radius:18px;box-shadow:0 18px 50px rgba(16,40,63,.04)}.hep-panel-pad{padding:20px}.hep-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}.hep-panel-head h2{margin:0;font:900 18px Manrope,Inter,sans-serif}.hep-panel-head p{margin:4px 0 0;color:#7a8994;font-size:9.5px;line-height:1.5}.hep-needs-list{display:grid;gap:10px}.hep-need-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px;border:1px solid #e2e9ee;border-radius:13px;background:#fbfcfd}.hep-need-card-main{min-width:0}.hep-need-card h3{margin:0;font:900 14px Manrope,Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hep-need-card-meta{display:flex;flex-wrap:wrap;gap:7px 14px;margin-top:6px;color:#758591;font-size:9px}.hep-status{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;background:#edf3f6;color:#506575;font-size:8px;font-weight:950}.hep-status.sourcing{background:#eaf7f1;color:#176c4d}.hep-status.employer_submitted,.hep-status.under_review{background:#fff3e8;color:#9e581b}.hep-status.declined{background:#fff0ed;color:#9d432f}.hep-need-card-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}.hep-empty{padding:28px 18px;border:1px dashed #d3dfe6;border-radius:13px;text-align:center;background:#fafcfd}.hep-empty b{display:block;font-size:12px}.hep-empty span{display:block;margin-top:6px;color:#81909a;font-size:9.5px;line-height:1.5}.hep-agreement-box{display:grid;gap:12px}.hep-agreement-box h3{margin:0;font:900 15px Manrope,Inter,sans-serif}.hep-agreement-state{padding:12px;border-radius:11px;background:#f4f7f9}.hep-agreement-state b{display:block;font-size:10px}.hep-agreement-state span{display:block;margin-top:4px;color:#778792;font-size:9px;line-height:1.5}.hep-file-pick{display:grid;gap:8px}.hep-file-pick label{min-height:38px;padding:0 11px;border:1px dashed #cbd8e0;border-radius:9px;background:#fbfcfd;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;cursor:pointer}.hep-file-pick input{display:none}.hep-agreement-locked{padding:11px;border:1px solid #cfe8dc;border-radius:10px;background:#eef8f4;color:#28674e;font-size:9px;line-height:1.5}.hep-view-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}.hep-view-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.hep-detail-card{background:#fff;border:1px solid #dfe7ec;border-radius:18px;padding:20px}.hep-detail-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.hep-detail-top h2{margin:0;font:900 23px Manrope,Inter,sans-serif;letter-spacing:-.03em}.hep-detail-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:8px;color:#778791;font-size:9.5px}.hep-info-toggle{margin-top:16px}.hep-info{margin-top:14px;border-top:1px solid #edf1f4;padding-top:16px;display:grid;gap:18px}.hep-info-section h3{margin:0 0 10px;font:900 13px Manrope,Inter,sans-serif}.hep-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hep-info-cell{padding:10px 11px;border:1px solid #edf1f4;border-radius:10px;background:#fafcfd}.hep-info-cell span{display:block;color:#85949e;font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.hep-info-cell b{display:block;margin-top:4px;font-size:9.5px;overflow-wrap:anywhere}.hep-role-list{display:grid;gap:9px}.hep-role-summary{padding:12px;border:1px solid #e5ebef;border-radius:11px;background:#fbfcfd}.hep-role-summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.hep-role-summary-head b{font-size:11px}.hep-role-summary-head span{font-size:9px;color:#758591}.hep-role-summary p{margin:7px 0 0;color:#566b7a;font-size:9.5px;line-height:1.55}.hep-candidates-section{margin-top:18px}.hep-candidates-section-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:10px}.hep-candidates-section h3{margin:0;font:900 16px Manrope,Inter,sans-serif}.hep-candidates-section p{margin:4px 0 0;color:#7b8994;font-size:9px}.hep-candidate-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 14px;border:1px solid #e1e8ed;border-radius:11px;background:#fbfcfd}.hep-candidate-row+.hep-candidate-row{margin-top:8px}.hep-candidate-row h4{margin:0;font:900 12px Manrope,Inter,sans-serif}.hep-candidate-row p{margin:4px 0 0;color:#758591;font-size:9px}.hep-candidate-row-right{display:flex;align-items:center;gap:8px}.hep-candidate-response{padding:6px 8px;border-radius:999px;background:#edf3f6;color:#526675;font-size:8px;font-weight:900}.hep-candidate-response.accepted{background:#e9f7f1;color:#176e4e}.hep-candidate-response.interview_requested{background:#fff3e7;color:#a85a16}.hep-candidate-response.not_suitable{background:#fff0ed;color:#9f432e}.hep-form-card{background:#fff;border:1px solid #dfe7ec;border-radius:18px;padding:22px}.hep-form-section+.hep-form-section{margin-top:24px;padding-top:22px;border-top:1px solid #edf1f4}.hep-form-section h2{margin:0 0 5px;font:900 17px Manrope,Inter,sans-serif}.hep-form-section>p{margin:0 0 14px;color:#7a8994;font-size:9.5px;line-height:1.5}.hep-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.hep-field{display:grid;gap:6px}.hep-field.full{grid-column:1/-1}.hep-field span{font-size:8px;font-weight:950;color:#5c7180;letter-spacing:.05em}.hep-input,.hep-textarea{width:100%;box-sizing:border-box;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;padding:11px 12px;font:750 11px Inter,sans-serif;outline:0}.hep-input{min-height:44px}.hep-textarea{min-height:92px;resize:vertical}.hep-input:focus,.hep-textarea:focus{border-color:#ee9c51;box-shadow:0 0 0 3px rgba(240,138,40,.1)}.hep-segment{display:flex;flex-wrap:wrap;gap:6px}.hep-segment button{min-height:38px;padding:0 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#536878;font-size:8.5px;font-weight:900;cursor:pointer}.hep-segment button.active{border-color:#10283f;background:#10283f;color:#fff}.hep-form-role{padding:14px;border:1px solid #e2e9ee;border-radius:12px;background:#fafcfd}.hep-form-role+.hep-form-role{margin-top:10px}.hep-role-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.hep-role-head b{font-size:9px;letter-spacing:.07em}.hep-role-head button{border:0;background:transparent;color:#a34b35;font-size:8.5px;font-weight:900;cursor:pointer}.hep-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px;padding-top:18px;border-top:1px solid #edf1f4}.hep-modal{position:fixed;inset:0;z-index:950;background:rgba(7,24,38,.68);display:grid;place-items:center;padding:20px}.hep-modal-card{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.25)}.hep-modal-head{position:sticky;top:0;z-index:3;padding:16px 18px;border-bottom:1px solid #e7edf1;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:15px}.hep-modal-head h2{margin:0;font:900 20px Manrope,Inter,sans-serif}.hep-modal-head p{margin:4px 0 0;color:#758591;font-size:9px}.hep-modal-body{padding:18px}.hep-candidate-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hep-candidate-meta>div{padding:10px;border:1px solid #edf1f4;border-radius:10px;background:#fafcfd}.hep-candidate-meta span{display:block;color:#87959f;font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.hep-candidate-meta b{display:block;margin-top:4px;font-size:9.5px;overflow-wrap:anywhere}.hep-candidate-skills{margin-top:10px;padding:11px;border-radius:10px;background:#f2f6f8;color:#506575;font-size:9.5px;line-height:1.55}.hep-candidate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.hep-candidate-btn{min-height:40px;padding:0 13px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#334d60;font-size:9px;font-weight:950;cursor:pointer}.hep-candidate-btn.primary{border-color:#f08a28;background:#f08a28;color:#fff}.hep-candidate-btn.danger{color:#9e452f}.hep-candidate-btn.active{box-shadow:0 0 0 2px rgba(16,40,63,.12)}.hep-candidate-btn:disabled{opacity:.55;cursor:wait}.hep-candidate-contact{margin-top:12px;padding:11px;border:1px solid #cfe9dc;border-radius:10px;background:#eef8f4}.hep-candidate-contact span{display:block;color:#5f8073;font-size:8px;font-weight:900}.hep-candidate-contact a{display:inline-block;margin-top:4px;color:#1d654b;font-size:11px;font-weight:900;text-decoration:none}.hep-password-overlay{position:fixed;inset:0;z-index:1000;background:rgba(8,25,39,.72);display:grid;place-items:center;padding:18px}.hep-password-card{width:min(100%,480px);background:#fff;border-radius:18px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.hep-password-card h2{margin:12px 0 8px;font:900 25px Manrope,Inter,sans-serif}.hep-password-card p{margin:0 0 18px;color:#71818d;font-size:11px;line-height:1.55}.hep-loading{min-height:100vh;display:grid;place-items:center;background:#f4f7f9;color:#71818d;font:800 12px Inter,sans-serif}
+        @media(max-width:900px){.hep-dashboard-grid{grid-template-columns:1fr}.hep-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:680px){.hep-top-inner,.hep-shell{width:calc(100% - 24px)}.hep-top-inner{min-height:66px}.hep-brand-copy,.hep-company-id{display:none}.hep-dashboard-hero,.hep-view-head,.hep-detail-top{align-items:stretch;flex-direction:column}.hep-dashboard-hero .hep-primary{width:100%}.hep-need-card{align-items:flex-start;flex-direction:column}.hep-need-card-actions{width:100%;justify-content:space-between}.hep-form-grid,.hep-info-grid,.hep-candidate-meta{grid-template-columns:1fr}.hep-form-actions{display:grid;grid-template-columns:1fr}.hep-form-actions button{width:100%}.hep-candidate-row{align-items:flex-start;flex-direction:column}.hep-candidate-row-right{width:100%;justify-content:space-between}.hep-modal{padding:10px}.hep-modal-card{max-height:calc(100vh - 20px)}}
       `}</style>
-      <header className="hep-top"><div className="hep-top-inner"><div className="hep-brand"><HirePortalLogo/><div className="hep-brand-copy"><b>{tr("EMPLOYER PORTAL", "DARBDAVIO PORTALAS")}</b><span>{tr("PRIVATE RECRUITMENT WORKSPACE", "PRIVATI DARBUOTOJŲ ATRANKOS ERDVĖ")}</span></div></div><div className="hep-top-actions"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/><div className="hep-company-id">{portal.account?.loginId}</div><button className="hep-logout" type="button" onClick={logout}>{tr("Sign out", "Atsijungti")}</button></div></div></header>
-      <main className="hep-shell">
-        <div className="hep-hero"><div><div className="hep-eyebrow">{tr("STATYBOS24 · INTERNATIONAL HIRE", "STATYBOS24 · TARPTAUTINĖ ATRANKA")}</div><h1>{portal.request?.companyName}</h1><p>{tr("Complete the required information below. Candidate sourcing starts only after Statybos24 reviews your signed agreement and workforce brief.", "Užpildykite žemiau esančią privalomą informaciją. Kandidatų paieška prasideda tik tada, kai Statybos24 peržiūri jūsų pasirašytą sutartį ir pilną darbuotojų poreikį.")}</p></div><div className={`hep-status ${sourcingStarted?"sourcing":submittedToReview?"review":""}`}>{sourcingStarted?tr("Sourcing in progress", "Vyksta darbuotojų paieška"):submittedToReview?tr("Submitted for review", "Pateikta peržiūrai"):tr("Action required", "Reikia jūsų veiksmo")}</div></div>
-        <div className="hep-alerts">{notice?<div className="hep-notice">{notice}</div>:null}{error?<div className="hep-error">{error}</div>:null}</div>
-        <div className="hep-progress">
-          <div className="hep-progress-card done"><span>{tr("01 · ACCESS", "01 · PRIEIGA")}</span><b>{tr("Employer access active", "Darbdavio prieiga aktyvi")}</b></div>
-          <div className={`hep-progress-card ${agreementDone?"done":portal.agreement?"current":""}`}><span>{tr("02 · AGREEMENT", "02 · SUTARTIS")}</span><b>{agreementDone?tr("Signed agreement uploaded", "Pasirašyta sutartis įkelta"):portal.agreement?tr("Signature required", "Reikia pasirašyti"):tr("Waiting for Statybos24", "Laukiama Statybos24")}</b></div>
-          <div className={`hep-progress-card ${briefDone?"done":"current"}`}><span>{tr("03 · WORKFORCE BRIEF", "03 · DARBUOTOJŲ POREIKIS")}</span><b>{briefDone?tr("Submitted", "Pateikta"):tr("Complete the information", "Užpildykite informaciją")}</b></div>
-          <div className={`hep-progress-card ${sourcingStarted?"done":submittedToReview?"current":""}`}><span>{tr("04 · SOURCING", "04 · PAIEŠKA")}</span><b>{sourcingStarted?tr("In progress", "Vyksta"):submittedToReview?tr("Statybos24 review", "Statybos24 peržiūra"):tr("Not started", "Nepradėta")}</b></div>
+
+      <header className="hep-top">
+        <div className="hep-top-inner">
+          <div className="hep-brand"><HirePortalLogo/><div className="hep-brand-copy"><b>{tr("EMPLOYER PORTAL", "DARBDAVIO PORTALAS")}</b><span>{tr("PRIVATE RECRUITMENT WORKSPACE", "PRIVATI DARBUOTOJŲ ATRANKOS ERDVĖ")}</span></div></div>
+          <div className="hep-top-actions"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/><div className="hep-company-id">{portal.account?.loginId}</div><button className="hep-logout" type="button" onClick={logout}>{tr("Sign out", "Atsijungti")}</button></div>
         </div>
-        <div className="hep-grid"><div className="hep-main">
-          <section className="hep-card" id="agreement"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">01</div><div><h2>{tr("Recruitment agreement", "Atrankos sutartis")}</h2><p>{tr("Read the agreement prepared for your company. If the terms are acceptable, sign it on your side and upload the signed copy.", "Perskaitykite jūsų įmonei parengtą sutartį. Jei sąlygos tinka, pasirašykite ją savo pusėje ir įkelkite pasirašytą kopiją.")}</p></div></div></div>
-            {portal.agreement ? <>
-              <div className="hep-agreement-state"><b>{portal.agreement.name || tr("Recruitment Agreement", "Atrankos sutartis")}</b><span>{agreementDone?`${tr("Signed copy received", "Pasirašyta kopija gauta")}${portal.agreement.signedName?`: ${portal.agreement.signedName}`:""}.`:tr("Please read the agreement before uploading the signed copy.", "Prieš įkeldami pasirašytą kopiją perskaitykite sutartį.")}</span></div>
-              <div className="hep-actions" style={{justifyContent:"flex-start"}}><button className="hep-btn dark" type="button" onClick={openAgreement}>{tr("Open agreement", "Atidaryti sutartį")}</button></div>
-              {agreementDone ? <div className="hep-agreement-locked"><b>{tr("Signed copy received", "Pasirašyta kopija gauta")}</b><span>{tr("This agreement is now locked in the employer portal. If a correction is required, contact Statybos24 — the employer cannot replace the signed agreement directly.", "Ši sutartis darbdavio portale užrakinta. Jei reikia pataisymo, kreipkitės į Statybos24 — darbdavys pats pasirašytos sutarties pakeisti negali.")}</span></div> : <div className="hep-file-row"><div className="hep-file-pick"><b>{signedFile?.name || tr("No signed file selected", "Pasirašytas failas nepasirinktas")}</b><label>{tr("Choose PDF / DOCX", "Pasirinkti PDF / DOCX")}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e=>setSignedFile(e.target.files?.[0]||null)}/></label></div>{signedFile?<div className="hep-actions"><button className="hep-btn primary" type="button" disabled={uploading} onClick={uploadSignedAgreement}>{uploading?tr("Uploading...", "Įkeliama..."):tr("Upload signed agreement once", "Įkelti pasirašytą sutartį")}</button></div>:null}</div>}
-            </> : <div className="hep-agreement-state"><b>{tr("Agreement is being prepared", "Sutartis ruošiama")}</b><span>{tr("Statybos24 will upload your recruitment agreement here. If anything is unclear, reply to the email from which you received your portal access.", "Statybos24 čia įkels jūsų atrankos sutartį. Jei kas nors neaišku, atsakykite į el. laišką, iš kurio gavote prisijungimą prie portalo.")}</span></div>}
+      </header>
+
+      <main className="hep-shell">
+        <div className="hep-alerts">{notice ? <div className="hep-notice">{notice}</div> : null}{error ? <div className="hep-error">{error}</div> : null}</div>
+
+        {screen === "dashboard" ? <>
+          <section className="hep-dashboard-hero">
+            <div><div className="hep-eyebrow">{tr("STATYBOS24 · INTERNATIONAL HIRE", "STATYBOS24 · TARPTAUTINĖ ATRANKA")}</div><h1>{portal.company?.name || portal.request?.companyName}</h1><p>{tr("Submit workforce needs and review the candidates Statybos24 introduces for each specific job.", "Pateikite darbuotojų poreikius ir kiekvienam konkrečiam darbui peržiūrėkite Statybos24 pateiktus kandidatus.")}</p></div>
+            <button className="hep-primary" type="button" onClick={openNewNeed}>+ {tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</button>
           </section>
 
-          <section className="hep-card" id="company"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">02</div><div><h2>{tr("Company information", "Įmonės informacija")}</h2><p>{tr("Legal and billing information required before recruitment begins.", "Juridinė ir sąskaitoms reikalinga informacija prieš pradedant darbuotojų paiešką.")}</p></div></div></div>
-            <div className="hep-form-grid">
-              <label className="hep-field"><span>{tr("LEGAL COMPANY NAME *", "JURIDINIS ĮMONĖS PAVADINIMAS *")}</span><input className="hep-input" value={company.legalName} onChange={e=>setCompanyField('legalName',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("REGISTRATION NUMBER *", "ĮMONĖS KODAS / REGISTRACIJOS NR. *")}</span><input className="hep-input" value={company.registrationNumber} onChange={e=>setCompanyField('registrationNumber',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("VAT NUMBER", "PVM KODAS")}</span><input className="hep-input" value={company.vatNumber} onChange={e=>setCompanyField('vatNumber',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("WEBSITE", "SVETAINĖ")}</span><input className="hep-input" value={company.website} onChange={e=>setCompanyField('website',e.target.value)} placeholder="https://"/></label>
-              <label className="hep-field full"><span>{tr("BILLING / LEGAL ADDRESS *", "JURIDINIS / SĄSKAITŲ ADRESAS *")}</span><input className="hep-input" value={company.billingAddress} onChange={e=>setCompanyField('billingAddress',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("CONTACT PERSON *", "KONTAKTINIS ASMUO *")}</span><input className="hep-input" value={company.contactName} onChange={e=>setCompanyField('contactName',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("JOB TITLE", "PAREIGOS")}</span><input className="hep-input" value={company.jobTitle} onChange={e=>setCompanyField('jobTitle',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("BUSINESS EMAIL *", "DARBINIS EL. PAŠTAS *")}</span><input className="hep-input" type="email" value={company.businessEmail} onChange={e=>setCompanyField('businessEmail',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("PHONE", "TELEFONAS")}</span><input className="hep-input" value={company.phone} onChange={e=>setCompanyField('phone',e.target.value)}/></label>
-            </div>
-          </section>
+          <div className="hep-dashboard-grid">
+            <section className="hep-panel hep-panel-pad">
+              <div className="hep-panel-head"><div><h2>{tr("Your workforce needs", "Jūsų darbuotojų poreikiai")}</h2><p>{tr("Open a need to review the information you submitted and the candidates assigned to it.", "Atidarykite poreikį, kad matytumėte pateiktą informaciją ir jam priskirtus kandidatus.")}</p></div><b>{needs.length}</b></div>
+              {needs.length ? <div className="hep-needs-list">{needs.map((need) => <article className="hep-need-card" key={need.id}>
+                <div className="hep-need-card-main"><h3>{need.title}</h3><div className="hep-need-card-meta"><span>{need.projectLocation}, {need.projectCountry}</span><span>{tr("Start", "Pradžia")}: {need.requestedStartDate || "—"}</span><span>{tr("Workers", "Darbuotojai")}: {totalWorkers(need) || "—"}</span></div></div>
+                <div className="hep-need-card-actions"><span className={`hep-status ${need.status || ""}`}>{needStatusLabel(need.status)}</span><button className="hep-secondary" type="button" onClick={() => openNeed(need)}>{tr("Open", "Atidaryti")}</button></div>
+              </article>)}</div> : <div className="hep-empty"><b>{tr("No workforce needs submitted yet", "Darbuotojų poreikių dar nepateikta")}</b><span>{tr("Use “Submit workforce need” when you are ready to provide full job, salary, accommodation and project information.", "Paspauskite „Pateikti darbuotojų poreikį“, kai būsite pasiruošę pateikti pilną darbo, atlyginimo, apgyvendinimo ir projekto informaciją.")}</span></div>}
+            </section>
 
-          <section className="hep-card" id="workforce"><div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">03</div><div><h2>{tr("Workforce requirements", "Darbuotojų poreikis")}</h2><p>{tr("Tell us exactly who you need. This information becomes the sourcing brief used by the Statybos24 recruitment team.", "Tiksliai nurodykite, kokių žmonių reikia. Šią informaciją Statybos24 atrankos komanda naudos kaip pagrindinį paieškos aprašą.")}</p></div></div></div>
-            <h3 className="hep-subtitle">{tr("Trades & competencies", "Profesijos ir kompetencijos")}</h3>
-            {workforce.roles.map((role,index)=><div className="hep-role" key={`hep-role-${index}`}><div className="hep-role-head"><b>{tr("ROLE", "POZICIJA")} {String(index+1).padStart(2,'0')}</b>{workforce.roles.length>1?<button type="button" onClick={()=>removeRole(index)}>{tr("Remove", "Pašalinti")}</button>:null}</div><div className="hep-form-grid">
-              <label className="hep-field"><span>{tr("PROFESSION / TRADE *", "PROFESIJA / SPECIALYBĖ *")}</span><input className="hep-input" value={role.profession||""} onChange={e=>setRole(index,'profession',e.target.value)} placeholder={tr("e.g. Drywall installer", "pvz. gipso kartono montuotojas")}/></label>
-              <label className="hep-field"><span>{tr("WORKERS NEEDED *", "REIKALINGAS DARBUOTOJŲ SKAIČIUS *")}</span><input className="hep-input" inputMode="numeric" value={role.count||1} onChange={e=>setRole(index,'count',Math.max(1,Number(e.target.value||1)))}/></label>
-              <label className="hep-field"><span>{tr("MINIMUM EXPERIENCE", "MINIMALI PATIRTIS")}</span><input className="hep-input" value={role.experience||""} onChange={e=>setRole(index,'experience',e.target.value)} placeholder={tr("e.g. 3+ years", "pvz. 3+ metai")}/></label>
-              <label className="hep-field"><span>{tr("LANGUAGE / LEVEL", "KALBA / LYGIS")}</span><input className="hep-input" value={[role.language,role.languageLevel].filter(Boolean).join(' ')} onChange={e=>setRole(index,'language',e.target.value)} placeholder={tr("e.g. English B1", "pvz. anglų B1")}/></label>
-              <label className="hep-field full"><span>{tr("REQUIRED SKILLS / TASKS", "REIKALINGI ĮGŪDŽIAI / DARBAI")}</span><textarea className="hep-textarea" value={role.skills||""} onChange={e=>setRole(index,'skills',e.target.value)} placeholder={tr("Drywall installation, metal framing, ceilings, Q2/Q3 finishing...", "Gipso montavimas, metalinis karkasas, lubos, Q2/Q3 glaistymas...")}/></label>
-              <div className="hep-field full"><span>{tr("DRIVING LICENCE", "VAIRUOTOJO PAŽYMĖJIMAS")}</span><HirePortalSegment value={role.drivingLicense||"preferred"} onChange={v=>setRole(index,'drivingLicense',v)} options={[{value:'required',label:tr('Required','Privalomas')},{value:'preferred',label:tr('Preferred','Pageidautinas')},{value:'not_required',label:tr('Not required','Nereikalingas')}]}/></div>
-            </div></div>)}
-            <button type="button" className="hep-add-role" onClick={addRole}>{tr("+ Add another trade", "+ Pridėti kitą profesiją")}</button>
-            <div className="hep-section-divider"/><h3 className="hep-subtitle">{tr("Project & employment", "Projektas ir įdarbinimas")}</h3><div className="hep-form-grid">
-              <label className="hep-field"><span>{tr("PROJECT COUNTRY *", "PROJEKTO ŠALIS *")}</span><input className="hep-input" value={workforce.projectCountry} onChange={e=>setWorkforceField('projectCountry',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("PROJECT LOCATION *", "PROJEKTO VIETA *")}</span><input className="hep-input" value={workforce.projectLocation} onChange={e=>setWorkforceField('projectLocation',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("EXPECTED START DATE *", "PLANUOJAMA PRADŽIOS DATA *")}</span><input className="hep-input" type="date" value={workforce.startDate||""} onChange={e=>setWorkforceField('startDate',e.target.value)}/></label>
-              <label className="hep-field"><span>{tr("ALL WORKERS NEEDED BY", "VISI DARBUOTOJAI REIKALINGI IKI")}</span><input className="hep-input" type="date" value={workforce.neededBy||""} onChange={e=>setWorkforceField('neededBy',e.target.value)}/></label>
-              <div className="hep-field full"><span>{tr("EMPLOYMENT TYPE", "ĮDARBINIMO TIPAS")}</span><HirePortalSegment value={workforce.employmentType} onChange={v=>setWorkforceField('employmentType',v)} options={[{value:'direct',label:tr('Direct employment','Tiesioginis įdarbinimas')},{value:'fixed_term',label:tr('Fixed-term','Terminuota sutartis')},{value:'permanent',label:tr('Permanent','Neterminuota sutartis')}]}/></div>
-              <label className="hep-field"><span>{tr("PROJECT / CONTRACT DURATION", "PROJEKTO / SUTARTIES TRUKMĖ")}</span><input className="hep-input" value={workforce.duration} onChange={e=>setWorkforceField('duration',e.target.value)} placeholder={tr("e.g. 12 months", "pvz. 12 mėnesių")}/></label>
-              <label className="hep-field"><span>{tr("HOURS PER WEEK", "VALANDOS PER SAVAITĘ")}</span><input className="hep-input" inputMode="decimal" value={workforce.hoursPerWeek} onChange={e=>setWorkforceField('hoursPerWeek',e.target.value)} placeholder={tr("e.g. 45", "pvz. 45")}/></label>
-              <label className="hep-field"><span>{tr("OVERTIME", "VIRŠVALANDŽIAI")}</span><input className="hep-input" value={workforce.overtime} onChange={e=>setWorkforceField('overtime',e.target.value)} placeholder={tr("Rate / conditions", "Įkainis / sąlygos")}/></label>
-              <label className="hep-field"><span>{tr("ROTATION", "ROTACIJA")}</span><input className="hep-input" value={workforce.rotation} onChange={e=>setWorkforceField('rotation',e.target.value)} placeholder={tr("e.g. 4/1", "pvz. 4/1")}/></label>
-            </div>
-            <div className="hep-section-divider"/><h3 className="hep-subtitle">{tr("Salary & mobility", "Atlyginimas ir mobilumas")}</h3><div className="hep-form-grid">
-              <label className="hep-field"><span>{tr("CURRENCY *", "VALIUTA *")}</span><input className="hep-input" value={workforce.salaryCurrency} onChange={e=>setWorkforceField('salaryCurrency',e.target.value.toUpperCase())} placeholder="EUR"/></label>
-              <div className="hep-field"><span>{tr("SALARY TYPE", "ATLYGINIMO TIPAS")}</span><HirePortalSegment value={workforce.salaryType} onChange={v=>setWorkforceField('salaryType',v)} options={[{value:'hourly',label:tr('Per hour','Valandinis')},{value:'monthly',label:tr('Per month','Mėnesinis')}]}/></div>
-              <label className="hep-field"><span>{tr("MINIMUM SALARY *", "MINIMALUS ATLYGINIMAS *")}</span><input className="hep-input" inputMode="decimal" value={workforce.salaryMin} onChange={e=>setWorkforceField('salaryMin',e.target.value)} placeholder={tr("e.g. 22", "pvz. 22")}/></label>
-              <label className="hep-field"><span>{tr("MAXIMUM SALARY", "MAKSIMALUS ATLYGINIMAS")}</span><input className="hep-input" inputMode="decimal" value={workforce.salaryMax} onChange={e=>setWorkforceField('salaryMax',e.target.value)} placeholder={tr("e.g. 25", "pvz. 25")}/></label>
-              <div className="hep-field full"><span>{tr("SALARY BASIS", "ATLYGINIMO PAGRINDAS")}</span><HirePortalSegment value={workforce.salaryBasis} onChange={v=>setWorkforceField('salaryBasis',v)} options={[{value:'gross',label:tr('Gross','Bruto')},{value:'net',label:tr('Net','Neto')}]}/></div>
-              <div className="hep-field full"><span>{tr("ACCOMMODATION", "APGYVENDINIMAS")}</span><HirePortalSegment value={workforce.accommodation} onChange={v=>setWorkforceField('accommodation',v)} options={[{value:'yes',label:tr('Provided by employer','Suteikia darbdavys')},{value:'no',label:tr('Not provided','Nesuteikiama')},{value:'shared_cost',label:tr('Shared / employee cost','Dalinai / moka darbuotojas')}]}/></div>
-              <label className="hep-field"><span>{tr("ROOM / ACCOMMODATION TYPE", "KAMBARIO / APGYVENDINIMO TIPAS")}</span><input className="hep-input" value={workforce.roomType} onChange={e=>setWorkforceField('roomType',e.target.value)} placeholder={tr("Single / shared room", "Atskiras / bendras kambarys")}/></label>
-              <label className="hep-field"><span>{tr("EMPLOYEE ACCOMMODATION COST", "DARBUOTOJO APGYVENDINIMO KAINA")}</span><input className="hep-input" value={workforce.accommodationCost} onChange={e=>setWorkforceField('accommodationCost',e.target.value)} placeholder={tr("0 / amount per month", "0 / suma per mėnesį")}/></label>
-              <label className="hep-field"><span>{tr("INITIAL TRAVEL", "PIRMINĖ KELIONĖ")}</span><input className="hep-input" value={workforce.initialTravel} onChange={e=>setWorkforceField('initialTravel',e.target.value)} placeholder={tr("Who pays Lithuania → project", "Kas apmoka kelionę Lietuva → projektas")}/></label>
-              <label className="hep-field"><span>{tr("TRANSPORT TO WORKSITE", "TRANSPORTAS Į DARBO VIETĄ")}</span><input className="hep-input" value={workforce.workTransport} onChange={e=>setWorkforceField('workTransport',e.target.value)} placeholder={tr("Company vehicle / public transport...", "Įmonės automobilis / viešasis transportas...")}/></label>
-              <label className="hep-field full"><span>{tr("HOME TRAVEL / ROTATION TRAVEL", "KELIONĖS NAMO / ROTACIJOS KELIONĖS")}</span><input className="hep-input" value={workforce.homeTravel} onChange={e=>setWorkforceField('homeTravel',e.target.value)} placeholder={tr("Frequency and who covers the cost", "Dažnumas ir kas apmoka")}/></label>
-              <label className="hep-field full"><span>{tr("ADDITIONAL REQUIREMENTS / INFORMATION", "PAPILDOMI REIKALAVIMAI / INFORMACIJA")}</span><textarea className="hep-textarea" value={workforce.additionalInfo} onChange={e=>setWorkforceField('additionalInfo',e.target.value)} placeholder={tr("Certificates, tools, shift details, interview process, safety requirements, other important information...", "Sertifikatai, įrankiai, pamainos, interviu procesas, saugos reikalavimai ar kita svarbi informacija...")}/></label>
-            </div>
-            <div className="hep-actions"><button type="button" className="hep-btn" disabled={saving} onClick={()=>saveBrief(false)}>{saving?tr("Saving...", "Saugoma..."):tr("Save draft", "Išsaugoti juodraštį")}</button><button type="button" className="hep-btn primary" disabled={saving} onClick={()=>saveBrief(true)}>{saving?tr("Saving...", "Saugoma..."):tr("Submit workforce brief", "Pateikti darbuotojų poreikį")}</button></div>
-          </section>
+            <aside className="hep-panel hep-panel-pad">
+              <div className="hep-agreement-box"><div><h3>{tr("Recruitment agreement", "Atrankos sutartis")}</h3></div>
+                {portal.agreement ? <>
+                  <div className="hep-agreement-state"><b>{portal.agreement.name || tr("Recruitment agreement", "Atrankos sutartis")}</b><span>{agreementDone ? tr("Signed copy received.", "Pasirašyta kopija gauta.") : tr("Open, sign and return the agreement once.", "Atidarykite, pasirašykite ir vieną kartą grąžinkite sutartį.")}</span></div>
+                  <button className="hep-secondary" type="button" onClick={openAgreement}>{tr("Open agreement", "Atidaryti sutartį")}</button>
+                  {agreementDone ? <div className="hep-agreement-locked">{tr("The signed agreement is locked in the portal. Corrections are handled through Statybos24.", "Pasirašyta sutartis portale užrakinta. Pataisymai atliekami per Statybos24.")}</div> : <>
+                    <div className="hep-file-pick"><label>{signedFile?.name || tr("Choose signed PDF / DOCX", "Pasirinkti pasirašytą PDF / DOCX")}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setSignedFile(event.target.files?.[0] || null)}/></label></div>
+                    {signedFile ? <button className="hep-primary" type="button" disabled={uploading} onClick={uploadSignedAgreement}>{uploading ? tr("Uploading...", "Įkeliama...") : tr("Upload signed agreement", "Įkelti pasirašytą sutartį")}</button> : null}
+                  </>}
+                </> : <div className="hep-agreement-state"><b>{tr("Agreement is being prepared", "Sutartis ruošiama")}</b><span>{tr("Statybos24 will place the company agreement here.", "Statybos24 čia įkels įmonės sutartį.")}</span></div>}
+              </div>
+            </aside>
+          </div>
+        </> : null}
 
-          <section className="hep-card" id="candidates">
-            <div className="hep-card-head"><div className="hep-card-title"><div className="hep-step">04</div><div><h2>{tr("Candidates introduced by Statybos24", "Statybos24 pateikti kandidatai")}</h2><p>{tr("Only candidates selected for your request and who agreed to be introduced to your company appear here.", "Čia matysite tik jūsų užklausai atrinktus kandidatus, kurie sutiko būti pristatyti jūsų įmonei.")}</p></div></div></div>
-            {presentedCandidates.length ? <div className="hep-candidates-list">
-              {presentedCandidates.map(candidate=>{
-                const busy=candidateBusyId===candidate.id;
-                const response=candidate.employerResponse||"";
-                return <article className="hep-candidate-card" key={candidate.id}>
-                  <div className="hep-candidate-head"><div><h3>{candidate.name}</h3><p>{candidate.profession||tr("Construction specialist","Statybų specialistas")}</p></div><span className={`hep-candidate-response ${response}`}>{candidateResponseLabel(response)}</span></div>
-                  <div className="hep-candidate-meta">
-                    <div><span>{tr("Experience","Patirtis")}</span><b>{candidate.yearsExperience===null||candidate.yearsExperience===undefined?"—":`${Number(candidate.yearsExperience)} ${tr("yrs","m.")}`}</b></div>
-                    <div><span>{tr("Language","Kalba")}</span><b>{candidate.languageDetails||"—"}</b></div>
-                    <div><span>{tr("Driving licence","Vairuotojo paž.")}</span><b>{candidate.hasDrivingLicenseB===true?tr("B category","B kategorija"):candidate.hasDrivingLicenseB===false?tr("No / not confirmed","Ne / nepatvirtinta"):"—"}</b></div>
-                    <div><span>{tr("Available from","Galimas nuo")}</span><b>{candidate.availableFrom||"—"}</b></div>
-                    <div><span>{tr("Salary expectation","Atlygio lūkestis")}</span><b>{candidate.salaryExpectation||"—"}</b></div>
-                  </div>
-                  {candidate.skills?<div className="hep-candidate-skills"><b>{tr("Skills:","Įgūdžiai:")}</b> {candidate.skills}</div>:null}
-                  <div className="hep-candidate-actions">
-                    {candidate.cvAvailable?<button className="hep-candidate-btn" type="button" disabled={busy} onClick={()=>openCandidateCv(candidate)}>{tr("View CV","Peržiūrėti CV")}</button>:null}
-                    <button className={`hep-candidate-btn ${response==="interview_requested"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"interview_requested")}>{tr("Request interview","Prašyti interviu")}</button>
-                    <button className={`hep-candidate-btn primary ${response==="accepted"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"accepted")}>{tr("Approve candidate","Patvirtinti kandidatą")}</button>
-                    <button className={`hep-candidate-btn danger ${response==="not_suitable"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"not_suitable")}>{tr("Not suitable","Netinka")}</button>
-                  </div>
-                  {candidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("CONTACT SHARED BY STATYBOS24", "STATYBOS24 PERDUOTAS KONTAKTAS")}</span><a href={`mailto:${candidate.contactEmail}`}>{candidate.contactEmail}</a></div> : null}
-                  <div className="hep-candidate-privacy">{candidate.contactEmail ? tr("Statybos24 shared the candidate's email for the interview process. The phone number remains private unless coordinated separately.", "Statybos24 perdavė kandidato el. paštą interviu procesui. Telefono numeris lieka privatus, nebent atskirai suderinama kitaip.") : tr("Candidate phone and email are not shown. If you request an interview, Statybos24 can share the candidate's email after coordinating the process.","Kandidato telefono numeris ir el. paštas nerodomi. Paprašius interviu, Statybos24 gali perduoti kandidato el. paštą, kai procesas suderintas.")}</div>
-                </article>;
-              })}
-            </div>:<div className="hep-candidate-placeholder"><b>{tr("No candidates presented yet", "Kandidatų dar nepateikta")}</b><span>{tr("Once sourcing is active, candidates selected by Statybos24 for this exact request will appear here.", "Prasidėjus paieškai čia atsiras tik šiai konkrečiai užklausai Statybos24 atrinkti kandidatai.")}</span></div>}
+        {screen === "new" ? <>
+          <section className="hep-view-head"><div><button className="hep-back" type="button" onClick={() => setScreen("dashboard")}>← {tr("Back", "Atgal")}</button><div className="hep-eyebrow" style={{marginTop:16}}>{tr("NEW WORKFORCE NEED", "NAUJAS DARBUOTOJŲ POREIKIS")}</div><h1>{tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</h1><p>{tr("Provide the complete job and project conditions. This is the information Statybos24 will use for sourcing and candidate screening.", "Pateikite pilnas darbo ir projekto sąlygas. Pagal šią informaciją Statybos24 vykdys paiešką ir kandidatų atranką.")}</p></div></section>
+
+          <section className="hep-form-card">
+            <div className="hep-form-section"><h2>{tr("Job & project", "Darbas ir projektas")}</h2><p>{tr("Give this need a clear title and define where and when the work starts.", "Suteikite poreikiui aiškų pavadinimą ir nurodykite, kur bei kada prasideda darbas.")}</p><div className="hep-form-grid">
+              <label className="hep-field full"><span>{tr("WORKFORCE NEED / JOB TITLE *", "POREIKIO / DARBO PAVADINIMAS *")}</span><input className="hep-input" value={needForm.needTitle} onChange={(e) => setNeedField("needTitle", e.target.value)} placeholder={tr("e.g. Drywall installers – Hamburg", "pvz. Gipso montuotojai – Hamburgas")}/></label>
+              <label className="hep-field"><span>{tr("PROJECT COUNTRY *", "PROJEKTO ŠALIS *")}</span><input className="hep-input" value={needForm.projectCountry} onChange={(e) => setNeedField("projectCountry", e.target.value)}/></label>
+              <label className="hep-field"><span>{tr("PROJECT LOCATION *", "PROJEKTO VIETA *")}</span><input className="hep-input" value={needForm.projectLocation} onChange={(e) => setNeedField("projectLocation", e.target.value)}/></label>
+              <label className="hep-field"><span>{tr("START DATE *", "DARBO PRADŽIA *")}</span><input className="hep-input" type="date" value={needForm.startDate} onChange={(e) => setNeedField("startDate", e.target.value)}/></label>
+              <label className="hep-field"><span>{tr("NEEDED BY", "IKI KADA REIKIA SURINKTI")}</span><input className="hep-input" type="date" value={needForm.neededBy} onChange={(e) => setNeedField("neededBy", e.target.value)}/></label>
+            </div></div>
+
+            <div className="hep-form-section"><h2>{tr("Workers required", "Reikalingi darbuotojai")}</h2><p>{tr("Add every trade / role needed for this project.", "Pridėkite visas šiam projektui reikalingas profesijas / pozicijas.")}</p>
+              {needForm.roles.map((role, index) => <div className="hep-form-role" key={`need-role-${index}`}><div className="hep-role-head"><b>{tr("ROLE", "POZICIJA")} {String(index + 1).padStart(2, "0")}</b>{needForm.roles.length > 1 ? <button type="button" onClick={() => removeNeedRole(index)}>{tr("Remove", "Pašalinti")}</button> : null}</div><div className="hep-form-grid">
+                <label className="hep-field"><span>{tr("PROFESSION / TRADE *", "PROFESIJA / SPECIALYBĖ *")}</span><input className="hep-input" value={role.profession} onChange={(e) => setNeedRole(index, "profession", e.target.value)} placeholder={tr("e.g. Drywall installer", "pvz. gipso kartono montuotojas")}/></label>
+                <label className="hep-field"><span>{tr("WORKERS NEEDED *", "DARBUOTOJŲ SKAIČIUS *")}</span><input className="hep-input" inputMode="numeric" value={role.count} onChange={(e) => setNeedRole(index, "count", Math.max(1, Number(e.target.value || 1)))}/></label>
+                <label className="hep-field"><span>{tr("MINIMUM EXPERIENCE", "MINIMALI PATIRTIS")}</span><input className="hep-input" value={role.experience} onChange={(e) => setNeedRole(index, "experience", e.target.value)} placeholder={tr("e.g. 3+ years", "pvz. 3+ metai")}/></label>
+                <label className="hep-field"><span>{tr("LANGUAGE / LEVEL", "KALBA / LYGIS")}</span><input className="hep-input" value={role.language} onChange={(e) => setNeedRole(index, "language", e.target.value)} placeholder={tr("e.g. English B1", "pvz. anglų B1")}/></label>
+                <label className="hep-field full"><span>{tr("REQUIRED SKILLS / TASKS", "REIKALINGI ĮGŪDŽIAI / DARBAI")}</span><textarea className="hep-textarea" value={role.skills} onChange={(e) => setNeedRole(index, "skills", e.target.value)} placeholder={tr("Drywall installation, framing, ceilings, finishing...", "Gipso montavimas, karkasas, lubos, glaistymas...")}/></label>
+                <div className="hep-field full"><span>{tr("DRIVING LICENCE", "VAIRUOTOJO PAŽYMĖJIMAS")}</span><HirePortalSegment value={role.drivingLicense} onChange={(value) => setNeedRole(index, "drivingLicense", value)} options={[{value:"required",label:tr("Required", "Privalomas")},{value:"preferred",label:tr("Preferred", "Pageidautinas")},{value:"not_required",label:tr("Not required", "Nereikalingas")}]} /></div>
+              </div></div>)}
+              <button className="hep-secondary" type="button" style={{marginTop:10}} onClick={addNeedRole}>+ {tr("Add another trade", "Pridėti kitą profesiją")}</button>
+            </div>
+
+            <div className="hep-form-section"><h2>{tr("Employment conditions", "Darbo sąlygos")}</h2><p>{tr("Define hours, contract type, overtime and rotation.", "Nurodykite darbo laiką, sutarties tipą, viršvalandžius ir rotaciją.")}</p><div className="hep-form-grid">
+              <div className="hep-field full"><span>{tr("EMPLOYMENT TYPE", "ĮDARBINIMO TIPAS")}</span><HirePortalSegment value={needForm.employmentType} onChange={(value) => setNeedField("employmentType", value)} options={[{value:"direct",label:tr("Direct employment", "Tiesioginis įdarbinimas")},{value:"fixed_term",label:tr("Fixed-term", "Terminuota")},{value:"permanent",label:tr("Permanent", "Neterminuota")}]} /></div>
+              <label className="hep-field"><span>{tr("PROJECT / CONTRACT DURATION", "PROJEKTO / SUTARTIES TRUKMĖ")}</span><input className="hep-input" value={needForm.duration} onChange={(e) => setNeedField("duration", e.target.value)} placeholder={tr("e.g. 12 months", "pvz. 12 mėnesių")}/></label>
+              <label className="hep-field"><span>{tr("HOURS PER WEEK *", "VALANDOS PER SAVAITĘ *")}</span><input className="hep-input" inputMode="decimal" value={needForm.hoursPerWeek} onChange={(e) => setNeedField("hoursPerWeek", e.target.value)} placeholder="40"/></label>
+              <label className="hep-field"><span>{tr("OVERTIME", "VIRŠVALANDŽIAI")}</span><input className="hep-input" value={needForm.overtime} onChange={(e) => setNeedField("overtime", e.target.value)} placeholder={tr("Rate / conditions", "Įkainis / sąlygos")}/></label>
+              <label className="hep-field"><span>{tr("ROTATION", "ROTACIJA")}</span><input className="hep-input" value={needForm.rotation} onChange={(e) => setNeedField("rotation", e.target.value)} placeholder="4/1"/></label>
+            </div></div>
+
+            <div className="hep-form-section"><h2>{tr("Salary", "Atlyginimas")}</h2><p>{tr("State clearly what the worker will be paid.", "Aiškiai nurodykite, kiek darbuotojui bus mokama.")}</p><div className="hep-form-grid">
+              <label className="hep-field"><span>{tr("CURRENCY *", "VALIUTA *")}</span><input className="hep-input" value={needForm.salaryCurrency} onChange={(e) => setNeedField("salaryCurrency", e.target.value.toUpperCase())}/></label>
+              <div className="hep-field"><span>{tr("SALARY TYPE", "ATLYGINIMO TIPAS")}</span><HirePortalSegment value={needForm.salaryType} onChange={(value) => setNeedField("salaryType", value)} options={[{value:"hourly",label:tr("Per hour", "Valandinis")},{value:"monthly",label:tr("Per month", "Mėnesinis")}]} /></div>
+              <label className="hep-field"><span>{tr("MINIMUM SALARY *", "MINIMALUS ATLYGINIMAS *")}</span><input className="hep-input" inputMode="decimal" value={needForm.salaryMin} onChange={(e) => setNeedField("salaryMin", e.target.value)} placeholder="22"/></label>
+              <label className="hep-field"><span>{tr("MAXIMUM SALARY", "MAKSIMALUS ATLYGINIMAS")}</span><input className="hep-input" inputMode="decimal" value={needForm.salaryMax} onChange={(e) => setNeedField("salaryMax", e.target.value)} placeholder="25"/></label>
+              <div className="hep-field full"><span>{tr("SALARY BASIS", "ATLYGINIMO PAGRINDAS")}</span><HirePortalSegment value={needForm.salaryBasis} onChange={(value) => setNeedField("salaryBasis", value)} options={[{value:"gross",label:tr("Gross", "Bruto")},{value:"net",label:tr("Net", "Neto")}]} /></div>
+            </div></div>
+
+            <div className="hep-form-section"><h2>{tr("Accommodation & travel", "Apgyvendinimas ir kelionės")}</h2><p>{tr("Explain accommodation, daily transport and travel costs before the worker accepts the job.", "Nurodykite apgyvendinimą, kasdienį transportą ir kelionių išlaidas prieš darbuotojui priimant darbą.")}</p><div className="hep-form-grid">
+              <div className="hep-field full"><span>{tr("ACCOMMODATION *", "APGYVENDINIMAS *")}</span><HirePortalSegment value={needForm.accommodation} onChange={(value) => setNeedField("accommodation", value)} options={[{value:"yes",label:tr("Provided by employer", "Suteikia darbdavys")},{value:"no",label:tr("Not provided", "Nesuteikiama")},{value:"shared_cost",label:tr("Employee contributes", "Dalinai moka darbuotojas")}]} /></div>
+              <label className="hep-field"><span>{tr("ROOM / ACCOMMODATION TYPE", "KAMBARIO / APGYVENDINIMO TIPAS")}</span><input className="hep-input" value={needForm.roomType} onChange={(e) => setNeedField("roomType", e.target.value)} placeholder={tr("Single / shared room", "Atskiras / bendras kambarys")}/></label>
+              <label className="hep-field"><span>{tr("EMPLOYEE ACCOMMODATION COST", "DARBUOTOJO APGYVENDINIMO KAINA")}</span><input className="hep-input" value={needForm.accommodationCost} onChange={(e) => setNeedField("accommodationCost", e.target.value)} placeholder={tr("0 / amount per month", "0 / suma per mėnesį")}/></label>
+              <label className="hep-field"><span>{tr("INITIAL TRAVEL", "PIRMINĖ KELIONĖ")}</span><input className="hep-input" value={needForm.initialTravel} onChange={(e) => setNeedField("initialTravel", e.target.value)} placeholder={tr("Who pays Lithuania → project", "Kas apmoka Lietuva → projektas")}/></label>
+              <label className="hep-field"><span>{tr("TRANSPORT TO WORKSITE", "TRANSPORTAS Į DARBO VIETĄ")}</span><input className="hep-input" value={needForm.workTransport} onChange={(e) => setNeedField("workTransport", e.target.value)} placeholder={tr("Company vehicle / public transport", "Įmonės automobilis / viešasis transportas")}/></label>
+              <label className="hep-field full"><span>{tr("HOME / ROTATION TRAVEL", "KELIONĖS NAMO / ROTACIJA")}</span><input className="hep-input" value={needForm.homeTravel} onChange={(e) => setNeedField("homeTravel", e.target.value)} placeholder={tr("Frequency and who pays", "Dažnumas ir kas apmoka")}/></label>
+              <label className="hep-field full"><span>{tr("ADDITIONAL REQUIREMENTS / INFORMATION", "PAPILDOMI REIKALAVIMAI / INFORMACIJA")}</span><textarea className="hep-textarea" value={needForm.additionalInfo} onChange={(e) => setNeedField("additionalInfo", e.target.value)} placeholder={tr("Certificates, tools, shifts, safety requirements or other important information...", "Sertifikatai, įrankiai, pamainos, saugos reikalavimai ar kita svarbi informacija...")}/></label>
+            </div></div>
+
+            <div className="hep-form-actions"><button className="hep-secondary" type="button" disabled={saving} onClick={() => setScreen("dashboard")}>{tr("Cancel", "Atšaukti")}</button><button className="hep-primary" type="button" disabled={saving} onClick={submitNeed}>{saving ? tr("Submitting...", "Pateikiama...") : tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</button></div>
           </section>
-        </div><aside className="hep-side">
-          <section className="hep-card hep-side-card"><h3>{tr("Current request", "Dabartinė užklausa")}</h3><div className="hep-side-list"><div className="hep-side-row"><span>{tr("Project", "Projektas")}</span><b>{portal.request?.projectLocation}, {portal.request?.projectCountry}</b></div><div className="hep-side-row"><span>{tr("Requested start", "Prašoma pradžia")}</span><b>{portal.request?.requestedStartDate||"—"}</b></div><div className="hep-side-row"><span>{tr("Portal status", "Portalo būsena")}</span><b>{sourcingStarted?tr("Sourcing", "Vyksta paieška"):submittedToReview?tr("Under Statybos24 review", "Statybos24 peržiūri"):tr("Employer action required", "Reikia darbdavio veiksmo")}</b></div></div></section>
-          <section className="hep-card hep-side-card"><h3>{tr("Need clarification?", "Reikia paaiškinimo?")}</h3><p>{tr("Please reply to the Statybos24 email from which you received these login details. This keeps all commercial and agreement questions in the same email thread.", "Atsakykite į Statybos24 el. laišką, iš kurio gavote šiuos prisijungimo duomenis. Taip visi komerciniai ir sutarties klausimai liks vienoje el. pašto gijoje.")}</p></section>
-          <section className="hep-card hep-side-card"><h3>{tr("Candidates", "Kandidatai")}</h3><div className="hep-candidate-summary-count">{presentedCandidates.length}</div><span className="hep-candidate-summary-label">{presentedCandidates.length===1?tr("candidate presented", "pateiktas kandidatas"):tr("candidates presented", "pateikti kandidatai")}</span>{presentedCandidates.length?<a href="#candidates" style={{display:"inline-block",marginTop:10}}>{tr("Review candidates", "Peržiūrėti kandidatus")} →</a>:null}</section>
-        </aside></div>
+        </> : null}
+
+        {screen === "need" && selectedNeed ? <>
+          <section className="hep-view-head"><div><button className="hep-back" type="button" onClick={() => { setScreen("dashboard"); setSelectedCandidate(null); }}>← {tr("All workforce needs", "Visi poreikiai")}</button><div className="hep-eyebrow" style={{marginTop:16}}>{tr("WORKFORCE NEED", "DARBUOTOJŲ POREIKIS")}</div><div className="hep-view-title-row"><h1>{selectedNeed.title}</h1><span className={`hep-status ${selectedNeed.status || ""}`}>{needStatusLabel(selectedNeed.status)}</span></div><p>{selectedNeed.projectLocation}, {selectedNeed.projectCountry} · {tr("start", "pradžia")} {selectedNeed.requestedStartDate || "—"}</p></div></section>
+
+          <section className="hep-detail-card">
+            <div className="hep-detail-top"><div><h2>{selectedNeed.title}</h2><div className="hep-detail-meta"><span>{tr("Workers", "Darbuotojai")}: {totalWorkers(selectedNeed) || "—"}</span><span>{tr("Submitted", "Pateikta")}: {selectedNeed.submittedAt ? new Date(selectedNeed.submittedAt).toLocaleDateString(lang === "lt" ? "lt-LT" : "en-GB") : "—"}</span></div></div><button className="hep-secondary" type="button" onClick={() => setNeedInfoOpen((open) => !open)}>{needInfoOpen ? tr("Hide information", "Slėpti informaciją") : tr("Information", "Informacija")}</button></div>
+
+            {needInfoOpen ? <div className="hep-info">
+              <div className="hep-info-section"><h3>{tr("Project", "Projektas")}</h3><div className="hep-info-grid">
+                <div className="hep-info-cell"><span>{tr("Country", "Šalis")}</span><b>{selectedNeed.projectCountry || "—"}</b></div><div className="hep-info-cell"><span>{tr("Location", "Vieta")}</span><b>{selectedNeed.projectLocation || "—"}</b></div><div className="hep-info-cell"><span>{tr("Start", "Pradžia")}</span><b>{selectedNeed.requestedStartDate || "—"}</b></div>
+                <div className="hep-info-cell"><span>{tr("Needed by", "Surinkti iki")}</span><b>{wf.neededBy || "—"}</b></div><div className="hep-info-cell"><span>{tr("Employment", "Įdarbinimas")}</span><b>{employmentTypeLabel(wf.employmentType)}</b></div><div className="hep-info-cell"><span>{tr("Hours / week", "Valandos / sav.")}</span><b>{wf.hoursPerWeek || "—"}</b></div><div className="hep-info-cell"><span>{tr("Duration", "Trukmė")}</span><b>{wf.duration || "—"}</b></div><div className="hep-info-cell"><span>{tr("Rotation", "Rotacija")}</span><b>{wf.rotation || "—"}</b></div><div className="hep-info-cell"><span>{tr("Overtime", "Viršvalandžiai")}</span><b>{wf.overtime || "—"}</b></div>
+              </div></div>
+              <div className="hep-info-section"><h3>{tr("Workers", "Darbuotojai")}</h3><div className="hep-role-list">{Array.isArray(wf.roles) ? wf.roles.map((role, index) => <div className="hep-role-summary" key={`summary-${index}`}><div className="hep-role-summary-head"><b>{role.profession || "—"}</b><span>{role.count || 1} {tr("worker(s)", "darbuotojai")}</span></div><p>{tr("Experience", "Patirtis")}: {role.experience || "—"} · {tr("Language", "Kalba")}: {role.language || "—"} · {tr("Driving licence", "Vairuotojo paž.")}: {drivingLabel(role.drivingLicense)}</p>{role.skills ? <p><b>{tr("Skills / tasks", "Įgūdžiai / darbai")}:</b> {role.skills}</p> : null}</div>) : null}</div></div>
+              <div className="hep-info-section"><h3>{tr("Salary", "Atlyginimas")}</h3><div className="hep-info-grid"><div className="hep-info-cell"><span>{tr("Salary", "Atlyginimas")}</span><b>{wf.salaryMin || "—"}{wf.salaryMax ? ` – ${wf.salaryMax}` : ""} {wf.salaryCurrency || ""}</b></div><div className="hep-info-cell"><span>{tr("Type", "Tipas")}</span><b>{salaryTypeLabel(wf.salaryType)}</b></div><div className="hep-info-cell"><span>{tr("Basis", "Pagrindas")}</span><b>{salaryBasisLabel(wf.salaryBasis)}</b></div><div className="hep-info-cell"><span>{tr("Overtime", "Viršvalandžiai")}</span><b>{wf.overtime || "—"}</b></div></div></div>
+              <div className="hep-info-section"><h3>{tr("Accommodation & travel", "Apgyvendinimas ir kelionės")}</h3><div className="hep-info-grid"><div className="hep-info-cell"><span>{tr("Accommodation", "Apgyvendinimas")}</span><b>{accommodationLabel(wf.accommodation)}</b></div><div className="hep-info-cell"><span>{tr("Room", "Kambarys")}</span><b>{wf.roomType || "—"}</b></div><div className="hep-info-cell"><span>{tr("Cost", "Kaina")}</span><b>{wf.accommodationCost || "—"}</b></div><div className="hep-info-cell"><span>{tr("Initial travel", "Pirminė kelionė")}</span><b>{wf.initialTravel || "—"}</b></div><div className="hep-info-cell"><span>{tr("Work transport", "Transportas į darbą")}</span><b>{wf.workTransport || "—"}</b></div><div className="hep-info-cell"><span>{tr("Home travel", "Kelionės namo")}</span><b>{wf.homeTravel || "—"}</b></div></div>{wf.additionalInfo ? <div className="hep-role-summary" style={{marginTop:8}}><p style={{margin:0}}>{wf.additionalInfo}</p></div> : null}</div>
+            </div> : null}
+
+            <div className="hep-candidates-section"><div className="hep-candidates-section-head"><div><h3>{tr("Candidates", "Kandidatai")}</h3><p>{tr("Candidates Statybos24 has introduced for this exact workforce need.", "Kandidatai, kuriuos Statybos24 pateikė būtent šiam darbuotojų poreikiui.")}</p></div><b>{selectedCandidates.length}</b></div>
+              {selectedCandidates.length ? selectedCandidates.map((candidate) => <article className="hep-candidate-row" key={candidate.id}><div><h4>{candidate.name}</h4><p>{candidate.profession || tr("Construction specialist", "Statybų specialistas")}</p></div><div className="hep-candidate-row-right"><span className={`hep-candidate-response ${candidate.employerResponse || ""}`}>{candidateResponseLabel(candidate.employerResponse)}</span><button className="hep-secondary" type="button" onClick={() => setSelectedCandidate({ needId:selectedNeed.id, candidateId:candidate.id })}>{tr("Review", "Peržiūrėti")}</button></div></article>) : <div className="hep-empty"><b>{tr("No candidates yet", "Kandidatų dar nėra")}</b><span>{tr("Candidates assigned by Statybos24 to this need will appear here.", "Čia atsiras Statybos24 šiam poreikiui priskirti kandidatai.")}</span></div>}
+            </div>
+          </section>
+        </> : null}
       </main>
-      {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">{tr("FIRST SIGN-IN", "PIRMAS PRISIJUNGIMAS")}</div><h2>{tr("Create your own password", "Susikurkite savo slaptažodį")}</h2><p>{tr("The password sent by Statybos24 is temporary. Set a private password before accessing company documents and the workforce brief.", "Statybos24 atsiųstas slaptažodis yra laikinas. Prieš atidarant įmonės dokumentus ir darbuotojų poreikį susikurkite savo privatų slaptažodį.")}</p><label className="hep-field"><span>{tr("NEW PASSWORD", "NAUJAS SLAPTAŽODIS")}</span><input className="hep-input" type="password" value={password1} onChange={e=>setPassword1(e.target.value)} placeholder={tr("At least 12 characters", "Bent 12 simbolių")}/></label><label className="hep-field"><span>{tr("CONFIRM PASSWORD", "PAKARTOKITE SLAPTAŽODĮ")}</span><input className="hep-input" type="password" value={password2} onChange={e=>setPassword2(e.target.value)}/></label>{error?<div className="hep-error" style={{marginTop:12}}>{error}</div>:null}<div className="hep-actions"><button className="hep-btn primary" type="button" disabled={saving} onClick={changePassword}>{saving?tr("Saving...", "Saugoma..."):tr("Save password & continue", "Išsaugoti slaptažodį ir tęsti")}</button></div></div></div>:null}
+
+      {activeCandidate ? <div className="hep-modal" role="dialog" aria-modal="true"><div className="hep-modal-card"><div className="hep-modal-head"><div><h2>{activeCandidate.name}</h2><p>{activeCandidate.profession || tr("Construction specialist", "Statybų specialistas")}</p></div><button className="hep-back" type="button" onClick={() => setSelectedCandidate(null)}>← {tr("Back", "Atgal")}</button></div><div className="hep-modal-body">
+        <div className="hep-candidate-meta"><div><span>{tr("Experience", "Patirtis")}</span><b>{activeCandidate.yearsExperience === null || activeCandidate.yearsExperience === undefined ? "—" : `${Number(activeCandidate.yearsExperience)} ${tr("yrs", "m.")}`}</b></div><div><span>{tr("Language", "Kalba")}</span><b>{activeCandidate.languageDetails || "—"}</b></div><div><span>{tr("Driving licence", "Vairuotojo paž.")}</span><b>{activeCandidate.hasDrivingLicenseB === true ? tr("B category", "B kategorija") : activeCandidate.hasDrivingLicenseB === false ? tr("No / not confirmed", "Ne / nepatvirtinta") : "—"}</b></div><div><span>{tr("Available from", "Galimas nuo")}</span><b>{activeCandidate.availableFrom || "—"}</b></div><div><span>{tr("Salary expectation", "Atlygio lūkestis")}</span><b>{activeCandidate.salaryExpectation || "—"}</b></div><div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse)}</b></div></div>
+        {activeCandidate.skills ? <div className="hep-candidate-skills"><b>{tr("Skills / experience", "Įgūdžiai / patirtis")}:</b> {activeCandidate.skills}</div> : null}
+        {activeCandidate.cvAvailable ? <div className="hep-candidate-actions"><button className="hep-candidate-btn" type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => openCandidateCv(activeCandidate)}>{tr("View CV", "Peržiūrėti CV")}</button></div> : null}
+        {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("CONTACT SHARED BY STATYBOS24", "STATYBOS24 PERDUOTAS KONTAKTAS")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
+        <div className="hep-candidate-actions"><button className={`hep-candidate-btn ${activeCandidate.employerResponse === "interview_requested" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "interview_requested")}>{tr("Request interview", "Noriu interviu")}</button><button className={`hep-candidate-btn primary ${activeCandidate.employerResponse === "accepted" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "accepted")}>{tr("Approve candidate", "Patvirtinti kandidatą")}</button><button className={`hep-candidate-btn danger ${activeCandidate.employerResponse === "not_suitable" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "not_suitable")}>{tr("Reject", "Atmesti")}</button></div>
+      </div></div></div> : null}
+
+      {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">{tr("FIRST SIGN-IN", "PIRMAS PRISIJUNGIMAS")}</div><h2>{tr("Create your own password", "Susikurkite savo slaptažodį")}</h2><p>{tr("The password sent by Statybos24 is temporary. Set a private password before using the employer portal.", "Statybos24 atsiųstas slaptažodis yra laikinas. Prieš naudojantis darbdavio portalu susikurkite savo privatų slaptažodį.")}</p><label className="hep-field"><span>{tr("NEW PASSWORD", "NAUJAS SLAPTAŽODIS")}</span><input className="hep-input" type="password" value={password1} onChange={(e) => setPassword1(e.target.value)} placeholder={tr("At least 12 characters", "Bent 12 simbolių")}/></label><label className="hep-field" style={{marginTop:11}}><span>{tr("CONFIRM PASSWORD", "PAKARTOKITE SLAPTAŽODĮ")}</span><input className="hep-input" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)}/></label>{error ? <div className="hep-error" style={{marginTop:12}}>{error}</div> : null}<div className="hep-form-actions"><button className="hep-primary" type="button" disabled={saving} onClick={changePassword}>{saving ? tr("Saving...", "Saugoma...") : tr("Save password & continue", "Išsaugoti slaptažodį ir tęsti")}</button></div></div></div> : null}
     </div>
   );
 }
-
 function App() {
   const [user, setUser] = useState(null);
   const authUserIdRef = useRef(null);
