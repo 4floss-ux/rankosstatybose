@@ -26936,10 +26936,6 @@ function AdminDashboard({
               .admin-hire-detail-section .admin-foreign-fact { background: #f8fafc !important; border: 1px solid #edf1f5 !important; border-radius: 10px !important; padding: 11px 12px !important; min-width: 0; overflow-wrap: anywhere; }
               .admin-hire-detail-section .admin-foreign-fact span { color: #718497 !important; }
               .admin-hire-detail-section .admin-foreign-fact b { color: #122d45 !important; line-height: 1.45; }
-              /* Poreikio ir profesijų informacija vizualiai atskirta nuo kontaktų bei dokumentų. */
-              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) { background: #f5faff !important; border-color: #d5e6f6 !important; }
-              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) .admin-foreign-fact { background: #eaf4ff !important; border-color: #d6e6f6 !important; }
-              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) .admin-foreign-fact span { color: #557590 !important; }
 
               @media (max-width: 640px) {
                 .admin-hire-overview { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
