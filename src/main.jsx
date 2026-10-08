@@ -31481,6 +31481,30 @@ function HireEmployerPortalPage() {
     return roles.reduce((sum, role) => sum + Math.max(0, Number(role?.count || 0)), 0);
   }
 
+  // A need is filled only after the employer has approved enough distinct candidates.
+  function needIsFullyStaffed(need) {
+    const requested = totalWorkers(need);
+    if (requested < 1) return false;
+    const candidates = Array.isArray(need?.candidates) ? need.candidates : [];
+    const acceptedIds = new Set(candidates.filter((candidate) =>
+      candidate?.employerResponse === "accepted" || candidate?.employer_response === "accepted"
+    ).map((candidate) => candidate.id).filter(Boolean));
+    return acceptedIds.size >= requested;
+  }
+
+  const staffingFinishedText = ({
+    en:"Workers recruited and approved. A Statybos24.lt representative will contact you.",
+    lt:"Darbuotojai surinkti ir patvirtinti. Su jumis susisieks Statybos24.lt atsakingas darbuotojas.",
+    de:"Mitarbeiter gefunden und bestätigt. Ein zuständiger Mitarbeiter von Statybos24.lt wird sich mit Ihnen in Verbindung setzen.",
+    nl:"De werknemers zijn gevonden en goedgekeurd. Een medewerker van Statybos24.lt neemt contact met u op.",
+    no:"Arbeiderne er funnet og godkjent. En ansvarlig medarbeider fra Statybos24.lt vil kontakte dere.",
+    sv:"Arbetarna har hittats och godkänts. En ansvarig medarbetare från Statybos24.lt kontaktar er.",
+    da:"Medarbejderne er fundet og godkendt. En ansvarlig medarbejder fra Statybos24.lt kontakter jer."
+  })[lang] || "Workers recruited and approved. A Statybos24.lt representative will contact you.";
+  const staffingFinishedLabel = ({
+    en:"Workers approved",lt:"Darbuotojai patvirtinti",de:"Mitarbeiter bestätigt",nl:"Werknemers goedgekeurd",no:"Arbeidere godkjent",sv:"Arbetare godkända",da:"Medarbejdere godkendt"
+  })[lang] || "Workers approved";
+
   async function loadPortal(showLoader=true) {
     if (!supabase || !token) {
       setLoading(false);
@@ -31771,6 +31795,11 @@ function HireEmployerPortalPage() {
   return (
     <div className="hep-page">
       <style>{`
+        .hep-need-card.is-fully-staffed{background:#eaf8f0;border-color:#9ed7b8;box-shadow:inset 4px 0 0 #289568}
+        .hep-need-card.is-fully-staffed h3{color:#145a3b}
+        .hep-need-card.is-fully-staffed .hep-need-card-meta{color:#39785b}
+        .hep-staffing-finished-message{margin:10px 0 0;color:#166545;font-size:10px;line-height:1.6;font-weight:800;white-space:normal}
+        .hep-status.fully-staffed{background:#ccebdc;color:#126141}
         .hep-open-with-news{position:relative;display:inline-flex;align-items:center;gap:7px}
         .hep-news-mark{display:grid;place-items:center;width:17px;height:17px;flex:0 0 17px;border-radius:50%;background:#df342d;color:#fff;font-size:11px;font-weight:950;line-height:1}
         .hep-candidate-row.has-new-update{border-color:#f0b37c;background:#fff4e9}
@@ -31799,10 +31828,17 @@ function HireEmployerPortalPage() {
           <div className="hep-dashboard-grid">
             <section className="hep-panel hep-panel-pad">
               <div className="hep-panel-head"><div><h2>{tr("Your workforce needs", "Jūsų darbuotojų poreikiai")}</h2><p>{tr("Open a need to review the information you submitted and the candidates assigned to it.", "Atidarykite poreikį, kad matytumėte pateiktą informaciją ir jam priskirtus kandidatus.")}</p></div><b>{needs.length}</b></div>
-              {needs.length ? <div className="hep-needs-list">{needs.map((need) => <article className="hep-need-card" key={need.id}>
-                <div className="hep-need-card-main"><h3>{need.title}</h3><div className="hep-need-card-meta"><span>{need.projectLocation}, {need.projectCountry}</span><span>{tr("Start", "Pradžia")}: {need.requestedStartDate || "—"}</span><span>{tr("Workers", "Darbuotojai")}: {totalWorkers(need) || "—"}</span></div></div>
-                <div className="hep-need-card-actions"><span className={`hep-status ${need.status || ""}`}>{needStatusLabel(need.status)}</span><button className="hep-secondary hep-open-with-news" type="button" onClick={() => openNeed(need)}>{tr("Open", "Atidaryti")}{needHasNews(need) ? <span className="hep-news-mark" aria-label={tr("New update", "Nauja informacija")} title={tr("New candidate update", "Nauja informacija apie kandidatą")}>!</span> : null}</button></div>
-              </article>)}</div> : <div className="hep-empty"><b>{tr("No workforce needs submitted yet", "Darbuotojų poreikių dar nepateikta")}</b><span>{tr("Use “Submit workforce need” when you are ready to provide full job, salary, accommodation and project information.", "Paspauskite „Pateikti darbuotojų poreikį“, kai būsite pasiruošę pateikti pilną darbo, atlyginimo, apgyvendinimo ir projekto informaciją.")}</span></div>}
+              {needs.length ? <div className="hep-needs-list">{needs.map((need) => {
+                const fullyStaffed = needIsFullyStaffed(need);
+                return <article className={`hep-need-card${fullyStaffed ? " is-fully-staffed" : ""}`} key={need.id}>
+                  <div className="hep-need-card-main">
+                    <h3>{need.title}</h3>
+                    <div className="hep-need-card-meta"><span>{need.projectLocation}, {need.projectCountry}</span><span>{tr("Start", "Pradžia")}: {need.requestedStartDate || "—"}</span><span>{tr("Workers", "Darbuotojai")}: {totalWorkers(need) || "—"}</span></div>
+                    {fullyStaffed ? <p className="hep-staffing-finished-message">{staffingFinishedText}</p> : null}
+                  </div>
+                  <div className="hep-need-card-actions"><span className={`hep-status ${fullyStaffed ? "fully-staffed" : (need.status || "")}`}>{fullyStaffed ? staffingFinishedLabel : needStatusLabel(need.status)}</span><button className="hep-secondary hep-open-with-news" type="button" onClick={() => openNeed(need)}>{tr("Open", "Atidaryti")}{needHasNews(need) ? <span className="hep-news-mark" aria-label={tr("New update", "Nauja informacija")} title={tr("New candidate update", "Nauja informacija apie kandidatą")}>!</span> : null}</button></div>
+                </article>;
+              })}</div> : <div className="hep-empty"><b>{tr("No workforce needs submitted yet", "Darbuotojų poreikių dar nepateikta")}</b><span>{tr("Use “Submit workforce need” when you are ready to provide full job, salary, accommodation and project information.", "Paspauskite „Pateikti darbuotojų poreikį“, kai būsite pasiruošę pateikti pilną darbo, atlyginimo, apgyvendinimo ir projekto informaciją.")}</span></div>}
             </section>
 
             <aside className="hep-panel hep-panel-pad">
