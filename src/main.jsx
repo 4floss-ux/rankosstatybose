@@ -26919,6 +26919,30 @@ function AdminDashboard({
               <b>{foreignHireRequests.length}</b>
             </div>
 
+            <style>{`
+              .admin-hire-overview { gap: 9px !important; }
+              .admin-hire-overview-stat { border: 1px solid #e3eaf0 !important; border-radius: 12px !important; background: #fff !important; box-shadow: none !important; padding: 12px 14px !important; position: relative; }
+              .admin-hire-overview-stat:first-child { background: #f4f8fb !important; border-color: #d8e5ee !important; }
+              .admin-hire-overview-stat:nth-child(4) { background: #fff9f2 !important; border-color: #f3e4d5 !important; }
+              .admin-hire-details-toggle { border-color: #dce6ed !important; border-radius: 12px !important; background: #f6f9fb !important; padding: 12px 14px !important; }
+              .admin-hire-details-toggle .admin-small-btn { border-radius: 9px; font-weight: 750; white-space: nowrap; }
+              .admin-hire-details-body { padding-top: 12px; }
+              .admin-hire-detail-section { border: 1px solid #e2eaf0 !important; border-radius: 14px !important; background: #fff !important; box-shadow: none !important; padding: 16px !important; margin-bottom: 10px !important; }
+              .admin-hire-detail-section h4 { font-size: 15px !important; letter-spacing: -.015em; }
+              .admin-hire-detail-section .admin-foreign-grid { gap: 8px !important; }
+              .admin-hire-detail-section .admin-foreign-fact { background: #f8fafc !important; border: 1px solid #edf1f5 !important; border-radius: 10px !important; padding: 11px 12px !important; min-width: 0; overflow-wrap: anywhere; }
+              .admin-hire-detail-section .admin-foreign-fact span { color: #718497 !important; }
+              .admin-hire-detail-section .admin-foreign-fact b { color: #122d45 !important; line-height: 1.45; }
+              @media (max-width: 640px) {
+                .admin-hire-overview { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+                .admin-hire-overview-stat { padding: 10px 11px !important; }
+                .admin-hire-details-toggle { align-items: stretch !important; }
+                .admin-hire-details-toggle .admin-small-btn { width: 100%; }
+                .admin-hire-detail-section { padding: 12px !important; }
+              }
+              @media (max-width: 370px) { .admin-hire-overview { grid-template-columns: 1fr !important; } }
+            `}</style>
+
             {foreignHireRequests.length ? (
               <div className="admin-foreign-list">
                 {adminPageSlice(foreignHireRequests).map((request) => {
@@ -26945,7 +26969,7 @@ function AdminDashboard({
                   const fullNeed = request.brief_workforce_details || {};
                   const fullNeedTitle = fullNeed.needTitle || fullNeed.roles?.[0]?.profession || request.company_name;
                   const roleList = Array.isArray(fullNeed.roles) ? fullNeed.roles : [];
-                  const detailsMinimized = !!foreignHireMinimized[request.request_id];
+                  const detailsMinimized = foreignHireMinimized[request.request_id] !== false;
                   const totalRequestedWorkers = roleList.reduce((sum, role) => sum + Math.max(1, Number(role?.count || 0) || 0), 0);
                   const projectSummary = [fullNeed.projectCountry, fullNeed.projectLocation].filter(Boolean).join(" · ") || "—";
                   const salaryValue = `${fullNeed.salaryAmount || fullNeed.salaryMin || "—"}${fullNeed.salaryCurrency ? ` ${fullNeed.salaryCurrency}` : ""}`.trim();
@@ -26998,11 +27022,11 @@ function AdminDashboard({
                       ) : null}
 
                       {hasFullBrief ? <>
-                        <div style={{
+                        <div className="admin-hire-overview" style={{
                           display: "grid",
                           gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
                           gap: 12,
-                          marginBottom: 14,
+                          marginBottom: 12,
                         }}>
                           {[
                             { label: "Pozicija", value: fullNeedTitle || "—" },
@@ -27013,6 +27037,7 @@ function AdminDashboard({
                             { label: "Sutartis", value: request.signed_agreement_path ? "Pasirašyta" : "Laukiama parašo" },
                           ].map((item) => (
                             <div
+                              className="admin-hire-overview-stat"
                               key={`${request.request_id}-${item.label}`}
                               style={{
                                 border: "1px solid #d8e1e8",
@@ -27029,7 +27054,7 @@ function AdminDashboard({
                           ))}
                         </div>
 
-                        <div style={{
+                        <div className="admin-hire-details-toggle" style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
@@ -27042,23 +27067,23 @@ function AdminDashboard({
                           marginBottom: detailsMinimized ? 0 : 12,
                         }}>
                           <div style={{ minWidth: 0 }}>
-                            <strong style={{ display: "block", color: "#102438" }}>Pilna workforce need informacija</strong>
+                            <strong style={{ display: "block", color: "#102438" }}>Visi poreikio duomenys</strong>
                             <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#607180", lineHeight: 1.5 }}>
-                              Viršuje rodoma trumpa santrauka. Jei reikia, išskleiskite pilnas poreikio detales.
+                              {detailsMinimized ? "Išskleiskite, kad matytumėte visas darbo sąlygas, kontaktus ir dokumentus." : "Visi įmonės pateikti duomenys suskirstyti pagal temas."}
                             </span>
                           </div>
                           <button
                             className="admin-small-btn"
                             type="button"
-                            onClick={() => setForeignHireMinimized((current) => ({ ...current, [request.request_id]: !current[request.request_id] }))}
+                            onClick={() => setForeignHireMinimized((current) => ({ ...current, [request.request_id]: !(current[request.request_id] !== false) }))}
                             style={{ background: "#fff", color: "#102438", borderColor: "#d8e1e8" }}
                           >
                             {detailsMinimized ? "Išskleisti informaciją" : "Suskleisti informaciją"}
                           </button>
                         </div>
 
-                        {!detailsMinimized ? <>
-                          <div style={{
+                        {!detailsMinimized ? <div className="admin-hire-details-body">
+                          <div className="admin-hire-detail-section" style={{
                             border: "1px solid #d8e1e8",
                             borderRadius: 18,
                             background: "#fff",
@@ -27080,7 +27105,7 @@ function AdminDashboard({
                             </div>
                           </div>
 
-                          <div style={{
+                          <div className="admin-hire-detail-section" style={{
                             border: "1px solid #d8e1e8",
                             borderRadius: 18,
                             background: "#fff",
@@ -27114,6 +27139,7 @@ function AdminDashboard({
 
                           {roleList.length ? roleList.map((role, index) => (
                             <div
+                              className="admin-hire-detail-section"
                               key={`${request.request_id}-full-role-${index}`}
                               style={{
                                 border: "1px solid #d8e1e8",
@@ -27158,7 +27184,7 @@ function AdminDashboard({
                             </div>
                           ) : null}
 
-                          <div style={{
+                          <div className="admin-hire-detail-section" style={{
                             border: "1px solid #d8e1e8",
                             borderRadius: 18,
                             background: "#fff",
@@ -27177,7 +27203,7 @@ function AdminDashboard({
                               <div><span>Darbo sutartis susipažinimui</span>{request.employmentContractUrl ? <a href={request.employmentContractUrl} target="_blank" rel="noreferrer">{request.employment_contract_name || "Atidaryti darbo sutartį"}</a> : <b>Neįkelta</b>}</div>
                             </div>
                           </div>
-                        </> : null}
+                        </div> : null}
                       </> : <>
                         <div className="admin-foreign-grid">
                           <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.company_name || "—"}</b></div>
