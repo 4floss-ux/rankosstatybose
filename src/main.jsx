@@ -25146,7 +25146,7 @@ function AdminDashboard({
       setError("Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį.");
       return;
     }
-    if (["hired", "started"].includes(status) && (!candidate.candidate_job_confirmed_at || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) || candidate.employer_response !== "accepted")) {
+    if (["hired", "started"].includes(status) && (!candidate.candidate_job_confirmed_at || !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) || candidate.employer_response !== "accepted")) {
       setError("Įdarbinimui būtinas darbdavio patvirtinimas, pasirašyta tarpininkavimo sutartis ir užfiksuotas darbo sutarties patvirtinimas.");
       return;
     }
@@ -25352,7 +25352,7 @@ function AdminDashboard({
                   const needsEmploymentAgreement = ["hired", "started"].includes(next?.[0]) && !candidate.job_confirmation?.signedEmploymentAgreementPath;
                   const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
                   const canHireCandidate = candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status);
-                  const hireBlocked = !candidate.job_confirmation?.signedEmploymentAgreementPath || !candidate.candidate_job_confirmed_at || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
+                  const hireBlocked = !candidate.job_confirmation?.signedEmploymentAgreementPath || !candidate.candidate_job_confirmed_at || !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
                   return (
                     <div className="admin-candidate-card" key={candidate.candidate_id}>
                       <button
@@ -25389,7 +25389,7 @@ function AdminDashboard({
                       <div className="admin-candidate-docs">
                         {candidate.cvUrl ? <a className="admin-candidate-doc" href={candidate.cvUrl} target="_blank" rel="noreferrer">CV · {candidate.cv_name || "Atidaryti"}</a> : null}
                         <label className="admin-candidate-doc">{candidate.cv_path ? "Pakeisti CV" : "+ Įkelti CV"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "cv", file); event.target.value = ""; }} /></label>
-                        {candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Statybos24 ir darbuotojo tarpininkavimo sutartis · {candidate.candidate_signed_agreement_name || "Peržiūrėti"}</a> : null}
+                        {candidate.candidate_signed_agreement_path ? (candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Statybos24 ir darbuotojo tarpininkavimo sutartis · {candidate.candidate_signed_agreement_name || "Peržiūrėti"}</a> : <span className="admin-candidate-doc">✓ Tarpininkavimo sutartis įkelta · {candidate.candidate_signed_agreement_name || "Dokumentas"}</span>) : null}
                         <label className="admin-candidate-doc">{candidate.candidate_signed_agreement_path ? "Pakeisti tarpininkavimo sutartį" : "+ Įkelti tarpininkavimo sutartį"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label>
                       </div>
 
@@ -25445,7 +25445,7 @@ function AdminDashboard({
                             className="admin-small-btn"
                             type="button"
                             disabled={candidateBusy || hireBlocked}
-                            title={!candidate.job_confirmation?.signedEmploymentAgreementPath ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : !candidate.candidate_job_confirmed_at ? "Palaukite, kol bus užfiksuotas darbo sutarties patvirtinimas." : !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) ? "Pirmiausia įkelkite pasirašytą kandidato tarpininkavimo sutartį." : ""}
+                            title={!candidate.job_confirmation?.signedEmploymentAgreementPath ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) ? "Pirmiausia įkelkite pasirašytą kandidato tarpininkavimo sutartį." : !candidate.candidate_job_confirmed_at ? "Palaukite, kol bus užfiksuotas darbo sutarties patvirtinimas." : ""}
                             onClick={() => updateForeignHireCandidateStatus(candidate, "hired")}
                             style={{ background: hireBlocked ? "#eef2f5" : "#102438", color: hireBlocked ? "#83909d" : "#fff", borderColor: hireBlocked ? "#dce5eb" : "#102438" }}
                           >{candidateBusy ? "Saugoma..." : "Įdarbinti"}</button>
