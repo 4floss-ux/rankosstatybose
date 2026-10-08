@@ -24318,6 +24318,8 @@ function AdminDashboard({
   const [foreignHireSetupLogin, setForeignHireSetupLogin] = useState("");
   const [foreignHireSetupPassword, setForeignHireSetupPassword] = useState("");
   const [foreignHireAgreementFile, setForeignHireAgreementFile] = useState(null);
+  const [foreignHireInvoices, setForeignHireInvoices] = useState({});
+  const [foreignHireInvoiceBusyId, setForeignHireInvoiceBusyId] = useState(null);
   const [foreignHireSetupBusy, setForeignHireSetupBusy] = useState(false);
   const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [foreignHireCandidateOpenId, setForeignHireCandidateOpenId] = useState(null);
@@ -24561,6 +24563,10 @@ function AdminDashboard({
           ),
         }))
       );
+
+      const { data: invoiceRows, error: invoiceLoadError } = await supabase.rpc("admin_get_foreign_hire_invoices");
+      if (invoiceLoadError) throw invoiceLoadError;
+      setForeignHireInvoices(Object.fromEntries((invoiceRows || []).map((invoice) => [invoice.request_id, invoice])));
 
       const foreignHireRows = await Promise.all(
         (foreignHireRequestsResult.data || []).map(async (row) => ({
@@ -25519,6 +25525,49 @@ function AdminDashboard({
     setForeignHireCredentials(null);
     setError("");
     setNotice("");
+  }
+
+  async function uploadForeignHireInvoice(request, file) {
+    if (!request?.request_id || !file || foreignHireInvoiceBusyId) return;
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (!["pdf", "docx"].includes(ext) || file.size < 1 || file.size > 15 * 1024 * 1024) {
+      setError("Sąskaita turi būti PDF arba DOCX, iki 15 MB."); return;
+    }
+    if (request.status !== "closed") { setError("Sąskaitą galima įkelti tik uždarius paiešką."); return; }
+    setForeignHireInvoiceBusyId(request.request_id); setError(""); setNotice("");
+    const storagePath = `${request.request_id}/${Date.now()}-${window.crypto.randomUUID()}-${safeStorageFileName(file.name)}`;
+    try {
+      const uploaded = await supabase.storage.from("foreign-hire-invoices").upload(storagePath, file, {
+        contentType: ext === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document", upsert: false,
+      });
+      if (uploaded.error) throw uploaded.error;
+      const saved = await supabase.rpc("admin_set_foreign_hire_invoice", {
+        p_request_id: request.request_id, p_path: storagePath, p_name: file.name,
+      });
+      if (saved.error) {
+        await supabase.storage.from("foreign-hire-invoices").remove([storagePath]);
+        throw saved.error;
+      }
+      setForeignHireInvoices((previous) => ({ ...previous, [request.request_id]: {
+        request_id: request.request_id, file_name: file.name, storage_path: storagePath,
+      } }));
+      const oldPath = foreignHireInvoices[request.request_id]?.storage_path;
+      if (oldPath && oldPath !== storagePath) {
+        await supabase.storage.from("foreign-hire-invoices").remove([oldPath]);
+      }
+      setNotice("Sąskaita faktūra įkelta. Darbdavys gali ją atsisiųsti.");
+    } catch (err) { setError(err?.message || "Nepavyko įkelti sąskaitos."); }
+    finally { setForeignHireInvoiceBusyId(null); }
+  }
+
+  async function viewForeignHireInvoice(invoice) {
+    if (!invoice?.storage_path) return;
+    try {
+      const { data, error } = await supabase.storage.from("foreign-hire-invoices")
+        .createSignedUrl(invoice.storage_path, 300, { download: invoice.file_name });
+      if (error || !data?.signedUrl) throw error || new Error("Nuoroda nepasiekiama.");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err) { setError(err?.message || "Nepavyko atsisiųsti sąskaitos."); }
   }
 
   function validateForeignHireAgreementFile(file) {
@@ -27374,6 +27423,13 @@ function AdminDashboard({
                         {hasFullBrief && request.brief_status !== "approved" ? <button className="admin-small-btn" type="button" disabled={busy || !request.signed_agreement_path} title={!request.signed_agreement_path ? "Pirmiausia turi būti įkelta pasirašyta tarpininkavimo sutartis" : undefined} onClick={() => lockForeignHireSubmission(request)} style={{background:request.signed_agreement_path ? "#102438" : "#e8edf1",color:request.signed_agreement_path ? "#fff" : "#81909c",borderColor:request.signed_agreement_path ? "#102438" : "#d8e1e8",cursor:request.signed_agreement_path ? "pointer" : "not-allowed"}}>{busy ? "Pradedama..." : "Pradėti paiešką"}</button> : null}
                         {hasFullBrief && !request.signed_agreement_path && request.brief_status !== "approved" ? <span className="admin-candidate-job-note" style={{margin:0}}>Paieškai pradėti būtina pasirašyta tarpininkavimo sutartis.</span> : null}
                         <a className="admin-small-btn" href={mailHref} style={{textDecoration:"none", ...(searchCompleted ? {background:"#b62e28",color:"#fff",borderColor:"#b62e28",fontWeight:800} : {})}}>Rašyti el. paštu</a>
+                        {searchCompleted ? <>
+                          <label className="admin-small-btn" style={{cursor:foreignHireInvoiceBusyId ? "wait" : "pointer",display:"inline-flex",alignItems:"center",gap:6}}>
+                            {foreignHireInvoiceBusyId === request.request_id ? "Įkeliama..." : foreignHireInvoices[request.request_id] ? "Pakeisti sąskaitą faktūrą" : "+ Įkelti sąskaitą faktūrą"}
+                            <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={!!foreignHireInvoiceBusyId} style={{display:"none"}} onChange={(event) => { const file=event.target.files?.[0]; if (file) uploadForeignHireInvoice(request,file); event.target.value=""; }} />
+                          </label>
+                          {foreignHireInvoices[request.request_id] ? <button className="admin-small-btn" type="button" onClick={() => viewForeignHireInvoice(foreignHireInvoices[request.request_id])}>Sąskaita: {foreignHireInvoices[request.request_id].file_name}</button> : null}
+                        </> : null}
                         <button className="admin-small-btn danger" type="button" disabled={busy} onClick={() => deleteForeignHireRequest(request)}>Ištrinti visam laikui</button>
                       </div>
 
@@ -31429,6 +31485,7 @@ function HireEmployerPortalPage() {
   const [uploading, setUploading] = useState(false);
   const [signedFile, setSignedFile] = useState(null);
   const [employmentContractFile, setEmploymentContractFile] = useState(null);
+  const [availableInvoices, setAvailableInvoices] = useState([]);
   const [candidateBusyId, setCandidateBusyId] = useState(null);
   const [password1, setPassword1] = useState("");
   const [password2, setPassword2] = useState("");
@@ -31553,6 +31610,10 @@ function HireEmployerPortalPage() {
       const { data, error } = await supabase.rpc("foreign_employer_portal_data", { p_session_token: token });
       if (error) throw error;
       setPortal(data);
+      try {
+        const invoices = await supabase.functions.invoke("foreign-hire-portal-files", { body: { action:"invoice-list", token } });
+        setAvailableInvoices(invoices.error ? [] : (invoices.data?.requestIds || []));
+      } catch { setAvailableInvoices([]); }
       setError("");
     } catch (err) {
       setError(err?.message || tr("Could not load the employer portal.", "Nepavyko įkelti darbdavio portalo."));
@@ -31605,6 +31666,19 @@ function HireEmployerPortalPage() {
     } catch (err) {
       setError(err?.message || tr("Could not open the agreement.", "Nepavyko atidaryti sutarties."));
     }
+  }
+
+  async function downloadNeedInvoice(need) {
+    if (need?.status !== "closed" || !availableInvoices.includes(need.id)) return;
+    setError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("foreign-hire-portal-files", {
+        body: { action:"invoice-url", token, needId:need.id },
+      });
+      if (error || !data?.url) throw error || new Error(data?.error || "Invoice is not available.");
+      const a=document.createElement("a"); a.href=data.url; a.download=data.name || "invoice.pdf";
+      a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove();
+    } catch (err) { setError(err?.message || tr("Could not download invoice.", "Nepavyko atsisiųsti sąskaitos.")); }
   }
 
   async function downloadSignedAgreement() {
@@ -31873,7 +31947,7 @@ function HireEmployerPortalPage() {
                     <div className="hep-need-card-meta"><span>{need.projectLocation}, {need.projectCountry}</span><span>{tr("Start", "Pradžia")}: {need.requestedStartDate || "—"}</span><span>{tr("Workers", "Darbuotojai")}: {totalWorkers(need) || "—"}</span></div>
                     {fullyStaffed ? <p className="hep-staffing-finished-message">{staffingFinishedText}</p> : null}
                   </div>
-                  <div className="hep-need-card-actions"><span className={`hep-status ${fullyStaffed ? "fully-staffed" : (need.status || "")}`}>{fullyStaffed ? staffingFinishedLabel : needStatusLabel(need.status)}</span><button className="hep-secondary hep-open-with-news" type="button" onClick={() => openNeed(need)}>{tr("Open", "Atidaryti")}{needHasNews(need) ? <span className="hep-news-mark" aria-label={tr("New update", "Nauja informacija")} title={tr("New candidate update", "Nauja informacija apie kandidatą")}>!</span> : null}</button></div>
+                  <div className="hep-need-card-actions"><span className={`hep-status ${fullyStaffed ? "fully-staffed" : (need.status || "")}`}>{fullyStaffed ? staffingFinishedLabel : needStatusLabel(need.status)}</span>{need.status === "closed" && availableInvoices.includes(need.id) ? <button className="hep-secondary" type="button" onClick={() => downloadNeedInvoice(need)}>{({ en:"Invoice", lt:"Sąskaita", de:"Rechnung", nl:"Factuur", no:"Faktura", sv:"Faktura", da:"Faktura" })[lang] || "Invoice"}</button> : null}<button className="hep-secondary hep-open-with-news" type="button" onClick={() => openNeed(need)}>{tr("Open", "Atidaryti")}{needHasNews(need) ? <span className="hep-news-mark" aria-label={tr("New update", "Nauja informacija")} title={tr("New candidate update", "Nauja informacija apie kandidatą")}>!</span> : null}</button></div>
                 </article>;
               })}</div> : <div className="hep-empty"><b>{tr("No workforce needs submitted yet", "Darbuotojų poreikių dar nepateikta")}</b><span>{tr("Use “Submit workforce need” when you are ready to provide full job, salary, accommodation and project information.", "Paspauskite „Pateikti darbuotojų poreikį“, kai būsite pasiruošę pateikti pilną darbo, atlyginimo, apgyvendinimo ir projekto informaciją.")}</span></div>}
             </section>
