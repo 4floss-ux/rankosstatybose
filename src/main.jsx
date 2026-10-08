@@ -24825,7 +24825,14 @@ function AdminDashboard({
         p_confirmation: confirmation,
       });
       if (result.error) throw result.error;
-      setNotice("Darbdavio ir darbuotojo pasirašyta darbo sutartis įkelta.");
+      // Abiejų šalių pasirašyta darbo sutartis yra kandidato sutikimo įrodymas.
+      // Išlaikome esamą backend būseną, bet papildomo admin mygtuko nebereikia.
+      const consentResult = await supabase.rpc("admin_confirm_foreign_candidate_job_confirmation", {
+        p_candidate_id: candidate.candidate_id,
+      });
+      setNotice(consentResult.error
+        ? "Pasirašyta darbo sutartis įkelta, tačiau automatiškai pažymėti patvirtinimo nepavyko: " + consentResult.error.message
+        : "Pasirašyta darbo sutartis įkelta ir sutikimas užfiksuotas.");
       await loadForeignHireCandidates(candidate.request_id, true);
       if (previous.signedEmploymentAgreementPath && previous.signedEmploymentAgreementPath !== newPath) {
         try { await supabase.storage.from("foreign-hire-candidates").remove([previous.signedEmploymentAgreementPath]); } catch (_) {}
@@ -24835,35 +24842,6 @@ function AdminDashboard({
         try { await supabase.storage.from("foreign-hire-candidates").remove([newPath]); } catch (_) {}
       }
       setError(err?.message || "Nepavyko įkelti pasirašytos darbo sutarties.");
-    } finally {
-      setForeignHireCandidateBusyId(null);
-    }
-  }
-
-  async function confirmForeignHireJobConfirmation(candidate) {
-    if (!candidate?.candidate_id || foreignHireCandidateBusyId) return;
-    if (!candidate.job_confirmation?.signedEmploymentAgreementPath) {
-      setError("Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį.");
-      return;
-    }
-    const ok = await askConfirm({
-      title: "Patvirtinti kandidato sutikimą",
-      message: "Patvirtinkite tik tada, kai kandidatas gavo galutines darbo sąlygas, jas perskaitė ir aiškiai sutiko vykti dirbti pagal šį pasiūlymą.",
-      confirmLabel: "Taip, kandidatas sutiko",
-      tone: "default",
-    });
-    if (!ok) return;
-    setForeignHireCandidateBusyId(candidate.candidate_id);
-    setError("");
-    try {
-      const result = await supabase.rpc("admin_confirm_foreign_candidate_job_confirmation", {
-        p_candidate_id: candidate.candidate_id,
-      });
-      if (result.error) throw result.error;
-      setNotice("Pažymėta, kad kandidatas susipažino su galutinėmis darbo sąlygomis ir sutiko.");
-      await loadForeignHireCandidates(candidate.request_id, true);
-    } catch (err) {
-      setError(err?.message || "Nepavyko patvirtinti kandidato sutikimo.");
     } finally {
       setForeignHireCandidateBusyId(null);
     }
@@ -25450,14 +25428,6 @@ function AdminDashboard({
                           />
                         </label>
                         {candidate.employer_response !== "accepted" ? <div className="admin-candidate-job-note" style={{ marginTop: 9 }}>Įkelti galima, kai darbdavys patvirtina kandidatą.</div> : null}
-                        {candidate.signedEmploymentAgreementUrl ? (
-                          <div className={`admin-candidate-consent ${candidate.candidate_job_confirmed_at ? "ok" : ""}`} style={{ marginTop: 12 }}>
-                            {candidate.candidate_job_confirmed_at
-                              ? `✓ Kandidato sutikimas su darbo sąlygomis pažymėtas ${formatAdminDate(candidate.candidate_job_confirmed_at)}.`
-                              : "Įsitikinkite, kad kandidatas susipažino su pasirašyta darbo sutartimi ir sutinka dirbti pagal šias sąlygas."}
-                            {!candidate.candidate_job_confirmed_at ? <div style={{ marginTop: 8 }}><button className="admin-small-btn" type="button" disabled={candidateBusy} onClick={() => confirmForeignHireJobConfirmation(candidate)}>Patvirtinti kandidato sutikimą</button></div> : null}
-                          </div>
-                        ) : null}
                       </div>
 
                       <div className="admin-candidate-actions">
