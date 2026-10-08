@@ -24856,7 +24856,7 @@ function AdminDashboard({
       ready_to_present: ["presented", "Pateikti darbdaviui"],
       presented: ["interview", "Interviu"],
       interview: ["offer", "Pasiūlymas"],
-      offer: ["hired", "Įdarbintas"],
+      offer: ["hired", "Įdarbinti"],
       hired: ["started", "Pradėjo dirbti"],
     })[status] || null;
   }
@@ -24904,7 +24904,7 @@ function AdminDashboard({
     setForeignHireExternalRequestId(null);
     const rows = await loadForeignHireCandidates(request.request_id);
     if (Array.isArray(rows)) {
-      const accepted = rows.filter((candidate) => candidate.employer_response === "accepted");
+      const accepted = rows.filter((candidate) => candidate.employer_response === "accepted" && !["hired", "started"].includes(candidate.status));
       setForeignHireExpandedCandidateIds((current) => ({
         ...current,
         ...Object.fromEntries(accepted.map((candidate) => [candidate.candidate_id, true])),
@@ -25142,6 +25142,14 @@ function AdminDashboard({
 
   async function updateForeignHireCandidateStatus(candidate, status, confirmConsent = false) {
     if (!candidate?.candidate_id || !status || foreignHireCandidateBusyId) return;
+    if (["hired", "started"].includes(status) && !candidate.job_confirmation?.signedEmploymentAgreementPath) {
+      setError("Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį.");
+      return;
+    }
+    if (["hired", "started"].includes(status) && (!candidate.candidate_job_confirmed_at || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) || candidate.employer_response !== "accepted")) {
+      setError("Įdarbinimui būtinas darbdavio patvirtinimas, pasirašyta tarpininkavimo sutartis ir užfiksuotas darbo sutarties patvirtinimas.");
+      return;
+    }
     setForeignHireCandidateBusyId(candidate.candidate_id);
     setError("");
     try {
@@ -25341,12 +25349,15 @@ function AdminDashboard({
                   const candidateExpanded = !!foreignHireExpandedCandidateIds[candidate.candidate_id];
                   const needsSignedAgreement = ["presented", "interview", "offer", "hired", "started"].includes(next?.[0]) && !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
                   const needsEmployerAcceptance = ["hired", "started"].includes(next?.[0]) && candidate.employer_response !== "accepted";
+                  const needsEmploymentAgreement = ["hired", "started"].includes(next?.[0]) && !candidate.job_confirmation?.signedEmploymentAgreementPath;
                   const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
+                  const canHireCandidate = candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status);
+                  const hireBlocked = !candidate.job_confirmation?.signedEmploymentAgreementPath || !candidate.candidate_job_confirmed_at || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
                   return (
                     <div className="admin-candidate-card" key={candidate.candidate_id}>
                       <button
                         type="button"
-                        className={`admin-candidate-card-head ${candidate.employer_response === "accepted" ? "is-employer-accepted" : candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at ? "is-interview-requested" : ""}`}
+                        className={`admin-candidate-card-head ${candidate.employer_response === "accepted" && !["hired", "started"].includes(candidate.status) ? "is-employer-accepted" : candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at ? "is-interview-requested" : ""}`}
                         aria-expanded={candidateExpanded}
                         onClick={() => setForeignHireExpandedCandidateIds((current) => ({ ...current, [candidate.candidate_id]: !current[candidate.candidate_id] }))}
                         style={{ width: "100%", border: 0, background: "transparent", padding: 0, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
@@ -25431,14 +25442,25 @@ function AdminDashboard({
                       </div>
 
                       <div className="admin-candidate-actions">
-                        {next ? (
+                        {canHireCandidate ? (
                           <button
                             className="admin-small-btn"
                             type="button"
-                            disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsJobConfirmation}
+                            disabled={candidateBusy || hireBlocked}
+                            title={!candidate.job_confirmation?.signedEmploymentAgreementPath ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : !candidate.candidate_job_confirmed_at ? "Palaukite, kol bus užfiksuotas darbo sutarties patvirtinimas." : !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) ? "Pirmiausia įkelkite pasirašytą kandidato tarpininkavimo sutartį." : ""}
+                            onClick={() => updateForeignHireCandidateStatus(candidate, "hired")}
+                            style={{ background: hireBlocked ? "#eef2f5" : "#102438", color: hireBlocked ? "#83909d" : "#fff", borderColor: hireBlocked ? "#dce5eb" : "#102438" }}
+                          >{candidateBusy ? "Saugoma..." : "Įdarbinti"}</button>
+                        ) : ["hired", "started"].includes(candidate.status) ? (
+                          next ? <button className="admin-small-btn" type="button" disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation} onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}>{candidateBusy ? "Saugoma..." : next[1]}</button> : <span className="admin-foreign-status sourcing">Įdarbintas</span>
+                        ) : next ? (
+                          <button
+                            className="admin-small-btn"
+                            type="button"
+                            disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation}
                             onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}
                             style={next[0] === "presented" || next[0] === "started" ? { background: "#102438", color: "#fff", borderColor: "#102438" } : undefined}
-                            title={needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutartį." : needsJobConfirmation ? "Pirmiausia kandidatas turi patvirtinti galutines darbo sąlygas." : ""}
+                            title={needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutartį." : needsEmploymentAgreement ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : needsJobConfirmation ? "Palaukite, kol sistema užfiksuos pasirašytos darbo sutarties patvirtinimą." : ""}
                           >
                             {candidateBusy ? "Saugoma..." : next[1]}
                           </button>
@@ -27052,6 +27074,9 @@ function AdminDashboard({
                   const pendingInterviewCount = hasLoadedRequestCandidates
                     ? requestCandidates.filter((candidate) => candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at).length
                     : Number(request.employer_interview_requested_count || 0);
+                  const pendingAcceptedCount = hasLoadedRequestCandidates
+                    ? requestCandidates.filter((candidate) => candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status)).length
+                    : Number(request.employer_accepted_count || 0);
                   const expanded = foreignHireExpandedId === request.request_id;
                   const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
                   const hasFullBrief = ["submitted", "approved"].includes(request.brief_status) && !!request.brief_workforce_details;
@@ -27077,7 +27102,7 @@ function AdminDashboard({
                       : (fullNeed.homeTravel || "—");
 
                   return (
-                    <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(pendingInterviewCount+Number(request.employer_accepted_count||0))>0 ? "has-employer-action" : ""}`} key={request.request_id}>
+                    <article className={`admin-foreign-card ${["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${(pendingInterviewCount+pendingAcceptedCount)>0 ? "has-employer-action" : ""}`} key={request.request_id}>
                       <button type="button" className="admin-foreign-summary" onClick={() => {
                         setForeignHireExpandedId(expanded ? null : request.request_id);
                         if (!expanded && (request.status === "sourcing" || Number(request.candidate_count || 0) > 0)) {
@@ -27113,7 +27138,7 @@ function AdminDashboard({
                           </div>
                           <button className="admin-small-btn" type="button" onClick={() => openForeignHireInterviewCandidates(request)}>Peržiūrėti kandidatus</button>
                         </div>
-                      ) : Number(request.employer_accepted_count || 0) > 0 ? (
+                      ) : pendingAcceptedCount > 0 ? (
                         <div className="admin-foreign-employer-alert">
                           <div>
                             <strong>Darbdavys patvirtino kandidatą</strong>
@@ -31974,8 +31999,8 @@ function HireEmployerPortalPage() {
           <div><span>{tr("Available from", "Gali vykti nuo")}</span><b>{activeCandidate.availableFrom || "—"}</b></div>
           <div><span>{tr("Needs accommodation", "Reikalingas būstas")}</span><b>{activeCandidate.needsAccommodation === true ? tr("Yes", "Taip") : activeCandidate.needsAccommodation === false ? tr("No", "Ne") : "—"}</b></div>
           <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse, !!activeCandidate.contactEmail)}</b></div>
-          {activeCandidate.skills ? <div><span>{tr("Skills", "Įgūdžiai")}</span><b style={{whiteSpace:"pre-wrap"}}>{activeCandidate.skills}</b></div> : null}
         </div>
+        {activeCandidate.skills ? <div className="hep-candidate-comment"><b>{tr("Skills", "Įgūdžiai")}</b><span style={{whiteSpace:"pre-wrap"}}>{activeCandidate.skills}</span></div> : null}
         {activeCandidate.recruiterComment ? <div className="hep-candidate-comment"><b>{tr("Statybos24 comment", "Statybos24 komentaras")}</b>{activeCandidate.recruiterComment}</div> : null}
         {activeCandidate.cvAvailable ? <div className="hep-candidate-cv"><div className="hep-candidate-cv-copy"><span>{tr("Candidate CV", "Kandidato CV")}</span><b>{activeCandidate.cvName || tr("Candidate CV", "Kandidato CV")}</b></div><button className="hep-candidate-btn" type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => openCandidateCv(activeCandidate)}>{tr("Open full CV", "Atidaryti pilną CV")}</button></div> : null}
         {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("We share the candidate email so you can contact them about the interview.", "Perduodame kandidato el. paštą, kad galėtumėte susisiekti dėl interviu.")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
