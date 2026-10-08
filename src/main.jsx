@@ -26922,8 +26922,11 @@ function AdminDashboard({
             <style>{`
               .admin-hire-overview { gap: 9px !important; }
               .admin-hire-overview-stat { border: 1px solid #e3eaf0 !important; border-radius: 12px !important; background: #fff !important; box-shadow: none !important; padding: 12px 14px !important; position: relative; }
-              .admin-hire-overview-stat:first-child { background: #f4f8fb !important; border-color: #d8e5ee !important; }
-              .admin-hire-overview-stat:nth-child(4) { background: #fff9f2 !important; border-color: #f3e4d5 !important; }
+              /* Visi poreikio santraukos duomenys turi vienodą švelnų mėlyną foną. */
+              .admin-hire-overview-stat,
+              .admin-hire-overview-stat:first-child,
+              .admin-hire-overview-stat:nth-child(4) { background: #eef6ff !important; border-color: #d4e5f6 !important; }
+              .admin-hire-overview-stat > div:first-child { color: #56718a !important; }
               .admin-hire-details-toggle { border-color: #dce6ed !important; border-radius: 12px !important; background: #f6f9fb !important; padding: 12px 14px !important; }
               .admin-hire-details-toggle .admin-small-btn { border-radius: 9px; font-weight: 750; white-space: nowrap; }
               .admin-hire-details-body { padding-top: 12px; }
@@ -26933,6 +26936,11 @@ function AdminDashboard({
               .admin-hire-detail-section .admin-foreign-fact { background: #f8fafc !important; border: 1px solid #edf1f5 !important; border-radius: 10px !important; padding: 11px 12px !important; min-width: 0; overflow-wrap: anywhere; }
               .admin-hire-detail-section .admin-foreign-fact span { color: #718497 !important; }
               .admin-hire-detail-section .admin-foreign-fact b { color: #122d45 !important; line-height: 1.45; }
+              /* Poreikio ir profesijų informacija vizualiai atskirta nuo kontaktų bei dokumentų. */
+              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) { background: #f5faff !important; border-color: #d5e6f6 !important; }
+              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) .admin-foreign-fact { background: #eaf4ff !important; border-color: #d6e6f6 !important; }
+              .admin-hire-details-body > .admin-hire-detail-section:not(:first-child):not(:last-child) .admin-foreign-fact span { color: #557590 !important; }
+
               @media (max-width: 640px) {
                 .admin-hire-overview { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
                 .admin-hire-overview-stat { padding: 10px 11px !important; }
