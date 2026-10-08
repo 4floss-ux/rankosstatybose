@@ -24348,11 +24348,11 @@ function AdminDashboard({
     hasDrivingLicenseB: false,
     needsAccommodation: null,
     availableFrom: "",
-    salaryExpectation: "",
     sourceDetail: "",
     recruiterNote: "",
   });
   const [foreignHireExternalCvFile, setForeignHireExternalCvFile] = useState(null);
+  const [foreignHireExternalSignedAgreementFile, setForeignHireExternalSignedAgreementFile] = useState(null);
   const [monthlyAwardLeaders, setMonthlyAwardLeaders] = useState([]);
   const [selectedBugReport, setSelectedBugReport] = useState(null);
   const [resolvingBugId, setResolvingBugId] = useState(null);
@@ -24992,6 +24992,7 @@ function AdminDashboard({
       recruiterNote: "",
     });
     setForeignHireExternalCvFile(null);
+    setForeignHireExternalSignedAgreementFile(null);
   }
 
   async function saveExternalForeignHireCandidate() {
@@ -25004,8 +25005,8 @@ function AdminDashboard({
       setError("Nurodykite tinkamą kandidato amžių.");
       return;
     }
-    if (foreignHireExternalCvFile) {
-      const validationError = validateForeignCandidateDocument(foreignHireExternalCvFile);
+    for (const candidateFile of [foreignHireExternalCvFile, foreignHireExternalSignedAgreementFile].filter(Boolean)) {
+      const validationError = validateForeignCandidateDocument(candidateFile);
       if (validationError) {
         setError(validationError);
         return;
@@ -25031,7 +25032,7 @@ function AdminDashboard({
         p_has_driving_license_b: !!foreignHireExternalForm.hasDrivingLicenseB,
         p_needs_accommodation: foreignHireExternalForm.needsAccommodation,
         p_available_from: foreignHireExternalForm.availableFrom || null,
-        p_salary_expectation: foreignHireExternalForm.salaryExpectation.trim() || null,
+        p_salary_expectation: null,
         p_source_detail: foreignHireExternalForm.sourceDetail.trim() || null,
         p_recruiter_note: foreignHireExternalForm.recruiterNote.trim() || null,
       });
@@ -25066,13 +25067,36 @@ function AdminDashboard({
         }
       }
 
+      let agreementUploadFailed = false;
+      if (foreignHireExternalSignedAgreementFile && candidateId) {
+        const file = foreignHireExternalSignedAgreementFile;
+        const storagePath = `${requestId}/${candidateId}/signed_agreement/${Date.now()}-${safeStorageFileName(file.name)}`;
+        const uploadResult = await supabase.storage.from("foreign-hire-candidates")
+          .upload(storagePath, file, { cacheControl: "3600", upsert: false, contentType: file.type || "application/octet-stream" });
+        if (uploadResult.error) {
+          agreementUploadFailed = true;
+        } else {
+          const documentResult = await supabase.rpc("admin_set_foreign_candidate_document", {
+            p_candidate_id: candidateId,
+            p_document_type: "signed_agreement",
+            p_path: storagePath,
+            p_name: file.name,
+          });
+          if (documentResult.error) {
+            agreementUploadFailed = true;
+            try { await supabase.storage.from("foreign-hire-candidates").remove([storagePath]); } catch {}
+          }
+        }
+      }
+
       setNotice(
-        cvUploadFailed
-          ? "Kandidatas pridėtas, bet CV nepavyko įkelti. CV galite įkelti kandidato kortelėje."
+        agreementUploadFailed || cvUploadFailed
+          ? `Kandidatas pridėtas, tačiau nepavyko įkelti: ${[cvUploadFailed ? "CV" : "", agreementUploadFailed ? "pasirašytos tarpininkavimo sutarties" : ""].filter(Boolean).join(" ir ")}. Galite bandyti dar kartą kandidato kortelėje.`
           : "Kandidatas pridėtas su visa pateikta informacija."
       );
       setForeignHireExternalRequestId(null);
       setForeignHireExternalCvFile(null);
+      setForeignHireExternalSignedAgreementFile(null);
       await loadForeignHireCandidates(foreignHireCandidateOpenId, true);
     } catch (err) {
       setError(err?.message || "Nepavyko pridėti kandidato.");
@@ -25208,8 +25232,25 @@ function AdminDashboard({
                   <div className="admin-external-field"><label>Telefonas</label><input value={foreignHireExternalForm.phone} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, phone: event.target.value }))} /></div>
                   <div className="admin-external-field"><label>Galimas nuo</label><input value={foreignHireExternalForm.availableFrom} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, availableFrom: event.target.value }))} placeholder="YYYY-MM-DD" /></div>
                   <div className="admin-external-field wide"><label>Kandidato patirtis / kompetencijos</label><input value={foreignHireExternalForm.skills} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, skills: event.target.value }))} placeholder="Pvz. 6 m. gipso montavimas, metalinis karkasas, lubos, Q2/Q3" /></div>
-                  <div className="admin-external-field"><label>Kalba</label><input value={foreignHireExternalForm.languageDetails} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, languageDetails: event.target.value }))} placeholder="Pvz. English B1" /></div>
-                  <div className="admin-external-field"><label>Atlygio lūkestis</label><input value={foreignHireExternalForm.salaryExpectation} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, salaryExpectation: event.target.value }))} placeholder="Pvz. 22 EUR gross/h" /></div>
+                  <div className="admin-external-field wide">
+                    <label>Kalbos ir lygiai</label>
+                    {(foreignHireExternalForm.languageDetails.split("\n").length ? foreignHireExternalForm.languageDetails.split("\n") : [""]).map((language, index, all) => (
+                      <div key={index} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                        <input
+                          style={{ flex: 1, minWidth: 0 }}
+                          value={language}
+                          placeholder={index === 0 ? "Pvz. English B1" : "Kita kalba ir jos lygis"}
+                          onChange={(event) => setForeignHireExternalForm((current) => {
+                            const languages = current.languageDetails.split("\n");
+                            languages[index] = event.target.value.replace(/[\r\n]/g, " ");
+                            return { ...current, languageDetails: languages.join("\n") };
+                          })}
+                        />
+                        {all.length > 1 ? <button type="button" className="admin-small-btn" aria-label="Pašalinti kalbą" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: current.languageDetails.split("\n").filter((_, i) => i !== index).join("\n") }))}>×</button> : null}
+                      </div>
+                    ))}
+                    <button type="button" className="admin-small-btn" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: `${current.languageDetails}\n` }))}>+ Pridėti kalbą</button>
+                  </div>
                   <div className="admin-external-field"><label>Šaltinis (nebūtina)</label><input value={foreignHireExternalForm.sourceDetail} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, sourceDetail: event.target.value }))} placeholder="Facebook grupė / referral..." /></div>
                   <div className="admin-external-field">
                     <label>Vairuotojo pažymėjimas</label>
@@ -25237,9 +25278,17 @@ function AdminDashboard({
                       onChange={(event) => setForeignHireExternalCvFile(event.target.files?.[0] || null)}
                     />
                   </label>
+                  <label className="admin-foreign-file">
+                    <span className="admin-foreign-file-copy">
+                      <b>{foreignHireExternalSignedAgreementFile?.name || "Pasirašyta kandidato ir Statybos24 tarpininkavimo sutartis"}</b>
+                      <span>Privatus admin dokumentas · PDF arba DOCX · iki 15 MB · darbdaviui nerodomas</span>
+                    </span>
+                    <span className="admin-small-btn">{foreignHireExternalSignedAgreementFile ? "Pakeisti sutartį" : "Pasirinkti sutartį"}</span>
+                    <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setForeignHireExternalSignedAgreementFile(event.target.files?.[0] || null)} />
+                  </label>
                 </div>
                 <div className="admin-candidate-actions">
-                  <button className="admin-small-btn" type="button" onClick={() => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); }}>Atšaukti</button>
+                  <button className="admin-small-btn" type="button" onClick={() => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); setForeignHireExternalSignedAgreementFile(null); }}>Atšaukti</button>
                   <button className="admin-small-btn" type="button" disabled={foreignHireCandidateBusyId === "external"} onClick={saveExternalForeignHireCandidate} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
                     {foreignHireCandidateBusyId === "external" ? "Saugoma..." : "Pridėti kandidatą"}
                   </button>
@@ -25272,7 +25321,6 @@ function AdminDashboard({
                         <div><span>Patirtis</span><b>{candidate.years_experience === null ? "—" : `${Number(candidate.years_experience)} m.`}</b></div>
                         <div><span>Kalba</span><b>{candidate.language_details || "—"}</b></div>
                         <div><span>Galimas nuo</span><b>{candidate.available_from || "—"}</b></div>
-                        <div><span>Atlygio lūkestis</span><b>{candidate.salary_expectation || "—"}</b></div>
                         <div><span>B kategorija</span><b>{candidate.has_driving_license_b === true ? "Taip" : candidate.has_driving_license_b === false ? "Ne" : "—"}</b></div>
                         <div><span>Reikalingas būstas</span><b>{candidate.needs_accommodation === true ? "Taip" : candidate.needs_accommodation === false ? "Ne" : "—"}</b></div>
                         <div><span>Telefonas</span><b>{candidate.phone || "—"}</b></div>
@@ -25290,7 +25338,7 @@ function AdminDashboard({
                         {candidate.candidateAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateAgreementUrl} target="_blank" rel="noreferrer">Sutartis · {candidate.candidate_agreement_name || "Atidaryti"}</a> : null}
                         {!candidate.candidate_agreement_path ? <label className="admin-candidate-doc">+ Įkelti sutartį<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "agreement", file); event.target.value = ""; }} /></label> : null}
                         {candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Pasirašyta sutartis · {candidate.candidate_signed_agreement_name || "Atidaryti"}</a> : null}
-                        {candidate.candidate_agreement_path && !candidate.candidate_signed_agreement_path ? <label className="admin-candidate-doc">+ Įkelti pasirašytą sutartį<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label> : null}
+                        {!candidate.candidate_signed_agreement_path ? <label className="admin-candidate-doc">+ Įkelti pasirašytą sutartį<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label> : null}
                       </div>
 
                       {candidate.employer_contact_shared_at ? (
@@ -31806,7 +31854,6 @@ function HireEmployerPortalPage() {
           <div><span>{tr("Driving licence", "Vairuotojo paž.")}</span><b>{activeCandidate.hasDrivingLicenseB === true ? tr("Yes", "Taip") : activeCandidate.hasDrivingLicenseB === false ? tr("No", "Ne") : "—"}</b></div>
           <div><span>{tr("Available from", "Gali vykti nuo")}</span><b>{activeCandidate.availableFrom || "—"}</b></div>
           <div><span>{tr("Needs accommodation", "Reikalingas būstas")}</span><b>{activeCandidate.needsAccommodation === true ? tr("Yes", "Taip") : activeCandidate.needsAccommodation === false ? tr("No", "Ne") : "—"}</b></div>
-          <div><span>{tr("Salary expectation", "Atlygio lūkestis")}</span><b>{activeCandidate.salaryExpectation || "—"}</b></div>
           <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse, !!activeCandidate.contactEmail)}</b></div>
         </div>
         {activeCandidate.skills ? <div className="hep-candidate-skills"><b>{tr("Skills", "Įgūdžiai")}:</b> {activeCandidate.skills}</div> : null}
