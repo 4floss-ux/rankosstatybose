@@ -24348,6 +24348,7 @@ function AdminDashboard({
     sourceDetail: "",
     recruiterNote: "",
   });
+  const [foreignHireExternalCvFile, setForeignHireExternalCvFile] = useState(null);
   const [monthlyAwardLeaders, setMonthlyAwardLeaders] = useState([]);
   const [selectedBugReport, setSelectedBugReport] = useState(null);
   const [resolvingBugId, setResolvingBugId] = useState(null);
@@ -24934,20 +24935,33 @@ function AdminDashboard({
       sourceDetail: "",
       recruiterNote: "",
     });
+    setForeignHireExternalCvFile(null);
   }
 
   async function saveExternalForeignHireCandidate() {
     if (!foreignHireExternalRequestId || foreignHireCandidateBusyId) return;
     if (!foreignHireExternalForm.fullName.trim() || !foreignHireExternalForm.profession.trim()) {
-      setError("Nurodykite išorinio kandidato vardą ir profesiją.");
+      setError("Nurodykite kandidato vardą, pavardę ir profesiją.");
       return;
+    }
+    if (foreignHireExternalForm.ageYears && (Number(foreignHireExternalForm.ageYears) < 18 || Number(foreignHireExternalForm.ageYears) > 80)) {
+      setError("Nurodykite tinkamą kandidato amžių.");
+      return;
+    }
+    if (foreignHireExternalCvFile) {
+      const validationError = validateForeignCandidateDocument(foreignHireExternalCvFile);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
     }
 
     setForeignHireCandidateBusyId("external");
     setError("");
     try {
+      const requestId = foreignHireExternalRequestId;
       const result = await supabase.rpc("admin_add_external_foreign_hire_candidate", {
-        p_request_id: foreignHireExternalRequestId,
+        p_request_id: requestId,
         p_full_name: foreignHireExternalForm.fullName.trim(),
         p_email: foreignHireExternalForm.email.trim() || null,
         p_phone: foreignHireExternalForm.phone.trim() || null,
@@ -24966,11 +24980,46 @@ function AdminDashboard({
         p_recruiter_note: foreignHireExternalForm.recruiterNote.trim() || null,
       });
       if (result.error) throw result.error;
-      setNotice("Išorinis kandidatas pridėtas.");
+
+      const candidateId = result.data;
+      let cvUploadFailed = false;
+      if (foreignHireExternalCvFile && candidateId) {
+        const file = foreignHireExternalCvFile;
+        const storagePath = `${requestId}/${candidateId}/cv/${Date.now()}-${safeStorageFileName(file.name)}`;
+        const uploadResult = await supabase.storage
+          .from("foreign-hire-candidates")
+          .upload(storagePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type || undefined,
+          });
+
+        if (uploadResult.error) {
+          cvUploadFailed = true;
+        } else {
+          const documentResult = await supabase.rpc("admin_set_foreign_candidate_document", {
+            p_candidate_id: candidateId,
+            p_document_type: "cv",
+            p_path: storagePath,
+            p_name: file.name,
+          });
+          if (documentResult.error) {
+            cvUploadFailed = true;
+            try { await supabase.storage.from("foreign-hire-candidates").remove([storagePath]); } catch {}
+          }
+        }
+      }
+
+      setNotice(
+        cvUploadFailed
+          ? "Kandidatas pridėtas, bet CV nepavyko įkelti. CV galite įkelti kandidato kortelėje."
+          : "Kandidatas pridėtas su visa pateikta informacija."
+      );
       setForeignHireExternalRequestId(null);
+      setForeignHireExternalCvFile(null);
       await loadForeignHireCandidates(foreignHireCandidateOpenId, true);
     } catch (err) {
-      setError(err?.message || "Nepavyko pridėti išorinio kandidato.");
+      setError(err?.message || "Nepavyko pridėti kandidato.");
     } finally {
       setForeignHireCandidateBusyId(null);
     }
@@ -25120,9 +25169,21 @@ function AdminDashboard({
                     </div>
                   </div>
                   <div className="admin-external-field full"><label>Mano komentaras</label><textarea value={foreignHireExternalForm.recruiterNote} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, recruiterNote: event.target.value }))} placeholder="Trumpas mano komentaras apie kandidatą, pokalbį ar tinkamumą šiai užklausai..." /></div>
+                  <label className="admin-foreign-file">
+                    <span className="admin-foreign-file-copy">
+                      <b>{foreignHireExternalCvFile?.name || "Pilnas kandidato CV nepasirinktas"}</b>
+                      <span>PDF arba DOCX · iki 15 MB · darbdavys galės atidaryti kandidato peržiūroje</span>
+                    </span>
+                    <span className="admin-small-btn">{foreignHireExternalCvFile ? "Pakeisti CV" : "Pasirinkti CV"}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={(event) => setForeignHireExternalCvFile(event.target.files?.[0] || null)}
+                    />
+                  </label>
                 </div>
                 <div className="admin-candidate-actions">
-                  <button className="admin-small-btn" type="button" onClick={() => setForeignHireExternalRequestId(null)}>Atšaukti</button>
+                  <button className="admin-small-btn" type="button" onClick={() => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); }}>Atšaukti</button>
                   <button className="admin-small-btn" type="button" disabled={foreignHireCandidateBusyId === "external"} onClick={saveExternalForeignHireCandidate} style={{ background: "#102438", color: "#fff", borderColor: "#102438" }}>
                     {foreignHireCandidateBusyId === "external" ? "Saugoma..." : "Pridėti kandidatą"}
                   </button>
