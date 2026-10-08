@@ -30940,9 +30940,7 @@ function HireEmployerPortalPage() {
         p_session_token:token,p_candidate_id:candidate.id,p_response:response
       });
       if(error) throw error;
-      const message = response==="interested"
-        ? tr("Marked as interested. Statybos24 will continue with you.","Pažymėta, kad kandidatas domina. Statybos24 susisieks dėl kito žingsnio.")
-        : response==="interview_requested"
+      const message = response==="interview_requested"
         ? tr("Interview requested. Statybos24 will coordinate the next step.","Paprašytas interviu. Statybos24 suderins kitą žingsnį.")
         : response==="accepted"
         ? tr("Candidate approved. Statybos24 will confirm final conditions with the candidate before travel.","Kandidatas patvirtintas. Prieš kelionę Statybos24 su kandidatu patvirtins galutines darbo sąlygas.")
@@ -30954,7 +30952,6 @@ function HireEmployerPortalPage() {
 
   function candidateResponseLabel(response) {
     return ({
-      interested:tr("Interested","Domina"),
       interview_requested:tr("Interview requested","Paprašytas interviu"),
       accepted:tr("Candidate approved","Kandidatas patvirtintas"),
       not_suitable:tr("Not suitable","Netinka"),
@@ -31099,7 +31096,6 @@ function HireEmployerPortalPage() {
                   {candidate.skills?<div className="hep-candidate-skills"><b>{tr("Skills:","Įgūdžiai:")}</b> {candidate.skills}</div>:null}
                   <div className="hep-candidate-actions">
                     {candidate.cvAvailable?<button className="hep-candidate-btn" type="button" disabled={busy} onClick={()=>openCandidateCv(candidate)}>{tr("View CV","Peržiūrėti CV")}</button>:null}
-                    <button className={`hep-candidate-btn ${response==="interested"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"interested")}>{tr("Interested","Domina")}</button>
                     <button className={`hep-candidate-btn ${response==="interview_requested"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"interview_requested")}>{tr("Request interview","Prašyti interviu")}</button>
                     <button className={`hep-candidate-btn primary ${response==="accepted"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"accepted")}>{tr("Approve candidate","Patvirtinti kandidatą")}</button>
                     <button className={`hep-candidate-btn danger ${response==="not_suitable"?"active":""}`} type="button" disabled={busy} onClick={()=>respondToCandidate(candidate,"not_suitable")}>{tr("Not suitable","Netinka")}</button>
