@@ -30487,19 +30487,30 @@ function setForeignHirePortalToken(token) {
 }
 
 
+const HIRE_PORTAL_LOGIN_COPY = {
+  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID",companyPlaceholder:"e.g. MULLER-4821",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID and password.",sessionError:"Could not create a portal session.",signInError:"Could not sign in. Check your access details.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
+  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID",companyPlaceholder:"pvz. MULLER-4821",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite Company ID ir slaptažodį.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Nepavyko prisijungti. Patikrinkite prisijungimo duomenis.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
+  de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"UNTERNEHMENS-ID",companyPlaceholder:"z. B. MULLER-4821",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Anmeldung fehlgeschlagen. Prüfen Sie Ihre Zugangsdaten.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
+  nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"BEDRIJFS-ID",companyPlaceholder:"bijv. MULLER-4821",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Inloggen mislukt. Controleer uw inloggegevens.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
+  no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"BEDRIFTS-ID",companyPlaceholder:"f.eks. MULLER-4821",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Kunne ikke logge inn. Kontroller innloggingsopplysningene.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
+  sv:{metaTitle:"Arbetsgivarportal inloggning | Statybos24",eyebrow:"FÖR INTERNATIONELLA ARBETSGIVARE",heroTitle:"Er privata rekryteringsyta.",heroCopy:"Läs avtalet, fyll i hela bemanningsbehovet och följ kandidaterna som Statybos24 presenterar.",heroFoot:"Direkt byggrekrytering från Litauen.",portal:"ARBETSGIVARPORTAL",signIn:"Logga in",intro:"Använd de privata inloggningsuppgifter som Statybos24 har skickat till er.",companyId:"FÖRETAGS-ID",companyPlaceholder:"t.ex. MULLER-4821",password:"LÖSENORD",passwordPlaceholder:"Ert lösenord",missing:"Ange företags-ID och lösenord.",sessionError:"Det gick inte att skapa portalsessionen.",signInError:"Det gick inte att logga in. Kontrollera inloggningsuppgifterna.",busy:"Loggar in...",submit:"Logga in på arbetsgivarportalen",help:"Frågor om åtkomst eller avtal? Svara på Statybos24-mejlet där ni fick inloggningsuppgifterna eller kontakta"},
+  da:{metaTitle:"Arbejdsgiverportal login | Statybos24",eyebrow:"FOR INTERNATIONALE ARBEJDSGIVERE",heroTitle:"Jeres private rekrutteringsområde.",heroCopy:"Læs aftalen, udfyld hele bemandingsbehovet og følg de kandidater, som Statybos24 præsenterer.",heroFoot:"Direkte rekruttering til byggebranchen fra Litauen.",portal:"ARBEJDSGIVERPORTAL",signIn:"Log ind",intro:"Brug de private loginoplysninger, som Statybos24 har sendt til jer.",companyId:"VIRKSOMHEDS-ID",companyPlaceholder:"f.eks. MULLER-4821",password:"ADGANGSKODE",passwordPlaceholder:"Jeres adgangskode",missing:"Indtast virksomheds-ID og adgangskode.",sessionError:"Portalsessionen kunne ikke oprettes.",signInError:"Kunne ikke logge ind. Kontrollér loginoplysningerne.",busy:"Logger ind...",submit:"Log ind på arbejdsgiverportalen",help:"Spørgsmål om adgang eller aftale? Svar på Statybos24-mailen, hvor I modtog loginoplysningerne, eller kontakt"}
+};
+
 function detectHirePortalLanguage() {
-  const supported = ["en", "lt"];
+  const supported = HIRE_LANGUAGES.map((item) => item.code);
   const queryLanguage = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
   if (supported.includes(queryLanguage)) return queryLanguage;
   try {
     const saved = window.localStorage.getItem("hire-language");
     if (supported.includes(saved)) return saved;
   } catch {}
-  return String(window.navigator?.language || "").toLowerCase().startsWith("lt") ? "lt" : "en";
+  const browser = String(window.navigator?.language || "").toLowerCase().slice(0,2);
+  return supported.includes(browser) ? browser : "en";
 }
 
 function persistHirePortalLanguage(code) {
-  if (!["en", "lt"].includes(code)) return;
+  if (!HIRE_LANGUAGES.some((item) => item.code === code)) return;
   try { window.localStorage.setItem("hire-language", code); } catch {}
   const url = new URL(window.location.href);
   url.searchParams.set("lang", code);
@@ -30508,9 +30519,24 @@ function persistHirePortalLanguage(code) {
 }
 
 function HirePortalLanguageSwitch({ lang, onChange }) {
-  return <div className="hire-portal-lang-switch" role="group" aria-label={lang === "lt" ? "Kalba" : "Language"}>
-    <button type="button" className={lang === "en" ? "active" : ""} onClick={() => onChange("en")}>EN</button>
-    <button type="button" className={lang === "lt" ? "active" : ""} onClick={() => onChange("lt")}>LT</button>
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = HIRE_LANGUAGES.find((item) => item.code === lang) || HIRE_LANGUAGES[0];
+  useEffect(() => {
+    if (!open) return;
+    const close = (event) => { if (!rootRef.current?.contains(event.target)) setOpen(false); };
+    const key = (event) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", key); };
+  }, [open]);
+  return <div className="hire-portal-lang-switch" ref={rootRef}>
+    <button type="button" className="hire-portal-lang-trigger" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <span>{selected.short}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    </button>
+    {open ? <div className="hire-portal-lang-menu" role="listbox" aria-label={HIRE_COPY[lang]?.language || "Language"}>
+      {HIRE_LANGUAGES.map((item) => <button type="button" role="option" aria-selected={item.code===lang} className={item.code===lang?"active":""} key={item.code} onClick={() => { onChange(item.code); setOpen(false); }}><span>{item.label}</span><b>{item.short}</b></button>)}
+    </div> : null}
   </div>;
 }
 
@@ -30520,7 +30546,7 @@ function HirePortalLogo() {
 
 function HireEmployerLoginPage() {
   const [lang, setLang] = useState(detectHirePortalLanguage);
-  const tr = (en, lt) => lang === "lt" ? lt : en;
+  const copy = HIRE_PORTAL_LOGIN_COPY[lang] || HIRE_PORTAL_LOGIN_COPY.en;
   const changeLanguage = (code) => { persistHirePortalLanguage(code); setLang(code); };
 
   useEffect(() => {
@@ -30530,10 +30556,10 @@ function HireEmployerLoginPage() {
     const robots = existing || document.createElement("meta");
     if (!existing) { robots.setAttribute("name", "robots"); document.head.appendChild(robots); }
     robots.setAttribute("content", "noindex,nofollow,noarchive");
-    document.title = tr("Employer portal login | Statybos24", "Darbdavio portalo prisijungimas | Statybos24");
+    document.title = copy.metaTitle;
     document.documentElement.lang = lang;
     return () => { document.title = previousTitle; if (existing) { if (previous === null) existing.removeAttribute("content"); else existing.setAttribute("content", previous); } else robots.remove(); };
-  }, [lang]);
+  }, [lang, copy.metaTitle]);
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30553,7 +30579,7 @@ function HireEmployerLoginPage() {
     if (!supabase || busy) return;
     setError("");
     if (!loginId.trim() || !password) {
-      setError(tr("Enter your Company ID and password.", "Įveskite Company ID ir slaptažodį."));
+      setError(copy.missing);
       return;
     }
     setBusy(true);
@@ -30564,11 +30590,11 @@ function HireEmployerLoginPage() {
       });
       if (error) throw error;
       const row = data?.[0];
-      if (!row?.session_token) throw new Error(tr("Could not create a portal session.", "Nepavyko sukurti portalo sesijos."));
+      if (!row?.session_token) throw new Error(copy.sessionError);
       setForeignHirePortalToken(row.session_token);
       window.location.assign("/hire/portal");
     } catch (err) {
-      setError(err?.message || tr("Could not sign in. Check your access details.", "Nepavyko prisijungti. Patikrinkite prisijungimo duomenis."));
+      setError(err?.message || copy.signInError);
     } finally {
       setBusy(false);
     }
@@ -30579,28 +30605,28 @@ function HireEmployerLoginPage() {
       <style>{`
         .hire-login-page{min-height:100vh;background:#f5f8fa;color:#10283f;font-family:Inter,system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,.82fr)}
         .hire-login-brand{position:relative;overflow:hidden;background:#10283f;color:#fff;padding:54px clamp(32px,6vw,90px);display:flex;flex-direction:column;justify-content:space-between;isolation:isolate}.hire-login-brand:before{content:"EUROPE";position:absolute;left:-3%;bottom:5%;font:950 clamp(90px,14vw,220px)/.8 Manrope,Inter,sans-serif;letter-spacing:-.08em;color:rgba(255,255,255,.035);z-index:-1}.hire-login-brand-logo{background:#fff;border-radius:14px;padding:13px 18px;width:max-content}.hire-login-brand-copy{max-width:650px}.hire-login-brand-copy small{display:block;color:#f4a55d;font-size:9px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}.hire-login-brand-copy h1{margin:12px 0 18px;font:900 clamp(42px,5.3vw,76px)/.96 Manrope,Inter,sans-serif;letter-spacing:-.055em}.hire-login-brand-copy p{max-width:570px;margin:0;color:#c4d1da;font-size:14px;line-height:1.7}.hire-login-brand-foot{color:#8296a6;font-size:10px}
-        .hire-login-side{display:grid;place-items:center;padding:34px}.hire-login-card{width:min(100%,470px);background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:34px;box-shadow:0 24px 65px rgba(16,40,63,.08)}.hire-login-card .mobile-logo{display:none;text-align:center;margin-bottom:24px}.hire-login-card small{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.15em;text-transform:uppercase}.hire-login-card h2{margin:8px 0 7px;font:900 30px/1.08 Manrope,Inter,sans-serif;letter-spacing:-.035em}.hire-login-card>p{margin:0 0 25px;color:#72818d;font-size:12px;line-height:1.55}.hire-login-card-top{display:flex;justify-content:flex-end;margin:-4px 0 8px}.hire-portal-lang-switch{display:inline-flex;padding:3px;border:1px solid #dce5eb;border-radius:9px;background:#f7f9fa}.hire-portal-lang-switch button{min-width:38px;height:30px;border:0;border-radius:6px;background:transparent;color:#758590;font:900 9px Inter,sans-serif;cursor:pointer}.hire-portal-lang-switch button.active{background:#10283f;color:#fff}.hire-login-form{display:grid;gap:15px}.hire-login-field{display:grid;gap:7px}.hire-login-field span{font-size:9px;font-weight:900;color:#526575;letter-spacing:.03em}.hire-login-input{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;padding:11px 13px;font:750 13px Inter,sans-serif;outline:0}.hire-login-input:focus{border-color:#ef9d52;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.hire-login-error{padding:11px 12px;border:1px solid #efc2b7;border-radius:10px;background:#fff2ee;color:#a5452d;font-size:10px;line-height:1.45}.hire-login-submit{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;font:900 11px Inter,sans-serif;cursor:pointer}.hire-login-submit:disabled{opacity:.6;cursor:wait}.hire-login-help{margin-top:18px;padding-top:17px;border-top:1px solid #edf1f4;color:#7b8994;font-size:9.5px;line-height:1.55}.hire-login-help a{color:#b96017;font-weight:850;text-decoration:none}
+        .hire-login-side{display:grid;place-items:center;padding:34px}.hire-login-card{width:min(100%,470px);background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:34px;box-shadow:0 24px 65px rgba(16,40,63,.08)}.hire-login-card .mobile-logo{display:none;text-align:center;margin-bottom:24px}.hire-login-card small{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.15em;text-transform:uppercase}.hire-login-card h2{margin:8px 0 7px;font:900 30px/1.08 Manrope,Inter,sans-serif;letter-spacing:-.035em}.hire-login-card>p{margin:0 0 25px;color:#72818d;font-size:12px;line-height:1.55}.hire-login-card-top{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 12px}.hire-login-back{height:40px;padding:0 13px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font:850 10px Inter,sans-serif}.hire-login-back:hover{background:#f7f9fa}.hire-portal-lang-switch{position:relative;display:inline-block}.hire-portal-lang-trigger{min-width:72px;height:40px;padding:0 10px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;display:flex;align-items:center;justify-content:space-between;gap:10px;font:900 9px Inter,sans-serif;cursor:pointer}.hire-portal-lang-trigger svg{width:16px;height:16px}.hire-portal-lang-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:50;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:11px;background:#fff;box-shadow:0 18px 45px rgba(16,40,63,.14)}.hire-portal-lang-menu button{width:100%;min-height:36px;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hire-portal-lang-menu button:hover{background:#f5f8fa}.hire-portal-lang-menu button.active{background:#10283f;color:#fff}.hire-portal-lang-menu button b{font-size:8px;letter-spacing:.08em}.hire-login-form{display:grid;gap:15px}.hire-login-field{display:grid;gap:7px}.hire-login-field span{font-size:9px;font-weight:900;color:#526575;letter-spacing:.03em}.hire-login-input{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;padding:11px 13px;font:750 13px Inter,sans-serif;outline:0}.hire-login-input:focus{border-color:#ef9d52;box-shadow:0 0 0 3px rgba(240,138,40,.11)}.hire-login-error{padding:11px 12px;border:1px solid #efc2b7;border-radius:10px;background:#fff2ee;color:#a5452d;font-size:10px;line-height:1.45}.hire-login-submit{min-height:48px;border:0;border-radius:10px;background:#f08a28;color:#fff;font:900 11px Inter,sans-serif;cursor:pointer}.hire-login-submit:disabled{opacity:.6;cursor:wait}.hire-login-help{margin-top:18px;padding-top:17px;border-top:1px solid #edf1f4;color:#7b8994;font-size:9.5px;line-height:1.55}.hire-login-help a{color:#b96017;font-weight:850;text-decoration:none}
         @media(max-width:860px){.hire-login-page{grid-template-columns:1fr}.hire-login-brand{display:none}.hire-login-side{padding:22px 14px}.hire-login-card{padding:26px 20px}.hire-login-card .mobile-logo{display:block}.hire-login-card h2{font-size:27px}}
       `}</style>
       <section className="hire-login-brand">
         <div className="hire-login-brand-logo"><HirePortalLogo /></div>
-        <div className="hire-login-brand-copy"><small>{tr("FOR INTERNATIONAL EMPLOYERS", "TARPTAUTINIAMS DARBDAVIAMS")}</small><h1>{tr("Your private recruitment workspace.", "Jūsų privati darbuotojų atrankos erdvė.")}</h1><p>{tr("Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.", "Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.")}</p></div>
-        <div className="hire-login-brand-foot">{tr("Direct construction recruitment from Lithuania.", "Tiesioginė statybų darbuotojų atranka iš Lietuvos.")}</div>
+        <div className="hire-login-brand-copy"><small>{copy.eyebrow}</small><h1>{copy.heroTitle}</h1><p>{copy.heroCopy}</p></div>
+        <div className="hire-login-brand-foot">{copy.heroFoot}</div>
       </section>
       <section className="hire-login-side">
         <form className="hire-login-card" onSubmit={submit}>
           <div className="mobile-logo"><HirePortalLogo /></div>
-          <div className="hire-login-card-top"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/></div>
-          <small>{tr("EMPLOYER PORTAL", "DARBDAVIO PORTALAS")}</small>
-          <h2>{tr("Sign in", "Prisijungti")}</h2>
-          <p>{tr("Use the private access details sent to you by Statybos24.", "Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.")}</p>
+          <div className="hire-login-card-top"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/><a className="hire-login-back" href="/hire"><span aria-hidden="true">←</span>{HIRE_COPY[lang]?.form?.common?.back || "Back"}</a></div>
+          <small>{copy.portal}</small>
+          <h2>{copy.signIn}</h2>
+          <p>{copy.intro}</p>
           <div className="hire-login-form">
-            <label className="hire-login-field"><span>{tr("COMPANY ID", "ĮMONĖS ID")}</span><input className="hire-login-input" autoComplete="username" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder={tr("e.g. MULLER-4821", "pvz. MULLER-4821")} /></label>
-            <label className="hire-login-field"><span>{tr("PASSWORD", "SLAPTAŽODIS")}</span><input className="hire-login-input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={tr("Your password", "Jūsų slaptažodis")} /></label>
+            <label className="hire-login-field"><span>{copy.companyId}</span><input className="hire-login-input" autoComplete="username" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder={copy.companyPlaceholder} /></label>
+            <label className="hire-login-field"><span>{copy.password}</span><input className="hire-login-input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} /></label>
             {error ? <div className="hire-login-error">{error}</div> : null}
-            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? tr("Signing in...", "Jungiamasi...") : tr("Sign in to employer portal", "Prisijungti prie darbdavio portalo")}</button>
+            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? copy.busy : copy.submit}</button>
           </div>
-          <div className="hire-login-help">{tr("Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact", "Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite")} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</div>
+          <div className="hire-login-help">{copy.help} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</div>
         </form>
       </section>
     </div>
@@ -30762,7 +30788,7 @@ function HireEmployerPortalPage() {
     <div className="hep-page">
       <style>{`
         .hep-page{--navy:#10283f;--orange:#f08a28;min-height:100vh;background:#f5f8fa;color:var(--navy);font-family:Inter,system-ui,sans-serif}.hep-basic{min-height:100vh;display:grid;place-items:center;align-content:center;gap:16px;background:#f5f8fa;color:#10283f;font-family:Inter,sans-serif;text-align:center;padding:24px}.hep-basic h1,.hep-basic p{margin:0}.hep-basic button,.hep-basic a{padding:11px 15px;border:0;border-radius:9px;background:#10283f;color:#fff;text-decoration:none;font-weight:850;cursor:pointer}.hep-loader{width:28px;height:28px;border:3px solid #d9e3e9;border-top-color:#f08a28;border-radius:50%;animation:hepspin .8s linear infinite}@keyframes hepspin{to{transform:rotate(360deg)}}
-        .hep-top{position:sticky;top:0;z-index:120;background:rgba(255,255,255,.96);border-bottom:1px solid #e2e9ee;backdrop-filter:blur(10px)}.hep-top-inner{width:min(1280px,calc(100% - 36px));min-height:74px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.hep-brand{display:flex;align-items:center;gap:15px}.hep-brand-copy{padding-left:15px;border-left:1px solid #e1e8ed}.hep-brand-copy b{display:block;font-size:10px}.hep-brand-copy span{display:block;margin-top:3px;color:#7b8994;font-size:8px;letter-spacing:.07em;text-transform:uppercase}.hep-top-actions{display:flex;align-items:center;gap:8px}.hire-portal-lang-switch{display:inline-flex;padding:3px;border:1px solid #dce5eb;border-radius:9px;background:#f7f9fa}.hire-portal-lang-switch button{min-width:36px;height:30px;border:0;border-radius:6px;background:transparent;color:#758590;font:900 8.5px Inter,sans-serif;cursor:pointer}.hire-portal-lang-switch button.active{background:#10283f;color:#fff}.hep-company-id{padding:9px 11px;border:1px solid #e0e7ec;border-radius:9px;background:#f9fbfc;color:#667783;font-size:9px;font-weight:800}.hep-logout{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#526575;font:850 9px Inter,sans-serif;cursor:pointer}
+        .hep-top{position:sticky;top:0;z-index:120;background:rgba(255,255,255,.96);border-bottom:1px solid #e2e9ee;backdrop-filter:blur(10px)}.hep-top-inner{width:min(1280px,calc(100% - 36px));min-height:74px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}.hep-brand{display:flex;align-items:center;gap:15px}.hep-brand-copy{padding-left:15px;border-left:1px solid #e1e8ed}.hep-brand-copy b{display:block;font-size:10px}.hep-brand-copy span{display:block;margin-top:3px;color:#7b8994;font-size:8px;letter-spacing:.07em;text-transform:uppercase}.hep-top-actions{display:flex;align-items:center;gap:8px}.hire-portal-lang-switch{position:relative;display:inline-block}.hire-portal-lang-trigger{min-width:68px;height:38px;padding:0 10px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#10283f;display:flex;align-items:center;justify-content:space-between;gap:9px;font:900 8.5px Inter,sans-serif;cursor:pointer}.hire-portal-lang-trigger svg{width:15px;height:15px}.hire-portal-lang-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:180;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:11px;background:#fff;box-shadow:0 18px 45px rgba(16,40,63,.14)}.hire-portal-lang-menu button{width:100%;min-height:36px;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hire-portal-lang-menu button:hover{background:#f5f8fa}.hire-portal-lang-menu button.active{background:#10283f;color:#fff}.hire-portal-lang-menu button b{font-size:8px;letter-spacing:.08em}.hep-company-id{padding:9px 11px;border:1px solid #e0e7ec;border-radius:9px;background:#f9fbfc;color:#667783;font-size:9px;font-weight:800}.hep-logout{min-height:38px;padding:8px 11px;border:1px solid #dce5eb;border-radius:9px;background:#fff;color:#526575;font:850 9px Inter,sans-serif;cursor:pointer}
         .hep-shell{width:min(1280px,calc(100% - 36px));margin:28px auto 70px}.hep-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:26px;align-items:end;margin-bottom:18px}.hep-eyebrow{color:#d46f18;font-size:8px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.hep-hero h1{margin:6px 0 8px;font:900 clamp(30px,4vw,46px)/1 Manrope,Inter,sans-serif;letter-spacing:-.045em}.hep-hero p{max-width:740px;margin:0;color:#6f7f8c;font-size:12px;line-height:1.6}.hep-status{padding:10px 13px;border-radius:999px;background:#edf3f7;color:#526575;font-size:9px;font-weight:900;white-space:nowrap}.hep-status.sourcing{background:#e9f7f1;color:#14734f}.hep-status.review{background:#fff3e7;color:#a85a16}
         .hep-alerts{display:grid;gap:8px;margin-bottom:16px}.hep-notice,.hep-error{padding:12px 14px;border-radius:11px;font-size:10px;font-weight:750;line-height:1.5}.hep-notice{border:1px solid #bfe3d2;background:#eef8f4;color:#176e4e}.hep-error{border:1px solid #efc2b7;background:#fff1ed;color:#a5432c}
         .hep-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}.hep-progress-card{min-height:84px;padding:14px;border:1px solid #e0e8ed;border-radius:13px;background:#fff}.hep-progress-card span{display:block;color:#85929b;font-size:7.5px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.hep-progress-card b{display:block;margin-top:9px;font-size:12px}.hep-progress-card.done{border-color:#bfdfd0;background:#f4fbf8}.hep-progress-card.done b{color:#176f4e}.hep-progress-card.current{border-color:#f0c596;background:#fff9f3}.hep-progress-card.current b{color:#b76018}
