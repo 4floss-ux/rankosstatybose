@@ -30893,6 +30893,7 @@ const HIRE_EMPLOYER_PORTAL_I18N = {
   "Declined":{de:"Abgelehnt",nl:"Afgewezen",no:"Avslått",sv:"Avslagen",da:"Afvist"},
   "Completed":{de:"Abgeschlossen",nl:"Afgerond",no:"Fullført",sv:"Slutförd",da:"Afsluttet"},
   "Interview requested":{de:"Vorstellungsgespräch angefragt",nl:"Interview aangevraagd",no:"Intervju forespurt",sv:"Intervju begärd",da:"Samtale anmodet"},
+  "Interview contact provided":{de:"Interviewkontakt bereitgestellt",nl:"Interviewcontact verstrekt",no:"Intervjukontakt delt",sv:"Intervjukontakt delad",da:"Interviewkontakt delt"},
   "Candidate approved":{de:"Kandidat bestätigt",nl:"Kandidaat goedgekeurd",no:"Kandidat godkjent",sv:"Kandidat godkänd",da:"Kandidat godkendt"},
   "Not suitable":{de:"Nicht geeignet",nl:"Niet geschikt",no:"Ikke egnet",sv:"Inte lämplig",da:"Ikke egnet"},
   "Awaiting decision":{de:"Entscheidung ausstehend",nl:"Wacht op beslissing",no:"Avventer beslutning",sv:"Väntar på beslut",da:"Afventer beslutning"},
@@ -31012,6 +31013,7 @@ const HIRE_EMPLOYER_PORTAL_I18N = {
   "Open full CV":{de:"Vollständigen Lebenslauf öffnen",nl:"Volledig CV openen",no:"Åpne full CV",sv:"Öppna fullständigt CV",da:"Åbn fuldt CV"},
   "View CV":{de:"Lebenslauf ansehen",nl:"CV bekijken",no:"Se CV",sv:"Visa CV",da:"Se CV"},
   "CONTACT SHARED BY STATYBOS24":{de:"KONTAKT VON STATYBOS24 FREIGEGEBEN",nl:"CONTACT GEDEELD DOOR STATYBOS24",no:"KONTAKT DELT AV STATYBOS24",sv:"KONTAKT DELAD AV STATYBOS24",da:"KONTAKT DELT AF STATYBOS24"},
+  "We share the candidate email so you can contact them about the interview.":{de:"Wir geben die E-Mail-Adresse des Kandidaten weiter, damit Sie ihn wegen des Vorstellungsgesprächs kontaktieren können.",nl:"We delen het e-mailadres van de kandidaat zodat u contact kunt opnemen over het interview.",no:"Vi deler kandidatens e-postadresse slik at dere kan kontakte kandidaten om intervjuet.",sv:"Vi delar kandidatens e-postadress så att ni kan kontakta kandidaten om intervjun.",da:"Vi deler kandidatens e-mailadresse, så I kan kontakte kandidaten om interviewet."},
   "Request interview":{de:"Vorstellungsgespräch anfragen",nl:"Interview aanvragen",no:"Be om intervju",sv:"Begär intervju",da:"Bed om samtale"},
   "Approve candidate":{de:"Kandidat bestätigen",nl:"Kandidaat goedkeuren",no:"Godkjenn kandidat",sv:"Godkänn kandidat",da:"Godkend kandidat"},
   "Reject":{de:"Ablehnen",nl:"Afwijzen",no:"Avslå",sv:"Avslå",da:"Afvis"},
@@ -31119,7 +31121,10 @@ function HireEmployerPortalPage() {
     })[status] || tr("Submitted", "Pateikta");
   }
 
-  function candidateResponseLabel(response) {
+  function candidateResponseLabel(response, contactShared = false) {
+    if (response === "interview_requested" && contactShared) {
+      return tr("Interview contact provided", "Interviu kontaktas pateiktas");
+    }
     return ({
       interview_requested:tr("Interview requested", "Paprašytas interviu"),
       accepted:tr("Candidate approved", "Kandidatas patvirtintas"),
@@ -31466,7 +31471,7 @@ function HireEmployerPortalPage() {
             </div> : null}
 
             <div className="hep-candidates-section"><div className="hep-candidates-section-head"><div><h3>{tr("Candidates", "Kandidatai")}</h3><p>{tr("Candidates Statybos24 has introduced for this exact workforce need.", "Kandidatai, kuriuos Statybos24 pateikė būtent šiam darbuotojų poreikiui.")}</p></div><b>{selectedCandidates.length}</b></div>
-              {selectedCandidates.length ? selectedCandidates.map((candidate) => <article className="hep-candidate-row" key={candidate.id}><div><h4>{candidate.name}</h4><p>{candidate.profession || tr("Construction specialist", "Statybų specialistas")}</p></div><div className="hep-candidate-row-right"><span className={`hep-candidate-response ${candidate.employerResponse || ""}`}>{candidateResponseLabel(candidate.employerResponse)}</span><button className="hep-secondary" type="button" onClick={() => setSelectedCandidate({ needId:selectedNeed.id, candidateId:candidate.id })}>{tr("Review", "Peržiūrėti")}</button></div></article>) : <div className="hep-empty"><b>{tr("No candidates yet", "Kandidatų dar nėra")}</b><span>{tr("Candidates assigned by Statybos24 to this need will appear here.", "Čia atsiras Statybos24 šiam poreikiui priskirti kandidatai.")}</span></div>}
+              {selectedCandidates.length ? selectedCandidates.map((candidate) => <article className="hep-candidate-row" key={candidate.id}><div><h4>{candidate.name}</h4><p>{candidate.profession || tr("Construction specialist", "Statybų specialistas")}</p></div><div className="hep-candidate-row-right"><span className={`hep-candidate-response ${candidate.employerResponse || ""}`}>{candidateResponseLabel(candidate.employerResponse, !!candidate.contactEmail)}</span><button className="hep-secondary" type="button" onClick={() => setSelectedCandidate({ needId:selectedNeed.id, candidateId:candidate.id })}>{tr("Review", "Peržiūrėti")}</button></div></article>) : <div className="hep-empty"><b>{tr("No candidates yet", "Kandidatų dar nėra")}</b><span>{tr("Candidates assigned by Statybos24 to this need will appear here.", "Čia atsiras Statybos24 šiam poreikiui priskirti kandidatai.")}</span></div>}
             </div>
           </section>
         </> : null}
@@ -31481,12 +31486,12 @@ function HireEmployerPortalPage() {
           <div><span>{tr("Available from", "Gali vykti nuo")}</span><b>{activeCandidate.availableFrom || "—"}</b></div>
           <div><span>{tr("Needs accommodation", "Reikalingas būstas")}</span><b>{activeCandidate.needsAccommodation === true ? tr("Yes", "Taip") : activeCandidate.needsAccommodation === false ? tr("No", "Ne") : "—"}</b></div>
           <div><span>{tr("Salary expectation", "Atlygio lūkestis")}</span><b>{activeCandidate.salaryExpectation || "—"}</b></div>
-          <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse)}</b></div>
+          <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse, !!activeCandidate.contactEmail)}</b></div>
         </div>
         {activeCandidate.skills ? <div className="hep-candidate-skills"><b>{tr("Skills", "Įgūdžiai")}:</b> {activeCandidate.skills}</div> : null}
         {activeCandidate.recruiterComment ? <div className="hep-candidate-comment"><b>{tr("Statybos24 comment", "Statybos24 komentaras")}</b>{activeCandidate.recruiterComment}</div> : null}
         {activeCandidate.cvAvailable ? <div className="hep-candidate-cv"><div className="hep-candidate-cv-copy"><span>{tr("Candidate CV", "Kandidato CV")}</span><b>{activeCandidate.cvName || tr("Candidate CV", "Kandidato CV")}</b></div><button className="hep-candidate-btn" type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => openCandidateCv(activeCandidate)}>{tr("Open full CV", "Atidaryti pilną CV")}</button></div> : null}
-        {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("CONTACT SHARED BY STATYBOS24", "STATYBOS24 PERDUOTAS KONTAKTAS")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
+        {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("We share the candidate email so you can contact them about the interview.", "Perduodame kandidato el. paštą, kad galėtumėte susisiekti dėl interviu.")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
         <div className="hep-candidate-actions"><button className={`hep-candidate-btn ${activeCandidate.employerResponse === "interview_requested" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "interview_requested")}>{tr("Request interview", "Noriu interviu")}</button><button className={`hep-candidate-btn primary ${activeCandidate.employerResponse === "accepted" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "accepted")}>{tr("Approve candidate", "Patvirtinti kandidatą")}</button><button className={`hep-candidate-btn danger ${activeCandidate.employerResponse === "not_suitable" ? "active" : ""}`} type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => respondToCandidate(activeCandidate, "not_suitable")}>{tr("Reject", "Atmesti")}</button></div>
       </div></div></div> : null}
 
