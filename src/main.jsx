@@ -31698,14 +31698,14 @@ function HireEmployerPortalPage() {
   }
 
   const staffingFinishedText = ({
-    en:"Workers recruited and approved. A Statybos24.lt representative will contact you.",
-    lt:"Darbuotojai surinkti ir patvirtinti. Su jumis susisieks Statybos24.lt atsakingas darbuotojas.",
-    de:"Mitarbeiter gefunden und bestätigt. Ein zuständiger Mitarbeiter von Statybos24.lt wird sich mit Ihnen in Verbindung setzen.",
-    nl:"De werknemers zijn gevonden en goedgekeurd. Een medewerker van Statybos24.lt neemt contact met u op.",
-    no:"Arbeiderne er funnet og godkjent. En ansvarlig medarbeider fra Statybos24.lt vil kontakte dere.",
-    sv:"Arbetarna har hittats och godkänts. En ansvarig medarbetare från Statybos24.lt kontaktar er.",
-    da:"Medarbejderne er fundet og godkendt. En ansvarlig medarbejder fra Statybos24.lt kontakter jer."
-  })[lang] || "Workers recruited and approved. A Statybos24.lt representative will contact you.";
+    en:"Workers recruited and approved. A representative will contact you.",
+    lt:"Darbuotojai surinkti ir patvirtinti. Su jumis susisieks atsakingas darbuotojas.",
+    de:"Mitarbeiter gefunden und bestätigt. Ein zuständiger Mitarbeiter wird sich mit Ihnen in Verbindung setzen.",
+    nl:"De werknemers zijn gevonden en goedgekeurd. Een medewerker neemt contact met u op.",
+    no:"Arbeiderne er funnet og godkjent. En ansvarlig medarbeider vil kontakte dere.",
+    sv:"Arbetarna har hittats och godkänts. En ansvarig medarbetare kontaktar er.",
+    da:"Medarbejderne er fundet og godkendt. En ansvarlig medarbejder kontakter jer."
+  })[lang] || "Workers recruited and approved. A representative will contact you.";
   const staffingFinishedLabel = ({
     en:"Workers approved",lt:"Darbuotojai patvirtinti",de:"Mitarbeiter bestätigt",nl:"Werknemers goedgekeurd",no:"Arbeidere godkjent",sv:"Arbetare godkända",da:"Medarbejdere godkendt"
   })[lang] || "Workers approved";
@@ -32195,7 +32195,7 @@ function HireEmployerPortalPage() {
           <div><span>{tr("Decision", "Sprendimas")}</span><b>{candidateResponseLabel(activeCandidate.employerResponse, !!activeCandidate.contactEmail)}</b></div>
         </div>
         {activeCandidate.skills ? <div className="hep-candidate-comment"><b>{tr("Skills", "Įgūdžiai")}</b><span style={{whiteSpace:"pre-wrap"}}>{activeCandidate.skills}</span></div> : null}
-        {activeCandidate.recruiterComment ? <div className="hep-candidate-comment"><b>{tr("Comment", "Komentaras")}</b>{activeCandidate.recruiterComment}</div> : null}
+        {activeCandidate.recruiterComment ? <div className="hep-candidate-comment"><b>{tr("Statybos24 comment", "Statybos24 komentaras")}</b>{activeCandidate.recruiterComment}</div> : null}
         {activeCandidate.cvAvailable ? <div className="hep-candidate-cv"><div className="hep-candidate-cv-copy"><span>{tr("Candidate CV", "Kandidato CV")}</span><b>{activeCandidate.cvName || tr("Candidate CV", "Kandidato CV")}</b></div><button className="hep-candidate-btn" type="button" disabled={candidateBusyId === activeCandidate.id} onClick={() => openCandidateCv(activeCandidate)}>{tr("Open full CV", "Atidaryti pilną CV")}</button></div> : null}
         {activeCandidate.contactEmail ? <div className="hep-candidate-contact"><span>{tr("We share the candidate email so you can contact them about the interview.", "Perduodame kandidato el. paštą, kad galėtumėte susisiekti dėl interviu.")}</span><a href={`mailto:${activeCandidate.contactEmail}`}>{activeCandidate.contactEmail}</a></div> : null}
         {activeCandidate.rejectionReason ? <div className="hep-rejection-note"><b>{tr("Rejection reason", "Atmetimo priežastis")}</b>{activeCandidate.rejectionReason}</div> : null}
