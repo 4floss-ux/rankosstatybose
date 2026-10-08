@@ -24321,6 +24321,7 @@ function AdminDashboard({
   const [foreignHireSetupBusy, setForeignHireSetupBusy] = useState(false);
   const [foreignHireCredentials, setForeignHireCredentials] = useState(null);
   const [foreignHireCandidateOpenId, setForeignHireCandidateOpenId] = useState(null);
+  const [foreignHireExpandedCandidateIds, setForeignHireExpandedCandidateIds] = useState({});
   const [foreignHireExpandedId, setForeignHireExpandedId] = useState(null);
   const [foreignHireMinimized, setForeignHireMinimized] = useState({});
   const [foreignHireCandidatesByRequest, setForeignHireCandidatesByRequest] = useState({});
@@ -25310,19 +25311,27 @@ function AdminDashboard({
                 {candidates.map((candidate) => {
                   const next = foreignHireCandidateNext(candidate.status);
                   const candidateBusy = foreignHireCandidateBusyId === candidate.candidate_id;
+                  const candidateExpanded = !!foreignHireExpandedCandidateIds[candidate.candidate_id];
                   const needsSignedAgreement = ["presented", "interview", "offer", "hired", "started"].includes(next?.[0]) && !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
                   const needsEmployerAcceptance = ["hired", "started"].includes(next?.[0]) && candidate.employer_response !== "accepted";
                   const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
                   return (
                     <div className="admin-candidate-card" key={candidate.candidate_id}>
-                      <div className="admin-candidate-card-head">
-                        <div>
-                          <h4>{candidate.full_name}</h4>
+                      <button
+                        type="button"
+                        className="admin-candidate-card-head"
+                        aria-expanded={candidateExpanded}
+                        onClick={() => setForeignHireExpandedCandidateIds((current) => ({ ...current, [candidate.candidate_id]: !current[candidate.candidate_id] }))}
+                        style={{ width: "100%", border: 0, background: "transparent", padding: 0, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+                      >
+                        <h4 style={{ margin: 0, minWidth: 0, overflowWrap: "anywhere" }}>{candidate.full_name || "Kandidatas"}</h4>
+                        <span aria-hidden="true" style={{ fontSize: 22, color: "#607180", lineHeight: 1, flexShrink: 0 }}>{candidateExpanded ? "−" : "+"}</span>
+                      </button>
+                      {candidateExpanded ? <>
+                        <div className="admin-candidate-card-head" style={{ marginTop: 10 }}>
                           <p>{candidate.source_type === "platform" ? "Statybos24 bazė" : candidate.source_detail || "Išorinis kandidatas"} · {candidate.profession}</p>
+                          <span className="admin-candidate-chip">{foreignHireCandidateStatusLabel(candidate.status)}</span>
                         </div>
-                        <span className="admin-candidate-chip">{foreignHireCandidateStatusLabel(candidate.status)}</span>
-                      </div>
-
                       <div className="admin-candidate-meta">
                         <div><span>Amžius</span><b>{candidate.age_years ?? "—"}</b></div>
                         <div><span>Patirtis</span><b>{candidate.years_experience === null ? "—" : `${Number(candidate.years_experience)} m.`}</b></div>
@@ -25422,6 +25431,7 @@ function AdminDashboard({
                         ) : null}
                         <button className="admin-small-btn danger" type="button" disabled={candidateBusy} onClick={() => deleteForeignHireCandidate(candidate)}>Ištrinti kandidatą</button>
                       </div>
+                      </> : null}
                     </div>
                   );
                 })}
