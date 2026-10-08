@@ -27033,38 +27033,6 @@ function AdminDashboard({
                       ) : null}
 
                       {hasFullBrief ? <>
-                        <div className="admin-hire-overview" style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                          gap: 12,
-                          marginBottom: 12,
-                        }}>
-                          {[
-                            { label: "Pozicija", value: fullNeedTitle || "—" },
-                            { label: "Darbuotojai", value: `${totalRequestedWorkers || 0} žm.` },
-                            { label: "Projektas", value: projectSummary },
-                            { label: "Atlygis", value: salarySummary },
-                            { label: "Darbo pradžia", value: fullNeed.startDate || "—" },
-                            { label: "Sutartis", value: request.signed_agreement_path ? "Pasirašyta" : "Laukiama parašo" },
-                          ].map((item) => (
-                            <div
-                              className="admin-hire-overview-stat"
-                              key={`${request.request_id}-${item.label}`}
-                              style={{
-                                border: "1px solid #d8e1e8",
-                                borderRadius: 16,
-                                background: "linear-gradient(180deg,#ffffff 0%,#f7fafc 100%)",
-                                padding: "12px 14px",
-                                boxShadow: "0 8px 24px rgba(16,36,56,.05)",
-                                minWidth: 0,
-                              }}
-                            >
-                              <div style={{ fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "#7d8b97", marginBottom: 6 }}>{item.label}</div>
-                              <div style={{ fontSize: 14, fontWeight: 800, color: "#102438", lineHeight: 1.4, wordBreak: "break-word" }}>{item.value}</div>
-                            </div>
-                          ))}
-                        </div>
-
                         <div className="admin-hire-details-toggle" style={{
                           display: "flex",
                           alignItems: "center",
