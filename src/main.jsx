@@ -27072,14 +27072,14 @@ function AdminDashboard({
                           gap: 12,
                           flexWrap: "wrap",
                           padding: "14px 16px",
-                          border: "1px solid #d8e1e8",
+                          border: "1px solid #f2c28f",
                           borderRadius: 16,
-                          background: "#f8fafc",
+                          background: "linear-gradient(110deg, #fff0dc 0%, #fff9f0 100%)",
                           marginBottom: detailsMinimized ? 0 : 12,
                         }}>
                           <div style={{ minWidth: 0 }}>
-                            <strong style={{ display: "block", color: "#102438" }}>Visi poreikio duomenys</strong>
-                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#607180", lineHeight: 1.5 }}>
+                            <strong style={{ display: "block", color: "#754411" }}>Visi poreikio duomenys</strong>
+                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#8a6138", lineHeight: 1.5 }}>
                               {detailsMinimized ? "Išskleiskite, kad matytumėte visas darbo sąlygas, kontaktus ir dokumentus." : "Visi įmonės pateikti duomenys suskirstyti pagal temas."}
                             </span>
                           </div>
@@ -27095,15 +27095,15 @@ function AdminDashboard({
 
                         {!detailsMinimized ? <div className="admin-hire-details-body">
                           <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #d8e1e8",
+                            border: "1px solid #e2e8ee",
                             borderRadius: 18,
                             background: "#fff",
                             padding: 14,
-                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            boxShadow: "0 3px 12px rgba(16,36,56,.025)",
                             marginBottom: 12,
                           }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Kontaktinė informacija</h4>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#fff0dc", borderLeft: "4px solid #f08a28" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#754411", fontWeight: 850 }}>Kontaktinė informacija</h4>
                               <span style={{ fontSize: 12, color: "#607180" }}>Įmonė ir atsakingas kontaktas</span>
                             </div>
                             <div className="admin-foreign-grid">
@@ -27117,15 +27117,15 @@ function AdminDashboard({
                           </div>
 
                           <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #d8e1e8",
+                            border: "1px solid #e2e8ee",
                             borderRadius: 18,
                             background: "#fff",
                             padding: 14,
-                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            boxShadow: "0 3px 12px rgba(16,36,56,.025)",
                             marginBottom: 12,
                           }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Poreikio ir darbo sąlygos</h4>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#fff0dc", borderLeft: "4px solid #f08a28" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#754411", fontWeight: 850 }}>Poreikio ir darbo sąlygos</h4>
                               <span style={{ fontSize: 12, color: "#607180" }}>Pagrindinė suvestinė apie projektą ir sąlygas</span>
                             </div>
                             <div className="admin-foreign-grid">
@@ -27153,16 +27153,16 @@ function AdminDashboard({
                               className="admin-hire-detail-section"
                               key={`${request.request_id}-full-role-${index}`}
                               style={{
-                                border: "1px solid #d8e1e8",
+                                border: "1px solid #e2e8ee",
                                 borderRadius: 18,
                                 background: "#fff",
                                 padding: 14,
-                                boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                                boxShadow: "0 3px 12px rgba(16,36,56,.025)",
                                 marginBottom: 12,
                               }}
                             >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>{roleList.length > 1 ? `Profesija ${index + 1}` : "Reikalinga profesija"}</h4>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#fff0dc", borderLeft: "4px solid #f08a28" }}>
+                                <h4 style={{ margin: 0, fontSize: 15, color: "#754411", fontWeight: 850 }}>{roleList.length > 1 ? `Profesija ${index + 1}` : "Reikalinga profesija"}</h4>
                                 <span style={{ fontSize: 12, color: "#607180" }}>{role.profession || "Profesija nenurodyta"}</span>
                               </div>
                               <div className="admin-foreign-grid">
@@ -27177,16 +27177,16 @@ function AdminDashboard({
                           )) : null}
 
                           {fullNeed.additionalInfo ? (
-                            <div style={{
-                              border: "1px solid #d8e1e8",
+                            <div className="admin-hire-additional-section" style={{
+                              border: "1px solid #e2e8ee",
                               borderRadius: 18,
                               background: "#fff",
                               padding: 14,
-                              boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                              boxShadow: "0 3px 12px rgba(16,36,56,.025)",
                               marginBottom: 12,
                             }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Papildoma informacija</h4>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#fff0dc", borderLeft: "4px solid #f08a28" }}>
+                                <h4 style={{ margin: 0, fontSize: 15, color: "#754411", fontWeight: 850 }}>Papildoma informacija</h4>
                                 <span style={{ fontSize: 12, color: "#607180" }}>Papildomi reikalavimai ir pastabos</span>
                               </div>
                               <div className="admin-foreign-grid">
@@ -27196,15 +27196,15 @@ function AdminDashboard({
                           ) : null}
 
                           <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #d8e1e8",
+                            border: "1px solid #e2e8ee",
                             borderRadius: 18,
                             background: "#fff",
                             padding: 14,
-                            boxShadow: "0 10px 30px rgba(16,36,56,.05)",
+                            boxShadow: "0 3px 12px rgba(16,36,56,.025)",
                             marginBottom: 12,
                           }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#102438" }}>Portalas ir dokumentai</h4>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#fff0dc", borderLeft: "4px solid #f08a28" }}>
+                              <h4 style={{ margin: 0, fontSize: 15, color: "#754411", fontWeight: 850 }}>Portalas ir dokumentai</h4>
                               <span style={{ fontSize: 12, color: "#607180" }}>Prisijungimas, sutartys ir prisegti failai</span>
                             </div>
                             <div className="admin-foreign-access-summary" style={{ marginTop: 0 }}>
