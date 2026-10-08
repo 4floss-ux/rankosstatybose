@@ -147,20 +147,23 @@ function BrandLogo({ href = "#", className = "brand", height = 38, style, imgSty
           return;
         }
 
-        const selector = href && href.startsWith("#") ? href : null;
-        const target = selector ? document.querySelector(selector) : null;
-
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (href === "#" || !href) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
           return;
         }
 
-        if (href && href !== "#") {
+        if (href.startsWith("#")) {
+          const targetId = href.slice(1);
+          const target = targetId ? document.getElementById(targetId) : null;
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
           window.location.assign(href);
           return;
         }
 
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.location.assign(href);
       }}
       style={{ display: "inline-flex", alignItems: "center", ...style }}
     >
