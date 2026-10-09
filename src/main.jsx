@@ -31721,6 +31721,8 @@ function HireEmployerPortalPage() {
       const { data, error } = await supabase.rpc("foreign_employer_portal_data", { p_session_token: token });
       if (error) throw error;
       setPortal(data);
+      setError("");
+      setLoading(false);
       try {
         const invoices = await supabase.functions.invoke("foreign-hire-portal-files", { body: { action:"invoice-list", token } });
         setAvailableInvoices(invoices.error ? [] : (invoices.data?.requestIds || []));
