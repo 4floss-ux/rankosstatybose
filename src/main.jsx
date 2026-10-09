@@ -30029,32 +30029,24 @@ function BusinessPresentationPage({ onSignup }) {
   );
 }
 
-function AppBootLoader() {
+function AppBootLoader({ compact = false, label = "Kraunama" }) {
   return (
-    <div
-      role="status"
-      aria-label="Kraunama"
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "#f7f9fb",
-      }}
-    >
-      <div style={{ display: "grid", justifyItems: "center", gap: 18 }}>
-        <BrandImage height={52} />
-        <span
-          aria-hidden="true"
-          style={{
-            width: 28,
-            height: 28,
-            border: "3px solid #dfe7ed",
-            borderTopColor: "#f08a28",
-            borderRadius: "50%",
-            animation: "app-boot-spin .75s linear infinite",
-          }}
-        />
-        <style>{`@keyframes app-boot-spin{to{transform:rotate(360deg)}}`}</style>
+    <div role="status" aria-label={label} style={{
+      minHeight: compact ? 26 : "100vh",
+      display: compact ? "inline-flex" : "grid",
+      alignItems: "center", justifyContent: "center", placeItems: "center",
+      background: compact ? "transparent" : "#f7f9fb",
+    }}>
+      <div style={{ display: compact ? "flex" : "grid", alignItems: "center", justifyItems: "center", gap: compact ? 8 : 18 }}>
+        <span style={compact ? { display: "inline-flex", background: "#fff", borderRadius: 4, padding: "3px 5px" } : undefined}>
+          <BrandImage height={compact ? 18 : 52} />
+        </span>
+        <span aria-hidden="true" className="app-boot-spinner" style={{
+          display: "inline-block", width: compact ? 14 : 28, height: compact ? 14 : 28,
+          border: `${compact ? 2 : 3}px solid #dfe7ed`, borderTopColor: "#f08a28",
+          borderRadius: "50%", animation: "app-boot-spin .75s linear infinite", flexShrink: 0,
+        }} />
+        <style>{`@keyframes app-boot-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.app-boot-spinner{animation:none!important}}`}</style>
       </div>
     </div>
   );
@@ -30973,7 +30965,7 @@ function HirePage() {
                         {submitError?<div className="hire-request-submit-error">{submitError}</div>:null}
                         <div className="hire-initial-submit-row">
                           <div className="hire-initial-submit-note">{ir.important}</div>
-                          <button type="button" className="hire-btn primary" onClick={submitInitialRequest} disabled={submitting}>{submitting ? ({en:"Sending...",lt:"Siunčiama...",de:"Wird gesendet...",nl:"Verzenden...",no:"Sender...",sv:"Skickar...",da:"Sender..."}[lang] || "Sending...") : ir.submit} {!submitting && <HireArrowIcon/>}</button>
+                          <button type="button" className="hire-btn primary" onClick={submitInitialRequest} disabled={submitting}>{submitting ? <AppBootLoader compact label={({en:"Sending...",lt:"Siunčiama...",de:"Wird gesendet...",nl:"Verzenden...",no:"Sender...",sv:"Skickar...",da:"Sender..."}[lang] || "Sending...")} /> : ir.submit} {!submitting && <HireArrowIcon/>}</button>
                         </div>
                       </div>
                     </div>
@@ -31149,7 +31141,7 @@ function HireEmployerLoginPage() {
             <label className="hire-login-field"><span>{copy.companyId}</span><input className="hire-login-input" autoComplete="username" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder={copy.companyPlaceholder} /></label>
             <label className="hire-login-field"><span>{copy.password}</span><input className="hire-login-input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} /></label>
             {error ? <div className="hire-login-error">{error}</div> : null}
-            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? copy.busy : copy.submit}</button>
+            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? <AppBootLoader compact label={copy.busy} /> : copy.submit}</button>
           </div>
           <div className="hire-login-help">{copy.help} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</div>
         </form>
@@ -31976,7 +31968,7 @@ function HireEmployerPortalPage() {
     } finally { setSaving(false); }
   }
 
-  if (loading) return <div className="hep-loading">{tr("Loading employer portal...", "Kraunamas darbdavio portalas...")}</div>;
+  if (loading) return <AppBootLoader label={tr("Loading employer portal...", "Kraunamas darbdavio portalas...")} />;
   if (!portal) {
     const loadErrorCopy = {
   "en": {
@@ -32131,7 +32123,7 @@ function HireEmployerPortalPage() {
                   </button>
                   <div className="hep-agreement-state"><span>{tr("Please read the agreement carefully. If everything is acceptable, sign it and upload the signed copy. If you have questions, contact Statybos24 by email.", "Prašome atidžiai perskaityti ir susipažinti su sutartimi. Jeigu viskas tinka, pasirašykite ją ir įkelkite pasirašytą kopiją. Jeigu turite klausimų, susisiekite su Statybos24 el. paštu.")}</span></div>
                   <div className="hep-agreement-actions">
-                    <label className="hep-agreement-upload" aria-disabled={uploading}>{uploading ? tr("Uploading...", "Įkeliama...") : tr("Upload signed agreement", "Įkelti pasirašytą sutartį")}<input type="file" disabled={uploading} accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.target.files?.[0] || null; if (file) { setSignedFile(file); uploadSignedAgreement(file); } event.target.value = ""; }}/></label>
+                    <label className="hep-agreement-upload" aria-disabled={uploading}>{uploading ? <AppBootLoader compact label={tr("Uploading...", "Įkeliama...")} /> : tr("Upload signed agreement", "Įkelti pasirašytą sutartį")}<input type="file" disabled={uploading} accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.target.files?.[0] || null; if (file) { setSignedFile(file); uploadSignedAgreement(file); } event.target.value = ""; }}/></label>
                     <a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a>
                   </div>
                 </>) : <><div className="hep-agreement-state"><b>{tr("Agreement is being prepared", "Sutartis ruošiama")}</b><span>{tr("Statybos24 will place the company agreement here.", "Statybos24 čia įkels įmonės sutartį.")}</span></div><a className="hep-agreement-email" href="mailto:info@statybos24.lt">{tr("Contact by email", "Susisiekti el. paštu")}</a></>}
@@ -32201,7 +32193,7 @@ function HireEmployerPortalPage() {
               </div>
             </div></div>
 
-            <div className="hep-form-actions"><button className="hep-secondary" type="button" disabled={saving} onClick={() => setScreen("dashboard")}>{tr("Cancel", "Atšaukti")}</button><button className="hep-primary" type="button" disabled={saving} onClick={submitNeed}>{saving ? tr("Submitting...", "Pateikiama...") : tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</button></div>
+            <div className="hep-form-actions"><button className="hep-secondary" type="button" disabled={saving} onClick={() => setScreen("dashboard")}>{tr("Cancel", "Atšaukti")}</button><button className="hep-primary" type="button" disabled={saving} onClick={submitNeed}>{saving ? <AppBootLoader compact label={tr("Submitting...", "Pateikiama...")} /> : tr("Submit workforce need", "Pateikti darbuotojų poreikį")}</button></div>
           </section>
         </> : null}
 
@@ -32274,7 +32266,7 @@ function HireEmployerPortalPage() {
         </div>
       </div></div> : null}
 
-      {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">{tr("FIRST SIGN-IN", "PIRMAS PRISIJUNGIMAS")}</div><h2>{tr("Create your own password", "Susikurkite savo slaptažodį")}</h2><p>{tr("The password sent by Statybos24 is temporary. Set a private password before using the employer portal.", "Statybos24 atsiųstas slaptažodis yra laikinas. Prieš naudojantis darbdavio portalu susikurkite savo privatų slaptažodį.")}</p><label className="hep-field"><span>{tr("NEW PASSWORD", "NAUJAS SLAPTAŽODIS")}</span><input className="hep-input" type="password" value={password1} onChange={(e) => setPassword1(e.target.value)} placeholder={tr("At least 12 characters", "Bent 12 simbolių")}/></label><label className="hep-field" style={{marginTop:11}}><span>{tr("CONFIRM PASSWORD", "PAKARTOKITE SLAPTAŽODĮ")}</span><input className="hep-input" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)}/></label>{error ? <div className="hep-error" style={{marginTop:12}}>{error}</div> : null}<div className="hep-form-actions"><button className="hep-primary" type="button" disabled={saving} onClick={changePassword}>{saving ? tr("Saving...", "Saugoma...") : tr("Save password & continue", "Išsaugoti slaptažodį ir tęsti")}</button></div></div></div> : null}
+      {portal.account?.mustChangePassword ? <div className="hep-password-overlay"><div className="hep-password-card"><div className="hep-eyebrow">{tr("FIRST SIGN-IN", "PIRMAS PRISIJUNGIMAS")}</div><h2>{tr("Create your own password", "Susikurkite savo slaptažodį")}</h2><p>{tr("The password sent by Statybos24 is temporary. Set a private password before using the employer portal.", "Statybos24 atsiųstas slaptažodis yra laikinas. Prieš naudojantis darbdavio portalu susikurkite savo privatų slaptažodį.")}</p><label className="hep-field"><span>{tr("NEW PASSWORD", "NAUJAS SLAPTAŽODIS")}</span><input className="hep-input" type="password" value={password1} onChange={(e) => setPassword1(e.target.value)} placeholder={tr("At least 12 characters", "Bent 12 simbolių")}/></label><label className="hep-field" style={{marginTop:11}}><span>{tr("CONFIRM PASSWORD", "PAKARTOKITE SLAPTAŽODĮ")}</span><input className="hep-input" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)}/></label>{error ? <div className="hep-error" style={{marginTop:12}}>{error}</div> : null}<div className="hep-form-actions"><button className="hep-primary" type="button" disabled={saving} onClick={changePassword}>{saving ? <AppBootLoader compact label={tr("Saving...", "Saugoma...")} /> : tr("Save password & continue", "Išsaugoti slaptažodį ir tęsti")}</button></div></div></div> : null}
     </div>
   );
 }
