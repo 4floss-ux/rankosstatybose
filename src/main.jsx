@@ -25641,8 +25641,8 @@ function AdminDashboard({
 
     const loginId = foreignHireSetupLogin.trim().toUpperCase();
     const tempPassword = foreignHireSetupPassword;
-    if (!/^[A-Z0-9][A-Z0-9-]{4,39}$/.test(loginId)) {
-      setError("Prisijungimo ID turi būti 5–40 simbolių: A-Z, skaičiai arba brūkšnelis.");
+    if (!/^ID-[0-9]{6}$/.test(loginId)) {
+      setError("Įmonės ID turi būti ID- ir 6 skaitmenys, pvz. ID-123456.");
       return;
     }
     if (tempPassword.length < 10) {
@@ -31016,13 +31016,13 @@ function setForeignHirePortalToken(token) {
 
 
 const HIRE_PORTAL_LOGIN_COPY = {
-  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID",companyPlaceholder:"e.g. MULLER-4821",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID and password.",sessionError:"Could not create a portal session.",signInError:"Incorrect Company ID or password.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
-  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID",companyPlaceholder:"pvz. MULLER-4821",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite Company ID ir slaptažodį.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingas įmonės ID arba slaptažodis.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
-  de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"UNTERNEHMENS-ID",companyPlaceholder:"z. B. MULLER-4821",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Unternehmens-ID oder Passwort ist falsch.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
-  nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"BEDRIJFS-ID",companyPlaceholder:"bijv. MULLER-4821",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Bedrijfs-ID of wachtwoord is onjuist.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
-  no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"BEDRIFTS-ID",companyPlaceholder:"f.eks. MULLER-4821",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Bedrifts-ID eller passord er feil.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
-  sv:{metaTitle:"Arbetsgivarportal inloggning | Statybos24",eyebrow:"FÖR INTERNATIONELLA ARBETSGIVARE",heroTitle:"Er privata rekryteringsyta.",heroCopy:"Läs avtalet, fyll i hela bemanningsbehovet och följ kandidaterna som Statybos24 presenterar.",heroFoot:"Direkt byggrekrytering från Litauen.",portal:"ARBETSGIVARPORTAL",signIn:"Logga in",intro:"Använd de privata inloggningsuppgifter som Statybos24 har skickat till er.",companyId:"FÖRETAGS-ID",companyPlaceholder:"t.ex. MULLER-4821",password:"LÖSENORD",passwordPlaceholder:"Ert lösenord",missing:"Ange företags-ID och lösenord.",sessionError:"Det gick inte att skapa portalsessionen.",signInError:"Företags-ID eller lösenord är fel.",busy:"Loggar in...",submit:"Logga in på arbetsgivarportalen",help:"Frågor om åtkomst eller avtal? Svara på Statybos24-mejlet där ni fick inloggningsuppgifterna eller kontakta"},
-  da:{metaTitle:"Arbejdsgiverportal login | Statybos24",eyebrow:"FOR INTERNATIONALE ARBEJDSGIVERE",heroTitle:"Jeres private rekrutteringsområde.",heroCopy:"Læs aftalen, udfyld hele bemandingsbehovet og følg de kandidater, som Statybos24 præsenterer.",heroFoot:"Direkte rekruttering til byggebranchen fra Litauen.",portal:"ARBEJDSGIVERPORTAL",signIn:"Log ind",intro:"Brug de private loginoplysninger, som Statybos24 har sendt til jer.",companyId:"VIRKSOMHEDS-ID",companyPlaceholder:"f.eks. MULLER-4821",password:"ADGANGSKODE",passwordPlaceholder:"Jeres adgangskode",missing:"Indtast virksomheds-ID og adgangskode.",sessionError:"Portalsessionen kunne ikke oprettes.",signInError:"Virksomheds-ID eller adgangskode er forkert.",busy:"Logger ind...",submit:"Log ind på arbejdsgiverportalen",help:"Spørgsmål om adgang eller aftale? Svar på Statybos24-mailen, hvor I modtog loginoplysningerne, eller kontakt"}
+  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID",companyPlaceholder:"e.g. ID-123456",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID and password.",sessionError:"Could not create a portal session.",signInError:"Incorrect Company ID or password.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
+  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID",companyPlaceholder:"pvz. ID-123456",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite įmonės ID ir slaptažodį.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingas įmonės ID arba slaptažodis.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
+  de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"UNTERNEHMENS-ID",companyPlaceholder:"z. B. ID-123456",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Unternehmens-ID oder Passwort ist falsch.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
+  nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"BEDRIJFS-ID",companyPlaceholder:"bijv. ID-123456",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Bedrijfs-ID of wachtwoord is onjuist.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
+  no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"BEDRIFTS-ID",companyPlaceholder:"f.eks. ID-123456",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Bedrifts-ID eller passord er feil.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
+  sv:{metaTitle:"Arbetsgivarportal inloggning | Statybos24",eyebrow:"FÖR INTERNATIONELLA ARBETSGIVARE",heroTitle:"Er privata rekryteringsyta.",heroCopy:"Läs avtalet, fyll i hela bemanningsbehovet och följ kandidaterna som Statybos24 presenterar.",heroFoot:"Direkt byggrekrytering från Litauen.",portal:"ARBETSGIVARPORTAL",signIn:"Logga in",intro:"Använd de privata inloggningsuppgifter som Statybos24 har skickat till er.",companyId:"FÖRETAGS-ID",companyPlaceholder:"t.ex. ID-123456",password:"LÖSENORD",passwordPlaceholder:"Ert lösenord",missing:"Ange företags-ID och lösenord.",sessionError:"Det gick inte att skapa portalsessionen.",signInError:"Företags-ID eller lösenord är fel.",busy:"Loggar in...",submit:"Logga in på arbetsgivarportalen",help:"Frågor om åtkomst eller avtal? Svara på Statybos24-mejlet där ni fick inloggningsuppgifterna eller kontakta"},
+  da:{metaTitle:"Arbejdsgiverportal login | Statybos24",eyebrow:"FOR INTERNATIONALE ARBEJDSGIVERE",heroTitle:"Jeres private rekrutteringsområde.",heroCopy:"Læs aftalen, udfyld hele bemandingsbehovet og følg de kandidater, som Statybos24 præsenterer.",heroFoot:"Direkte rekruttering til byggebranchen fra Litauen.",portal:"ARBEJDSGIVERPORTAL",signIn:"Log ind",intro:"Brug de private loginoplysninger, som Statybos24 har sendt til jer.",companyId:"VIRKSOMHEDS-ID",companyPlaceholder:"f.eks. ID-123456",password:"ADGANGSKODE",passwordPlaceholder:"Jeres adgangskode",missing:"Indtast virksomheds-ID og adgangskode.",sessionError:"Portalsessionen kunne ikke oprettes.",signInError:"Virksomheds-ID eller adgangskode er forkert.",busy:"Logger ind...",submit:"Log ind på arbejdsgiverportalen",help:"Spørgsmål om adgang eller aftale? Svar på Statybos24-mailen, hvor I modtog loginoplysningerne, eller kontakt"}
 };
 
 function detectHirePortalLanguage() {
@@ -31728,7 +31728,7 @@ function HireEmployerPortalPage() {
       setError("");
     } catch (err) {
       setError(err?.message || tr("Could not load the employer portal.", "Nepavyko įkelti darbdavio portalo."));
-      if (/session/i.test(err?.message || "")) setForeignHirePortalToken("");
+      if (/(session|sesij)/i.test(err?.message || "")) setForeignHirePortalToken("");
     } finally {
       setLoading(false);
     }
@@ -31976,26 +31976,75 @@ function HireEmployerPortalPage() {
 
   if (loading) return <div className="hep-loading">{tr("Loading employer portal...", "Kraunamas darbdavio portalas...")}</div>;
   if (!portal) {
-    const removedCopy = ({
-      en:{title:"Your employer profile has been removed",body:"The administrator has removed your employer profile, so this private portal access is no longer active. If this was unexpected, contact Statybos24. You can also submit a new workforce need and start again.",contact:"Contact by email",request:"Submit workforce need"},
-      lt:{title:"Administratorius pašalino jūsų profilį",body:"Jūsų darbdavio profilis buvo pašalintas, todėl ši privati portalo prieiga nebeaktyvi. Jei tai netikėta, susisiekite su Statybos24. Taip pat galite iš naujo pateikti darbuotojų poreikį.",contact:"Susisiekti el. paštu",request:"Pateikti poreikį"},
-      de:{title:"Ihr Arbeitgeberprofil wurde entfernt",body:"Der Administrator hat Ihr Arbeitgeberprofil entfernt. Dieser private Portalzugang ist daher nicht mehr aktiv. Wenn dies unerwartet ist, kontaktieren Sie Statybos24. Sie können auch einen neuen Personalbedarf senden.",contact:"Per E-Mail kontaktieren",request:"Personalbedarf senden"},
-      nl:{title:"Uw werkgeversprofiel is verwijderd",body:"De beheerder heeft uw werkgeversprofiel verwijderd. Deze privétoegang tot het portaal is daarom niet meer actief. Neem contact op met Statybos24 als dit onverwacht is. U kunt ook opnieuw een personeelsbehoefte indienen.",contact:"Contact via e-mail",request:"Personeelsbehoefte indienen"},
-      no:{title:"Arbeidsgiverprofilen din er fjernet",body:"Administratoren har fjernet arbeidsgiverprofilen din, og den private portaltilgangen er derfor ikke lenger aktiv. Kontakt Statybos24 hvis dette var uventet. Du kan også sende inn et nytt bemanningsbehov.",contact:"Kontakt på e-post",request:"Send bemanningsbehov"},
-      sv:{title:"Er arbetsgivarprofil har tagits bort",body:"Administratören har tagit bort er arbetsgivarprofil och den privata portalåtkomsten är därför inte längre aktiv. Kontakta Statybos24 om detta var oväntat. Ni kan också skicka in ett nytt bemanningsbehov.",contact:"Kontakta via e-post",request:"Skicka bemanningsbehov"},
-      da:{title:"Jeres arbejdsgiverprofil er blevet fjernet",body:"Administratoren har fjernet jeres arbejdsgiverprofil, så den private portaladgang ikke længere er aktiv. Kontakt Statybos24, hvis dette var uventet. I kan også indsende et nyt bemandingsbehov.",contact:"Kontakt via e-mail",request:"Indsend bemandingsbehov"}
-    })[lang] || null;
-    const copy = removedCopy || {title:"Your employer profile has been removed",body:"This private portal access is no longer active.",contact:"Contact by email",request:"Submit workforce need"};
+    const loadErrorCopy = {
+  "en": {
+    "title": "Could not load your employer portal",
+    "body": "Try again. If your session has expired, sign in again. Contact Statybos24 if the problem continues.",
+    "contact": "Contact by email",
+    "request": "Submit workforce need",
+    "retry": "Try again",
+    "signIn": "Sign in"
+  },
+  "lt": {
+    "title": "Nepavyko įkelti darbdavio portalo",
+    "body": "Bandykite dar kartą. Jei sesija baigėsi, prisijunkite iš naujo. Jei problema kartojasi, susisiekite su Statybos24.",
+    "contact": "Susisiekti el. paštu",
+    "request": "Pateikti poreikį",
+    "retry": "Bandyti dar kartą",
+    "signIn": "Prisijungti"
+  },
+  "de": {
+    "title": "Ihr Arbeitgeberportal konnte nicht geladen werden",
+    "body": "Versuchen Sie es erneut. Wenn Ihre Sitzung abgelaufen ist, melden Sie sich erneut an. Kontaktieren Sie Statybos24, wenn das Problem weiterhin besteht.",
+    "contact": "Per E-Mail kontaktieren",
+    "request": "Personalbedarf senden",
+    "retry": "Erneut versuchen",
+    "signIn": "Anmelden"
+  },
+  "nl": {
+    "title": "Uw werkgeversportaal kon niet worden geladen",
+    "body": "Probeer het opnieuw. Als uw sessie is verlopen, log dan opnieuw in. Neem contact op met Statybos24 als het probleem blijft bestaan.",
+    "contact": "Contact via e-mail",
+    "request": "Personeelsbehoefte indienen",
+    "retry": "Opnieuw proberen",
+    "signIn": "Inloggen"
+  },
+  "no": {
+    "title": "Kunne ikke laste arbeidsgiverportalen",
+    "body": "Prøv igjen. Logg inn på nytt hvis økten har utløpt. Kontakt Statybos24 hvis problemet fortsetter.",
+    "contact": "Kontakt på e-post",
+    "request": "Send bemanningsbehov",
+    "retry": "Prøv igjen",
+    "signIn": "Logg inn"
+  },
+  "sv": {
+    "title": "Arbetsgivarportalen kunde inte laddas",
+    "body": "Försök igen. Logga in på nytt om sessionen har gått ut. Kontakta Statybos24 om problemet kvarstår.",
+    "contact": "Kontakta via e-post",
+    "request": "Skicka bemanningsbehov",
+    "retry": "Försök igen",
+    "signIn": "Logga in"
+  },
+  "da": {
+    "title": "Arbejdsgiverportalen kunne ikke indlæses",
+    "body": "Prøv igen. Log ind igen, hvis sessionen er udløbet. Kontakt Statybos24, hvis problemet fortsætter.",
+    "contact": "Kontakt via e-mail",
+    "request": "Indsend bemandingsbehov",
+    "retry": "Prøv igen",
+    "signIn": "Log ind"
+  }
+};
+    const copy = loadErrorCopy[lang] || loadErrorCopy.en;
     return <div className="hep-access-removed-page">
       <style>{`
         .hep-access-removed-page{min-height:100vh;background:#f4f7f9;color:#10283f;font-family:Inter,system-ui,sans-serif;display:grid;place-items:center;padding:24px;box-sizing:border-box}
         .hep-access-removed-card{width:min(100%,620px);background:#fff;border:1px solid #dfe7ec;border-radius:22px;padding:34px;box-shadow:0 28px 80px rgba(16,40,63,.10);text-align:center}
         .hep-access-removed-logo{display:flex;justify-content:center;margin-bottom:24px}.hep-access-removed-eyebrow{color:#d56d16;font-size:8px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
         .hep-access-removed-card h1{margin:0;font:900 clamp(28px,5vw,42px)/1.04 Manrope,Inter,sans-serif;letter-spacing:-.04em}.hep-access-removed-card p{margin:16px auto 0;max-width:500px;color:#6f808c;font-size:12px;line-height:1.7}
-        .hep-access-removed-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:24px}.hep-access-removed-actions a{min-height:46px;padding:0 18px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:10px;font-weight:950}
+        .hep-access-removed-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:24px}.hep-access-removed-actions a,.hep-access-removed-actions button{min-height:46px;padding:0 18px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-family:inherit;font-size:10px;font-weight:950;cursor:pointer}
         .hep-access-removed-mail{border:1px solid #dbe5eb;background:#fff;color:#10283f}.hep-access-removed-request{border:1px solid #f08a28;background:#f08a28;color:#fff}
         .hep-access-removed-lang{display:flex;justify-content:center;margin-top:20px}.hep-access-removed-lang .hire-portal-lang-switch{position:relative}.hep-access-removed-lang .hire-portal-lang-trigger{width:74px;height:40px;padding:0 11px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#10283f;display:flex;align-items:center;justify-content:space-between;gap:10px;font:900 9px Inter,sans-serif;cursor:pointer}.hep-access-removed-lang .hire-portal-lang-menu{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 8px);z-index:10;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:12px;background:#fff;box-shadow:0 18px 45px rgba(16,40,63,.16)}.hep-access-removed-lang .hire-portal-lang-menu button{width:100%;min-height:37px;padding:7px 9px;border:0;border-radius:8px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hep-access-removed-lang .hire-portal-lang-menu button.active{background:#10283f;color:#fff}
-        @media(max-width:560px){.hep-access-removed-card{padding:28px 20px}.hep-access-removed-actions{display:grid}.hep-access-removed-actions a{width:100%;box-sizing:border-box}}
+        @media(max-width:560px){.hep-access-removed-card{padding:28px 20px}.hep-access-removed-actions{display:grid}.hep-access-removed-actions a,.hep-access-removed-actions button{width:100%;box-sizing:border-box}}
       `}</style>
       <section className="hep-access-removed-card">
         <div className="hep-access-removed-logo"><HirePortalLogo/></div>
@@ -32003,6 +32052,8 @@ function HireEmployerPortalPage() {
         <h1>{copy.title}</h1>
         <p>{copy.body}</p>
         <div className="hep-access-removed-actions">
+          <button className="hep-access-removed-request" type="button" onClick={() => loadPortal()}>{copy.retry}</button>
+          <a className="hep-access-removed-mail" href={`/hire/login?lang=${encodeURIComponent(lang)}`}>{copy.signIn}</a>
           <a className="hep-access-removed-mail" href="mailto:info@statybos24.lt">{copy.contact}</a>
           <a className="hep-access-removed-request" href={`/hire?request=1&lang=${encodeURIComponent(lang)}`}>{copy.request}</a>
         </div>
