@@ -13215,6 +13215,49 @@ function CompanyBadge({ name, avatarPath, size = 34, fontSize = 13 }) {
   );
 }
 
+function EmployerWorkCalendar({ jobs, onBack, onOpenJob, onCreateJob }) {
+  const today = () => { const [y,m,d] = localDateISO(new Date()).split("-").map(Number); return new Date(y,m-1,d,12); };
+  const [anchor, setAnchor] = useState(today);
+  const [mode, setMode] = useState("week");
+  const [city, setCity] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => localDateISO(new Date()));
+  const [selectedId, setSelectedId] = useState(null);
+  const day = (date, delta = 0) => { const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12); copy.setDate(copy.getDate() + delta); return copy; };
+  const first = mode === "month" ? new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12) : day(anchor);
+  const gridStart = day(first, -((first.getDay() + 6) % 7));
+  const days = Array.from({ length: mode === "month" ? 42 : 7 }, (_, i) => day(gridStart, i));
+  const cities = [...new Set(jobs.map(j => j.city).filter(Boolean))].sort((a,b) => a.localeCompare(b, "lt"));
+  const filtered = jobs.filter(j => !city || j.city === city);
+  const forDate = date => filtered.filter(j => String(j.work_date || "").slice(0,10) === date).sort((a,b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
+  const selected = filtered.find(j => j.id === selectedId);
+  const status = job => {
+    if (job.status === "cancelled") return {tone:"red", label:"Atšauktas darbas"};
+    if (job.status === "completed") return {tone:"grey", label:"Užbaigtas darbas"};
+    if (job.status === "draft") return {tone:"grey", label:"Juodraštis"};
+    const have = Number(job.confirmedCount || 0), need = Number(job.workers_needed || 0);
+    return {tone:need > 0 && have >= need ? "green" : "amber", label:`Patvirtino ${have} iš ${need}`};
+  };
+  const move = direction => {
+    const next = mode === "week" ? day(anchor, 7 * direction) : new Date(anchor.getFullYear(), anchor.getMonth()+direction, 1, 12);
+    setAnchor(next); setSelectedDate(localDateISO(mode === "week" ? day(next, -((next.getDay()+6)%7)) : next)); setSelectedId(null);
+  };
+  const setView = value => { setMode(value); setSelectedId(null); const next = day(anchor); setSelectedDate(localDateISO(value === "month" ? new Date(next.getFullYear(),next.getMonth(),1,12) : next)); };
+  const card = job => { const s = status(job); return <button key={job.id} type="button" className={`edcal-job ${s.tone} ${selectedId === job.id ? "selected" : ""}`} onClick={() => {setSelectedId(job.id); setSelectedDate(String(job.work_date).slice(0,10));}} aria-pressed={selectedId === job.id}><b>{formatJobTitle(job.title)}</b><span>{job.city || "Vieta nenurodyta"}</span><span>{String(job.start_time || "").slice(0,5)}–{String(job.end_time || "").slice(0,5)}</span><em>{s.label}</em></button>; };
+  return <>
+    <style>{`
+      .edcal-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.edcal-head h1{font-family:Manrope,Inter,sans-serif;font-size:34px;letter-spacing:-.035em;margin:6px 0}.edcal-head p{color:#6c7a88;margin:8px 0}.edcal-actions{display:flex;gap:8px;flex-wrap:wrap}.edcal-panel{background:#fff;border:1px solid #dfe7ed;border-radius:16px;padding:18px;min-width:0}.edcal-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}.edcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.edcal-nav button{min-height:40px}.edcal-switch{display:flex;background:#f1f4f6;padding:4px;border-radius:10px;gap:4px}.edcal-switch button{border:0;background:transparent;padding:9px 13px;border-radius:8px;color:#526374;font:inherit;cursor:pointer}.edcal-switch button.active{background:#fff1e5;color:#9c5417;font-weight:800}.edcal-select{padding:10px;border:1px solid #dbe4ea;border-radius:9px;background:#fff;color:#102438;max-width:100%;font:inherit}.edcal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #e4ebf0;border-left:1px solid #e4ebf0;border-radius:12px;overflow:hidden}.edcal-cell{min-width:0;border-right:1px solid #e4ebf0;border-bottom:1px solid #e4ebf0;padding:8px;min-height:155px;background:#fff}.edcal-cell.weekend{background:#f8fafb}.edcal-cell.outside{background:#f1f4f6}.edcal-date{border:0;background:transparent;color:#102438;font:inherit;text-align:left;cursor:pointer;padding:5px;margin-bottom:6px;border-radius:7px}.edcal-date.today{background:#fff1e5;color:#a85a18;font-weight:900}.edcal-date span{display:block;font-size:11px;color:#6c7a88}.edcal-job{display:grid;gap:5px;width:100%;min-width:0;text-align:left;padding:10px 8px;margin:5px 0;border:1px solid #dfe7ed;border-left:4px solid #f08a28;border-radius:10px;background:#fff;color:#102438;font:inherit;cursor:pointer;overflow-wrap:anywhere}.edcal-job.selected{outline:2px solid #f08a28;outline-offset:1px}.edcal-job b{font-size:12px}.edcal-job span{color:#607180;font-size:11px}.edcal-job em{font-size:11px;font-style:normal;border-radius:8px;padding:5px;background:#fff3e7;color:#9c5417}.edcal-job.green{border-left-color:#19815a}.edcal-job.green em{background:#edf8f3;color:#167a54}.edcal-job.red{border-left-color:#b64d2a}.edcal-job.red em{background:#fff1ed;color:#b4472a}.edcal-job.grey{border-left-color:#8896a3}.edcal-job.grey em{background:#f1f4f6;color:#526374}.edcal-legend{display:flex;gap:15px;flex-wrap:wrap;color:#607180;font-size:12px;margin-top:14px}.edcal-detail h2{margin:0 0 10px;font-family:Manrope,Inter,sans-serif}.edcal-detail p{color:#607180;white-space:pre-wrap;overflow-wrap:anywhere}.edcal-mobile{display:none}.edcal-empty{color:#6c7a88;padding:20px 0}.edcal-daystrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0}.edcal-daystrip button{padding:10px 2px;border:1px solid #dfe7ed;border-radius:9px;background:#fff;color:#102438;cursor:pointer}.edcal-daystrip button.active{background:#fff1e5;border-color:#f08a28}.edcal-daystrip span{display:block;font-size:10px;margin-top:5px}.edcal-job:focus-visible,.edcal-date:focus-visible,.edcal-daystrip button:focus-visible{outline:2px solid #f08a28;outline-offset:2px}
+      @media(max-width:760px){.edcal-head{flex-direction:column}.edcal-head h1{font-size:27px}.edcal-actions{width:100%}.edcal-actions button{flex:1}.edcal-panel{padding:12px}.edcal-desktop{display:none}.edcal-mobile{display:block}.edcal-toolbar{gap:10px}.edcal-nav{width:100%;justify-content:space-between}.edcal-nav b{font-size:13px}.edcal-job{padding:14px}.edcal-job b{font-size:15px}.edcal-job span,.edcal-job em{font-size:13px}}
+    `}</style>
+    <div className="edcal-head"><div><div className="eyebrow">DARBDAVIO PASKYRA · BUSINESS PRO</div><h1>Darbų kalendorius</h1><p>Darbo pasiūlymai ir darbuotojų patvirtinimai vienoje vietoje.</p></div><div className="edcal-actions"><button type="button" className="ed-secondary" onClick={onBack}>← Grįžti į skydelį</button><button type="button" className="ed-primary" onClick={onCreateJob}>+ Sukurti darbą</button></div></div>
+    <section className="edcal-panel" aria-label="Darbų kalendorius"><div className="edcal-toolbar"><div className="edcal-nav"><button type="button" className="ed-secondary" aria-label="Ankstesnis laikotarpis" onClick={() => move(-1)}>‹</button><b>{mode === "month" ? anchor.toLocaleDateString("lt-LT",{year:"numeric",month:"long"}) : `${days[0].toLocaleDateString("lt-LT")} – ${days[6].toLocaleDateString("lt-LT")}`}</b><button type="button" className="ed-secondary" aria-label="Kitas laikotarpis" onClick={() => move(1)}>›</button><button type="button" className="ed-secondary" onClick={() => {const now = today(); setAnchor(now);setSelectedDate(localDateISO(now));setSelectedId(null);}}>Šiandien</button></div><div className="edcal-switch"><button type="button" className={mode === "week" ? "active" : ""} aria-pressed={mode === "week"} onClick={() => setView("week")}>Savaitė</button><button type="button" className={mode === "month" ? "active" : ""} aria-pressed={mode === "month"} onClick={() => setView("month")}>Mėnuo</button></div><select className="edcal-select" aria-label="Filtruoti pagal miestą" value={city} onChange={e => {setCity(e.target.value);setSelectedId(null);}}><option value="">Visi miestai</option>{cities.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+    <div className="edcal-grid edcal-desktop">{days.map(date => {const key=localDateISO(date); return <div key={key} className={`edcal-cell ${date.getDay() === 0 || date.getDay() === 6 ? "weekend" : ""} ${mode === "month" && date.getMonth() !== anchor.getMonth() ? "outside" : ""}`}><button type="button" className={`edcal-date ${key === localDateISO(new Date()) ? "today" : ""}`} onClick={() => {setSelectedDate(key);setSelectedId(null);}}><span>{date.toLocaleDateString("lt-LT",{weekday:"short"})}</span>{date.getDate()}</button>{forDate(key).map(card)}</div>;})}</div>
+    <div className="edcal-mobile">{mode === "week" ? <div className="edcal-daystrip">{days.map(d => {const k=localDateISO(d);return <button key={k} type="button" className={selectedDate === k ? "active" : ""} aria-pressed={selectedDate === k} onClick={() => {setSelectedDate(k);setSelectedId(null);}}>{d.getDate()}<span>{d.toLocaleDateString("lt-LT",{weekday:"short"})}</span></button>;})}</div> : <label>Pasirinkti dieną <input type="date" className="edcal-select" value={selectedDate} min={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth(),1,12))} max={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth()+1,0,12))} onChange={e => {if(e.target.value){setSelectedDate(e.target.value);setSelectedId(null);}}}/></label>}<h3>{selectedDate}</h3>{forDate(selectedDate).length ? forDate(selectedDate).map(card) : <p className="edcal-empty">Šią dieną darbo pasiūlymų nėra.</p>}</div>
+    <div className="edcal-legend"><span style={{color:"#167a54"}}>● Patvirtintas poreikis</span><span style={{color:"#9c5417"}}>● Laukiama darbuotojų</span><span style={{color:"#b4472a"}}>● Atšauktas darbas</span><span>● Juodraštis / užbaigtas</span></div>
+    {!filtered.some(j => days.some(d => localDateISO(d) === String(j.work_date || "").slice(0,10))) && <p className="edcal-empty">Šiuo laikotarpiu darbo pasiūlymų nėra.</p>}</section>
+    {selected && <section className="edcal-panel edcal-detail" aria-live="polite"><h2>{formatJobTitle(selected.title)}</h2><p>{selected.work_date} · {String(selected.start_time || "").slice(0,5)}–{String(selected.end_time || "").slice(0,5)}<br/>{selected.address_text || selected.city}</p><p>{status(selected).label}</p>{selected.description && <p>{selected.description}</p>}<button type="button" className="ed-primary" onClick={() => onOpenJob(selected)}>Atidaryti darbą ir darbuotojus</button>{selected.status === "open" && <button type="button" className="ed-secondary" style={{marginLeft:8}} onClick={() => onOpenJob(selected, true)}>Pakviesti iš favoritų</button>}</section>}
+  </>;
+}
+
 function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
@@ -13257,6 +13300,26 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyAvatarPreview, setCompanyAvatarPreview] = useState("");
   const [companyAvatarMarkedForRemoval, setCompanyAvatarMarkedForRemoval] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
+  const [calendarRequested, setCalendarRequested] = useState(() => new URLSearchParams(window.location.search).get("employerView") === "calendar");
+  const calendarAllowed = planSummary?.plan_key === "business_pro";
+  const calendarVisible = calendarRequested && calendarAllowed;
+  useEffect(() => {
+    const sync = () => setCalendarRequested(new URLSearchParams(window.location.search).get("employerView") === "calendar");
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+  function navigateEmployerCalendar(open) {
+    if (open && !calendarAllowed) { setShowPlans(true); return; }
+    const url = new URL(window.location.href);
+    if (open) url.searchParams.set("employerView", "calendar");
+    else url.searchParams.delete("employerView");
+    const marker = { ...(window.history.state || {}), employerCalendarTransition: true };
+    window.history.replaceState(marker, "", window.location.href);
+    window.history.pushState(marker, "", url.pathname + url.search + url.hash);
+    setCalendarRequested(open);
+    window.scrollTo({top:0, behavior:"auto"});
+  }
+
   const [billingStatus, setBillingStatus] = useState(null);
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
@@ -17824,6 +17887,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       </header>
 
       <main className="ed-shell">
+        {calendarVisible && <EmployerWorkCalendar
+          jobs={visibleJobs}
+          onBack={() => navigateEmployerCalendar(false)}
+          onCreateJob={() => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm()); }}
+          onOpenJob={(job, favorites) => { navigateEmployerCalendar(false); requestAnimationFrame(async () => { if (await openExistingJob(job)) { if (favorites && planSummary?.can_saved_workers) setWorkerSource("team"); } }); }}
+        />}
+        <div style={{display: calendarVisible ? "none" : "contents"}}>
+
         {!onAdminReturn && jobs.length === 0 && (
           <section
             style={{
@@ -18225,6 +18296,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </button>
               </>
             )}
+
+            <button className="ed-secondary" type="button" onClick={() => navigateEmployerCalendar(true)}>
+              {calendarAllowed ? "Darbų kalendorius" : "Darbų kalendorius · Pro"}
+            </button>
 
             <button
               className="ed-secondary"
@@ -20138,6 +20213,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
         </section>
+        </div>
       </main>
 
       <ArrivalTimeDialog
@@ -35525,6 +35601,7 @@ function MobilePopupBackGuard() {
       }
 
       const popup = topPopup();
+      if (!popup && window.history.state?.employerCalendarTransition) return;
 
       if (popup) {
         closeTopPopup();
