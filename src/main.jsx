@@ -156,11 +156,11 @@ function MetaMarketingConsent() {
   const button = { minHeight: 44, padding: "10px 16px", border: "1px solid #102438", borderRadius: 8, background: "#fff", color: "#102438", fontWeight: 750, cursor: "pointer" };
   return <>
     {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 460, padding: 16, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
-      <b>Reklamos matavimas</b>
-      <p style={{ fontSize: 14, lineHeight: 1.5, margin: "8px 0 12px" }}>Ar leidžiate perduoti „Meta“ reklamos matavimo duomenis? Atsisakius svetainė veiks įprastai.</p>
+      <b>Ar leidžiate naudoti reklamos slapukus?</b>
+      <p style={{ fontSize: 13, lineHeight: 1.5, margin: "8px 0 12px" }}>Daugiau informacijos – privatumo politikoje.</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <button type="button" style={button} onClick={() => decide(false)}>Neleisti</button>
-        <button type="button" style={button} onClick={() => decide(true)}>Leisti</button>
+        <button type="button" style={button} onClick={() => decide(false)}>Nesutinku</button>
+        <button type="button" style={button} onClick={() => decide(true)}>Sutinku</button>
         <button type="button" style={{ ...button, borderColor: "transparent" }} onClick={() => setPrivacy(true)}>Privatumo politika</button>
       </div>
     </section> : <button type="button" style={{ ...button, position: "fixed", bottom: 12, left: 12, zIndex: 900, fontSize: 11, padding: "6px 10px" }} onClick={() => setEditing(true)}>Privatumo pasirinkimai</button>}
