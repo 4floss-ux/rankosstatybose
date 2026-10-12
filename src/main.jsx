@@ -155,9 +155,9 @@ function MetaMarketingConsent() {
   };
   const button = { minHeight: 44, padding: "10px 16px", border: "1px solid #102438", borderRadius: 8, background: "#fff", color: "#102438", fontWeight: 750, cursor: "pointer" };
   return <>
-    {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 680, padding: 20, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
-      <b>Ar leidžiate matuoti reklamos rezultatus?</b>
-      <p style={{ fontSize: 14, lineHeight: 1.5 }}>Su jūsų sutikimu „Meta Pixel“ ir „Conversions API“ padės įvertinti, ar reklama atveda darbuotojų registracijas. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos identifikatoriai ir SHA-256 užkoduotas el. paštas. Šie duomenys naudojami reklamos rezultatams matuoti ir optimizuoti. Atsisakius platforma veiks įprastai.</p>
+    {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 460, padding: 16, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
+      <b>Reklamos matavimas</b>
+      <p style={{ fontSize: 14, lineHeight: 1.5, margin: "8px 0 12px" }}>Ar leidžiate perduoti „Meta“ reklamos matavimo duomenis? Atsisakius svetainė veiks įprastai.</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         <button type="button" style={button} onClick={() => decide(false)}>Neleisti</button>
         <button type="button" style={button} onClick={() => decide(true)}>Leisti</button>
