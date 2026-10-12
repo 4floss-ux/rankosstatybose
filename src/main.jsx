@@ -18300,6 +18300,41 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <button className="ed-primary" type="button" onClick={() => navigateEmployerCalendar(true)}>
+              {calendarAllowed ? "Darbų kalendorius" : "Darbų kalendorius · Pro"}
+            </button>
+
+            <button
+              className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
+                planSummary?.can_team_chat ? "" : "locked"
+              }`}
+              type="button"
+              onClick={openCompanyTeamChat}
+            >
+              {planSummary?.can_team_chat
+                ? "Vadovų pokalbis"
+                : "Vadovų pokalbis · Pro"}
+
+              {planSummary?.can_team_chat && teamChatUnread > 0 && (
+                <span
+                  className="ed-chat-alert"
+                  title="Nauja žinutė vadovų pokalbyje"
+                >
+                  {Math.min(9, teamChatUnread)}
+                </span>
+              )}
+            </button>
+
+            <button
+              className="ed-secondary"
+              type="button"
+              onClick={openSavedWorkerTeam}
+            >
+              {planSummary?.can_saved_workers
+                ? `Darbuotojai favoritai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
+                : "Darbuotojai favoritai · Business"}
+            </button>
+
             {companyMemberRole === "owner" && (
               <>
                 <button
@@ -18333,40 +18368,6 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </>
             )}
 
-            <button className="ed-secondary" type="button" onClick={() => navigateEmployerCalendar(true)}>
-              {calendarAllowed ? "Darbų kalendorius" : "Darbų kalendorius · Pro"}
-            </button>
-
-            <button
-              className="ed-secondary"
-              type="button"
-              onClick={openSavedWorkerTeam}
-            >
-              {planSummary?.can_saved_workers
-                ? `Darbuotojai favoritai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
-                : "Darbuotojai favoritai · Business"}
-            </button>
-
-            <button
-              className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
-                planSummary?.can_team_chat ? "" : "locked"
-              }`}
-              type="button"
-              onClick={openCompanyTeamChat}
-            >
-              {planSummary?.can_team_chat
-                ? "Vadovų pokalbis"
-                : "Vadovų pokalbis · Pro"}
-
-              {planSummary?.can_team_chat && teamChatUnread > 0 && (
-                <span
-                  className="ed-chat-alert"
-                  title="Nauja žinutė vadovų pokalbyje"
-                >
-                  {Math.min(9, teamChatUnread)}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
