@@ -60,9 +60,117 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Meta tracking is deliberately opt-in and limited to Lithuania worker signups.
+const META_PIXEL_ID = "1836112917406632";
+const META_CONSENT_KEY = "s24_meta_consent_v1";
+const META_PENDING_KEY = "s24_meta_pending_registration_v1";
+let metaSending = false;
+let metaPageViewed = false;
+function metaRead(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
+function metaWrite(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } }
+function metaAllowed() { const c = metaRead(META_CONSENT_KEY); return c?.allowed === true && Date.now() - c.at < 180 * 86400000; }
+function metaCookie(name) { const item = document.cookie.split("; ").find((v) => v.startsWith(name + "=")); return item ? item.slice(name.length + 1) : undefined; }
+function metaClearCookies() {
+  for (const name of ["_fbp", "_fbc"]) {
+    document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+    document.cookie = `${name}=; Max-Age=0; Path=/; Domain=.statybos24.lt; SameSite=Lax`;
+  }
+}
+function metaSafeLocation() { return !/[?&#](access_token|refresh_token|code|token|team_invite|type)=/i.test(window.location.href); }
+function metaStartPixel() {
+  if (!metaAllowed() || !metaSafeLocation()) return;
+  if (!window.fbq) {
+    const q = function (...args) { q.callMethod ? q.callMethod(...args) : q.queue.push(args); };
+    q.queue = []; q.loaded = true; q.version = "2.0"; q.push = q;
+    window.fbq = q; window._fbq = q;
+    const script = document.createElement("script"); script.async = true;
+    script.src = "https://connect.facebook.net/en_US/fbevents.js";
+    document.head.appendChild(script);
+    q("consent", "grant"); q("set", "autoConfig", false, META_PIXEL_ID); q("init", META_PIXEL_ID);
+  } else { window.fbq("consent", "grant"); }
+  // Never send auth callback tokens or recovery/team invitation query parameters.
+  if (!metaPageViewed && !/[?&#](access_token|refresh_token|code|token|team_invite|type)=/i.test(window.location.href)) {
+    window.fbq("track", "PageView"); metaPageViewed = true;
+  }
+  const click = new URLSearchParams(window.location.search).get("fbclid");
+  if (click && /^[A-Za-z0-9_-]{1,500}$/.test(click)) {
+    document.cookie = `_fbc=fb.1.${Date.now()}.${click}; Max-Age=7776000; Path=/; Secure; SameSite=Lax`;
+  }
+}
+function metaRememberRegistration(user, role) {
+  if (!metaAllowed() || role !== "worker" || !user?.id || user.identities?.length === 0) return;
+  const created = Date.parse(user.created_at);
+  if (!Number.isFinite(created) || Date.now() - created > 10 * 60000) return;
+  metaWrite(META_PENDING_KEY, { userId: user.id, at: Date.now(), browserSent: false, attempts: 0 });
+  // Sign-up with an immediate session may emit SIGNED_IN before this marker exists.
+  window.dispatchEvent(new Event("s24-meta-registration"));
+}
+async function metaFlushRegistration() {
+  if (!supabase || !metaAllowed() || !metaSafeLocation() || metaSending) return;
+  const p = metaRead(META_PENDING_KEY);
+  if (!p) return;
+  if (Date.now() - p.at > 48 * 3600000) { localStorage.removeItem(META_PENDING_KEY); return; }
+  if (p.attempts >= 4) return;
+  metaSending = true;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id !== p.userId) return;
+    if (!session.user.email_confirmed_at) return;
+    p.attempts += 1; metaWrite(META_PENDING_KEY, p);
+    const { data, error } = await supabase.functions.invoke("meta-registration", {
+      body: { consent: true, fbc: metaCookie("_fbc"), fbp: metaCookie("_fbp") },
+    });
+    if (error || !data?.ok) return;
+    if (metaAllowed() && !p.browserSent) {
+      metaStartPixel();
+      window.fbq?.("track", "CompleteRegistration", { content_name: "worker_registration", status: true }, { eventID: data.event_id });
+      p.browserSent = true;
+    }
+    localStorage.removeItem(META_PENDING_KEY);
+  } catch { /* Measurement must never interrupt registration. */ }
+  finally { metaSending = false; }
+}
+function MetaMarketingConsent() {
+  const [choice, setChoice] = useState(() => {
+    const c = metaRead(META_CONSENT_KEY);
+    return c && Date.now() - c.at < 180 * 86400000 ? c.allowed : null;
+  });
+  const [editing, setEditing] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
+  useEffect(() => {
+    const run = () => { if (metaAllowed()) { metaStartPixel(); void metaFlushRegistration(); } };
+    run();
+    const auth = supabase?.auth.onAuthStateChange(() => { setTimeout(run, 0); });
+    const interval = setInterval(run, 60000);
+    window.addEventListener("s24-meta-registration", run);
+    const sync = (event) => { if (event.key === META_CONSENT_KEY) { setChoice(metaAllowed()); if (!metaAllowed()) { window.fbq?.("consent", "revoke"); metaClearCookies(); } else run(); } };
+    window.addEventListener("storage", sync);
+    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("storage", sync); };
+  }, []);
+  const decide = (allowed) => {
+    metaWrite(META_CONSENT_KEY, { allowed, at: Date.now() });
+    setChoice(allowed); setEditing(false);
+    if (allowed) { metaStartPixel(); void metaFlushRegistration(); }
+    else { window.fbq?.("consent", "revoke"); metaClearCookies(); localStorage.removeItem(META_PENDING_KEY); }
+  };
+  const button = { minHeight: 44, padding: "10px 16px", border: "1px solid #102438", borderRadius: 8, background: "#fff", color: "#102438", fontWeight: 750, cursor: "pointer" };
+  return <>
+    {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 680, padding: 20, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
+      <b>Ar leidžiate matuoti reklamos rezultatus?</b>
+      <p style={{ fontSize: 14, lineHeight: 1.5 }}>Su jūsų sutikimu „Meta Pixel“ ir „Conversions API“ padės įvertinti, ar reklama atveda darbuotojų registracijas. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos identifikatoriai ir SHA-256 užkoduotas el. paštas. Šie duomenys naudojami reklamos rezultatams matuoti ir optimizuoti. Atsisakius platforma veiks įprastai.</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        <button type="button" style={button} onClick={() => decide(false)}>Neleisti</button>
+        <button type="button" style={button} onClick={() => decide(true)}>Leisti</button>
+        <button type="button" style={{ ...button, borderColor: "transparent" }} onClick={() => setPrivacy(true)}>Privatumo politika</button>
+      </div>
+    </section> : <button type="button" style={{ ...button, position: "fixed", bottom: 12, left: 12, zIndex: 900, fontSize: 11, padding: "6px 10px" }} onClick={() => setEditing(true)}>Privatumo pasirinkimai</button>}
+    <PlatformPrivacyDialog open={privacy} onClose={() => setPrivacy(false)} />
+  </>;
+}
+
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-06-v6";
+const PRIVACY_VERSION = "2026-10-12-meta-v7";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
@@ -1616,6 +1724,8 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
 
+        <p><b>Reklamos rezultatų matavimas.</b> Tik gavus jūsų atskirą sutikimą naudojami „Meta Pixel“ ir „Conversions API“. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos paspaudimo ir naršyklės identifikatoriai (_fbc, _fbp) bei SHA-256 užkoduotas el. paštas. Šie duomenys nėra anoniminiai: „Meta“ gali juos susieti su jūsų paskyra reklamos rezultatams matuoti ir optimizuoti. „Meta“ slapukų galiojimas šiame diegime – iki 90 dienų, sutikimo pasirinkimas saugomas iki 180 dienų. Sutikimą galima atšaukti mygtuku „Privatumo pasirinkimai“. Atsisakius registracija ir platformos paslaugos veikia įprastai. Registracijos matavimo techniniame žurnale saugomas paskyros identifikatorius, įvykio identifikatorius, laikas ir siuntimo būsena; el. paštas ir reklamos slapukai jame nekaupiami. Daugiau apie „Meta“ duomenų tvarkymą: <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politika</a>.</p>
+
         <p><b>Apsauga nuo automatinių užklausų.</b> Registracijos ir SMS užklausų apsaugai naudojama Cloudflare Turnstile patikra, kuri gali veikti nematomai naršyklėje. Daugiau informacijos pateikiama <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Cloudflare Turnstile privatumo pranešime</a>.</p>
 
         <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
@@ -2276,6 +2386,7 @@ function AuthModal({
         });
 
         if (error) throw error;
+        metaRememberRegistration(data.user, teamInvite ? "employer" : role);
 
         if (data.session) {
           onClose();
@@ -35819,6 +35930,7 @@ createRoot(document.getElementById("root")).render(
         <style>{mobileModalSafetyStyles}</style>
         <App />
         <SiteAnalyticsTracker />
+        <MetaMarketingConsent />
         <MobilePopupBackGuard />
         <BackToTopButton />
       </>
