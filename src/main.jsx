@@ -156,7 +156,7 @@ function MetaMarketingConsent() {
   const button = { minHeight: 44, padding: "10px 16px", border: "1px solid #102438", borderRadius: 8, background: "#fff", color: "#102438", fontWeight: 750, cursor: "pointer" };
   return <>
     {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 460, padding: 16, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
-      <b>Ar leidžiate naudoti reklamos slapukus?</b>
+      <b>Ar sutinkate su reklamos slapukais?</b>
       <p style={{ fontSize: 13, lineHeight: 1.5, margin: "8px 0 12px" }}>Daugiau informacijos – privatumo politikoje.</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         <button type="button" style={button} onClick={() => decide(false)}>Nesutinku</button>
@@ -1706,7 +1706,8 @@ function PlatformPrivacyDialog({ open, onClose }) {
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", boxSizing: "border-box", overflow: "hidden", background: "#fff", color: "#102438", borderRadius: 18, padding: 0, boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+        <div style={{ maxHeight: "min(820px,calc(100dvh - 32px))", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain", padding: "28px clamp(18px,4vw,36px)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2></div>
           <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
@@ -1741,6 +1742,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
         <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
 
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+        </div>
       </section>
     </div>
   );
