@@ -143,9 +143,11 @@ function MetaMarketingConsent() {
     const auth = supabase?.auth.onAuthStateChange(() => { setTimeout(run, 0); });
     const interval = setInterval(run, 60000);
     window.addEventListener("s24-meta-registration", run);
+    const editConsent = () => setEditing(true);
+    window.addEventListener("s24-edit-meta-consent", editConsent);
     const sync = (event) => { if (event.key === META_CONSENT_KEY) { setChoice(metaAllowed()); if (!metaAllowed()) { window.fbq?.("consent", "revoke"); metaClearCookies(); } else run(); } };
     window.addEventListener("storage", sync);
-    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("storage", sync); };
+    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("s24-edit-meta-consent", editConsent); window.removeEventListener("storage", sync); };
   }, []);
   const decide = (allowed) => {
     metaWrite(META_CONSENT_KEY, { allowed, at: Date.now() });
@@ -163,7 +165,7 @@ function MetaMarketingConsent() {
         <button type="button" style={button} onClick={() => decide(true)}>Sutinku</button>
         <button type="button" style={{ ...button, borderColor: "transparent" }} onClick={() => setPrivacy(true)}>Privatumo politika</button>
       </div>
-    </section> : <button type="button" style={{ ...button, position: "fixed", bottom: 12, left: 12, zIndex: 900, fontSize: 11, padding: "6px 10px" }} onClick={() => setEditing(true)}>Privatumo pasirinkimai</button>}
+    </section> : null}
     <PlatformPrivacyDialog open={privacy} onClose={() => setPrivacy(false)} />
   </>;
 }
@@ -1725,7 +1727,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
 
-        <p><b>Reklamos rezultatų matavimas.</b> Tik gavus jūsų atskirą sutikimą naudojami „Meta Pixel“ ir „Conversions API“. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos paspaudimo ir naršyklės identifikatoriai (_fbc, _fbp) bei SHA-256 užkoduotas el. paštas. Šie duomenys nėra anoniminiai: „Meta“ gali juos susieti su jūsų paskyra reklamos rezultatams matuoti ir optimizuoti. „Meta“ slapukų galiojimas šiame diegime – iki 90 dienų, sutikimo pasirinkimas saugomas iki 180 dienų. Sutikimą galima atšaukti mygtuku „Privatumo pasirinkimai“. Atsisakius registracija ir platformos paslaugos veikia įprastai. Registracijos matavimo techniniame žurnale saugomas paskyros identifikatorius, įvykio identifikatorius, laikas ir siuntimo būsena; el. paštas ir reklamos slapukai jame nekaupiami. Daugiau apie „Meta“ duomenų tvarkymą: <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politika</a>.</p>
+        <p><b>Reklamos rezultatų matavimas.</b> Tik gavus jūsų atskirą sutikimą naudojami „Meta Pixel“ ir „Conversions API“. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos paspaudimo ir naršyklės identifikatoriai (_fbc, _fbp) bei SHA-256 užkoduotas el. paštas. Šie duomenys nėra anoniminiai: „Meta“ gali juos susieti su jūsų paskyra reklamos rezultatams matuoti ir optimizuoti. „Meta“ slapukų galiojimas šiame diegime – iki 90 dienų, sutikimo pasirinkimas saugomas iki 180 dienų. Sutikimą galima atšaukti privatumo politikos lange pasirinkus „Keisti slapukų pasirinkimą“. Atsisakius registracija ir platformos paslaugos veikia įprastai. Registracijos matavimo techniniame žurnale saugomas paskyros identifikatorius, įvykio identifikatorius, laikas ir siuntimo būsena; el. paštas ir reklamos slapukai jame nekaupiami. Daugiau apie „Meta“ duomenų tvarkymą: <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politika</a>.</p>
 
         <p><b>Apsauga nuo automatinių užklausų.</b> Registracijos ir SMS užklausų apsaugai naudojama Cloudflare Turnstile patikra, kuri gali veikti nematomai naršyklėje. Daugiau informacijos pateikiama <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Cloudflare Turnstile privatumo pranešime</a>.</p>
 
@@ -1740,6 +1742,8 @@ function PlatformPrivacyDialog({ open, onClose }) {
         <p><b>Slapukai ir techninė saugykla.</b> Platforma gali naudoti techniškai būtinus autentifikavimo, sesijos ir saugumo identifikatorius, kad vartotojas galėtų prisijungti ir naudotis sistema. Atskiros reklaminės ar rinkodaros sekimo priemonės šiame privatumo pranešime nenumatytos; jei jos būtų įdiegtos, informacija ir pasirinkimai būtų pateikti atskirai.</p>
 
         <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
+
+        <button type="button" onClick={() => { onClose(); window.dispatchEvent(new Event("s24-edit-meta-consent")); }} style={{ minHeight: 44, border: "1px solid #102438", background: "#fff", color: "#102438", borderRadius: 10, padding: "11px 18px", marginRight: 10, marginBottom: 10, font: "inherit", cursor: "pointer" }}>Keisti slapukų pasirinkimą</button>
 
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
         </div>
