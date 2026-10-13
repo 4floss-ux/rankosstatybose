@@ -263,8 +263,8 @@ function MetaMarketingConsent() {
   return <>
     <style>{COOKIE_UI_STYLES}</style>
     {mode === "banner" && createPortal(<section className="s24-cookie-banner s24-cookie-ui" aria-label="Slapukų pasirinkimas">
-      <span className="s24-cookie-eyebrow">JŪSŲ PASIRINKIMAS</span><h2>Vertiname jūsų privatumą</h2>
-      <p>Būtinąją saugyklą naudojame svetainės veikimui. Tik jums leidus įjungsime lankomumo analizę ir reklamos rezultatų matavimą. Pasirinkimą galite keisti bet kada. <button type="button" className="s24-cookie-link" onClick={showPolicy}>Slapukų politika</button></p>
+      <h2>Vertiname jūsų privatumą</h2>
+      <p>Būtinąją saugyklą naudojame svetainės veikimui. Tik jums leidus įjungsime lankomumo analizę ir reklamos rezultatų matavimą. Pasirinkimą galite keisti bet kada.</p>
       <div className="s24-cookie-actions"><button type="button" className="s24-cookie-button primary" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button" onClick={showPreferences}>Pritaikyti</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}
     </section>, document.body)}
     {mode === "preferences" && <CookieModal title="Pritaikyti sutikimo parinktis" onClose={stableClose.current} footer={<><div className="s24-cookie-actions"><button type="button" className="s24-cookie-button" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button primary" onClick={() => choose(draft.analytics, draft.marketing)}>Išsaugoti mano nuostatas</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}</>}>
