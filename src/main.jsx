@@ -68,7 +68,7 @@ let metaSending = false;
 let metaPageViewed = false;
 function metaRead(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
 function metaWrite(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } }
-function metaAllowed() { const c = metaRead(META_CONSENT_KEY); return c?.allowed === true && Date.now() - c.at < 180 * 86400000; }
+function metaAllowed() { return cookieReadPreferences()?.marketing === true; }
 function metaCookie(name) { const item = document.cookie.split("; ").find((v) => v.startsWith(name + "=")); return item ? item.slice(name.length + 1) : undefined; }
 function metaClearCookies() {
   for (const name of ["_fbp", "_fbc"]) {
@@ -114,7 +114,7 @@ async function metaFlushRegistration() {
   metaSending = true;
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.id !== p.userId) return;
+    if (!metaAllowed() || session?.user?.id !== p.userId) return;
     if (!session.user.email_confirmed_at) return;
     p.attempts += 1; metaWrite(META_PENDING_KEY, p);
     const { data, error } = await supabase.functions.invoke("meta-registration", {
@@ -130,49 +130,171 @@ async function metaFlushRegistration() {
   } catch { /* Measurement must never interrupt registration. */ }
   finally { metaSending = false; }
 }
+const COOKIE_PREFS_KEY = "s24_cookie_preferences_v2";
+const COOKIE_CHOICE_MS = 180 * 86400000;
+function cookieReadPreferences() {
+  const saved = metaRead(COOKIE_PREFS_KEY);
+  if (saved?.version === 2 && typeof saved.analytics === "boolean" && typeof saved.marketing === "boolean" && Number.isFinite(saved.at) && saved.at <= Date.now() && Date.now() - saved.at < COOKIE_CHOICE_MS) return saved;
+  // Existing advertising choices remain valid; analytics is never granted by migration.
+  if (!saved) {
+    const legacy = metaRead(META_CONSENT_KEY);
+    if (typeof legacy?.allowed === "boolean" && Number.isFinite(legacy.at) && legacy.at <= Date.now() && Date.now() - legacy.at < COOKIE_CHOICE_MS) return { version: 2, necessary: true, analytics: false, marketing: legacy.allowed, at: legacy.at };
+  }
+  return null;
+}
+function cookieAnalyticsAllowed() { return cookieReadPreferences()?.analytics === true; }
+function cookieSavePreferences(analytics, marketing) {
+  const value = { version: 2, necessary: true, analytics: !!analytics, marketing: !!marketing, at: Date.now() };
+  if (!metaWrite(COOKIE_PREFS_KEY, value)) return false;
+  metaWrite(META_CONSENT_KEY, { allowed: value.marketing, at: value.at });
+  if (!value.marketing) {
+    window.fbq?.("consent", "revoke"); metaClearCookies();
+    try { localStorage.removeItem(META_PENDING_KEY); } catch { /* Storage may be restricted. */ }
+  }
+  if (!value.analytics) {
+    try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch { /* Optional storage. */ }
+  }
+  window.dispatchEvent(new Event("s24-cookie-preferences-changed"));
+  return true;
+}
+const COOKIE_UI_STYLES = `
+.s24-cookie-ui{--ck-navy:#102438;--ck-orange:#f08a28;--ck-light:#eff5fa;font-family:Inter,system-ui,sans-serif;color:var(--ck-light);font-size:14px;line-height:1.6;box-sizing:border-box}
+.s24-cookie-ui *{box-sizing:border-box}.s24-cookie-ui button,.s24-cookie-ui a{font:inherit}.s24-cookie-ui button{cursor:pointer}.s24-cookie-ui button:focus-visible,.s24-cookie-ui a:focus-visible,.s24-cookie-ui summary:focus-visible{outline:3px solid #ffc184;outline-offset:4px}
+.s24-cookie-banner{position:fixed;z-index:19000;bottom:20px;left:20px;width:min(560px,calc(100vw - 40px));border:1px solid rgba(255,255,255,.19);border-radius:20px;background:rgba(16,36,56,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 18px 60px rgba(7,22,37,.24);padding:25px;max-height:calc(100dvh - 40px);overflow-y:auto}
+.s24-cookie-eyebrow{display:block;font-size:10px;letter-spacing:.13em;font-weight:850;color:#ffc184;text-transform:uppercase;margin-bottom:8px}.s24-cookie-ui h2{font-size:23px;line-height:1.25;margin:0 0 12px;letter-spacing:-.025em;color:#fff}.s24-cookie-ui p{margin:0 0 16px;color:#d3e0ea}.s24-cookie-link{border:0;padding:0;background:none;color:#ffc184;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.s24-cookie-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.s24-cookie-button{min-height:46px;border:1px solid rgba(255,255,255,.5);border-radius:10px;padding:11px 12px;color:#fff;background:rgba(255,255,255,.055);font-size:13px!important;font-weight:800!important;line-height:1.3;white-space:normal}.s24-cookie-button:hover{background:rgba(255,255,255,.13)}.s24-cookie-button.primary{background:#f08a28;color:#102438;border-color:#f08a28}.s24-cookie-button.primary:hover{background:#ff9e45}.s24-cookie-button:disabled{cursor:default;opacity:.6}
+.s24-cookie-overlay{position:fixed;inset:0;z-index:21000;background:rgba(6,18,31,.44);backdrop-filter:blur(4px);display:grid;place-items:center;padding:20px}.s24-cookie-panel{display:flex;flex-direction:column;width:min(720px,100%);max-height:min(850px,calc(100dvh - 40px));border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:rgba(16,36,56,.96);backdrop-filter:blur(20px);box-shadow:0 24px 90px rgba(0,0,0,.28)}.s24-cookie-panel.wide{width:min(900px,100%)}.s24-cookie-panel-head{padding:24px 26px 18px;display:flex;align-items:flex-start;gap:16px;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.13);flex-shrink:0}.s24-cookie-panel-head h2{margin:4px 0 0}.s24-cookie-close{border:1px solid rgba(255,255,255,.22);border-radius:10px;width:40px;height:40px;flex-shrink:0;background:rgba(255,255,255,.07);color:#fff;font-size:25px!important;line-height:1}.s24-cookie-scroll{padding:22px 26px;overflow-y:auto;overflow-x:hidden;min-height:0;overscroll-behavior:contain;scrollbar-color:#647c90 transparent;scrollbar-width:thin}.s24-cookie-panel-foot{padding:18px 26px;border-top:1px solid rgba(255,255,255,.13);background:rgba(9,26,42,.55);flex-shrink:0}.s24-cookie-panel-foot .s24-cookie-actions{grid-template-columns:1fr 1.65fr 1fr}.s24-cookie-category{border:1px solid rgba(255,255,255,.16);border-radius:14px;margin-top:14px;background:rgba(255,255,255,.035);overflow:hidden}.s24-cookie-category-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px}.s24-cookie-category-top strong{display:block;font-size:16px;color:#fff}.s24-cookie-category-top small{display:block;font-size:12px;color:#c5d4df}.s24-cookie-always{font-size:11px;font-weight:850;color:#9fdfc2;white-space:nowrap}.s24-cookie-switch{position:relative;flex-shrink:0;min-height:30px;width:52px;height:30px;border:1px solid #9cafbe;border-radius:30px;background:#536879;padding:0;transition:background .15s}.s24-cookie-switch[aria-checked=true]{background:#f08a28;border-color:#f08a28}.s24-cookie-switch:before{content:'';position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:#fff;transition:transform .15s}.s24-cookie-switch[aria-checked=true]:before{transform:translateX(22px)}.s24-cookie-category details{padding:0 18px 15px}.s24-cookie-category summary{font-size:12px;color:#ffc184;cursor:pointer}.s24-cookie-category details p{font-size:13px;margin:10px 0 0}.s24-cookie-note{font-size:12px;color:#b6c8d7!important}.s24-cookie-error{color:#ffd4bd!important;font-size:12px;margin-top:12px!important}
+.s24-cookie-policy h3{font-size:20px;color:inherit;line-height:1.3;margin:30px 0 12px}.s24-cookie-policy h3:first-of-type{margin-top:18px}.s24-cookie-policy p,.s24-cookie-policy li{line-height:1.7}.s24-cookie-policy ul{padding-left:22px}.s24-cookie-policy a{color:inherit;text-underline-offset:3px}.s24-cookie-policy .s24-cookie-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,.17);border-radius:12px;margin:18px 0}.s24-cookie-policy table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}.s24-cookie-policy th,.s24-cookie-policy td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.12);overflow-wrap:anywhere}.s24-cookie-policy th{background:rgba(255,255,255,.08);font-weight:850}.s24-cookie-policy tr:last-child td{border-bottom:0}.s24-cookie-policy code{font-family:monospace;font-size:11px}
+.s24-cookie-page{min-height:100dvh;background:#f4f7fa;color:#102438;font:15px/1.7 Inter,system-ui,sans-serif}.s24-cookie-page *{box-sizing:border-box}.s24-cookie-page-header{background:#fff;border-bottom:1px solid #dce5eb}.s24-cookie-page-header>div{max-width:960px;margin:auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.s24-cookie-page-header a{color:#102438;font-weight:800;text-decoration:none}.s24-cookie-page-main{max-width:960px;margin:auto;padding:50px 24px 60px}.s24-cookie-page-main h1{font-size:clamp(32px,5vw,48px);letter-spacing:-.04em;line-height:1.1;margin:8px 0 12px}.s24-cookie-page .s24-cookie-eyebrow{color:#af590b}.s24-cookie-page .s24-cookie-policy{background:#fff;border:1px solid #dce5eb;border-radius:20px;padding:28px;margin-top:28px}.s24-cookie-page .s24-cookie-policy th{background:#f4f7fa}.s24-cookie-page .s24-cookie-policy th,.s24-cookie-page .s24-cookie-policy td{border-bottom-color:#e1e8ee}.s24-cookie-page .s24-cookie-table-wrap{border-color:#dce5eb}.s24-cookie-page-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.s24-cookie-page-actions button,.s24-cookie-page-actions a{font:inherit;min-height:44px;border:1px solid #102438;border-radius:10px;padding:11px 16px;background:#102438;color:#fff;cursor:pointer;text-decoration:none}.s24-cookie-page-actions a{background:#fff;color:#102438}
+@media(max-width:600px){.s24-cookie-banner{bottom:12px;left:12px;width:calc(100vw - 24px);padding:20px;border-radius:17px}.s24-cookie-ui h2{font-size:21px}.s24-cookie-actions{grid-template-columns:1fr}.s24-cookie-overlay{padding:12px}.s24-cookie-panel{max-height:calc(100dvh - 24px);border-radius:18px}.s24-cookie-panel-head{padding:19px 18px 15px}.s24-cookie-scroll{padding:18px}.s24-cookie-panel-foot{padding:14px 18px}.s24-cookie-panel-foot .s24-cookie-actions{grid-template-columns:1fr}.s24-cookie-category-top{padding:15px 14px}.s24-cookie-category details{padding:0 14px 14px}.s24-cookie-always{font-size:10px}.s24-cookie-page-main{padding:32px 16px}.s24-cookie-page .s24-cookie-policy{padding:20px 16px}.s24-cookie-page-header>div{padding:16px}.s24-cookie-page-header img{max-width:170px;height:auto}}
+@media(prefers-reduced-motion:reduce){.s24-cookie-ui *{transition:none!important}}
+`;
+function CookiePolicyContent() {
+  return <div className="s24-cookie-policy">
+    <p><b>Atnaujinta: 2026-10-13.</b> Ši politika aprašo statybos24.lt slapukus ir panašią naršyklės saugyklą. Dėl duomenų tvarkymo galite kreiptis į „Statybos24“, {PUBLIC_BUSINESS_ACTIVITY.toLowerCase()}, veiklos Nr. {PUBLIC_BUSINESS_NUMBER}, el. paštu <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</p>
+    <h3>Kas yra slapukai?</h3>
+    <p>Slapukai – nedideli duomenų įrašai naršyklėje. Taip pat naudojame vietinę saugyklą (localStorage) ir sesijos saugyklą (sessionStorage). Jos padeda išlaikyti prisijungimą, pasirinkimus ir, tik leidus, matuoti lankomumą bei reklamos rezultatus.</p>
+    <h3>Kokias kategorijas naudojame?</h3>
+    <p><b>Būtinieji.</b> Prisijungimo sesija, paskyros saugumas, slaptažodžio atkūrimas ir jūsų prašomų platformos funkcijų bei slapukų pasirinkimo išsaugojimas. Šių priemonių neprivalomų slapukų jungikliai neišjungia.</p>
+    <p><b>Analitiniai.</b> Tik sutikus įjungiamas mūsų lankomumo skaitiklis. Jis sukuria naršyklės lankytojo identifikatorių ir siunčia apsilankymą į statybos24.lt serverį. Jei esate prisijungę, kartu gali būti siunčiamas paskyros identifikatorius. Tai nėra visiškai anoniminė statistika. Šiame diegime nenaudojame „Google Analytics“.</p>
+    <p><b>Reklaminiai.</b> Tik sutikus įjungiami „Meta Pixel“ ir „Conversions API“. Jie skirti reklamos rezultatams matuoti ir optimizuoti. „Meta“ gali gauti puslapio peržiūrą, patvirtintos naujos darbuotojo registracijos įvykį, naršyklės informaciją, reklamos identifikatorius ir SHA-256 užkoduotą el. paštą. Užkoduotas el. paštas nėra anoniminis ir gali būti susietas su „Meta“ paskyra. Telefonas, gimimo data ir darbo profilio turinys šia integracija neperduodami.</p>
+    <h3>Naudojami įrašai ir jų trukmė</h3>
+    <div className="s24-cookie-table-wrap" tabIndex={0} aria-label="Slapukų ir naršyklės saugyklos lentelė"><table><thead><tr><th>Įrašas / teikėjas</th><th>Paskirtis</th><th>Trukmė</th></tr></thead><tbody>
+      <tr><td><code>sb-…-auth-token</code> / „Supabase“</td><td>Būtinoji vietinė saugykla prisijungimo sesijai</td><td>Iki atsijungimo, sesijos panaikinimo arba naršyklės duomenų išvalymo; žetonai atnaujinami pagal projekto nustatymus</td></tr>
+      <tr><td><code>password-recovery-user</code></td><td>Būtinoji sesijos saugykla slaptažodžio atkūrimui</td><td>Naudojamas iki 60 min.; pašalinamas baigus atkūrimą arba uždarius skirtuko sesiją</td></tr>
+      <tr><td><code>s24_cookie_preferences_v2</code>, <code>s24_meta_consent_v1</code></td><td>Būtinoji vietinė saugykla jūsų pasirinkimams</td><td>Pasirinkimas galioja 180 dienų; vėliau prašoma pasirinkti iš naujo</td></tr>
+      <tr><td><code>s24_visitor_id_v1</code>, <code>s24_visitor_at_v1</code></td><td>Analitinis lankytojo identifikatorius</td><td>Iki 180 dienų; ištrinamas atsisakius analitikos</td></tr>
+      <tr><td><code>_fbp</code>, <code>_fbc</code> / „Meta“</td><td>Reklamos naršyklės ir paspaudimo identifikatoriai</td><td>Iki 90 dienų; gali būti atnaujinami naudojantis svetaine; ištrinami atšaukus reklamos sutikimą</td></tr>
+      <tr><td><code>s24_meta_pending_registration_v1</code></td><td>Reklaminio įvykio vietinės saugyklos žymeklis</td><td>Iki išsiuntimo arba 48 val.; ištrinamas atšaukus reklamos sutikimą</td></tr>
+    </tbody></table></div>
+    <p>Paskyros ekrano nuostatos ir darbo eigos žymekliai taip pat gali būti saugomi vietinėje saugykloje, kol juos pakeičiate arba išvalote naršyklės duomenis. Saugumo patikrai naudojama „Cloudflare Turnstile“; jos veikimas priklauso nuo patikros ir paslaugos nustatymų. <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">„Cloudflare“ informacija</a>.</p>
+    <h3>Kaip pasirinkti ir pakeisti sutikimą?</h3>
+    <ul><li><b>Priimti viską</b> – įjungia analitinį ir reklaminį matavimą.</li><li><b>Pritaikyti</b> – leidžia šias kategorijas įjungti atskirai; būtinosios lieka aktyvios.</li><li><b>Atmesti</b> – išjungia abi neprivalomas kategorijas. Registracija ir darbo funkcijos lieka pasiekiamos.</li></ul>
+    <p>Pasirinkimas išsaugomas šioje naršyklėje 180 dienų. Kitame įrenginyje, privačiame lange ar išvalius saugyklą gali reikėti pasirinkti iš naujo. Nuostatas bet kada galite pakeisti svetainės apačioje per „Slapukų parinktys“ arba šios politikos mygtuką. Atšaukimas sustabdo būsimą matavimą, bet automatiškai nepanaikina anksčiau teisėtai išsiųstų įvykių.</p>
+    <h3>Trečiųjų šalių duomenų tvarkymas</h3>
+    <p>„Conversions API“ nėra slapukas – tai serverio duomenų siuntimas, susietas su tuo pačiu reklamos kategorijos pasirinkimu. „Meta“ duomenų tvarkymo ir perdavimo sąlygos aprašytos <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politikoje</a> ir <a href="https://www.facebook.com/privacy/policies/cookies/" target="_blank" rel="noopener noreferrer">slapukų politikoje</a>. Kita platformos asmens duomenų tvarkymo informacija pateikiama mūsų privatumo politikoje.</p>
+    <h3>Naršyklės nustatymai ir kontaktai</h3>
+    <p>Slapukus ir vietinę saugyklą galite pašalinti naršyklės nustatymuose. Pašalinus prisijungimo duomenis gali reikėti prisijungti iš naujo. Jei turite klausimų, rašykite <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>. Politika gali būti atnaujinta pasikeitus naudojamoms priemonėms.</p>
+  </div>;
+}
+function CookieModal({ title, wide = false, onClose, children, footer }) {
+  const panelRef = useRef(null);
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const panel = panelRef.current;
+    panel?.querySelector("button")?.focus();
+    const keys = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+      if (event.key !== "Tab") return;
+      const items = [...panel.querySelectorAll('button:not([disabled]), a[href], summary, [tabindex="0"]')].filter((item) => item.getClientRects().length);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", keys);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", keys); if (previousFocus?.isConnected) previousFocus.focus?.(); };
+  }, [onClose]);
+  return createPortal(<div className="s24-cookie-overlay s24-cookie-ui" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section ref={panelRef} className={`s24-cookie-panel${wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <header className="s24-cookie-panel-head"><div><span className="s24-cookie-eyebrow">STATYBOS24.LT · PRIVATUMAS</span><h2>{title}</h2></div><button type="button" className="s24-cookie-close" aria-label="Uždaryti" onClick={onClose}>×</button></header>
+      <div className="s24-cookie-scroll">{children}</div>
+      <footer className="s24-cookie-panel-foot">{footer}</footer>
+    </section>
+  </div>, document.body);
+}
+function CookieCategory({ title, subtitle, necessary = false, enabled, onToggle, children }) {
+  return <section className="s24-cookie-category"><div className="s24-cookie-category-top"><div><strong>{title}</strong><small>{subtitle}</small></div>{necessary ? <span className="s24-cookie-always">Visada aktyvūs</span> : <button type="button" className="s24-cookie-switch" role="switch" aria-label={title} aria-checked={enabled} onClick={onToggle} />}</div><details><summary>Rodyti išsamiau</summary>{children}</details></section>;
+}
 function MetaMarketingConsent() {
-  const [choice, setChoice] = useState(() => {
-    const c = metaRead(META_CONSENT_KEY);
-    return c && Date.now() - c.at < 180 * 86400000 ? c.allowed : null;
-  });
-  const [editing, setEditing] = useState(false);
-  const [privacy, setPrivacy] = useState(false);
+  const [saved, setSaved] = useState(cookieReadPreferences);
+  const [mode, setMode] = useState(() => cookieReadPreferences() ? null : "banner");
+  const [draft, setDraft] = useState(() => cookieReadPreferences() || { analytics: false, marketing: false });
+  const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const previousMode = useRef(null);
+  const closeRef = useRef(null);
+  closeRef.current = () => { setError(""); setMode(cookieReadPreferences() ? null : "banner"); };
+  const stableClose = useRef(() => closeRef.current());
   useEffect(() => {
     const run = () => { if (metaAllowed()) { metaStartPixel(); void metaFlushRegistration(); } };
+    const apply = () => { const value = cookieReadPreferences(); setSaved(value); if (!value?.marketing) { window.fbq?.("consent", "revoke"); metaClearCookies(); try { localStorage.removeItem(META_PENDING_KEY); } catch {} } else run(); if (!value?.analytics) { try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch {} } };
+    const edit = () => { setDraft(cookieReadPreferences() || { analytics: false, marketing: false }); setError(""); setMode("preferences"); };
+    const policy = () => { previousMode.current = cookieReadPreferences() ? null : "banner"; setMode("policy"); };
+    const sync = (event) => { if (event.key === COOKIE_PREFS_KEY || event.key === META_CONSENT_KEY || event.key === null) { apply(); setMode(cookieReadPreferences() ? null : "banner"); } };
+    const initial = cookieReadPreferences();
+    if (!initial?.marketing) metaClearCookies();
+    if (!initial?.analytics) { try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch {} }
     run();
     const auth = supabase?.auth.onAuthStateChange(() => { setTimeout(run, 0); });
-    const interval = setInterval(run, 60000);
+    const interval = setInterval(() => { if (cookieReadPreferences()) run(); else { apply(); setMode((current) => current || "banner"); } }, 60000);
     window.addEventListener("s24-meta-registration", run);
-    const editConsent = () => setEditing(true);
-    window.addEventListener("s24-edit-meta-consent", editConsent);
-    const sync = (event) => { if (event.key === META_CONSENT_KEY) { setChoice(metaAllowed()); if (!metaAllowed()) { window.fbq?.("consent", "revoke"); metaClearCookies(); } else run(); } };
+    window.addEventListener("s24-edit-meta-consent", edit);
+    window.addEventListener("s24-open-cookie-policy", policy);
+    window.addEventListener("s24-cookie-preferences-changed", apply);
     window.addEventListener("storage", sync);
-    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("s24-edit-meta-consent", editConsent); window.removeEventListener("storage", sync); };
+    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("s24-edit-meta-consent", edit); window.removeEventListener("s24-open-cookie-policy", policy); window.removeEventListener("s24-cookie-preferences-changed", apply); window.removeEventListener("storage", sync); };
   }, []);
-  const decide = (allowed) => {
-    metaWrite(META_CONSENT_KEY, { allowed, at: Date.now() });
-    setChoice(allowed); setEditing(false);
-    if (allowed) { metaStartPixel(); void metaFlushRegistration(); }
-    else { window.fbq?.("consent", "revoke"); metaClearCookies(); localStorage.removeItem(META_PENDING_KEY); }
+  const choose = (analytics, marketing) => {
+    if (!cookieSavePreferences(analytics, marketing)) { setError("Naršyklė neleidžia išsaugoti pasirinkimo. Patikrinkite svetainės saugyklos nustatymus. Neprivalomas matavimas neįjungtas."); return; }
+    setSaved(cookieReadPreferences()); setMode(null); setError("");
   };
-  const button = { minHeight: 44, padding: "10px 16px", border: "1px solid #102438", borderRadius: 8, background: "#fff", color: "#102438", fontWeight: 750, cursor: "pointer" };
+  const showPreferences = () => { setDraft(saved || { analytics: false, marketing: false }); setError(""); setMode("preferences"); };
+  const showPolicy = () => { previousMode.current = mode; setMode("policy"); };
+  const policyCloseRef = useRef(null);
+  policyCloseRef.current = () => setMode(previousMode.current);
+  const stablePolicyClose = useRef(() => policyCloseRef.current());
+  const errorMessage = error ? <p className="s24-cookie-error" role="alert">{error}</p> : null;
   return <>
-    {choice === null || editing ? <section aria-label="Reklamos matavimo pasirinkimas" style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 1200, maxWidth: 460, padding: 16, background: "#fff", color: "#102438", border: "1px solid #dce5eb", borderRadius: 14, boxShadow: "0 10px 45px #10243825", maxHeight: "70dvh", overflowY: "auto" }}>
-      <b>Ar sutinkate su svetainės Statybos24 privatumo politika?</b>
-      <p style={{ fontSize: 13, lineHeight: 1.5, margin: "8px 0 12px" }}>Daugiau informacijos skaitykite paspaudę privatumo politika.</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <button type="button" style={button} onClick={() => decide(false)}>Nesutinku</button>
-        <button type="button" style={button} onClick={() => decide(true)}>Sutinku</button>
-        <button type="button" style={{ ...button, borderColor: "transparent" }} onClick={() => setPrivacy(true)}>Privatumo politika</button>
-      </div>
-    </section> : null}
-    <PlatformPrivacyDialog open={privacy} onClose={() => setPrivacy(false)} />
+    <style>{COOKIE_UI_STYLES}</style>
+    {mode === "banner" && createPortal(<section className="s24-cookie-banner s24-cookie-ui" aria-label="Slapukų pasirinkimas">
+      <span className="s24-cookie-eyebrow">JŪSŲ PASIRINKIMAS</span><h2>Vertiname jūsų privatumą</h2>
+      <p>Būtinąją saugyklą naudojame svetainės veikimui. Tik jums leidus įjungsime lankomumo analizę ir reklamos rezultatų matavimą. Pasirinkimą galite keisti bet kada. <button type="button" className="s24-cookie-link" onClick={showPolicy}>Slapukų politika</button></p>
+      <div className="s24-cookie-actions"><button type="button" className="s24-cookie-button primary" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button" onClick={showPreferences}>Pritaikyti</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}
+    </section>, document.body)}
+    {mode === "preferences" && <CookieModal title="Pritaikyti sutikimo parinktis" onClose={stableClose.current} footer={<><div className="s24-cookie-actions"><button type="button" className="s24-cookie-button" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button primary" onClick={() => choose(draft.analytics, draft.marketing)}>Išsaugoti mano nuostatas</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}</>}>
+      <p>Pasirinkite, kurias neprivalomas priemones leidžiate naudoti. Būtinosios užtikrina prisijungimą ir platformos funkcijas.</p>
+      {expanded && <p>Analitinė ir reklaminė kategorijos valdomos atskirai. Reklaminė kategorija apima ir „Meta“ serverio įvykių siuntimą. Atsisakius neprivalomų priemonių galite registruotis, ieškoti darbuotojų ir naudotis darbo funkcijomis.</p>}
+      <button type="button" className="s24-cookie-link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "Rodyti mažiau" : "Rodyti daugiau"}</button>
+      <CookieCategory title="Būtinieji" subtitle="Prisijungimas, saugumas ir jūsų pasirinkimai" necessary><p>Sesijos ir techninė saugykla reikalinga jūsų prašomoms paslaugoms. Ši kategorija neapima reklamos sekimo.</p></CookieCategory>
+      <CookieCategory title="Analitiniai" subtitle="Svetainės lankomumo analizė" enabled={draft.analytics} onToggle={() => setDraft((value) => ({ ...value, analytics: !value.analytics }))}><p>Mūsų lankomumo skaitiklis saugo naršyklės lankytojo identifikatorių ir siunčia apsilankymą į statybos24.lt serverį. Prisijungus gali būti įtrauktas paskyros identifikatorius. „Google Analytics“ šiame diegime nėra.</p></CookieCategory>
+      <CookieCategory title="Reklaminiai" subtitle="„Meta Pixel“ ir „Conversions API“" enabled={draft.marketing} onToggle={() => setDraft((value) => ({ ...value, marketing: !value.marketing }))}><p>Leidžiama matuoti puslapio peržiūras ir patvirtintas naujas darbuotojų registracijas, perduodant „Meta“ reklamos identifikatorius, naršyklės informaciją ir užkoduotą el. paštą. Duomenys gali būti susieti su „Meta“ paskyra.</p></CookieCategory>
+      <p className="s24-cookie-note" style={{ marginTop: 18 }}>Pasirinkimas galioja 180 dienų šioje naršyklėje. <button type="button" className="s24-cookie-link" onClick={showPolicy}>Skaityti slapukų politiką</button></p>
+    </CookieModal>}
+    {mode === "policy" && <CookieModal title="Slapukų politika" wide onClose={stablePolicyClose.current} footer={<div className="s24-cookie-actions"><button type="button" className="s24-cookie-button primary" onClick={showPreferences}>Keisti parinktis</button><button type="button" className="s24-cookie-button" onClick={stablePolicyClose.current}>Grįžti</button><a className="s24-cookie-button" href="/slapuku-politika" style={{ textAlign: "center", textDecoration: "none" }}>Atskiras puslapis</a></div>}><CookiePolicyContent /></CookieModal>}
   </>;
 }
+function CookiePolicyPage() {
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  useEffect(() => { document.title = "Slapukų politika | Statybos24.lt"; }, []);
+  return <div className="s24-cookie-page"><style>{COOKIE_UI_STYLES}</style><header className="s24-cookie-page-header"><div><BrandLogo href="/" height={44} /><a href="/">← Į svetainę</a></div></header><main className="s24-cookie-page-main"><span className="s24-cookie-eyebrow">STATYBOS24.LT · PRIVATUMAS</span><h1>Slapukų politika</h1><p>Sužinokite, ką saugome naršyklėje ir kaip valdyti savo pasirinkimą.</p><CookiePolicyContent /><div className="s24-cookie-page-actions"><button type="button" onClick={() => window.dispatchEvent(new Event("s24-edit-meta-consent"))}>Keisti slapukų parinktis</button><button type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button><a href="/">Grįžti į svetainę</a></div></main><PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} /></div>;
+}
+
 
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-12-meta-v7";
+const PRIVACY_VERSION = "2026-10-13-cookies-v8";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
@@ -1727,7 +1849,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
 
-        <p><b>Reklamos rezultatų matavimas.</b> Tik gavus jūsų atskirą sutikimą naudojami „Meta Pixel“ ir „Conversions API“. „Meta“ perduodama puslapio peržiūra, patvirtintos naujos darbuotojo registracijos įvykis, naršyklės informacija, reklamos paspaudimo ir naršyklės identifikatoriai (_fbc, _fbp) bei SHA-256 užkoduotas el. paštas. Šie duomenys nėra anoniminiai: „Meta“ gali juos susieti su jūsų paskyra reklamos rezultatams matuoti ir optimizuoti. „Meta“ slapukų galiojimas šiame diegime – iki 90 dienų, sutikimo pasirinkimas saugomas iki 180 dienų. Sutikimą galima atšaukti privatumo politikos lange pasirinkus „Keisti slapukų pasirinkimą“. Atsisakius registracija ir platformos paslaugos veikia įprastai. Registracijos matavimo techniniame žurnale saugomas paskyros identifikatorius, įvykio identifikatorius, laikas ir siuntimo būsena; el. paštas ir reklamos slapukai jame nekaupiami. Daugiau apie „Meta“ duomenų tvarkymą: <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politika</a>.</p>
+        <p><b>Slapukai ir neprivalomas matavimas.</b> Lankomumo analitika ir „Meta“ reklamos matavimas naudojami tik pagal jūsų pasirinktas kategorijas. Išsamus naršyklės saugyklos, teikėjų, perduodamų duomenų ir trukmės paaiškinimas pateikiamas atskiroje <button type="button" onClick={() => { onClose(); window.dispatchEvent(new Event("s24-open-cookie-policy")); }} style={{ border: 0, background: "none", padding: 0, font: "inherit", color: "#a75208", textDecoration: "underline", cursor: "pointer" }}>slapukų politikoje</button>. Pasirinkimą galima keisti per „Slapukų parinktys“. Atsisakius neprivalomo matavimo registracija ir platformos paslaugos veikia įprastai.</p>
 
         <p><b>Apsauga nuo automatinių užklausų.</b> Registracijos ir SMS užklausų apsaugai naudojama Cloudflare Turnstile patikra, kuri gali veikti nematomai naršyklėje. Daugiau informacijos pateikiama <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Cloudflare Turnstile privatumo pranešime</a>.</p>
 
@@ -29871,6 +29993,8 @@ function PublicLandingPage({
           <div className="home-legal-links">
             <button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button>
             <button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>
+            <a className="home-terms-link" href="/slapuku-politika">Slapukų politika</a>
+            <button className="home-terms-link" type="button" onClick={() => window.dispatchEvent(new Event("s24-edit-meta-consent"))}>Slapukų parinktys</button>
             <button className="home-terms-link" type="button" onClick={() => setBusinessDetailsOpen(true)}>Rekvizitai</button>
           </div>
           <span>© 2026 statybos24.lt</span>
@@ -35499,79 +35623,50 @@ const mobileModalSafetyStyles = `
 
 function SiteAnalyticsTracker() {
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
+    if (typeof window === "undefined" || !supabase) return undefined;
     const hostname = String(window.location.hostname || "").toLowerCase();
-    if (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname.endsWith(".local")
-    ) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".local")) return undefined;
+    let cancelled = false, running = false, sent = false, generation = 0;
     async function sendVisit() {
+      if (cancelled || running || sent || !cookieAnalyticsAllowed()) return;
+      running = true;
+      const started = generation;
       try {
         const observerKey = "s24_analytics_observer_v1";
         const visitorKey = "s24_visitor_id_v1";
-
-        if (window.localStorage.getItem(observerKey) === "1") {
-          return;
-        }
-
+        const visitorAtKey = "s24_visitor_at_v1";
+        if (window.localStorage.getItem(observerKey) === "1") return;
         const sessionResult = await supabase.auth.getSession();
-        if (cancelled) return;
-
+        if (cancelled || !cookieAnalyticsAllowed() || started !== generation) return;
         const sessionUser = sessionResult.data?.session?.user || null;
         const email = String(sessionUser?.email || "").trim().toLowerCase();
-
-        if (
-          email === "4floss@gmail.com" ||
-          email === "tattoo.staponas@gmail.com"
-        ) {
-          window.localStorage.setItem(observerKey, "1");
-          return;
+        if (email === "4floss@gmail.com" || email === "tattoo.staponas@gmail.com") {
+          window.localStorage.setItem(observerKey, "1"); return;
         }
-
         let visitorId = window.localStorage.getItem(visitorKey);
-        if (!visitorId) {
-          visitorId =
-            typeof crypto?.randomUUID === "function"
-              ? crypto.randomUUID()
-              : `s24-${Date.now()}-${Math.random()
-                  .toString(36)
-                  .slice(2)}-${Math.random().toString(36).slice(2)}`;
+        const visitorAt = Number(window.localStorage.getItem(visitorAtKey));
+        if (!visitorId || !visitorAt || Date.now() - visitorAt > COOKIE_CHOICE_MS) {
+          visitorId = typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `s24-${Date.now()}-${Math.random().toString(36).slice(2)}`;
           window.localStorage.setItem(visitorKey, visitorId);
+          window.localStorage.setItem(visitorAtKey, String(Date.now()));
         }
-
-        await fetch("/api/analytics/visit", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            visitorId,
-            userId: sessionUser?.id || null,
-          }),
-          keepalive: true,
-          credentials: "same-origin",
-        });
-      } catch {
-        // Lankomumo skaitiklis niekada neturi trukdyti naudotis svetaine.
-      }
+        if (cancelled || !cookieAnalyticsAllowed() || started !== generation) return;
+        const response = await fetch("/api/analytics/visit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitorId, userId: sessionUser?.id || null }), keepalive: true, credentials: "same-origin" });
+        if (response.ok) sent = true;
+      } catch { /* Measurement must never block the platform. */ }
+      finally { running = false; }
     }
-
-    sendVisit();
-
-    return () => {
-      cancelled = true;
-    };
+    const changed = () => { generation += 1; if (!cookieAnalyticsAllowed()) sent = false; else void sendVisit(); };
+    const storage = (event) => { if (event.key === COOKIE_PREFS_KEY || event.key === null) changed(); };
+    void sendVisit();
+    window.addEventListener("s24-cookie-preferences-changed", changed);
+    window.addEventListener("storage", storage);
+    const retry = setInterval(() => { void sendVisit(); }, 60000);
+    return () => { cancelled = true; clearInterval(retry); window.removeEventListener("s24-cookie-preferences-changed", changed); window.removeEventListener("storage", storage); };
   }, []);
-
   return null;
 }
+
 
 function MobilePopupBackGuard() {
   useEffect(() => {
@@ -35917,13 +36012,16 @@ function FatalAppError() {
 applyBrandFavicon();
 
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+const isCookiePolicyRoute = currentPath === "/slapuku-politika";
 const isHireRoute = currentPath === "/hire";
 const isHireLoginRoute = currentPath === "/hire/login";
 const isHirePortalRoute = currentPath === "/hire/portal";
 
 createRoot(document.getElementById("root")).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
-    {isHireLoginRoute ? (
+    {isCookiePolicyRoute ? (
+      <><CookiePolicyPage /><MetaMarketingConsent /></>
+    ) : isHireLoginRoute ? (
       <HireEmployerLoginPage />
     ) : isHirePortalRoute ? (
       <HireEmployerPortalPage />
