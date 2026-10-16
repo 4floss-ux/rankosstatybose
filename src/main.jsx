@@ -13230,15 +13230,25 @@ function CalendarDemoChat({target,title,onClose}) {
   </div>;
 }
 
-function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeChange, onBack, onOpenJob, onCreateJob, onSelectJob, currentJobId, workers = [], workersLoading = false, onWorkerProfile, onWorkerMessage, onGroupMessage, onDemoProfile }) {
+function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeChange, onBack, onOpenJob, onCreateJob, onSelectJob, currentJobId, workers = [], workersLoading = false, onWorkerProfile, onWorkerMessage, onGroupMessage, onDemoProfile, teamName, unreadCount, calendarMemory, memoryKey }) {
   const today = () => { const [y,m,d] = localDateISO(new Date()).split("-").map(Number); return new Date(y,m-1,d,12); };
-  const [anchor, setAnchor] = useState(today);
-  const [mode, setMode] = useState("week");
-  const [city, setCity] = useState("");
-  const [selectedDate, setSelectedDate] = useState(() => localDateISO(new Date()));
-  const [selectedId, setSelectedId] = useState(null);
-  const [demoMode, setDemoMode] = useState(false);
+  const memory = calendarMemory?.current?.key === memoryKey ? calendarMemory.current : {};
+  const [anchor, setAnchor] = useState(() => memory.anchor ? new Date(memory.anchor) : today());
+  const [mode, setMode] = useState(memory.mode || "week");
+  const [city, setCity] = useState(memory.city || "");
+  const [selectedDate, setSelectedDate] = useState(memory.selectedDate || localDateISO(new Date()));
+  const [selectedId, setSelectedId] = useState(memory.selectedId || null);
+  const [demoMode, setDemoMode] = useState(memory.demoMode || false);
   const [demoAction, setDemoAction] = useState(null);
+  const [responsible, setResponsible] = useState(memory.responsible || "");
+  const [missingOnly, setMissingOnly] = useState(memory.missingOnly || false);
+  const [resultsOnly, setResultsOnly] = useState(false);
+
+  const ownerId = job => demoMode ? job.demoResponsible : (job.responsible_user_id || job.created_by || "");
+  const ownerName = job => demoMode ? job.demoResponsible : (teamName?.(ownerId(job)) || "Nepaskirta");
+  const needsPeople = job => !["completed","cancelled"].includes(job.status) && Number(job.workers_needed || 0)>Number(job.confirmedCount || 0);
+  const needsResults = job => !["completed","cancelled"].includes(job.status) && jobHasEnded(job) && Number(job.confirmedCount || 0)>0;
+
   const detailCardRef = useRef(null);
   const scrollToDetailCard = () => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -13251,10 +13261,11 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
     }));
   };
 
-  const [demoScope, setDemoScope] = useState("mine");
+  const [demoScope, setDemoScope] = useState(memory.demoScope || "mine");
+  useEffect(() => { if(calendarMemory) calendarMemory.current={key:memoryKey,anchor:anchor.toISOString(),mode,city,selectedDate,selectedId,responsible,missingOnly,demoMode,demoScope}; },[anchor,mode,city,selectedDate,selectedId,responsible,missingOnly,demoMode,demoScope,memoryKey]);
   const effectiveScope = demoMode ? demoScope : jobScope;
   const allowAllScope = demoMode || canSeeAllCompanyJobs;
-  function changeScope(value) { if (demoMode) setDemoScope(value); else onScopeChange(value); setSelectedId(null); setCity(""); }
+  function changeScope(value) { if (demoMode) setDemoScope(value); else onScopeChange(value); setSelectedId(null); setCity(""); setResponsible(""); }
   const day = (date, delta = 0) => { const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12); copy.setDate(copy.getDate() + delta); return copy; };
   const first = mode === "month" ? new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12) : day(anchor);
   const gridStart = day(first, -((first.getDay() + 6) % 7));
@@ -13280,13 +13291,17 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
       const [title, city, start_time, end_time, workers_needed, confirmedCount, status] = demoTemplates[index];
       const work_date = localDateISO(date);
       const responsible = ["Alanas", "Mantas", "Tomas"][index % 3];
-      return {id:`demo-${work_date}-${index}`, demoResponsible:responsible, demoMine:responsible === "Alanas", title, city, address_text:`${city} · pavyzdinis objektas`, work_date, start_time, end_time, workers_needed, confirmedCount, status, description:"Išgalvotas darbas, skirtas kalendoriaus peržiūrai. Kvietimai nesiunčiami."};
+      return {id:`demo-${work_date}-${index}`, demoResponsible:responsible, demoMine:responsible === "Alanas", pendingInvitationCount:index%3, unclosedAttendanceCount:status === "open" ? confirmedCount : 0, title, city, address_text:`${city} · pavyzdinis objektas`, work_date, start_time, end_time, workers_needed, confirmedCount, status, description:"Išgalvotas darbas, skirtas kalendoriaus peržiūrai. Kvietimai nesiunčiami."};
     });
   });
   const calendarJobs = demoMode ? demoJobs.filter(job => demoScope === "all" || job.demoMine) : jobs.filter(job => !(["draft", "open"].includes(job.status) && Number(job.confirmedCount || 0) === 0 && jobHasStarted(job)));
-  function toggleDemo() { setDemoMode(value => !value); setCity(""); setSelectedId(null); }
+  function toggleDemo() { setDemoMode(value => !value); setCity(""); setResponsible(""); setSelectedId(null); setMissingOnly(false); setResultsOnly(false); }
   const cities = [...new Set(calendarJobs.map(j => j.city).filter(Boolean))].sort((a,b) => a.localeCompare(b, "lt"));
-  const filtered = calendarJobs.filter(j => !city || j.city === city);
+  const owners = [...new Map(calendarJobs.map(job => [ownerId(job),ownerName(job)])).entries()].filter(([id]) => id);
+  const baseFiltered = calendarJobs.filter(j => (!city || j.city === city) && (!responsible || ownerId(j) === responsible));
+  const periodJobs = baseFiltered.filter(j => days.some(d => localDateISO(d) === String(j.work_date || "").slice(0,10)));
+  const filtered = baseFiltered.filter(j => (!missingOnly || needsPeople(j)) && (!resultsOnly || needsResults(j)));
+  const summary = periodJobs.reduce((v,j) => {v.jobs++; if(!["completed","cancelled"].includes(j.status)){v.confirmed+=Number(j.confirmedCount||0);v.missing+=Math.max(0,Number(j.workers_needed||0)-Number(j.confirmedCount||0));} if(needsResults(j))v.results++;return v;},{jobs:0,confirmed:0,missing:0,results:0});
   const forDate = date => filtered.filter(j => String(j.work_date || "").slice(0,10) === date).sort((a,b) => String(a.start_time || "").localeCompare(String(b.start_time || "")));
   const selected = filtered.find(j => j.id === selectedId);
   const status = job => {
@@ -13301,7 +13316,7 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
     setAnchor(next); setSelectedDate(localDateISO(mode === "week" ? day(next, -((next.getDay()+6)%7)) : next)); setSelectedId(null);
   };
   const setView = value => { setMode(value); setSelectedId(null); const next = day(anchor); setSelectedDate(localDateISO(value === "month" ? new Date(next.getFullYear(),next.getMonth(),1,12) : next)); };
-  const card = job => { const s = status(job); return <button key={job.id} type="button" className={`edcal-job ${s.tone} ${selectedId === job.id ? "selected" : ""}`} onClick={() => {setSelectedId(job.id); setDemoAction(null); scrollToDetailCard(); if (!demoMode) onSelectJob?.(job); setSelectedDate(String(job.work_date).slice(0,10));}} aria-pressed={selectedId === job.id}><b>{formatJobTitle(job.title)}</b>{demoMode && <span className={`edcal-owner ${job.demoMine ? "mine" : ""}`}>{job.demoResponsible}</span>}<span>{job.city || "Vieta nenurodyta"}</span><span>{String(job.start_time || "").slice(0,5)}–{String(job.end_time || "").slice(0,5)}</span><em>{s.label}</em></button>; };
+  const card = job => { const s = status(job); return <button key={job.id} type="button" className={`edcal-job ${s.tone} ${selectedId === job.id ? "selected" : ""}`} onClick={() => {setSelectedId(job.id); setDemoAction(null); scrollToDetailCard(); if (!demoMode) onSelectJob?.(job); setSelectedDate(String(job.work_date).slice(0,10));}} aria-pressed={selectedId === job.id}><b>{formatJobTitle(job.title)}</b><span className="edcal-owner">{ownerName(job)}</span><span>{job.city || "Vieta nenurodyta"}</span><span>{String(job.start_time || "").slice(0,5)}–{String(job.end_time || "").slice(0,5)}</span><em>{s.label}</em>{Number.isFinite(job.pendingInvitationCount) && <span>Laukiama atsakymų: {job.pendingInvitationCount}</span>}{needsPeople(job) && <span>Trūksta: {Math.max(0,Number(job.workers_needed)-Number(job.confirmedCount||0))}</span>}{needsResults(job) && <span className="edcal-alert">Pateikti darbo rezultatus</span>}{!demoMode && Number(unreadCount?.(job)||0)>0 && <span className="edcal-alert">Naujos žinutės: {unreadCount(job)}</span>}</button>; };
   return <>
     <style>{`
       .edcal-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.edcal-head h1{font-family:Manrope,Inter,sans-serif;font-size:34px;letter-spacing:-.035em;margin:6px 0}.edcal-head p{color:#6c7a88;margin:8px 0}.edcal-actions{display:flex;gap:8px;flex-wrap:wrap}.edcal-panel{background:#fff;border:1px solid #dfe7ed;border-radius:16px;padding:18px;min-width:0}.edcal-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}.edcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.edcal-nav button{min-height:40px}.edcal-switch{display:flex;background:#f1f4f6;padding:4px;border-radius:10px;gap:4px}.edcal-switch button{border:0;background:transparent;padding:9px 13px;border-radius:8px;color:#526374;font:inherit;cursor:pointer}.edcal-switch button.active{background:#fff1e5;color:#9c5417;font-weight:800}.edcal-select{padding:10px;border:1px solid #dbe4ea;border-radius:9px;background:#fff;color:#102438;max-width:100%;font:inherit}.edcal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #e4ebf0;border-left:1px solid #e4ebf0;border-radius:12px;overflow:hidden}.edcal-cell{min-width:0;border-right:1px solid #e4ebf0;border-bottom:1px solid #e4ebf0;padding:8px;min-height:155px;background:#fff}.edcal-cell.weekend{background:#f8fafb}.edcal-cell.outside{background:#f1f4f6}.edcal-date{border:0;background:transparent;color:#102438;font:inherit;text-align:left;cursor:pointer;padding:5px;margin-bottom:6px;border-radius:7px}.edcal-date.today{background:#fff1e5;color:#a85a18;font-weight:900}.edcal-date span{display:block;font-size:11px;color:#6c7a88}.edcal-job{display:grid;gap:5px;width:100%;min-width:0;text-align:left;padding:10px 8px;margin:5px 0;border:1px solid #dfe7ed;border-left:4px solid #f08a28;border-radius:10px;background:#fff;color:#102438;font:inherit;cursor:pointer;overflow-wrap:anywhere}.edcal-job.selected{outline:2px solid #f08a28;outline-offset:1px}.edcal-job b{font-size:12px}.edcal-job span{color:#607180;font-size:11px}.edcal-job em{font-size:11px;font-style:normal;border-radius:8px;padding:5px;background:#fff3e7;color:#9c5417}.edcal-job.green{border-left-color:#19815a}.edcal-job.green em{background:#edf8f3;color:#167a54}.edcal-job.red{border-left-color:#b64d2a}.edcal-job.red em{background:#fff1ed;color:#b4472a}.edcal-job.grey{border-left-color:#8896a3}.edcal-job.grey em{background:#f1f4f6;color:#526374}.edcal-legend{display:flex;gap:15px;flex-wrap:wrap;color:#607180;font-size:12px;margin-top:14px}.edcal-detail h2{margin:0 0 10px;font-family:Manrope,Inter,sans-serif}.edcal-detail p{color:#607180;white-space:pre-wrap;overflow-wrap:anywhere}.edcal-mobile{display:none}.edcal-empty{color:#6c7a88;padding:20px 0}.edcal-daystrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0}.edcal-daystrip button{padding:10px 2px;border:1px solid #dfe7ed;border-radius:9px;background:#fff;color:#102438;cursor:pointer}.edcal-daystrip button.active{background:#fff1e5;border-color:#f08a28}.edcal-daystrip span{display:block;font-size:10px;margin-top:5px}.edcal-job:focus-visible,.edcal-date:focus-visible,.edcal-daystrip button:focus-visible{outline:2px solid #f08a28;outline-offset:2px}
@@ -13328,19 +13343,23 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
       .edcal-facts{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:16px 22px}.edcal-detail-body{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 22px 20px;align-items:start}.edcal-description,.edcal-people{padding:14px!important;margin:0!important;box-sizing:border-box}.edcal-description h3,.edcal-people h3{margin:0 0 12px!important;min-height:22px;line-height:22px}.edcal-person{display:grid;grid-template-columns:34px minmax(70px,1fr) auto;gap:8px;align-items:center}.edcal-person-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap}.edcal-person-actions .edcal-status{font-size:10px;white-space:nowrap;padding:5px 7px}.edcal-person-actions .ed-secondary{font-size:10px;padding:6px 8px;white-space:nowrap}.edcal-person-copy b{font-size:12px}.edcal-person-copy small{font-size:10px}
       @media(max-width:1050px){.edcal-person{grid-template-columns:30px minmax(0,1fr)}.edcal-person-actions{grid-column:2/-1;justify-content:flex-start;flex-wrap:wrap}}
       @media(max-width:760px){.edcal-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px 16px}.edcal-detail-body{grid-template-columns:minmax(0,1fr);gap:12px;padding:0 16px 16px}.edcal-person-actions{grid-column:2/-1;justify-content:flex-start}.edcal-person-actions .edcal-status{max-width:none}}
+
+      .edcal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.edcal-summary button{display:grid;gap:7px;text-align:left;padding:14px;border:1px solid #dfe7ed;border-radius:12px;background:#fff;color:#102438;cursor:pointer}.edcal-summary span{font-size:11px;color:#607180}.edcal-summary b{font-size:24px}.edcal-extra-filters{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.edcal-extra-filters label{display:flex;align-items:center;gap:6px;font-size:12px;color:#526374}.edcal-extra-filters input{accent-color:#f08a28}.edcal-owner-filter{width:180px}.edcal-day-create{border:1px dashed #e4c4a2;border-radius:8px;background:#fffaf5;color:#9c5417;font:inherit;font-size:10px;cursor:pointer;padding:7px;width:100%;margin-top:5px}.edcal-alert{font-weight:800;color:#b85f0e!important}.edcal-job .edcal-owner{font-size:10px;font-weight:800;background:#f1f4f6;border-radius:6px;padding:4px}.edcal-summary button:focus-visible{outline:2px solid #f08a28}@media(max-width:760px){.edcal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.edcal-summary button{padding:11px}.edcal-summary b{font-size:21px}.edcal-owner-filter{width:100%}}
     `}</style>
     <div className="edcal-head"><div><div className="eyebrow">DARBDAVIO PASKYRA · BUSINESS PRO</div><h1>Darbų kalendorius</h1><p>Darbo pasiūlymai ir darbuotojų patvirtinimai vienoje vietoje.</p></div><div className="edcal-actions"><button type="button" className="ed-secondary" onClick={onBack}>← Grįžti į skydelį</button><button type="button" className="ed-secondary" onClick={toggleDemo}>{demoMode ? "Grįžti prie mano darbų" : "Peržiūrėti pavyzdį"}</button>{!demoMode && <button type="button" className="ed-primary" onClick={onCreateJob}>+ Sukurti darbą</button>}</div></div>
     {demoMode && <div role="status" style={{padding:"14px 16px",background:"#fff7ee",border:"1px solid #f2d3b8",borderRadius:12,color:"#8a531d"}}><b>Demonstracinis režimas · Išgalvoti darbai</b><br/>Rodomi tik pavyzdžiai. Jie nesaugomi, darbuotojai nekviečiami. Pasirinkite darbo kortelę arba perjunkite savaitę ir mėnesį.</div>}
+    <div className="edcal-summary" aria-label="Pasirinkto laikotarpio suvestinė"><button type="button" onClick={() => {setMissingOnly(false);setResultsOnly(false);}}><span>Darbai</span><b>{summary.jobs}</b></button><button type="button" onClick={() => {setMissingOnly(false);setResultsOnly(false);}}><span>Patvirtintos vietos</span><b>{summary.confirmed}</b></button><button type="button" onClick={() => {setMissingOnly(true);setResultsOnly(false);}}><span>Trūksta darbuotojų</span><b>{summary.missing}</b></button><button type="button" onClick={() => {setMissingOnly(false);setResultsOnly(true);}}><span>Neužbaigti darbai</span><b>{summary.results}</b></button></div>
     <section className="edcal-panel" aria-label="Darbų kalendorius">
       <div className="edcal-scope-row"><div className="edcal-scope" role="group" aria-label="Kalendoriuje rodomi darbai"><button type="button" className={effectiveScope !== "all" || !allowAllScope ? "active" : ""} aria-pressed={effectiveScope !== "all" || !allowAllScope} onClick={() => changeScope("mine")}>Mano darbai</button>{allowAllScope && <button type="button" className={effectiveScope === "all" ? "active" : ""} aria-pressed={effectiveScope === "all"} onClick={() => changeScope("all")}>Visi įmonės darbai</button>}</div>{demoMode && <span className="edcal-scope-note">Pavyzdys: jūs – Alanas. Mantas ir Tomas – tos pačios įmonės naudotojai.</span>}</div>
+      <div className="edcal-extra-filters">{allowAllScope && <div className="edcal-owner-filter"><RoundedSelect className="edcal-select" ariaLabel="Atsakingas vadovas" value={responsible} options={[{value:"",label:"Visi vadovai"},...owners.map(([value,label]) => ({value,label}))]} onChange={value => {setResponsible(value);setSelectedId(null);}}/></div>}<label><input type="checkbox" checked={missingOnly} onChange={e => {setMissingOnly(e.target.checked);setSelectedId(null);}}/> Tik trūksta darbuotojų</label><label><input type="checkbox" checked={resultsOnly} onChange={e => {setResultsOnly(e.target.checked);setSelectedId(null);}}/> Reikia darbo rezultatų</label></div>
       <div className="edcal-toolbar"><div className="edcal-nav"><button type="button" className="ed-secondary" aria-label="Ankstesnis laikotarpis" onClick={() => move(-1)}>‹</button><b>{mode === "month" ? anchor.toLocaleDateString("lt-LT",{year:"numeric",month:"long"}) : `${days[0].toLocaleDateString("lt-LT")} – ${days[6].toLocaleDateString("lt-LT")}`}</b><button type="button" className="ed-secondary" aria-label="Kitas laikotarpis" onClick={() => move(1)}>›</button><button type="button" className="ed-secondary" onClick={() => {const now = today(); setAnchor(now);setSelectedDate(localDateISO(now));setSelectedId(null);}}>Šiandien</button></div><div className="edcal-toolbar-right"><div className="edcal-switch"><button type="button" className={mode === "week" ? "active" : ""} aria-pressed={mode === "week"} onClick={() => setView("week")}>Savaitė</button><button type="button" className={mode === "month" ? "active" : ""} aria-pressed={mode === "month"} onClick={() => setView("month")}>Mėnuo</button></div><div className="edcal-city"><RoundedSelect className="edcal-select" ariaLabel="Filtruoti pagal miestą" value={city} options={[{value:"",label:"Visi miestai"},...cities.map(c => ({value:c,label:c}))]} onChange={value => {setCity(value);setSelectedId(null);}}/></div></div></div>
-    <div className="edcal-grid edcal-desktop">{days.map(date => {const key=localDateISO(date); return <div key={key} className={`edcal-cell ${date.getDay() === 0 || date.getDay() === 6 ? "weekend" : ""} ${mode === "month" && date.getMonth() !== anchor.getMonth() ? "outside" : ""}`}><button type="button" className={`edcal-date ${key === localDateISO(new Date()) ? "today" : ""}`} onClick={() => {setSelectedDate(key);setSelectedId(null);}}><span>{date.toLocaleDateString("lt-LT",{weekday:"short"})}</span>{date.getDate()}</button>{forDate(key).map(card)}</div>;})}</div>
-    <div className="edcal-mobile">{mode === "week" ? <div className="edcal-daystrip">{days.map(d => {const k=localDateISO(d);return <button key={k} type="button" className={selectedDate === k ? "active" : ""} aria-pressed={selectedDate === k} onClick={() => {setSelectedDate(k);setSelectedId(null);}}>{d.getDate()}<span>{d.toLocaleDateString("lt-LT",{weekday:"short"})}</span></button>;})}</div> : <label>Pasirinkti dieną <input type="date" className="edcal-select" value={selectedDate} min={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth(),1,12))} max={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth()+1,0,12))} onChange={e => {if(e.target.value){setSelectedDate(e.target.value);setSelectedId(null);}}}/></label>}<h3>{selectedDate}</h3>{forDate(selectedDate).length ? forDate(selectedDate).map(card) : <p className="edcal-empty">Šią dieną darbo pasiūlymų nėra.</p>}</div>
+    <div className="edcal-grid edcal-desktop">{days.map(date => {const key=localDateISO(date); return <div key={key} className={`edcal-cell ${date.getDay() === 0 || date.getDay() === 6 ? "weekend" : ""} ${mode === "month" && date.getMonth() !== anchor.getMonth() ? "outside" : ""}`}><button type="button" className={`edcal-date ${key === localDateISO(new Date()) ? "today" : ""}`} onClick={() => {setSelectedDate(key);setSelectedId(null);}}><span>{date.toLocaleDateString("lt-LT",{weekday:"short"})}</span>{date.getDate()}</button>{forDate(key).map(card)}{!demoMode && <button type="button" className="edcal-day-create" aria-label={`Sukurti darbą ${key}`} onClick={() => onCreateJob({date:key})}>+ Sukurti darbą</button>}</div>;})}</div>
+    <div className="edcal-mobile">{mode === "week" ? <div className="edcal-daystrip">{days.map(d => {const k=localDateISO(d);return <button key={k} type="button" className={selectedDate === k ? "active" : ""} aria-pressed={selectedDate === k} onClick={() => {setSelectedDate(k);setSelectedId(null);}}>{d.getDate()}<span>{d.toLocaleDateString("lt-LT",{weekday:"short"})}</span></button>;})}</div> : <label>Pasirinkti dieną <input type="date" className="edcal-select" value={selectedDate} min={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth(),1,12))} max={localDateISO(new Date(anchor.getFullYear(),anchor.getMonth()+1,0,12))} onChange={e => {if(e.target.value){setSelectedDate(e.target.value);setSelectedId(null);}}}/></label>}<h3>{selectedDate}</h3>{!demoMode && <button type="button" className="ed-secondary" onClick={() => onCreateJob({date:selectedDate})}>+ Sukurti darbą šią dieną</button>}{forDate(selectedDate).length ? forDate(selectedDate).map(card) : <p className="edcal-empty">Šią dieną darbo pasiūlymų nėra.</p>}</div>
     <div className="edcal-legend"><span style={{color:"#167a54"}}>● Patvirtintas poreikis</span><span style={{color:"#9c5417"}}>● Laukiama darbuotojų</span><span style={{color:"#b4472a"}}>● Atšauktas darbas</span><span>● Užbaigta</span></div>
     {!filtered.some(j => days.some(d => localDateISO(d) === String(j.work_date || "").slice(0,10))) && <p className="edcal-empty">Šiuo laikotarpiu darbo pasiūlymų nėra.</p>}</section>
     {selected && <section ref={detailCardRef} className="edcal-panel edcal-detail" aria-live="polite">
-      <div className="edcal-detail-head"><div><div className="eyebrow">{demoMode ? "PAVYZDINIS DARBAS" : "DARBO INFORMACIJA"}</div><h2>{formatJobTitle(selected.title)}</h2></div><div className="edcal-detail-topactions"><button type="button" className="ed-secondary edcal-group-message" onClick={() => demoMode ? setDemoAction({type:"group"}) : onGroupMessage?.(selected)}>Žinutė visiems darbuotojams</button><span className={`edcal-status ${status(selected).tone}`}>{status(selected).label}</span><button type="button" className="edcal-close" aria-label="Uždaryti darbo informaciją" onClick={() => setSelectedId(null)}>×</button></div></div>
-      <div className="edcal-facts">{demoMode && <div className="edcal-responsible-fact"><span>Atsakingas vadovas</span><b>{selected.demoResponsible}</b></div>}<div><span>Data</span><b>{selected.work_date}</b></div><div><span>Darbo laikas</span><b>{String(selected.start_time || "").slice(0,5)}–{String(selected.end_time || "").slice(0,5)}</b></div><div><span>Vieta</span><b>{selected.address_text || selected.city}</b></div><div><span>Darbuotojai</span><b>{selected.confirmedCount || 0} / {selected.workers_needed || 0} patvirtinti</b></div></div>
+      <div className="edcal-detail-head"><div><div className="eyebrow">{demoMode ? "PAVYZDINIS DARBAS" : "DARBO INFORMACIJA"}</div><h2>{formatJobTitle(selected.title)}</h2></div><div className="edcal-detail-topactions">{!demoMode && <button type="button" className="ed-secondary" onClick={() => onCreateJob({sourceJob:selected})}>Kartoti darbą</button>}{!demoMode && needsResults(selected) && <button type="button" className="ed-primary" onClick={() => onOpenJob(selected)}>Pateikti darbo rezultatus</button>}<button type="button" className="ed-secondary edcal-group-message" onClick={() => demoMode ? setDemoAction({type:"group"}) : onGroupMessage?.(selected)}>Žinutė visiems darbuotojams</button><span className={`edcal-status ${status(selected).tone}`}>{status(selected).label}</span><button type="button" className="edcal-close" aria-label="Uždaryti darbo informaciją" onClick={() => setSelectedId(null)}>×</button></div></div>
+      <div className="edcal-facts"><div className="edcal-responsible-fact"><span>Atsakingas vadovas</span><b>{ownerName(selected)}</b></div><div><span>Data</span><b>{selected.work_date}</b></div><div><span>Darbo laikas</span><b>{String(selected.start_time || "").slice(0,5)}–{String(selected.end_time || "").slice(0,5)}</b></div><div><span>Vieta</span><b>{selected.address_text || selected.city}</b></div><div><span>Darbuotojai</span><b>{selected.confirmedCount || 0} / {selected.workers_needed || 0} patvirtinti</b></div></div>
       <div className="edcal-detail-body"><div className="edcal-description"><h3>Darbo aprašymas</h3>{selected.description ? <div className="edcal-description-text">{selected.description}</div> : <p>Darbo aprašymas nepateiktas.</p>}</div>
       {demoMode ? <div className="edcal-people"><h3>Pavyzdiniai darbuotojai <span>{selected.workers_needed}</span></h3>{selected.status === "cancelled" ? <div className="edcal-cancelled">Darbas atšauktas. Darbuotojų kvietimai nevykdomi.</div> : Array.from({length:selected.workers_needed},(_,index) => <div className="edcal-person" key={index}>{index < selected.confirmedCount ? <div className="edcal-avatar">{["J","T","M","D"][index]}</div> : <button type="button" className="edcal-avatar edcal-add-worker" aria-label="Rasti darbuotoją laisvai vietai" onClick={() => setDemoAction({type:"matches"})}>+</button>}<div className="edcal-person-copy"><b>{index < selected.confirmedCount ? ["Jonas","Tomas","Mantas","Darius"][index] : "Laisva vieta"}</b><small>{index < selected.confirmedCount ? "Pavyzdinis darbuotojas" : "Darbuotojas nepaskirtas"}</small></div>{index < selected.confirmedCount && <div className="edcal-person-actions"><span className={`edcal-status ${index < selected.confirmedCount ? "green" : "amber"}`}>{index < selected.confirmedCount ? "Patvirtino" : "Nepaskirta"}</span><button type="button" className="ed-secondary" onClick={() => onDemoProfile?.(["Jonas","Tomas","Mantas","Darius"][index],selected.city)}>Profilis</button><button type="button" className="ed-secondary" onClick={() => setDemoAction({type:"message",name:["Jonas","Tomas","Mantas","Darius"][index]})}>Žinutė</button></div>}</div>)}</div> : <div className="edcal-people"><h3>Darbuotojai</h3>{currentJobId !== selected.id || workersLoading ? <p role="status">Kraunami darbuotojai…</p> : workers.length ? workers.map(worker => <div className="edcal-person" key={worker.id}><div className="edcal-avatar">{String(worker.name || "D").slice(0,1)}</div><div className="edcal-person-copy"><b>{worker.name || "Darbuotojas"}</b><small>Darbo dalyvis</small></div><div className="edcal-person-actions"><span className="edcal-status green">Patvirtino</span><button type="button" className="ed-secondary" onClick={() => onWorkerProfile?.(worker, selected)}>Profilis</button>{worker.invitationId && <button type="button" className="ed-secondary" onClick={() => onWorkerMessage?.(worker,selected)}>Žinutė</button>}</div></div>) : <p>Patvirtintų darbuotojų nėra.</p>}{selected.status === "open" && Number(selected.workers_needed || 0) > Number(selected.confirmedCount || 0) && <div className="edcal-person edcal-free-place"><button type="button" className="edcal-avatar edcal-add-worker" aria-label="Rasti ir kviesti tinkamus darbuotojus" onClick={() => onOpenJob(selected)}>+</button><div className="edcal-person-copy"><b>Laisvos vietos: {Math.max(0,Number(selected.workers_needed || 0)-Number(selected.confirmedCount || 0))}</b><small>Rasti ir kviesti tinkamus darbuotojus</small></div><button type="button" className="ed-secondary" onClick={() => onOpenJob(selected)}>Rasti darbuotojus</button></div>}<div className="edcal-detail-actions"><button type="button" className="ed-primary" onClick={() => onOpenJob(selected)}>Atidaryti darbą ir darbuotojus</button>{selected.status === "open" && <button type="button" className="ed-secondary" onClick={() => onOpenJob(selected, true)}>Pakviesti iš favoritų</button>}</div></div>}</div>
       {demoMode && demoAction && !["message","group"].includes(demoAction.type) && <div className="edcal-demo-interaction" role="status"><b>{demoAction.type === "demo-invited" ? "Kvietimas · Demonstracija" : demoAction.type === "matches" ? "Tinkami darbuotojai · Pavyzdys" : demoAction.type === "group" ? "Bendras darbo pokalbis · Pavyzdys" : `Privati žinutė · ${demoAction.name}`}</b><p>{demoAction.type === "matches" ? "Tikrame darbe kandidatai atrenkami pagal darbo vietą, laiką, prieinamumą ir kitus darbo kriterijus. Žemiau – tik išgalvoti pavyzdžiai." : "Tikrame darbe čia atsidaro pokalbis. Demonstraciniame režime žinutės nesiunčiamos."}</p>{demoAction.type === "matches" && ["Lukas (pavyzdys)","Paulius (pavyzdys)"].map(name => <div className="edcal-person" key={name}><div className="edcal-avatar">{name.slice(0,1)}</div><div className="edcal-person-copy"><b>{name}</b><small>Pavyzdinis kandidatas · {selected.city}</small></div><button type="button" className="ed-secondary" onClick={() => setDemoAction({type:"demo-invited",name})}>Kviesti (pavyzdys)</button></div>)}{demoAction.type === "demo-invited" && <p>Kvietimo peržiūra: {demoAction.name}. Tikras kvietimas neišsiųstas.</p>}<button type="button" className="ed-secondary" onClick={() => setDemoAction(null)}>Uždaryti</button></div>}
@@ -13392,6 +13411,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyAvatarPreview, setCompanyAvatarPreview] = useState("");
   const [companyAvatarMarkedForRemoval, setCompanyAvatarMarkedForRemoval] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
+  const employerCalendarMemory = useRef(null);
   const [calendarRequested, setCalendarRequested] = useState(() => new URLSearchParams(window.location.search).get("employerView") === "calendar");
   const calendarAllowed = planSummary?.plan_key === "business_pro";
   const calendarVisible = calendarRequested && calendarAllowed;
@@ -15576,6 +15596,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     const counts = {};
     const historicalAcceptedCounts = {};
     const declinedInvitationCounts = {};
+    const pendingInvitationCounts = {};
     const jobIdByBookingId = new Map();
 
     if (!acceptanceCountsResult.error) {
@@ -15586,6 +15607,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     for (const invitation of invitationRows) {
+      if(invitation.status === "pending") pendingInvitationCounts[invitation.job_id]=(pendingInvitationCounts[invitation.job_id] || 0)+1;
       if (invitation.status === "declined") {
         declinedInvitationCounts[invitation.job_id] =
           (declinedInvitationCounts[invitation.job_id] || 0) + 1;
@@ -15654,6 +15676,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       confirmedCount: counts[job.id] || 0,
       historicalAcceptedCount: historicalAcceptedCounts[job.id] || 0,
       declinedInvitationCount: declinedInvitationCounts[job.id] || 0,
+      pendingInvitationCount: invitationsResult.error ? null : (pendingInvitationCounts[job.id] || 0),
       employerWonDisputes: disputeCounts[job.id]?.employer || 0,
       workerWonDisputes: disputeCounts[job.id]?.worker || 0,
       unclosedAttendanceCount: attendanceCounts[job.id]?.unclosed || 0,
@@ -16887,7 +16910,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  async function openNewJobForm() {
+  async function openNewJobForm(options = {}) {
     if (
       planSummary &&
       !planSummary.unlimited_jobs &&
@@ -16954,6 +16977,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       description: "",
       responsibleUserId: user.id,
     });
+    const copy = options?.sourceJob;
+    const chosenDate = /^\d{4}-\d{2}-\d{2}$/.test(String(options?.date || "")) ? options.date : employerTomorrowISO();
+    if (copy) {
+      setForm(previous => ({...previous,title:copy.title || previous.title,city:copy.city || previous.city,address:copy.address_text || "",workDate:chosenDate,startTime:String(copy.start_time || "08:00").slice(0,5),endTime:String(copy.end_time || "17:00").slice(0,5),breakStartTime:String(copy.break_start_time || "").slice(0,5),breakEndTime:String(copy.break_end_time || "").slice(0,5),workersNeeded:Math.max(1,Number(copy.workers_needed)||1),transportMode:copy.transport_mode || "self_arrival",payAmount:copy.pay_amount ?? "",payUnit:copy.pay_unit || "hour",description:copy.description || "",responsibleUserId:user.id}));
+      if(copy.address_text && copy.location_latitude != null && copy.location_longitude != null) setSelectedJobAddress({label:copy.address_text,latitude:copy.location_latitude,longitude:copy.location_longitude});
+      setNotice("Darbo sąlygos nukopijuotos. Patikrinkite naują datą ir išsaugokite. Darbuotojus reikės pakviesti iš naujo.");
+    } else if(options?.date) setForm(previous => ({...previous,workDate:chosenDate}));
     setShowJobForm(true);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -17981,6 +18011,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <main className="ed-shell">
         {calendarVisible && <EmployerWorkCalendar
           jobs={visibleJobs}
+          calendarMemory={employerCalendarMemory}
+          memoryKey={`${company?.id}:${user.id}`}
+          teamName={teamMemberName}
+          unreadCount={job => unreadEmployerNotifications(job.id).filter(item => item.event_type === "message").length}
           currentJobId={currentJob?.id}
           workers={jobWorkers}
           workersLoading={jobWorkersLoading}
@@ -18000,7 +18034,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           canSeeAllCompanyJobs={canSeeAllCompanyJobs}
           onScopeChange={scope => setJobScope(scope === "all" && canSeeAllCompanyJobs ? "all" : "mine")}
           onBack={() => navigateEmployerCalendar(false)}
-          onCreateJob={() => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm()); }}
+          onCreateJob={options => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm(options)); }}
           onOpenJob={(job, favorites) => { navigateEmployerCalendar(false); requestAnimationFrame(async () => { if (await openExistingJob(job)) { if (favorites && planSummary?.can_saved_workers) setWorkerSource("team"); } }); }}
         />}
         <div style={{display: calendarVisible ? "none" : "contents"}}>
@@ -18343,6 +18377,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
+        {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
         <div className="ed-heading">
           <div>
             <div className="eyebrow">DARBDAVIO PASKYRA</div>
