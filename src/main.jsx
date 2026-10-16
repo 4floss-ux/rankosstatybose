@@ -60,235 +60,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-// Meta tracking is deliberately opt-in and limited to Lithuania worker signups.
-const META_PIXEL_ID = "1836112917406632";
-const META_CONSENT_KEY = "s24_meta_consent_v1";
-const META_PENDING_KEY = "s24_meta_pending_registration_v1";
-let metaSending = false;
-let metaPageViewed = false;
-function metaRead(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
-function metaWrite(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } }
-function metaAllowed() { return cookieReadPreferences()?.marketing === true; }
-function metaCookie(name) { const item = document.cookie.split("; ").find((v) => v.startsWith(name + "=")); return item ? item.slice(name.length + 1) : undefined; }
-function metaClearCookies() {
-  for (const name of ["_fbp", "_fbc"]) {
-    document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
-    document.cookie = `${name}=; Max-Age=0; Path=/; Domain=.statybos24.lt; SameSite=Lax`;
-  }
-}
-function metaSafeLocation() { return !/[?&#](access_token|refresh_token|code|token|team_invite|type)=/i.test(window.location.href); }
-function metaStartPixel() {
-  if (!metaAllowed() || !metaSafeLocation()) return;
-  if (!window.fbq) {
-    const q = function (...args) { q.callMethod ? q.callMethod(...args) : q.queue.push(args); };
-    q.queue = []; q.loaded = true; q.version = "2.0"; q.push = q;
-    window.fbq = q; window._fbq = q;
-    const script = document.createElement("script"); script.async = true;
-    script.src = "https://connect.facebook.net/en_US/fbevents.js";
-    document.head.appendChild(script);
-    q("consent", "grant"); q("set", "autoConfig", false, META_PIXEL_ID); q("init", META_PIXEL_ID);
-  } else { window.fbq("consent", "grant"); }
-  // Never send auth callback tokens or recovery/team invitation query parameters.
-  if (!metaPageViewed && !/[?&#](access_token|refresh_token|code|token|team_invite|type)=/i.test(window.location.href)) {
-    window.fbq("track", "PageView"); metaPageViewed = true;
-  }
-  const click = new URLSearchParams(window.location.search).get("fbclid");
-  if (click && /^[A-Za-z0-9_-]{1,500}$/.test(click)) {
-    document.cookie = `_fbc=fb.1.${Date.now()}.${click}; Max-Age=7776000; Path=/; Secure; SameSite=Lax`;
-  }
-}
-function metaRememberRegistration(user, role) {
-  if (!metaAllowed() || role !== "worker" || !user?.id || user.identities?.length === 0) return;
-  const created = Date.parse(user.created_at);
-  if (!Number.isFinite(created) || Date.now() - created > 10 * 60000) return;
-  metaWrite(META_PENDING_KEY, { userId: user.id, at: Date.now(), browserSent: false, attempts: 0 });
-  // Sign-up with an immediate session may emit SIGNED_IN before this marker exists.
-  window.dispatchEvent(new Event("s24-meta-registration"));
-}
-async function metaFlushRegistration() {
-  if (!supabase || !metaAllowed() || !metaSafeLocation() || metaSending) return;
-  const p = metaRead(META_PENDING_KEY);
-  if (!p) return;
-  if (Date.now() - p.at > 48 * 3600000) { localStorage.removeItem(META_PENDING_KEY); return; }
-  if (p.attempts >= 4) return;
-  metaSending = true;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!metaAllowed() || session?.user?.id !== p.userId) return;
-    if (!session.user.email_confirmed_at) return;
-    p.attempts += 1; metaWrite(META_PENDING_KEY, p);
-    const { data, error } = await supabase.functions.invoke("meta-registration", {
-      body: { consent: true, fbc: metaCookie("_fbc"), fbp: metaCookie("_fbp") },
-    });
-    if (error || !data?.ok) return;
-    if (metaAllowed() && !p.browserSent) {
-      metaStartPixel();
-      window.fbq?.("track", "CompleteRegistration", { content_name: "worker_registration", status: true }, { eventID: data.event_id });
-      p.browserSent = true;
-    }
-    localStorage.removeItem(META_PENDING_KEY);
-  } catch { /* Measurement must never interrupt registration. */ }
-  finally { metaSending = false; }
-}
-const COOKIE_PREFS_KEY = "s24_cookie_preferences_v2";
-const COOKIE_CHOICE_MS = 180 * 86400000;
-function cookieReadPreferences() {
-  const saved = metaRead(COOKIE_PREFS_KEY);
-  if (saved?.version === 2 && typeof saved.analytics === "boolean" && typeof saved.marketing === "boolean" && Number.isFinite(saved.at) && saved.at <= Date.now() && Date.now() - saved.at < COOKIE_CHOICE_MS) return saved;
-  // Existing advertising choices remain valid; analytics is never granted by migration.
-  if (!saved) {
-    const legacy = metaRead(META_CONSENT_KEY);
-    if (typeof legacy?.allowed === "boolean" && Number.isFinite(legacy.at) && legacy.at <= Date.now() && Date.now() - legacy.at < COOKIE_CHOICE_MS) return { version: 2, necessary: true, analytics: false, marketing: legacy.allowed, at: legacy.at };
-  }
-  return null;
-}
-function cookieAnalyticsAllowed() { return cookieReadPreferences()?.analytics === true; }
-function cookieSavePreferences(analytics, marketing) {
-  const value = { version: 2, necessary: true, analytics: !!analytics, marketing: !!marketing, at: Date.now() };
-  if (!metaWrite(COOKIE_PREFS_KEY, value)) return false;
-  metaWrite(META_CONSENT_KEY, { allowed: value.marketing, at: value.at });
-  if (!value.marketing) {
-    window.fbq?.("consent", "revoke"); metaClearCookies();
-    try { localStorage.removeItem(META_PENDING_KEY); } catch { /* Storage may be restricted. */ }
-  }
-  if (!value.analytics) {
-    try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch { /* Optional storage. */ }
-  }
-  window.dispatchEvent(new Event("s24-cookie-preferences-changed"));
-  return true;
-}
-const COOKIE_UI_STYLES = `
-.s24-cookie-ui{--ck-navy:#102438;--ck-orange:#f08a28;--ck-light:#eff5fa;font-family:Inter,system-ui,sans-serif;color:var(--ck-light);font-size:14px;line-height:1.6;box-sizing:border-box}
-.s24-cookie-ui *{box-sizing:border-box}.s24-cookie-ui button,.s24-cookie-ui a{font:inherit}.s24-cookie-ui button{cursor:pointer}.s24-cookie-ui button:focus-visible,.s24-cookie-ui a:focus-visible,.s24-cookie-ui summary:focus-visible{outline:3px solid #ffc184;outline-offset:4px}
-.s24-cookie-banner{position:fixed;z-index:19000;bottom:20px;left:20px;width:min(560px,calc(100vw - 40px));border:1px solid rgba(255,255,255,.19);border-radius:20px;background:rgba(16,36,56,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 18px 60px rgba(7,22,37,.24);padding:25px;max-height:calc(100dvh - 40px);overflow-y:auto}
-.s24-cookie-eyebrow{display:block;font-size:10px;letter-spacing:.13em;font-weight:850;color:#ffc184;text-transform:uppercase;margin-bottom:8px}.s24-cookie-ui h2{font-size:23px;line-height:1.25;margin:0 0 12px;letter-spacing:-.025em;color:#fff}.s24-cookie-ui p{margin:0 0 16px;color:#d3e0ea}.s24-cookie-link{border:0;padding:0;background:none;color:#ffc184;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.s24-cookie-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.s24-cookie-button{min-height:46px;border:1px solid rgba(255,255,255,.5);border-radius:10px;padding:11px 12px;color:#fff;background:rgba(255,255,255,.055);font-size:13px!important;font-weight:800!important;line-height:1.3;white-space:normal}.s24-cookie-button:hover{background:rgba(255,255,255,.13)}.s24-cookie-button.primary{background:#f08a28;color:#102438;border-color:#f08a28}.s24-cookie-button.primary:hover{background:#ff9e45}.s24-cookie-button:disabled{cursor:default;opacity:.6}
-.s24-cookie-overlay{position:fixed;inset:0;z-index:21000;background:rgba(6,18,31,.44);backdrop-filter:blur(4px);display:grid;place-items:center;padding:20px}.s24-cookie-panel{display:flex;flex-direction:column;width:min(720px,100%);max-height:min(850px,calc(100dvh - 40px));border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:rgba(16,36,56,.96);backdrop-filter:blur(20px);box-shadow:0 24px 90px rgba(0,0,0,.28)}.s24-cookie-panel.wide{width:min(900px,100%)}.s24-cookie-panel-head{padding:24px 26px 18px;display:flex;align-items:flex-start;gap:16px;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.13);flex-shrink:0}.s24-cookie-panel-head h2{margin:4px 0 0}.s24-cookie-close{border:1px solid rgba(255,255,255,.22);border-radius:10px;width:40px;height:40px;flex-shrink:0;background:rgba(255,255,255,.07);color:#fff;font-size:25px!important;line-height:1}.s24-cookie-scroll{padding:22px 26px;overflow-y:auto;overflow-x:hidden;min-height:0;overscroll-behavior:contain;scrollbar-color:#647c90 transparent;scrollbar-width:thin}.s24-cookie-panel-foot{padding:18px 26px;border-top:1px solid rgba(255,255,255,.13);background:rgba(9,26,42,.55);flex-shrink:0}.s24-cookie-panel-foot .s24-cookie-actions{grid-template-columns:1fr 1.65fr 1fr}.s24-cookie-category{border:1px solid rgba(255,255,255,.16);border-radius:14px;margin-top:14px;background:rgba(255,255,255,.035);overflow:hidden}.s24-cookie-category-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px}.s24-cookie-category-top strong{display:block;font-size:16px;color:#fff}.s24-cookie-category-top small{display:block;font-size:12px;color:#c5d4df}.s24-cookie-always{align-self:flex-start;margin-top:2px;font-size:11px;font-weight:850;color:#9fdfc2;white-space:nowrap}.s24-cookie-switch{position:relative;flex-shrink:0;min-height:30px;width:52px;height:30px;border:1px solid #9cafbe;border-radius:30px;background:#536879;padding:0;transition:background .15s}.s24-cookie-switch[aria-checked=true]{background:#f08a28;border-color:#f08a28}.s24-cookie-switch:before{content:'';position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:#fff;transition:transform .15s}.s24-cookie-switch[aria-checked=true]:before{transform:translateX(22px)}.s24-cookie-category details{padding:0 18px 15px}.s24-cookie-category summary{font-size:12px;color:#ffc184;cursor:pointer}.s24-cookie-category details p{font-size:13px;margin:10px 0 0}.s24-cookie-note{font-size:12px;color:#b6c8d7!important}.s24-cookie-error{color:#ffd4bd!important;font-size:12px;margin-top:12px!important}
-.s24-cookie-policy h3{font-size:20px;color:inherit;line-height:1.3;margin:30px 0 12px}.s24-cookie-policy h3:first-of-type{margin-top:18px}.s24-cookie-policy p,.s24-cookie-policy li{line-height:1.7}.s24-cookie-policy ul{padding-left:22px}.s24-cookie-policy a{color:inherit;text-underline-offset:3px}.s24-cookie-policy .s24-cookie-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,.17);border-radius:12px;margin:18px 0}.s24-cookie-policy table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}.s24-cookie-policy th,.s24-cookie-policy td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.12);overflow-wrap:anywhere}.s24-cookie-policy th{background:rgba(255,255,255,.08);font-weight:850}.s24-cookie-policy tr:last-child td{border-bottom:0}.s24-cookie-policy code{font-family:monospace;font-size:11px}
-.s24-cookie-page{min-height:100dvh;background:#f4f7fa;color:#102438;font:15px/1.7 Inter,system-ui,sans-serif}.s24-cookie-page *{box-sizing:border-box}.s24-cookie-page-header{background:#fff;border-bottom:1px solid #dce5eb}.s24-cookie-page-header>div{max-width:960px;margin:auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}.s24-cookie-page-header a{color:#102438;font-weight:800;text-decoration:none}.s24-cookie-page-main{max-width:960px;margin:auto;padding:50px 24px 60px}.s24-cookie-page-main h1{font-size:clamp(32px,5vw,48px);letter-spacing:-.04em;line-height:1.1;margin:8px 0 12px}.s24-cookie-page .s24-cookie-eyebrow{color:#af590b}.s24-cookie-page .s24-cookie-policy{background:#fff;border:1px solid #dce5eb;border-radius:20px;padding:28px;margin-top:28px}.s24-cookie-page .s24-cookie-policy th{background:#f4f7fa}.s24-cookie-page .s24-cookie-policy th,.s24-cookie-page .s24-cookie-policy td{border-bottom-color:#e1e8ee}.s24-cookie-page .s24-cookie-table-wrap{border-color:#dce5eb}.s24-cookie-page-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.s24-cookie-page-actions button,.s24-cookie-page-actions a{font:inherit;min-height:44px;border:1px solid #102438;border-radius:10px;padding:11px 16px;background:#102438;color:#fff;cursor:pointer;text-decoration:none}.s24-cookie-page-actions a{background:#fff;color:#102438}
-@media(max-width:600px){.s24-cookie-banner{bottom:12px;left:12px;width:calc(100vw - 24px);padding:20px;border-radius:17px}.s24-cookie-ui h2{font-size:21px}.s24-cookie-actions{grid-template-columns:1fr}.s24-cookie-overlay{padding:12px}.s24-cookie-panel{max-height:calc(100dvh - 24px);border-radius:18px}.s24-cookie-panel-head{padding:19px 18px 15px}.s24-cookie-scroll{padding:18px}.s24-cookie-panel-foot{padding:14px 18px}.s24-cookie-panel-foot .s24-cookie-actions{grid-template-columns:1fr}.s24-cookie-category-top{padding:15px 14px}.s24-cookie-category details{padding:0 14px 14px}.s24-cookie-always{font-size:10px}.s24-cookie-page-main{padding:32px 16px}.s24-cookie-page .s24-cookie-policy{padding:20px 16px}.s24-cookie-page-header>div{padding:16px}.s24-cookie-page-header img{max-width:170px;height:auto}}
-@media(prefers-reduced-motion:reduce){.s24-cookie-ui *{transition:none!important}}
-`;
-function CookiePolicyContent() {
-  return <div className="s24-cookie-policy">
-    <p><b>Atnaujinta: 2026-10-13.</b> Ši politika aprašo statybos24.lt slapukus ir panašią naršyklės saugyklą. Dėl duomenų tvarkymo galite kreiptis į „Statybos24“, {PUBLIC_BUSINESS_ACTIVITY.toLowerCase()}, veiklos Nr. {PUBLIC_BUSINESS_NUMBER}, el. paštu <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</p>
-    <h3>Kas yra slapukai?</h3>
-    <p>Slapukai – nedideli duomenų įrašai naršyklėje. Taip pat naudojame vietinę saugyklą (localStorage) ir sesijos saugyklą (sessionStorage). Jos padeda išlaikyti prisijungimą, pasirinkimus ir, tik leidus, matuoti lankomumą bei reklamos rezultatus.</p>
-    <h3>Kokias kategorijas naudojame?</h3>
-    <p><b>Būtinieji.</b> Prisijungimo sesija, paskyros saugumas, slaptažodžio atkūrimas ir jūsų prašomų platformos funkcijų bei slapukų pasirinkimo išsaugojimas. Šių priemonių neprivalomų slapukų jungikliai neišjungia.</p>
-    <p><b>Analitiniai.</b> Tik sutikus įjungiamas mūsų lankomumo skaitiklis. Jis sukuria naršyklės lankytojo identifikatorių ir siunčia apsilankymą į statybos24.lt serverį. Jei esate prisijungę, kartu gali būti siunčiamas paskyros identifikatorius. Tai nėra visiškai anoniminė statistika. Šiame diegime nenaudojame „Google Analytics“.</p>
-    <p><b>Reklaminiai.</b> Tik sutikus įjungiami „Meta Pixel“ ir „Conversions API“. Jie skirti reklamos rezultatams matuoti ir optimizuoti. „Meta“ gali gauti puslapio peržiūrą, patvirtintos naujos darbuotojo registracijos įvykį, naršyklės informaciją, reklamos identifikatorius ir SHA-256 užkoduotą el. paštą. Užkoduotas el. paštas nėra anoniminis ir gali būti susietas su „Meta“ paskyra. Telefonas, gimimo data ir darbo profilio turinys šia integracija neperduodami.</p>
-    <h3>Saugojimo trukmė</h3>
-    <p>Slapukų pasirinkimas galioja 180 dienų. Analitinis lankytojo identifikatorius saugomas iki 180 dienų, o „Meta“ reklamos slapukai – iki 90 dienų ir gali būti atnaujinami naudojantis svetaine. Atsisakius atitinkamos kategorijos šie neprivalomi įrašai pašalinami iš naršyklės.</p>
-    <p>Prisijungimo duomenys saugomi iki atsijungimo, sesijos panaikinimo arba naršyklės duomenų išvalymo. Slaptažodžio atkūrimo žymeklis naudojamas iki 60 minučių. Laukiančios registracijos matavimo žymeklis saugomas iki išsiuntimo arba 48 valandas ir pašalinamas atšaukus reklamos sutikimą.</p>
-    <p>Paskyros ekrano nuostatos ir darbo eigos žymekliai taip pat gali būti saugomi vietinėje saugykloje, kol juos pakeičiate arba išvalote naršyklės duomenis. Saugumo patikrai naudojama „Cloudflare Turnstile“; jos veikimas priklauso nuo patikros ir paslaugos nustatymų. <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">„Cloudflare“ informacija</a>.</p>
-    <h3>Kaip pasirinkti ir pakeisti sutikimą?</h3>
-    <ul><li><b>Priimti viską</b> – įjungia analitinį ir reklaminį matavimą.</li><li><b>Pritaikyti</b> – leidžia šias kategorijas įjungti atskirai; būtinosios lieka aktyvios.</li><li><b>Atmesti</b> – išjungia abi neprivalomas kategorijas. Registracija ir darbo funkcijos lieka pasiekiamos.</li></ul>
-    <p>Pasirinkimas išsaugomas šioje naršyklėje 180 dienų. Kitame įrenginyje, privačiame lange ar išvalius saugyklą gali reikėti pasirinkti iš naujo. Nuostatas bet kada galite pakeisti svetainės apačioje per „Slapukų parinktys“ arba šios politikos mygtuką. Atšaukimas sustabdo būsimą matavimą, bet automatiškai nepanaikina anksčiau teisėtai išsiųstų įvykių.</p>
-    <h3>Trečiųjų šalių duomenų tvarkymas</h3>
-    <p>„Conversions API“ nėra slapukas – tai serverio duomenų siuntimas, susietas su tuo pačiu reklamos kategorijos pasirinkimu. „Meta“ duomenų tvarkymo ir perdavimo sąlygos aprašytos <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener noreferrer">„Meta“ privatumo politikoje</a> ir <a href="https://www.facebook.com/privacy/policies/cookies/" target="_blank" rel="noopener noreferrer">slapukų politikoje</a>. Kita platformos asmens duomenų tvarkymo informacija pateikiama mūsų privatumo politikoje.</p>
-    <h3>Naršyklės nustatymai ir kontaktai</h3>
-    <p>Slapukus ir vietinę saugyklą galite pašalinti naršyklės nustatymuose. Pašalinus prisijungimo duomenis gali reikėti prisijungti iš naujo. Jei turite klausimų, rašykite <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>. Politika gali būti atnaujinta pasikeitus naudojamoms priemonėms.</p>
-  </div>;
-}
-function CookieModal({ title, wide = false, onClose, children, footer }) {
-  const panelRef = useRef(null);
-  useEffect(() => {
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const panel = panelRef.current;
-    panel?.querySelector("button")?.focus();
-    const keys = (event) => {
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab") return;
-      const items = [...panel.querySelectorAll('button:not([disabled]), a[href], summary, [tabindex="0"]')].filter((item) => item.getClientRects().length);
-      if (!items.length) return;
-      const first = items[0], last = items[items.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", keys);
-    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", keys); if (previousFocus?.isConnected) previousFocus.focus?.(); };
-  }, [onClose]);
-  return createPortal(<div className="s24-cookie-overlay s24-cookie-ui" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={panelRef} className={`s24-cookie-panel${wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-      <header className="s24-cookie-panel-head"><div><span className="s24-cookie-eyebrow">STATYBOS24.LT · PRIVATUMAS</span><h2>{title}</h2></div><button type="button" className="s24-cookie-close" aria-label="Uždaryti" onClick={onClose}>×</button></header>
-      <div className="s24-cookie-scroll">{children}</div>
-      <footer className="s24-cookie-panel-foot">{footer}</footer>
-    </section>
-  </div>, document.body);
-}
-function CookieCategory({ title, subtitle, necessary = false, enabled, onToggle, children }) {
-  return <section className="s24-cookie-category"><div className="s24-cookie-category-top"><div><strong>{title}</strong><small>{subtitle}</small></div>{necessary ? <span className="s24-cookie-always">Visada aktyvūs</span> : <button type="button" className="s24-cookie-switch" role="switch" aria-label={title} aria-checked={enabled} onClick={onToggle} />}</div><details><summary>Rodyti išsamiau</summary>{children}</details></section>;
-}
-function MetaMarketingConsent() {
-  const [saved, setSaved] = useState(cookieReadPreferences);
-  const [mode, setMode] = useState(() => cookieReadPreferences() ? null : "banner");
-  const [draft, setDraft] = useState(() => cookieReadPreferences() || { analytics: false, marketing: false });
-  const [error, setError] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const previousMode = useRef(null);
-  const closeRef = useRef(null);
-  closeRef.current = () => { setError(""); setMode(cookieReadPreferences() ? null : "banner"); };
-  const stableClose = useRef(() => closeRef.current());
-  useEffect(() => {
-    const run = () => { if (metaAllowed()) { metaStartPixel(); void metaFlushRegistration(); } };
-    const apply = () => { const value = cookieReadPreferences(); setSaved(value); if (!value?.marketing) { window.fbq?.("consent", "revoke"); metaClearCookies(); try { localStorage.removeItem(META_PENDING_KEY); } catch {} } else run(); if (!value?.analytics) { try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch {} } };
-    const edit = () => { setDraft(cookieReadPreferences() || { analytics: false, marketing: false }); setError(""); setMode("preferences"); };
-    const policy = () => { previousMode.current = cookieReadPreferences() ? null : "banner"; setMode("policy"); };
-    const sync = (event) => { if (event.key === COOKIE_PREFS_KEY || event.key === META_CONSENT_KEY || event.key === null) { apply(); setMode(cookieReadPreferences() ? null : "banner"); } };
-    const initial = cookieReadPreferences();
-    if (!initial?.marketing) metaClearCookies();
-    if (!initial?.analytics) { try { localStorage.removeItem("s24_visitor_id_v1"); localStorage.removeItem("s24_visitor_at_v1"); } catch {} }
-    run();
-    const auth = supabase?.auth.onAuthStateChange(() => { setTimeout(run, 0); });
-    const interval = setInterval(() => { if (cookieReadPreferences()) run(); else { apply(); setMode((current) => current || "banner"); } }, 60000);
-    window.addEventListener("s24-meta-registration", run);
-    window.addEventListener("s24-edit-meta-consent", edit);
-    window.addEventListener("s24-open-cookie-policy", policy);
-    window.addEventListener("s24-cookie-preferences-changed", apply);
-    window.addEventListener("storage", sync);
-    return () => { auth?.data.subscription.unsubscribe(); clearInterval(interval); window.removeEventListener("s24-meta-registration", run); window.removeEventListener("s24-edit-meta-consent", edit); window.removeEventListener("s24-open-cookie-policy", policy); window.removeEventListener("s24-cookie-preferences-changed", apply); window.removeEventListener("storage", sync); };
-  }, []);
-  const choose = (analytics, marketing) => {
-    if (!cookieSavePreferences(analytics, marketing)) { setError("Naršyklė neleidžia išsaugoti pasirinkimo. Patikrinkite svetainės saugyklos nustatymus. Neprivalomas matavimas neįjungtas."); return; }
-    setSaved(cookieReadPreferences()); setMode(null); setError("");
-  };
-  const showPreferences = () => { setDraft(saved || { analytics: false, marketing: false }); setError(""); setMode("preferences"); };
-  const showPolicy = () => { previousMode.current = mode; setMode("policy"); };
-  const policyCloseRef = useRef(null);
-  policyCloseRef.current = () => setMode(previousMode.current);
-  const stablePolicyClose = useRef(() => policyCloseRef.current());
-  const errorMessage = error ? <p className="s24-cookie-error" role="alert">{error}</p> : null;
-  return <>
-    <style>{COOKIE_UI_STYLES}</style>
-    {mode === "banner" && createPortal(<section className="s24-cookie-banner s24-cookie-ui" aria-label="Slapukų pasirinkimas">
-      <h2>Vertiname jūsų privatumą</h2>
-      <p>Būtinąją saugyklą naudojame svetainės veikimui. Tik jums leidus įjungsime lankomumo analizę ir reklamos rezultatų matavimą. Pasirinkimą galite keisti bet kada.</p>
-      <div className="s24-cookie-actions"><button type="button" className="s24-cookie-button primary" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button" onClick={showPreferences}>Pritaikyti</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}
-    </section>, document.body)}
-    {mode === "preferences" && <CookieModal title="Pritaikyti sutikimo parinktis" onClose={stableClose.current} footer={<><div className="s24-cookie-actions"><button type="button" className="s24-cookie-button" onClick={() => choose(true, true)}>Priimti viską</button><button type="button" className="s24-cookie-button primary" onClick={() => choose(draft.analytics, draft.marketing)}>Išsaugoti mano nuostatas</button><button type="button" className="s24-cookie-button" onClick={() => choose(false, false)}>Atmesti</button></div>{errorMessage}</>}>
-      <p>Pasirinkite, kurias neprivalomas priemones leidžiate naudoti. Būtinosios užtikrina prisijungimą ir platformos funkcijas.</p>
-      {expanded && <p>Analitinė ir reklaminė kategorijos valdomos atskirai. Reklaminė kategorija apima ir „Meta“ serverio įvykių siuntimą. Atsisakius neprivalomų priemonių galite registruotis, ieškoti darbuotojų ir naudotis darbo funkcijomis.</p>}
-      <button type="button" className="s24-cookie-link" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "Rodyti mažiau" : "Rodyti daugiau"}</button>
-      <CookieCategory title="Būtinieji" subtitle="Prisijungimas, saugumas ir jūsų pasirinkimai" necessary><p>Sesijos ir techninė saugykla reikalinga jūsų prašomoms paslaugoms. Ši kategorija neapima reklamos sekimo.</p></CookieCategory>
-      <CookieCategory title="Analitiniai" subtitle="Svetainės lankomumo analizė" enabled={draft.analytics} onToggle={() => setDraft((value) => ({ ...value, analytics: !value.analytics }))}><p>Mūsų lankomumo skaitiklis saugo naršyklės lankytojo identifikatorių ir siunčia apsilankymą į statybos24.lt serverį. Prisijungus gali būti įtrauktas paskyros identifikatorius. „Google Analytics“ šiame diegime nėra.</p></CookieCategory>
-      <CookieCategory title="Reklaminiai" subtitle="„Meta Pixel“ ir „Conversions API“" enabled={draft.marketing} onToggle={() => setDraft((value) => ({ ...value, marketing: !value.marketing }))}><p>Leidžiama matuoti puslapio peržiūras ir patvirtintas naujas darbuotojų registracijas, perduodant „Meta“ reklamos identifikatorius, naršyklės informaciją ir užkoduotą el. paštą. Duomenys gali būti susieti su „Meta“ paskyra.</p></CookieCategory>
-      <p className="s24-cookie-note" style={{ marginTop: 18 }}>Pasirinkimas galioja 180 dienų šioje naršyklėje. <button type="button" className="s24-cookie-link" onClick={showPolicy}>Skaityti slapukų politiką</button></p>
-    </CookieModal>}
-    {mode === "policy" && <CookieModal title="Slapukų politika" wide onClose={stablePolicyClose.current} footer={<div className="s24-cookie-actions"><button type="button" className="s24-cookie-button primary" onClick={showPreferences}>Keisti parinktis</button><button type="button" className="s24-cookie-button" onClick={stablePolicyClose.current}>Grįžti</button><a className="s24-cookie-button" href="/slapuku-politika" style={{ textAlign: "center", textDecoration: "none" }}>Atskiras puslapis</a></div>}><CookiePolicyContent /></CookieModal>}
-  </>;
-}
-function CookiePolicyPage() {
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  useEffect(() => { document.title = "Slapukų politika | Statybos24.lt"; }, []);
-  return <div className="s24-cookie-page"><style>{COOKIE_UI_STYLES}</style><header className="s24-cookie-page-header"><div><BrandLogo href="/" height={44} /><a href="/">← Į svetainę</a></div></header><main className="s24-cookie-page-main"><span className="s24-cookie-eyebrow">STATYBOS24.LT · PRIVATUMAS</span><h1>Slapukų politika</h1><p>Sužinokite, ką saugome naršyklėje ir kaip valdyti savo pasirinkimą.</p><CookiePolicyContent /><div className="s24-cookie-page-actions"><button type="button" onClick={() => window.dispatchEvent(new Event("s24-edit-meta-consent"))}>Keisti slapukų parinktis</button><button type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button><a href="/">Grįžti į svetainę</a></div></main><PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} /></div>;
-}
-
-
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-13-cookies-v8";
+const PRIVACY_VERSION = "2026-10-06-v6";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
@@ -1824,8 +1598,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", boxSizing: "border-box", overflow: "hidden", background: "#fff", color: "#102438", borderRadius: 18, padding: 0, boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
-        <div style={{ maxHeight: "min(820px,calc(100dvh - 32px))", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden", overscrollBehavior: "contain", padding: "28px clamp(18px,4vw,36px)" }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
           <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2></div>
           <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
@@ -1843,8 +1616,6 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Kam duomenys gali būti perduodami.</b> Duomenis gali tvarkyti platformos techninių paslaugų teikėjai, kurių paslaugos būtinos sistemai veikti, įskaitant Supabase (duomenų bazė, autentifikacija ir serverio funkcijos), Cloudflare (svetainės pateikimas, infrastruktūra ir apsauga nuo automatinių užklausų), Bird (telefono patvirtinimo SMS siuntimas) ir Stripe (mokėjimai bei prenumeratos). Darbo proceso duomenys taip pat gali būti matomi kitai konkretaus darbo šaliai tiek, kiek to reikia darbo kvietimui, rezervacijai, atvykimui, bendravimui, ginčui ar darbo užbaigimui.</p>
 
-        <p><b>Slapukai ir neprivalomas matavimas.</b> Lankomumo analitika ir „Meta“ reklamos matavimas naudojami tik pagal jūsų pasirinktas kategorijas. Išsamus naršyklės saugyklos, teikėjų, perduodamų duomenų ir trukmės paaiškinimas pateikiamas atskiroje <button type="button" onClick={() => { onClose(); window.dispatchEvent(new Event("s24-open-cookie-policy")); }} style={{ border: 0, background: "none", padding: 0, font: "inherit", color: "#a75208", textDecoration: "underline", cursor: "pointer" }}>slapukų politikoje</button>. Pasirinkimą galima keisti per „Slapukų parinktys“. Atsisakius neprivalomo matavimo registracija ir platformos paslaugos veikia įprastai.</p>
-
         <p><b>Apsauga nuo automatinių užklausų.</b> Registracijos ir SMS užklausų apsaugai naudojama Cloudflare Turnstile patikra, kuri gali veikti nematomai naršyklėje. Daugiau informacijos pateikiama <a href="https://www.cloudflare.com/turnstile-privacy-policy/" target="_blank" rel="noopener noreferrer">Cloudflare Turnstile privatumo pranešime</a>.</p>
 
         <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
@@ -1859,10 +1630,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
 
-        <button type="button" onClick={() => { onClose(); window.dispatchEvent(new Event("s24-edit-meta-consent")); }} style={{ minHeight: 44, border: "1px solid #102438", background: "#fff", color: "#102438", borderRadius: 10, padding: "11px 18px", marginRight: 10, marginBottom: 10, font: "inherit", cursor: "pointer" }}>Keisti slapukų pasirinkimą</button>
-
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
-        </div>
       </section>
     </div>
   );
@@ -2508,7 +2276,6 @@ function AuthModal({
         });
 
         if (error) throw error;
-        metaRememberRegistration(data.user, teamInvite ? "employer" : role);
 
         if (data.session) {
           onClose();
@@ -13448,7 +13215,7 @@ function CompanyBadge({ name, avatarPath, size = 34, fontSize = 13 }) {
   );
 }
 
-function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeChange, onBack, onOpenJob, onCreateJob }) {
+function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeChange, onBack, onOpenJob, onCreateJob, onSelectJob, currentJobId, workers = [], workersLoading = false, onWorkerProfile, onWorkerMessage, onGroupMessage }) {
   const today = () => { const [y,m,d] = localDateISO(new Date()).split("-").map(Number); return new Date(y,m-1,d,12); };
   const [anchor, setAnchor] = useState(today);
   const [mode, setMode] = useState("week");
@@ -13456,6 +13223,7 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
   const [selectedDate, setSelectedDate] = useState(() => localDateISO(new Date()));
   const [selectedId, setSelectedId] = useState(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [demoAction, setDemoAction] = useState(null);
   const [demoScope, setDemoScope] = useState("mine");
   const effectiveScope = demoMode ? demoScope : jobScope;
   const allowAllScope = demoMode || canSeeAllCompanyJobs;
@@ -13506,7 +13274,7 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
     setAnchor(next); setSelectedDate(localDateISO(mode === "week" ? day(next, -((next.getDay()+6)%7)) : next)); setSelectedId(null);
   };
   const setView = value => { setMode(value); setSelectedId(null); const next = day(anchor); setSelectedDate(localDateISO(value === "month" ? new Date(next.getFullYear(),next.getMonth(),1,12) : next)); };
-  const card = job => { const s = status(job); return <button key={job.id} type="button" className={`edcal-job ${s.tone} ${selectedId === job.id ? "selected" : ""}`} onClick={() => {setSelectedId(job.id); setSelectedDate(String(job.work_date).slice(0,10));}} aria-pressed={selectedId === job.id}><b>{formatJobTitle(job.title)}</b>{demoMode && <span className={`edcal-owner ${job.demoMine ? "mine" : ""}`}>{job.demoResponsible}</span>}<span>{job.city || "Vieta nenurodyta"}</span><span>{String(job.start_time || "").slice(0,5)}–{String(job.end_time || "").slice(0,5)}</span><em>{s.label}</em></button>; };
+  const card = job => { const s = status(job); return <button key={job.id} type="button" className={`edcal-job ${s.tone} ${selectedId === job.id ? "selected" : ""}`} onClick={() => {setSelectedId(job.id); setDemoAction(null); if (!demoMode) onSelectJob?.(job); setSelectedDate(String(job.work_date).slice(0,10));}} aria-pressed={selectedId === job.id}><b>{formatJobTitle(job.title)}</b>{demoMode && <span className={`edcal-owner ${job.demoMine ? "mine" : ""}`}>{job.demoResponsible}</span>}<span>{job.city || "Vieta nenurodyta"}</span><span>{String(job.start_time || "").slice(0,5)}–{String(job.end_time || "").slice(0,5)}</span><em>{s.label}</em></button>; };
   return <>
     <style>{`
       .edcal-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.edcal-head h1{font-family:Manrope,Inter,sans-serif;font-size:34px;letter-spacing:-.035em;margin:6px 0}.edcal-head p{color:#6c7a88;margin:8px 0}.edcal-actions{display:flex;gap:8px;flex-wrap:wrap}.edcal-panel{background:#fff;border:1px solid #dfe7ed;border-radius:16px;padding:18px;min-width:0}.edcal-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}.edcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.edcal-nav button{min-height:40px}.edcal-switch{display:flex;background:#f1f4f6;padding:4px;border-radius:10px;gap:4px}.edcal-switch button{border:0;background:transparent;padding:9px 13px;border-radius:8px;color:#526374;font:inherit;cursor:pointer}.edcal-switch button.active{background:#fff1e5;color:#9c5417;font-weight:800}.edcal-select{padding:10px;border:1px solid #dbe4ea;border-radius:9px;background:#fff;color:#102438;max-width:100%;font:inherit}.edcal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #e4ebf0;border-left:1px solid #e4ebf0;border-radius:12px;overflow:hidden}.edcal-cell{min-width:0;border-right:1px solid #e4ebf0;border-bottom:1px solid #e4ebf0;padding:8px;min-height:155px;background:#fff}.edcal-cell.weekend{background:#f8fafb}.edcal-cell.outside{background:#f1f4f6}.edcal-date{border:0;background:transparent;color:#102438;font:inherit;text-align:left;cursor:pointer;padding:5px;margin-bottom:6px;border-radius:7px}.edcal-date.today{background:#fff1e5;color:#a85a18;font-weight:900}.edcal-date span{display:block;font-size:11px;color:#6c7a88}.edcal-job{display:grid;gap:5px;width:100%;min-width:0;text-align:left;padding:10px 8px;margin:5px 0;border:1px solid #dfe7ed;border-left:4px solid #f08a28;border-radius:10px;background:#fff;color:#102438;font:inherit;cursor:pointer;overflow-wrap:anywhere}.edcal-job.selected{outline:2px solid #f08a28;outline-offset:1px}.edcal-job b{font-size:12px}.edcal-job span{color:#607180;font-size:11px}.edcal-job em{font-size:11px;font-style:normal;border-radius:8px;padding:5px;background:#fff3e7;color:#9c5417}.edcal-job.green{border-left-color:#19815a}.edcal-job.green em{background:#edf8f3;color:#167a54}.edcal-job.red{border-left-color:#b64d2a}.edcal-job.red em{background:#fff1ed;color:#b4472a}.edcal-job.grey{border-left-color:#8896a3}.edcal-job.grey em{background:#f1f4f6;color:#526374}.edcal-legend{display:flex;gap:15px;flex-wrap:wrap;color:#607180;font-size:12px;margin-top:14px}.edcal-detail h2{margin:0 0 10px;font-family:Manrope,Inter,sans-serif}.edcal-detail p{color:#607180;white-space:pre-wrap;overflow-wrap:anywhere}.edcal-mobile{display:none}.edcal-empty{color:#6c7a88;padding:20px 0}.edcal-daystrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0}.edcal-daystrip button{padding:10px 2px;border:1px solid #dfe7ed;border-radius:9px;background:#fff;color:#102438;cursor:pointer}.edcal-daystrip button.active{background:#fff1e5;border-color:#f08a28}.edcal-daystrip span{display:block;font-size:10px;margin-top:5px}.edcal-job:focus-visible,.edcal-date:focus-visible,.edcal-daystrip button:focus-visible{outline:2px solid #f08a28;outline-offset:2px}
@@ -13523,6 +13291,11 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
       .edcal-job .edcal-owner{font-size:10px;font-weight:800;color:#607180;background:#f1f4f6;padding:4px 6px;border-radius:6px;line-height:1.4}.edcal-job .edcal-owner.mine{background:#fff1e5;color:#9c5417}.edcal-facts .edcal-responsible-fact{grid-column:1/-1;background:#fff7ee;border-color:#f2d3b8}@media(max-width:760px){.edcal-job .edcal-owner{font-size:11px}}
 
       .edcal-description,.edcal-people{box-sizing:border-box;border:1px solid #e4ebf0;border-radius:12px;padding:14px;min-width:0;background:#fff}.edcal-detail-body{align-items:stretch}.edcal-description h3,.edcal-people h3{min-height:22px;display:flex;align-items:center;margin:0 0 12px;line-height:1.4}.edcal-person:first-of-type{margin-top:0}.edcal-facts>div{display:flex;flex-direction:column;justify-content:flex-start}.edcal-facts b{line-height:1.5}.edcal-full-description summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #dbe4ea;border-radius:9px;background:#f8fafb;color:#102438;font:inherit;font-size:12px;font-weight:800;padding:10px 12px;cursor:pointer}.edcal-full-description summary::-webkit-details-marker{display:none}.edcal-full-description summary:hover{background:#fff7ee;border-color:#efc59e}.edcal-full-description summary:focus-visible{outline:2px solid #f08a28;outline-offset:2px}.edcal-full-description[open] summary{background:#fff1e5;color:#9c5417;border-color:#efc59e}.edcal-full-description[open] summary span{transform:rotate(180deg)}.edcal-description-text{padding:14px 2px 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;font-size:13px;color:#607180}
+
+      .edcal-detail-body{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}.edcal-description,.edcal-people{padding:14px;margin:0;border:1px solid #e4ebf0;border-radius:12px;min-width:0;align-self:start}.edcal-description h3,.edcal-people h3{height:auto;min-height:22px;margin:0 0 12px;padding:0;line-height:22px;display:flex;align-items:center}.edcal-description-text{padding:0;margin:0;white-space:pre-wrap;line-height:1.65}.edcal-person{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;margin:0 0 8px;padding:10px}.edcal-person>.edcal-status{grid-column:2/-1;justify-self:start}.edcal-person-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.edcal-person-actions .ed-secondary{font-size:11px;min-height:32px;padding:6px 9px}.edcal-detail-actions{margin-top:12px}.edcal-group-message{font-size:11px;max-width:190px;white-space:normal;line-height:1.4}.edcal-detail-topactions{flex-wrap:wrap;justify-content:flex-end}.edcal-demo-interaction{margin:0 22px 16px;padding:14px;border:1px solid #f2d3b8;border-radius:12px;background:#fff7ee;font-size:13px}.edcal-demo-interaction p{font-size:12px;margin:8px 0}
+      @media(max-width:760px){.edcal-detail-body{grid-template-columns:minmax(0,1fr);gap:12px}.edcal-person{grid-template-columns:34px minmax(0,1fr)}.edcal-person-actions{grid-column:2;justify-content:flex-start}.edcal-detail-topactions{flex-direction:row;align-items:center}.edcal-detail-head{flex-wrap:wrap}.edcal-detail-topactions{width:100%;justify-content:flex-start}.edcal-group-message{max-width:none}.edcal-demo-interaction{margin:0 16px 16px}}
+
+      .edcal-add-worker{border:1px dashed #edb77f!important;background:#fff3e7!important;color:#b85f0e!important;font-size:22px!important;cursor:pointer}.edcal-add-worker:hover{background:#ffe7cf!important;border-color:#f08a28!important}.edcal-add-worker:focus-visible{outline:2px solid #f08a28;outline-offset:2px}.edcal-free-place{border-style:dashed;background:#fffaf5}.edcal-free-place>.ed-secondary{font-size:11px}@media(max-width:760px){.edcal-free-place>.ed-secondary{grid-column:2;justify-self:start}}
     `}</style>
     <div className="edcal-head"><div><div className="eyebrow">DARBDAVIO PASKYRA · BUSINESS PRO</div><h1>Darbų kalendorius</h1><p>Darbo pasiūlymai ir darbuotojų patvirtinimai vienoje vietoje.</p></div><div className="edcal-actions"><button type="button" className="ed-secondary" onClick={onBack}>← Grįžti į skydelį</button><button type="button" className="ed-secondary" onClick={toggleDemo}>{demoMode ? "Grįžti prie mano darbų" : "Peržiūrėti pavyzdį"}</button>{!demoMode && <button type="button" className="ed-primary" onClick={onCreateJob}>+ Sukurti darbą</button>}</div></div>
     {demoMode && <div role="status" style={{padding:"14px 16px",background:"#fff7ee",border:"1px solid #f2d3b8",borderRadius:12,color:"#8a531d"}}><b>Demonstracinis režimas · Išgalvoti darbai</b><br/>Rodomi tik pavyzdžiai. Jie nesaugomi, darbuotojai nekviečiami. Pasirinkite darbo kortelę arba perjunkite savaitę ir mėnesį.</div>}
@@ -13534,10 +13307,11 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
     <div className="edcal-legend"><span style={{color:"#167a54"}}>● Patvirtintas poreikis</span><span style={{color:"#9c5417"}}>● Laukiama darbuotojų</span><span style={{color:"#b4472a"}}>● Atšauktas darbas</span><span>● Užbaigta</span></div>
     {!filtered.some(j => days.some(d => localDateISO(d) === String(j.work_date || "").slice(0,10))) && <p className="edcal-empty">Šiuo laikotarpiu darbo pasiūlymų nėra.</p>}</section>
     {selected && <section className="edcal-panel edcal-detail" aria-live="polite">
-      <div className="edcal-detail-head"><div><div className="eyebrow">{demoMode ? "PAVYZDINIS DARBAS" : "DARBO INFORMACIJA"}</div><h2>{formatJobTitle(selected.title)}</h2></div><div className="edcal-detail-topactions"><span className={`edcal-status ${status(selected).tone}`}>{status(selected).label}</span><button type="button" className="edcal-close" aria-label="Uždaryti darbo informaciją" onClick={() => setSelectedId(null)}>×</button></div></div>
+      <div className="edcal-detail-head"><div><div className="eyebrow">{demoMode ? "PAVYZDINIS DARBAS" : "DARBO INFORMACIJA"}</div><h2>{formatJobTitle(selected.title)}</h2></div><div className="edcal-detail-topactions"><button type="button" className="ed-secondary edcal-group-message" onClick={() => demoMode ? setDemoAction({type:"group"}) : onGroupMessage?.(selected)}>Žinutė visiems darbuotojams</button><span className={`edcal-status ${status(selected).tone}`}>{status(selected).label}</span><button type="button" className="edcal-close" aria-label="Uždaryti darbo informaciją" onClick={() => setSelectedId(null)}>×</button></div></div>
       <div className="edcal-facts">{demoMode && <div className="edcal-responsible-fact"><span>Atsakingas vadovas</span><b>{selected.demoResponsible}</b></div>}<div><span>Data</span><b>{selected.work_date}</b></div><div><span>Darbo laikas</span><b>{String(selected.start_time || "").slice(0,5)}–{String(selected.end_time || "").slice(0,5)}</b></div><div><span>Vieta</span><b>{selected.address_text || selected.city}</b></div><div><span>Darbuotojai</span><b>{selected.confirmedCount || 0} / {selected.workers_needed || 0} patvirtinti</b></div></div>
-      <div className="edcal-detail-body"><div className="edcal-description"><h3>Darbo aprašymas</h3>{selected.description ? <details key={selected.id} className="edcal-full-description"><summary>Pilnas aprašymas <span aria-hidden="true">⌄</span></summary><div className="edcal-description-text">{selected.description}</div></details> : <p>Darbo aprašymas nepateiktas.</p>}</div>
-      {demoMode ? <div className="edcal-people"><h3>Pavyzdiniai darbuotojai <span>{selected.workers_needed}</span></h3>{selected.status === "cancelled" ? <div className="edcal-cancelled">Darbas atšauktas. Darbuotojų kvietimai nevykdomi.</div> : Array.from({length:selected.workers_needed},(_,index) => <div className="edcal-person" key={index}><div className="edcal-avatar">{index < selected.confirmedCount ? ["J","T","M","D"][index] : "+"}</div><div className="edcal-person-copy"><b>{index < selected.confirmedCount ? ["Jonas","Tomas","Mantas","Darius"][index] : "Laisva vieta"}</b><small>{index < selected.confirmedCount ? "Pavyzdinis darbuotojas" : "Darbuotojas nepaskirtas"}</small></div><span className={`edcal-status ${index < selected.confirmedCount ? "green" : "amber"}`}>{index < selected.confirmedCount ? "Patvirtino" : "Nepaskirta"}</span></div>)}</div> : <div className="edcal-detail-actions"><button type="button" className="ed-primary" onClick={() => onOpenJob(selected)}>Atidaryti darbą ir darbuotojus</button>{selected.status === "open" && <button type="button" className="ed-secondary" onClick={() => onOpenJob(selected, true)}>Pakviesti iš favoritų</button>}</div>}</div>
+      <div className="edcal-detail-body"><div className="edcal-description"><h3>Darbo aprašymas</h3>{selected.description ? <div className="edcal-description-text">{selected.description}</div> : <p>Darbo aprašymas nepateiktas.</p>}</div>
+      {demoMode ? <div className="edcal-people"><h3>Pavyzdiniai darbuotojai <span>{selected.workers_needed}</span></h3>{selected.status === "cancelled" ? <div className="edcal-cancelled">Darbas atšauktas. Darbuotojų kvietimai nevykdomi.</div> : Array.from({length:selected.workers_needed},(_,index) => <div className="edcal-person" key={index}>{index < selected.confirmedCount ? <div className="edcal-avatar">{["J","T","M","D"][index]}</div> : <button type="button" className="edcal-avatar edcal-add-worker" aria-label="Rasti darbuotoją laisvai vietai" onClick={() => setDemoAction({type:"matches"})}>+</button>}<div className="edcal-person-copy"><b>{index < selected.confirmedCount ? ["Jonas","Tomas","Mantas","Darius"][index] : "Laisva vieta"}</b><small>{index < selected.confirmedCount ? "Pavyzdinis darbuotojas" : "Darbuotojas nepaskirtas"}</small></div>{index < selected.confirmedCount && <div className="edcal-person-actions"><button type="button" className="ed-secondary" onClick={() => setDemoAction({type:"profile",name:["Jonas","Tomas","Mantas","Darius"][index]})}>Profilis</button><button type="button" className="ed-secondary" onClick={() => setDemoAction({type:"message",name:["Jonas","Tomas","Mantas","Darius"][index]})}>Žinutė</button></div>}<span className={`edcal-status ${index < selected.confirmedCount ? "green" : "amber"}`}>{index < selected.confirmedCount ? "Patvirtino" : "Nepaskirta"}</span></div>)}</div> : <div className="edcal-people"><h3>Darbuotojai</h3>{currentJobId !== selected.id || workersLoading ? <p role="status">Kraunami darbuotojai…</p> : workers.length ? workers.map(worker => <div className="edcal-person" key={worker.id}><div className="edcal-avatar">{String(worker.name || "D").slice(0,1)}</div><div className="edcal-person-copy"><b>{worker.name || "Darbuotojas"}</b><small>Darbo dalyvis</small></div><div className="edcal-person-actions"><button type="button" className="ed-secondary" onClick={() => onWorkerProfile?.(worker)}>Profilis</button>{worker.invitationId && <button type="button" className="ed-secondary" onClick={() => onWorkerMessage?.(worker,selected)}>Žinutė</button>}</div></div>) : <p>Patvirtintų darbuotojų nėra.</p>}{selected.status === "open" && Number(selected.workers_needed || 0) > Number(selected.confirmedCount || 0) && <div className="edcal-person edcal-free-place"><button type="button" className="edcal-avatar edcal-add-worker" aria-label="Rasti ir kviesti tinkamus darbuotojus" onClick={() => onOpenJob(selected)}>+</button><div className="edcal-person-copy"><b>Laisvos vietos: {Math.max(0,Number(selected.workers_needed || 0)-Number(selected.confirmedCount || 0))}</b><small>Rasti ir kviesti tinkamus darbuotojus</small></div><button type="button" className="ed-secondary" onClick={() => onOpenJob(selected)}>Rasti darbuotojus</button></div>}<div className="edcal-detail-actions"><button type="button" className="ed-primary" onClick={() => onOpenJob(selected)}>Atidaryti darbą ir darbuotojus</button>{selected.status === "open" && <button type="button" className="ed-secondary" onClick={() => onOpenJob(selected, true)}>Pakviesti iš favoritų</button>}</div></div>}</div>
+      {demoMode && demoAction && <div className="edcal-demo-interaction" role="status"><b>{demoAction.type === "demo-invited" ? "Kvietimas · Demonstracija" : demoAction.type === "matches" ? "Tinkami darbuotojai · Pavyzdys" : demoAction.type === "profile" ? `${demoAction.name} · Pavyzdinis profilis` : demoAction.type === "group" ? "Bendras darbo pokalbis · Pavyzdys" : `Privati žinutė · ${demoAction.name}`}</b><p>{demoAction.type === "matches" ? "Tikrame darbe kandidatai atrenkami pagal darbo vietą, laiką, prieinamumą ir kitus darbo kriterijus. Žemiau – tik išgalvoti pavyzdžiai." : demoAction.type === "profile" ? "Statybos darbuotojas · Vilnius. Išgalvotas profilis demonstracijai." : "Tikrame darbe čia atsidaro pokalbis. Demonstraciniame režime žinutės nesiunčiamos."}</p>{demoAction.type === "matches" && ["Lukas (pavyzdys)","Paulius (pavyzdys)"].map(name => <div className="edcal-person" key={name}><div className="edcal-avatar">{name.slice(0,1)}</div><div className="edcal-person-copy"><b>{name}</b><small>Pavyzdinis kandidatas · {selected.city}</small></div><button type="button" className="ed-secondary" onClick={() => setDemoAction({type:"demo-invited",name})}>Kviesti (pavyzdys)</button></div>)}{demoAction.type === "demo-invited" && <p>Kvietimo peržiūra: {demoAction.name}. Tikras kvietimas neišsiųstas.</p>}<button type="button" className="ed-secondary" onClick={() => setDemoAction(null)}>Uždaryti</button></div>}
       {demoMode && <div className="edcal-demo-foot">Išgalvoti duomenys · Peržiūra nesukuria kvietimų.</div>}
     </section>}
   </>;
@@ -18174,6 +17948,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       <main className="ed-shell">
         {calendarVisible && <EmployerWorkCalendar
           jobs={visibleJobs}
+          currentJobId={currentJob?.id}
+          workers={jobWorkers}
+          workersLoading={jobWorkersLoading}
+          onSelectJob={job => openExistingJob(job)}
+          onWorkerProfile={worker => openWorkerProfile(worker)}
+          onWorkerMessage={(worker, job) => openEmployerPrivateConversation(worker.invitationId, `${worker.name} · ${formatJobTitle(job.title)}`)}
+          onGroupMessage={job => openEmployerGroupConversation(job)}
           jobScope={jobScope}
           canSeeAllCompanyJobs={canSeeAllCompanyJobs}
           onScopeChange={scope => setJobScope(scope === "all" && canSeeAllCompanyJobs ? "all" : "mine")}
@@ -29987,8 +29768,6 @@ function PublicLandingPage({
           <div className="home-legal-links">
             <button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button>
             <button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>
-            <a className="home-terms-link" href="/slapuku-politika">Slapukų politika</a>
-            <button className="home-terms-link" type="button" onClick={() => window.dispatchEvent(new Event("s24-edit-meta-consent"))}>Slapukų parinktys</button>
             <button className="home-terms-link" type="button" onClick={() => setBusinessDetailsOpen(true)}>Rekvizitai</button>
           </div>
           <span>© 2026 statybos24.lt</span>
@@ -35617,50 +35396,79 @@ const mobileModalSafetyStyles = `
 
 function SiteAnalyticsTracker() {
   useEffect(() => {
-    if (typeof window === "undefined" || !supabase) return undefined;
+    if (typeof window === "undefined") return undefined;
+
     const hostname = String(window.location.hostname || "").toLowerCase();
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".local")) return undefined;
-    let cancelled = false, running = false, sent = false, generation = 0;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".local")
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
     async function sendVisit() {
-      if (cancelled || running || sent || !cookieAnalyticsAllowed()) return;
-      running = true;
-      const started = generation;
       try {
         const observerKey = "s24_analytics_observer_v1";
         const visitorKey = "s24_visitor_id_v1";
-        const visitorAtKey = "s24_visitor_at_v1";
-        if (window.localStorage.getItem(observerKey) === "1") return;
+
+        if (window.localStorage.getItem(observerKey) === "1") {
+          return;
+        }
+
         const sessionResult = await supabase.auth.getSession();
-        if (cancelled || !cookieAnalyticsAllowed() || started !== generation) return;
+        if (cancelled) return;
+
         const sessionUser = sessionResult.data?.session?.user || null;
         const email = String(sessionUser?.email || "").trim().toLowerCase();
-        if (email === "4floss@gmail.com" || email === "tattoo.staponas@gmail.com") {
-          window.localStorage.setItem(observerKey, "1"); return;
+
+        if (
+          email === "4floss@gmail.com" ||
+          email === "tattoo.staponas@gmail.com"
+        ) {
+          window.localStorage.setItem(observerKey, "1");
+          return;
         }
+
         let visitorId = window.localStorage.getItem(visitorKey);
-        const visitorAt = Number(window.localStorage.getItem(visitorAtKey));
-        if (!visitorId || !visitorAt || Date.now() - visitorAt > COOKIE_CHOICE_MS) {
-          visitorId = typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `s24-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        if (!visitorId) {
+          visitorId =
+            typeof crypto?.randomUUID === "function"
+              ? crypto.randomUUID()
+              : `s24-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .slice(2)}-${Math.random().toString(36).slice(2)}`;
           window.localStorage.setItem(visitorKey, visitorId);
-          window.localStorage.setItem(visitorAtKey, String(Date.now()));
         }
-        if (cancelled || !cookieAnalyticsAllowed() || started !== generation) return;
-        const response = await fetch("/api/analytics/visit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitorId, userId: sessionUser?.id || null }), keepalive: true, credentials: "same-origin" });
-        if (response.ok) sent = true;
-      } catch { /* Measurement must never block the platform. */ }
-      finally { running = false; }
+
+        await fetch("/api/analytics/visit", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            visitorId,
+            userId: sessionUser?.id || null,
+          }),
+          keepalive: true,
+          credentials: "same-origin",
+        });
+      } catch {
+        // Lankomumo skaitiklis niekada neturi trukdyti naudotis svetaine.
+      }
     }
-    const changed = () => { generation += 1; if (!cookieAnalyticsAllowed()) sent = false; else void sendVisit(); };
-    const storage = (event) => { if (event.key === COOKIE_PREFS_KEY || event.key === null) changed(); };
-    void sendVisit();
-    window.addEventListener("s24-cookie-preferences-changed", changed);
-    window.addEventListener("storage", storage);
-    const retry = setInterval(() => { void sendVisit(); }, 60000);
-    return () => { cancelled = true; clearInterval(retry); window.removeEventListener("s24-cookie-preferences-changed", changed); window.removeEventListener("storage", storage); };
+
+    sendVisit();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
   return null;
 }
-
 
 function MobilePopupBackGuard() {
   useEffect(() => {
@@ -36006,16 +35814,13 @@ function FatalAppError() {
 applyBrandFavicon();
 
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
-const isCookiePolicyRoute = currentPath === "/slapuku-politika";
 const isHireRoute = currentPath === "/hire";
 const isHireLoginRoute = currentPath === "/hire/login";
 const isHirePortalRoute = currentPath === "/hire/portal";
 
 createRoot(document.getElementById("root")).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
-    {isCookiePolicyRoute ? (
-      <><CookiePolicyPage /><MetaMarketingConsent /></>
-    ) : isHireLoginRoute ? (
+    {isHireLoginRoute ? (
       <HireEmployerLoginPage />
     ) : isHirePortalRoute ? (
       <HireEmployerPortalPage />
@@ -36028,7 +35833,6 @@ createRoot(document.getElementById("root")).render(
         <style>{mobileModalSafetyStyles}</style>
         <App />
         <SiteAnalyticsTracker />
-        <MetaMarketingConsent />
         <MobilePopupBackGuard />
         <BackToTopButton />
       </>
