@@ -13426,7 +13426,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [planSummary, setPlanSummary] = useState(null);
   const employerCalendarMemory = useRef(null);
   const [calendarRequested, setCalendarRequested] = useState(() => new URLSearchParams(window.location.search).get("employerView") === "calendar");
-  const calendarAllowed = planSummary?.plan_key === "business_pro";
+  // Temporary calendar rollout: existing admin preview plus the explicitly authorized tester.
+  // This controls feature visibility only; existing plan, company and database permissions still apply.
+  const calendarTesterEmail = String(user?.email || "").trim().toLowerCase();
+  const calendarPreviewEnabled = typeof onAdminReturn === "function" || calendarTesterEmail === "tattoo.staponas@gmail.com";
+  const calendarAllowed = calendarPreviewEnabled && planSummary?.plan_key === "business_pro";
   const calendarVisible = calendarRequested && calendarAllowed;
   useEffect(() => {
     const sync = () => setCalendarRequested(new URLSearchParams(window.location.search).get("employerView") === "calendar");
@@ -13434,6 +13438,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return () => window.removeEventListener("popstate", sync);
   }, []);
   function navigateEmployerCalendar(open) {
+    if (open && !calendarPreviewEnabled) return;
     if (open && !calendarAllowed) { setShowPlans(true); return; }
     const url = new URL(window.location.href);
     if (open) url.searchParams.set("employerView", "calendar");
@@ -18423,9 +18428,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            {calendarPreviewEnabled && (
             <button className="ed-secondary ed-calendar-launch" type="button" style={{background:"#f08a28",borderColor:"#f08a28",color:"#fff"}} onClick={() => navigateEmployerCalendar(true)}>
               {calendarAllowed ? "Darbų kalendorius" : "Darbų kalendorius · Pro"}
             </button>
+            )}
 
             <button
               className={`ed-secondary ed-team-chat-btn ed-chat-alert-btn ${
