@@ -2119,6 +2119,7 @@ function AuthModal({
     employerType: "company",
     companyName: "",
     companyCode: "",
+    workAbroadChoice: "",
   });
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
@@ -2199,6 +2200,7 @@ function AuthModal({
         if (!form.lastName.trim()) {
           throw new Error("Įveskite pavardę.");
         }
+        if (role === "worker" && !["yes","no"].includes(form.workAbroadChoice)) throw new Error("Pasirinkite, ar domina darbas užsienyje.");
         if (role === "worker") {
           const birthDateError = workerBirthDateError(form.birthDate, true);
           if (birthDateError) throw new Error(birthDateError);
@@ -2251,7 +2253,7 @@ function AuthModal({
               preferred_billing_interval: "monthly",
               first_name: form.firstName.trim(),
               last_name: form.lastName.trim(),
-              ...(role === "worker" ? { birth_date: form.birthDate } : {}),
+              ...(role === "worker" ? { birth_date: form.birthDate, work_abroad_interested: form.workAbroadChoice === "yes", work_abroad_interest_updated_at: new Date().toISOString() } : {}),
               display_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               legal_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
               city: canonicalCity,
@@ -2574,6 +2576,8 @@ function AuthModal({
                   </span>
                 </label>
               )}
+
+              {role === "worker" && <fieldset style={{border:"1px solid #dfe7ed",borderRadius:12,padding:14,margin:0}}><legend style={{fontSize:13,fontWeight:800,color:"#102438"}}>Ar domina darbas užsienyje? *</legend><div style={{display:"flex",gap:18,flexWrap:"wrap"}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,cursor:"pointer"}}><input type="radio" name="signup-work-abroad" value={value} checked={form.workAbroadChoice===value} onChange={()=>setForm(current=>({...current,workAbroadChoice:value}))} required disabled={loading}/>{label}</label>)}</div></fieldset>}
 
               <div style={twoColumns}>
                 <label style={labelStyle}>
@@ -8641,6 +8645,8 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       </header>
 
       <main className="wd-shell">
+        {showProfileEditor && <WorkAbroadPreference user={user}/>}
+
         <div className="wd-heading">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
@@ -24532,6 +24538,19 @@ function AdminPrivateMessageComposer({ target, onClose, onSent }) {
   );
 }
 
+function WorkAbroadPreference({user}) {
+  const [choice,setChoice]=useState(user?.user_metadata?.work_abroad_interested === true ? "yes" : user?.user_metadata?.work_abroad_interested === false ? "no" : "");
+  const [busy,setBusy]=useState(false); const [message,setMessage]=useState("");
+  return <section style={{background:"#fff",border:"1px solid #dfe7ed",borderRadius:14,padding:16}}><h3 style={{margin:"0 0 8px",fontSize:16}}>Darbas užsienyje</h3><div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:12}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{fontSize:13,display:"flex",gap:6,alignItems:"center"}}><input type="radio" name="profile-work-abroad" value={value} checked={choice===value} onChange={()=>{setChoice(value);setMessage("");}} disabled={busy}/>{label}</label>)}<button type="button" className="btn" disabled={!choice || busy} onClick={async()=>{setBusy(true);setMessage("");try{const result=await supabase.auth.updateUser({data:{work_abroad_interested:choice==="yes",work_abroad_interest_updated_at:new Date().toISOString()}});if(result.error)throw result.error;setMessage("Pasirinkimas išsaugotas.");}catch(e){setMessage(e.message || "Nepavyko išsaugoti.");}finally{setBusy(false);}}}>{busy ? "Saugoma…" : "Išsaugoti pasirinkimą"}</button></div>{message && <p role="status" style={{fontSize:12}}>{message}</p>}</section>;
+}
+
+function AdminWorkAbroadInterests() {
+ const [rows,setRows]=useState([]),[search,setSearch]=useState(""),[query,setQuery]=useState(""),[page,setPage]=useState(0),[reload,setReload]=useState(0),[busy,setBusy]=useState(true),[error,setError]=useState("");
+ useEffect(()=>{let cancelled=false;setBusy(true);setError("");setRows([]);supabase.rpc("admin_list_work_abroad_interested",{p_search:query,p_limit:50,p_offset:page*50}).then(result=>{if(cancelled)return;if(result.error)setError(result.error.message);else setRows(result.data||[]);}).catch(e=>{if(!cancelled)setError(e.message||"Nepavyko įkelti.");}).finally(()=>{if(!cancelled)setBusy(false);});return()=>{cancelled=true;};},[query,page,reload]);
+ const total=Number(rows[0]?.total_count||0);
+ return <section className="admin-section"><style>{`.abroad-admin-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.abroad-admin-head h2{margin:0}.abroad-admin-search{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.abroad-admin-search input{padding:10px;border:1px solid #dfe7ed;border-radius:9px;font:inherit;font-size:13px;min-width:0;flex:1}.abroad-admin-list{display:grid;gap:9px}.abroad-admin-person{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;padding:14px;border:1px solid #e4ebf0;border-radius:12px;background:#fff;font-size:13px}.abroad-admin-person small{display:block;color:#7a8996;font-size:11px;margin-top:5px}.abroad-admin-person a{color:#9c5417;overflow-wrap:anywhere}.abroad-admin-nav{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px}@media(max-width:620px){.abroad-admin-person{grid-template-columns:1fr;gap:9px}}`}</style><div className="abroad-admin-head"><h2>Domisi darbu užsienyje</h2><button type="button" className="btn ghost" onClick={()=>setReload(v=>v+1)} disabled={busy}>Atnaujinti</button></div><form className="abroad-admin-search" onSubmit={e=>{e.preventDefault();setPage(0);setQuery(search.trim());setReload(v=>v+1);}}><input aria-label="Ieškoti darbuotojų" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Vardas, miestas arba el. paštas"/><button type="submit" className="btn ghost">Ieškoti</button></form>{error && <p role="alert">{error}</p>}{busy ? <SilentLoader size={22} minHeight={80}/> : <><p style={{fontSize:12,color:"#607180"}}>Rasta: {total}</p><div className="abroad-admin-list">{rows.map(row=><article className="abroad-admin-person" key={row.user_id}><div><b>{row.display_name||"Darbuotojas"}</b><small>{row.city||"Miestas nenurodytas"}</small><small>Registracija: {new Date(row.registered_at).toLocaleDateString("lt-LT")}</small></div><div><small>El. paštas</small><a href={`mailto:${row.email}`}>{row.email}</a></div><div><small>Telefonas</small>{row.phone ? <a href={`tel:${row.phone}`}>{row.phone}</a> : "—"}</div></article>)}{!rows.length && <p>Darbuotojų pagal šiuos kriterijus nėra.</p>}</div></>}<div className="abroad-admin-nav"><button type="button" className="btn ghost" disabled={busy||page===0} onClick={()=>setPage(v=>v-1)}>← Ankstesni</button><span style={{fontSize:12}}>Puslapis {page+1}</span><button type="button" className="btn ghost" disabled={busy||(page+1)*50>=total} onClick={()=>setPage(v=>v+1)}>Kiti →</button></div></section>;
+}
+
 function AdminDashboard({
   user,
   onLogout,
@@ -24670,6 +24689,7 @@ function AdminDashboard({
   const tabs = [
     ["overview", "Suvestinė"],
     ["workers", "Darbuotojai"],
+    ["workAbroadInterest", "Domisi darbu užsienyje"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
@@ -26991,6 +27011,8 @@ function AdminDashboard({
           ))}
         </div>
 
+
+        {activeTab === "workAbroadInterest" && <AdminWorkAbroadInterests/>}
 
         {activeTab === "overview" && (
           <>
