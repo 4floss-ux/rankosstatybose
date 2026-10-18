@@ -2402,6 +2402,7 @@ function AuthModal({
           </button>
         </div>
 
+        {mode !== "signup" && (
         <div style={{ ...twoColumns, marginBottom: 18 }}>
           <button
             type="button"
@@ -2428,6 +2429,7 @@ function AuthModal({
             Registruotis
           </button>
         </div>
+        )}
 
         {mode === "signup" && !teamInvite && (
           <div style={{ ...twoColumns, marginBottom: 18 }}>
