@@ -29723,6 +29723,7 @@ function PublicLandingPage({
         }
         @media(prefers-reduced-motion:reduce){.home-page .home-plan{transition:none!important}.home-page .home-plan:hover,.home-page .home-plan:focus-within{transform:none!important}}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{grid-template-columns:1fr;gap:34px;padding:64px 0}.home-summary{max-width:650px}.home-services{grid-template-columns:repeat(2,1fr)}.home-prices{gap:9px}.home-plan{padding:18px}.home-cta-inner{align-items:flex-start;flex-direction:column}.home-cta-buttons{justify-content:flex-start}}
+        @media(min-width:701px){.home-page .home-audience-head{flex-direction:column;align-items:flex-start;gap:14px}.home-page .home-audience-head .home-intro{max-width:820px}.home-page .home-price-copy{max-width:none;min-width:0;flex:1}.home-page .home-price-title{color:var(--navy)}.home-page .home-price-subtitle{display:block;margin-top:14px;color:var(--muted);font:400 14px/1.65 Inter,sans-serif;letter-spacing:normal}}
         @media(max-width:700px){.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:68px;justify-content:space-between;gap:8px}.home-actions{gap:5px}.home-actions>.home-btn{font-size:11px;padding:8px 10px;min-height:40px}.home-login{font-size:11px;min-height:40px;padding:8px 4px}.home-hero-grid{padding:48px 0}.home-hero h1{font-size:clamp(37px,11vw,48px)}.home-lead{font-size:16px}.home-proof{gap:6px}.home-proof span{font-size:10px}.home-summary{padding:20px;border-radius:18px}.home-summary h2{font-size:22px}.home-section{padding:52px 0}.home-section-head,.home-price-head{align-items:flex-start;flex-direction:column}.home-services,.home-audiences,.home-prices{grid-template-columns:1fr}.home-service{padding:18px}.home-live-panel{grid-template-columns:1fr;padding:22px;gap:20px}.home-live-copy h2{font-size:34px}.home-live-copy p{font-size:14px}.home-toggle{width:100%}.home-toggle button{flex:1}.home-plan-sub{min-height:0}.home-cta{padding:50px 0}.home-cta-buttons{width:100%}.home-cta .home-btn{flex:1}.home-footer-inner{flex-direction:column;align-items:flex-start}}
         @media(max-width:420px){.home-brand{font-size:13px}.home-actions{margin-left:0}.home-live-panel{padding:18px}.home-live-copy h2{font-size:30px}.home-live-row{grid-template-columns:38px minmax(0,1fr);padding:13px}.home-live-row.active{padding-right:62px}.home-live-step{width:38px;height:38px}.home-live-status{right:10px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}.home-cta-buttons{display:grid}.home-cta .home-btn{width:100%}.home-summary-row{grid-template-columns:36px minmax(0,1fr);padding:12px}.home-summary-icon{width:36px;height:36px}}
         @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important;transition:none!important}}
@@ -29835,7 +29836,7 @@ function PublicLandingPage({
 
         <section className="home-section" id="kam-skirta">
           <div className="home-wrap">
-            <div className="home-section-head">
+            <div className="home-section-head home-audience-head">
               <div>
                 <div className="home-kicker">Kam skirta</div>
                 <h2>Viena platforma abiem darbo pusėms.</h2>
@@ -29873,8 +29874,7 @@ function PublicLandingPage({
             <div className="home-price-head">
               <div className="home-price-copy">
                 <div className="home-kicker">Darbdavių planai</div>
-                <h2>Pradėkite nemokamai. Augant poreikiui – rinkitės daugiau galimybių.</h2>
-                <span className="home-free-worker">Darbuotojams platforma nemokama</span>
+                <h2 className="home-price-title">Pradėkite nemokamai.<span className="home-price-subtitle"> Augant poreikiui – rinkitės daugiau galimybių.</span></h2>
               </div>
               <div className="home-toggle" aria-label="Mokėjimo laikotarpis">
                 <button className={pricingBillingCycle === "monthly" ? "selected" : ""} type="button" aria-pressed={pricingBillingCycle === "monthly"} onClick={() => setPricingBillingCycle("monthly")}>Kas mėnesį</button>
