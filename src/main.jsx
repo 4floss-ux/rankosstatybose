@@ -27046,17 +27046,23 @@ function AdminDashboard({
         {activeTab === "overview" && (
           <>
             {accountDayError && <p role="alert" style={{fontSize:12,color:"#b64d2a"}}>{accountDayError}</p>}
+            <style>{`
+              .admin-kpis .admin-daily-logins{grid-column:span 2;justify-content:flex-start;gap:12px;min-width:0}
+              .admin-kpis .admin-daily-title{min-height:0;font-size:12px;line-height:1.35}
+              .admin-daily-rows{display:grid;gap:8px}
+              .admin-daily-rows>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+              .admin-kpis .admin-daily-rows span{min-height:0;font-size:12px;color:#607180}
+              .admin-kpis .admin-daily-rows b{margin:0;font-size:22px;line-height:1.2;white-space:nowrap}
+              .admin-daily-rows small{font-size:16px;color:#8a98a6;font-weight:600}
+              @media(max-width:620px){.admin-kpis .admin-daily-logins{grid-column:1/-1}}
+            `}</style>
             <div className="admin-kpis">
-              <div className="admin-kpi">
-                <span>Darbuotojai</span>
-                <b style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>{accountDayStats ? Number(accountDayStats.workersToday || 0) : "—"}<small style={{fontSize:16,color:"#8a98a6",fontWeight:600}}>/ {accountDayStats ? Number(accountDayStats.workersTotal || 0) : "—"}</small></b>
-                <small style={{fontSize:10,color:"#7a8996",marginTop:8}}>Šiandien / visos paskyros</small>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Darbdaviai</span>
-                <b style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>{accountDayStats ? Number(accountDayStats.employersToday || 0) : "—"}<small style={{fontSize:16,color:"#8a98a6",fontWeight:600}}>/ {accountDayStats ? Number(accountDayStats.employersTotal || 0) : "—"}</small></b>
-                <small style={{fontSize:10,color:"#7a8996",marginTop:8}}>Šiandien / visos paskyros</small>
+              <div className="admin-kpi admin-daily-logins">
+                <span className="admin-daily-title">Šiandien prisijungė</span>
+                <div className="admin-daily-rows">
+                  <div><span>Darbuotojai</span><b>{accountDayStats ? Number(accountDayStats.workersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.workersTotal || 0) : "—"}</small></b></div>
+                  <div><span>Darbdaviai</span><b>{accountDayStats ? Number(accountDayStats.employersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.employersTotal || 0) : "—"}</small></b></div>
+                </div>
               </div>
 
               <div className="admin-kpi">
