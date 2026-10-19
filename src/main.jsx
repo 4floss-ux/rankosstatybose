@@ -24576,6 +24576,20 @@ function AdminDashboard({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [accountDayStats,setAccountDayStats]=useState(null);
+  const [accountDayError,setAccountDayError]=useState("");
+  useEffect(()=>{
+    if(activeTab!=="overview")return;
+    let stopped=false,inFlight=false;
+    async function loadDay(){
+      if(stopped || inFlight || document.visibilityState!=="visible")return;
+      inFlight=true;
+      try{const result=await supabase.rpc("admin_get_account_day_stats");if(stopped)return;if(result.error){setAccountDayError(result.error.message);setAccountDayStats(null);}else{setAccountDayStats(result.data);setAccountDayError("");}}catch(e){if(!stopped){setAccountDayError(e.message||"Nepavyko įkelti dienos statistikos.");setAccountDayStats(null);}}finally{inFlight=false;}
+    }
+    loadDay();const interval=window.setInterval(loadDay,60000);document.addEventListener("visibilitychange",loadDay);
+    return()=>{stopped=true;window.clearInterval(interval);document.removeEventListener("visibilitychange",loadDay);};
+  },[activeTab,refreshing]);
+
   const [stats, setStats] = useState({});
   const [visitorAnalytics, setVisitorAnalytics] = useState({});
   const [disputes, setDisputes] = useState([]);
@@ -27031,15 +27045,18 @@ function AdminDashboard({
 
         {activeTab === "overview" && (
           <>
+            {accountDayError && <p role="alert" style={{fontSize:12,color:"#b64d2a"}}>{accountDayError}</p>}
             <div className="admin-kpis">
               <div className="admin-kpi">
                 <span>Darbuotojai</span>
-                <b>{Number(stats.totalWorkers || 0)}</b>
+                <b style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>{accountDayStats ? Number(accountDayStats.workersToday || 0) : "—"}<small style={{fontSize:16,color:"#8a98a6",fontWeight:600}}>/ {accountDayStats ? Number(accountDayStats.workersTotal || 0) : "—"}</small></b>
+                <small style={{fontSize:10,color:"#7a8996",marginTop:8}}>Šiandien / visos paskyros</small>
               </div>
 
               <div className="admin-kpi">
                 <span>Darbdaviai</span>
-                <b>{Number(stats.totalEmployers || 0)}</b>
+                <b style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>{accountDayStats ? Number(accountDayStats.employersToday || 0) : "—"}<small style={{fontSize:16,color:"#8a98a6",fontWeight:600}}>/ {accountDayStats ? Number(accountDayStats.employersTotal || 0) : "—"}</small></b>
+                <small style={{fontSize:10,color:"#7a8996",marginTop:8}}>Šiandien / visos paskyros</small>
               </div>
 
               <div className="admin-kpi">
@@ -32552,6 +32569,22 @@ function HireEmployerPortalPage() {
 }
 function App() {
   const [user, setUser] = useState(null);
+  useEffect(() => {
+    if(!user?.id || !supabase) return;
+    let stopped=false, busy=false, recordedDay="";
+    async function recordDay() {
+      if(stopped || busy || document.visibilityState !== "visible") return;
+      const date=localDateISO(new Date());
+      if(recordedDay===date) return;
+      busy=true;
+      try { const result=await supabase.rpc("record_my_account_day"); if(!result.error && !stopped)recordedDay=date; } catch {} finally {busy=false;}
+    }
+    recordDay();
+    const interval=window.setInterval(recordDay,60000);
+    document.addEventListener("visibilitychange",recordDay);
+    return()=>{stopped=true;window.clearInterval(interval);document.removeEventListener("visibilitychange",recordDay);};
+  },[user?.id]);
+
   const authUserIdRef = useRef(null);
   const [authSessionChecked, setAuthSessionChecked] = useState(!supabase);
   const [accountStatusChecked, setAccountStatusChecked] = useState(!supabase);
