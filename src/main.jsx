@@ -27065,6 +27065,14 @@ function AdminDashboard({
                 </div>
               </div>
 
+              <div className="admin-kpi admin-daily-logins">
+                <span className="admin-daily-title">Šiandien užsiregistravo</span>
+                <div className="admin-daily-rows">
+                  <div><span>Darbuotojai</span><b>{accountDayStats && accountDayStats.workersRegisteredToday != null ? Number(accountDayStats.workersRegisteredToday) : "—"}</b></div>
+                  <div><span>Darbdaviai</span><b>{accountDayStats && accountDayStats.employersRegisteredToday != null ? Number(accountDayStats.employersRegisteredToday) : "—"}</b></div>
+                </div>
+              </div>
+
               <div className="admin-kpi">
                 <span>Panaudoti darbuotojai</span>
                 <b>{Number(stats.workersUsedThisMonth || 0)}</b>
