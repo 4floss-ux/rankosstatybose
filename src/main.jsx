@@ -29653,6 +29653,7 @@ function PublicLandingPage({
   setPricingBillingCycle,
 }) {
   const plans = EMPLOYER_PLANS;
+  const [mobilePlanIndex,setMobilePlanIndex] = useState(0);
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [businessDetailsOpen, setBusinessDetailsOpen] = useState(false);
@@ -29710,6 +29711,15 @@ function PublicLandingPage({
           .home-page .home-plan{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;transform-origin:center center}
           .home-page .home-plan:hover,.home-page .home-plan:focus-within{transform:translateY(-6px) scale(1.025);z-index:2;border-color:var(--orange);box-shadow:0 20px 44px rgba(16,36,56,.14)}
           .home-page .home-plan.featured:hover,.home-page .home-plan.featured:focus-within{box-shadow:0 20px 44px rgba(240,138,40,.2)}
+        }
+        .home-plan-mobile-nav{display:none}
+        @media(max-width:700px){
+          .home-plan-mobile-nav{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:12px;align-items:center;margin:0 0 22px;padding:9px;background:#f1f4f6;border:1px solid #e2e9ee;border-radius:13px;position:sticky;top:8px;z-index:5}
+          .home-plan-mobile-nav button{width:40px;height:40px;display:grid;place-items:center;border:1px solid #dbe4ea;border-radius:10px;background:#fff;color:#102438;font:inherit;font-size:25px;line-height:1;cursor:pointer}
+          .home-plan-mobile-nav button:active{background:#fff1e5;border-color:#f08a28}
+          .home-plan-mobile-nav button:focus-visible{outline:2px solid #f08a28;outline-offset:2px}
+          .home-plan-mobile-nav>div{text-align:center;min-width:0}.home-plan-mobile-nav b{display:block;font-size:14px}.home-plan-mobile-nav span{display:block;font-size:10px;color:#7a8996;margin-top:3px}
+          .home-page .home-prices>.home-plan{display:none}.home-page .home-prices>.home-plan.mobile-current-plan{display:flex}
         }
         @media(prefers-reduced-motion:reduce){.home-page .home-plan{transition:none!important}.home-page .home-plan:hover,.home-page .home-plan:focus-within{transform:none!important}}
         @media(max-width:900px){.home-navlinks{display:none}.home-hero-grid{grid-template-columns:1fr;gap:34px;padding:64px 0}.home-summary{max-width:650px}.home-services{grid-template-columns:repeat(2,1fr)}.home-prices{gap:9px}.home-plan{padding:18px}.home-cta-inner{align-items:flex-start;flex-direction:column}.home-cta-buttons{justify-content:flex-start}}
@@ -29872,8 +29882,10 @@ function PublicLandingPage({
               </div>
             </div>
 
+            <div className="home-plan-mobile-nav" aria-label="Planų pasirinkimas"><button type="button" aria-label="Ankstesnis planas" onClick={()=>setMobilePlanIndex(index=>(index-1+plans.length)%plans.length)}>‹</button><div aria-live="polite"><b>{plans[mobilePlanIndex]?.name}</b><span>{mobilePlanIndex+1} / {plans.length}</span></div><button type="button" aria-label="Kitas planas" onClick={()=>setMobilePlanIndex(index=>(index+1)%plans.length)}>›</button></div>
+
             <div className="home-prices">
-              {plans.map((item) => {
+              {plans.map((item, planIndex) => {
                 const paid = item.key !== "basic";
                 const yearly = pricingBillingCycle === "yearly";
                 const visibleFeatures =
@@ -29883,7 +29895,7 @@ function PublicLandingPage({
                     ? item.features.slice(0, 6)
                     : item.features;
                 return (
-                  <article className={`home-plan ${item.key === "business" ? "featured" : ""}`} key={item.key}>
+                  <article className={`home-plan ${item.key === "business" ? "featured" : ""} ${planIndex === mobilePlanIndex ? "mobile-current-plan" : ""}`} key={item.key}>
                     {item.key === "business" && <span className="home-plan-badge">POPULIARIAUSIAS</span>}
                     {item.key === "business_pro" && <span className="home-plan-badge pro">PILNAS VALDYMAS</span>}
                     <h3>{item.name}</h3>
