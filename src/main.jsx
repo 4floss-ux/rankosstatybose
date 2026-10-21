@@ -27618,6 +27618,7 @@ function AdminDashboard({
                               <div className="admin-foreign-fact"><span>Surinkti iki</span><b>{fullNeed.neededBy || "—"}</b></div>
                               <div className="admin-foreign-fact"><span>Įdarbinimo tipas</span><b>{fullNeed.employmentType || "—"}</b></div>
                               <div className="admin-foreign-fact"><span>Sutarties trukmė</span><b>{fullNeed.duration || "—"}</b></div>
+                              <div className="admin-foreign-fact"><span>Darbo valandų per savaitę</span><b>{fullNeed.weeklyHours ? `${fullNeed.weeklyHours} val.` : "—"}</b></div>
                               <div className="admin-foreign-fact"><span>Viršvalandžiai</span><b>{fullNeed.overtimeAllowed === "yes" ? "Taip" : fullNeed.overtimeAllowed === "no" ? "Ne" : (fullNeed.overtime || "—")}</b></div>
                               <div className="admin-foreign-fact"><span>Viršvalandžių apmokėjimas</span><b>{fullNeed.overtimePay || "—"}</b></div>
                               <div className="admin-foreign-fact"><span>Atlygis</span><b>{salarySummary}</b></div>
@@ -31922,6 +31923,7 @@ function HireEmployerPortalPage() {
     neededBy:"",
     employmentType:"",
     duration:"",
+    weeklyHours:"",
     overtimeAllowed:"no",
     overtimePay:"",
     salaryCurrency:"EUR",
@@ -32280,6 +32282,7 @@ function HireEmployerPortalPage() {
     if (firstInvalidRole) { setError(tr("Complete profession and worker count for every role.", "Kiekvienai pozicijai nurodykite profesiją ir darbuotojų skaičių.")); return; }
     if (!needForm.employmentType.trim()) { setError(tr("Enter the employment type.", "Nurodykite įdarbinimo tipą.")); return; }
     if (!needForm.duration.trim()) { setError(tr("Enter the contract duration.", "Nurodykite sutarties trukmę.")); return; }
+    if (!/^[1-9]\d*$/.test(String(needForm.weeklyHours).trim()) || Number(needForm.weeklyHours) > 80) { setError(tr("Enter weekly working hours (1–80).", "Nurodykite darbo valandų per savaitę skaičių (1–80).")); return; }
     if (needForm.overtimeAllowed === "yes" && !needForm.overtimePay.trim()) { setError(tr("Enter how overtime is paid.", "Nurodykite, kaip apmokami viršvalandžiai.")); return; }
     if (!String(needForm.salaryAmount).trim()) { setError(tr("Enter the offered salary.", "Nurodykite siūlomą atlyginimą.")); return; }
     if (!needForm.salaryCurrency.trim() || !needForm.salaryPayFrequency.trim()) { setError(tr("Enter the salary currency and payment frequency.", "Nurodykite atlyginimo valiutą ir kaip dažnai jis mokamas.")); return; }
@@ -32522,6 +32525,7 @@ function HireEmployerPortalPage() {
             <div className="hep-form-section"><h2>{tr("Employment conditions", "Darbo sąlygos")}</h2><p>{tr("Describe the employment arrangement and contract duration. Mark whether overtime is offered.", "Aprašykite įdarbinimo tipą, sutarties trukmę ir pažymėkite, ar numatomi viršvalandžiai.")}</p><div className="hep-form-grid">
               <label className="hep-field"><span>{tr("EMPLOYMENT TYPE *", "ĮDARBINIMO TIPAS *")}</span><input className="hep-input" value={needForm.employmentType} onChange={(e) => setNeedField("employmentType", e.target.value)} placeholder={tr("e.g. direct employment under German contract", "pvz. tiesioginis įdarbinimas pagal Vokietijos darbo sutartį")}/></label>
               <label className="hep-field"><span>{tr("CONTRACT DURATION *", "SUTARTIES TRUKMĖ *")}</span><input className="hep-input" value={needForm.duration} onChange={(e) => setNeedField("duration", e.target.value)} placeholder={tr("e.g. 12 months / permanent", "pvz. 12 mėnesių / neterminuota")}/></label>
+              <label className="hep-field"><span>{tr("WORKING HOURS PER WEEK *", "DARBO VALANDŲ PER SAVAITĘ SKAIČIUS *")}</span><input className="hep-input" type="number" inputMode="numeric" min="1" max="80" step="1" required value={needForm.weeklyHours} onChange={(e) => setNeedField("weeklyHours", e.target.value)} placeholder={tr("e.g. 40", "pvz. 40")}/></label>
               <div className="hep-field full"><span>{tr("OVERTIME", "VIRŠVALANDŽIAI")}</span><HirePortalCheckChoice name="overtime" value={needForm.overtimeAllowed} onChange={(value) => setNeedField("overtimeAllowed", value)} options={[{value:"yes",label:tr("Overtime available", "Taip")},{value:"no",label:tr("No overtime", "Ne")}]} /></div>
               {needForm.overtimeAllowed === "yes" ? <label className="hep-field full"><span>{tr("OVERTIME PAY *", "KAIP APMOKAMI VIRŠVALANDŽIAI *")}</span><input className="hep-input" value={needForm.overtimePay} onChange={(e) => setNeedField("overtimePay", e.target.value)} placeholder={tr("e.g. 125% hourly rate / +5 EUR per hour", "pvz. 125% valandinio tarifo / +5 EUR už valandą")}/></label> : null}
             </div></div>
@@ -32569,7 +32573,7 @@ function HireEmployerPortalPage() {
             {needInfoOpen ? <div className="hep-info">
               <div className="hep-info-section"><h3>{tr("Project", "Projektas")}</h3><div className="hep-info-grid">
                 <div className="hep-info-cell"><span>{tr("Country", "Šalis")}</span><b>{selectedNeed.projectCountry || "—"}</b></div><div className="hep-info-cell"><span>{tr("Location", "Adresas")}</span><b>{selectedNeed.projectLocation || "—"}</b></div><div className="hep-info-cell"><span>{tr("Start", "Darbo pradžia")}</span><b>{selectedNeed.requestedStartDate || "—"}</b></div>
-                <div className="hep-info-cell"><span>{tr("Needed by", "Darbuotojus turėti iki")}</span><b>{wf.neededBy || "—"}</b></div><div className="hep-info-cell"><span>{tr("Employment", "Įdarbinimas")}</span><b>{employmentTypeLabel(wf.employmentType)}</b></div><div className="hep-info-cell"><span>{tr("Duration", "Sutarties trukmė")}</span><b>{wf.duration || "—"}</b></div><div className="hep-info-cell"><span>{tr("Overtime", "Viršvalandžiai")}</span><b>{wf.overtimeAllowed === "yes" ? tr("Yes", "Taip") : wf.overtimeAllowed === "no" ? tr("No", "Ne") : (wf.overtime || "—")}</b></div>{wf.overtimeAllowed === "yes" ? <div className="hep-info-cell"><span>{tr("Overtime pay", "Viršvalandžių apmokėjimas")}</span><b>{wf.overtimePay || "—"}</b></div> : null}
+                <div className="hep-info-cell"><span>{tr("Needed by", "Darbuotojus turėti iki")}</span><b>{wf.neededBy || "—"}</b></div><div className="hep-info-cell"><span>{tr("Employment", "Įdarbinimas")}</span><b>{employmentTypeLabel(wf.employmentType)}</b></div><div className="hep-info-cell"><span>{tr("Duration", "Sutarties trukmė")}</span><b>{wf.duration || "—"}</b></div><div className="hep-info-cell"><span>{tr("Hours per week", "Valandų per savaitę")}</span><b>{wf.weeklyHours ? `${wf.weeklyHours} ${tr("hours", "val.")}` : "—"}</b></div><div className="hep-info-cell"><span>{tr("Overtime", "Viršvalandžiai")}</span><b>{wf.overtimeAllowed === "yes" ? tr("Yes", "Taip") : wf.overtimeAllowed === "no" ? tr("No", "Ne") : (wf.overtime || "—")}</b></div>{wf.overtimeAllowed === "yes" ? <div className="hep-info-cell"><span>{tr("Overtime pay", "Viršvalandžių apmokėjimas")}</span><b>{wf.overtimePay || "—"}</b></div> : null}
               </div></div>
               <div className="hep-info-section"><h3>{tr("Workers required", "Reikalingi darbuotojai")}: {totalWorkers(selectedNeed) || "—"}</h3><div className="hep-role-list">{Array.isArray(wf.roles) ? wf.roles.map((role, index) => <div className="hep-role-summary" key={`summary-${index}`}>
                   <div className="hep-info-grid">
