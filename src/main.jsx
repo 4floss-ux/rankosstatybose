@@ -31338,8 +31338,8 @@ function setForeignHirePortalToken(token) {
 
 
 const HIRE_PORTAL_LOGIN_COPY = {
-  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID",companyPlaceholder:"e.g. ID-123456",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID and password.",accessDenied:"This account does not have administrator access.",sessionError:"Could not create a portal session.",signInError:"Incorrect Company ID or password.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
-  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID",companyPlaceholder:"pvz. ID-123456",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite įmonės ID ir slaptažodį.",accessDenied:"Ši paskyra neturi administratoriaus teisių.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingas įmonės ID arba slaptažodis.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
+  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID OR ADMIN EMAIL",companyPlaceholder:"ID-123456 or admin email",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID or admin email and password.",accessDenied:"This account does not have administrator access.",sessionError:"Could not create a portal session.",signInError:"Incorrect login details.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
+  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID ARBA ADMINISTRATORIAUS EL. PAŠTAS",companyPlaceholder:"ID-123456 arba el. paštas",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite įmonės ID arba administratoriaus el. paštą ir slaptažodį.",accessDenied:"Ši paskyra neturi administratoriaus teisių.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingi prisijungimo duomenys.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
   de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"UNTERNEHMENS-ID",companyPlaceholder:"z. B. ID-123456",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",accessDenied:"Dieses Konto hat keine Administratorrechte.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Unternehmens-ID oder Passwort ist falsch.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
   nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"BEDRIJFS-ID",companyPlaceholder:"bijv. ID-123456",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",accessDenied:"Dit account heeft geen beheerdersrechten.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Bedrijfs-ID of wachtwoord is onjuist.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
   no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"BEDRIFTS-ID",companyPlaceholder:"f.eks. ID-123456",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",accessDenied:"Denne kontoen har ikke administratortilgang.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Bedrifts-ID eller passord er feil.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
@@ -31445,6 +31445,13 @@ function HireEmployerLoginPage() {
           throw new Error(copy.signInError);
         }
         try {
+          // Never grant admin access from the email text alone. Verify the actual
+          // authenticated user and server-side administrator role.
+          const identity = await supabase.auth.getUser();
+          if (identity.error || identity.data?.user?.id !== signedIn.data.user?.id ||
+              identity.data?.user?.email?.toLowerCase() !== "4floss@gmail.com") {
+            throw new Error(copy.accessDenied);
+          }
           const administrator = await supabase.rpc("is_admin");
           if (administrator.error) throw new Error(copy.sessionError);
           if (administrator.data !== true) throw new Error(copy.accessDenied);
@@ -31453,6 +31460,8 @@ function HireEmployerLoginPage() {
           throw accessError;
         }
         setForeignHirePortalToken("");
+        // Admin manages international employers through the existing admin panel;
+        // employer /hire/portal sessions remain company-ID based.
         window.location.assign("/?admin_tab=foreignHire");
         return;
       }
@@ -36044,7 +36053,23 @@ const isHireRoute = currentPath === "/hire";
 const isHireLoginRoute = currentPath === "/hire/login";
 const isHirePortalRoute = currentPath === "/hire/portal";
 
-createRoot(document.getElementById("root")).render(
+// Load the site's primary fonts before the initial React paint to avoid the
+// fallback-font -> webfont size/weight jump on hard refresh. Uses fonts already
+// declared by styles.css; does not fetch arbitrary third-party stylesheets.
+async function mountSiteWhenFontsReady() {
+  const rootElement = document.getElementById("root");
+  if (!rootElement) return;
+  if (document.fonts?.load) {
+    const loading = Promise.allSettled([
+      document.fonts.load('400 16px Inter'),
+      document.fonts.load('700 16px Inter'),
+      document.fonts.load('900 24px Manrope'),
+      document.fonts.load('700 24px Manrope'),
+    ]);
+    // Never keep the site unavailable if font downloads are blocked.
+    await Promise.race([loading, new Promise((resolve) => setTimeout(resolve, 2500))]);
+  }
+  createRoot(rootElement).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
     {isHireLoginRoute ? (
       <HireEmployerLoginPage />
@@ -36064,4 +36089,7 @@ createRoot(document.getElementById("root")).render(
       </>
     )}
   </Sentry.ErrorBoundary>
-);
+  );
+}
+
+void mountSiteWhenFontsReady();
