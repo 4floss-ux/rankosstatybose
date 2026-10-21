@@ -31338,8 +31338,8 @@ function setForeignHirePortalToken(token) {
 
 
 const HIRE_PORTAL_LOGIN_COPY = {
-  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID OR ADMIN EMAIL",companyPlaceholder:"ID-123456 or admin email",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID or admin email and password.",accessDenied:"This account does not have administrator access.",sessionError:"Could not create a portal session.",signInError:"Incorrect login details.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
-  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID ARBA ADMINISTRATORIAUS EL. PAŠTAS",companyPlaceholder:"ID-123456 arba el. paštas",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite įmonės ID arba administratoriaus el. paštą ir slaptažodį.",accessDenied:"Ši paskyra neturi administratoriaus teisių.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingi prisijungimo duomenys.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
+  en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"COMPANY ID / EMAIL",companyPlaceholder:"ID-123456 / email",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your Company ID or admin email and password.",accessDenied:"This account does not have administrator access.",sessionError:"Could not create a portal session.",signInError:"Incorrect login details.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
+  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"ĮMONĖS ID / EL. PAŠTAS",companyPlaceholder:"ID-123456 / el. paštas",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite įmonės ID arba administratoriaus el. paštą ir slaptažodį.",accessDenied:"Ši paskyra neturi administratoriaus teisių.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingi prisijungimo duomenys.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
   de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"UNTERNEHMENS-ID",companyPlaceholder:"z. B. ID-123456",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",accessDenied:"Dieses Konto hat keine Administratorrechte.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Unternehmens-ID oder Passwort ist falsch.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
   nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"BEDRIJFS-ID",companyPlaceholder:"bijv. ID-123456",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",accessDenied:"Dit account heeft geen beheerdersrechten.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Bedrijfs-ID of wachtwoord is onjuist.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
   no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"BEDRIFTS-ID",companyPlaceholder:"f.eks. ID-123456",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",accessDenied:"Denne kontoen har ikke administratortilgang.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Bedrifts-ID eller passord er feil.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
@@ -31431,39 +31431,25 @@ function HireEmployerLoginPage() {
     }
     setBusy(true);
     try {
-      // Email sign-in uses Supabase Auth; the server decides administrator access.
-      // Company IDs continue to use the separate employer portal session.
+      // Only the backend decides whether an authenticated email user can get an
+      // employer portal session. Passwords and allowed-email lists stay off the client.
       if (loginId.trim().includes("@")) {
-        if (loginId.trim().toLowerCase() !== "4floss@gmail.com") {
-          throw new Error(copy.signInError);
-        }
         const signedIn = await supabase.auth.signInWithPassword({
-          email: loginId.trim().toLowerCase(),
-          password,
+          email: loginId.trim().toLowerCase(), password,
         });
-        if (signedIn.error || !signedIn.data?.session) {
-          throw new Error(copy.signInError);
-        }
+        if (signedIn.error || !signedIn.data?.session) throw new Error(copy.signInError);
         try {
-          // Never grant admin access from the email text alone. Verify the actual
-          // authenticated user and server-side administrator role.
-          const identity = await supabase.auth.getUser();
-          if (identity.error || identity.data?.user?.id !== signedIn.data.user?.id ||
-              identity.data?.user?.email?.toLowerCase() !== "4floss@gmail.com") {
-            throw new Error(copy.accessDenied);
-          }
-          const administrator = await supabase.rpc("is_admin");
-          if (administrator.error) throw new Error(copy.sessionError);
-          if (administrator.data !== true) throw new Error(copy.accessDenied);
+          const { data, error: sessionError } = await supabase.rpc("foreign_employer_admin_test_login");
+          if (sessionError) throw sessionError;
+          const portalToken = (Array.isArray(data) ? data[0]?.session_token : data?.session_token) || "";
+          if (!portalToken) throw new Error(copy.sessionError);
+          setForeignHirePortalToken(portalToken);
+          window.location.assign("/hire/portal");
+          return;
         } catch (accessError) {
           await supabase.auth.signOut({ scope: "local" });
-          throw accessError;
+          throw new Error(copy.accessDenied);
         }
-        setForeignHirePortalToken("");
-        // Admin manages international employers through the existing admin panel;
-        // employer /hire/portal sessions remain company-ID based.
-        window.location.assign("/?admin_tab=foreignHire");
-        return;
       }
       const { data, error } = await supabase.rpc("foreign_employer_login", {
         p_login_id: loginId.trim().toUpperCase(),
@@ -32099,6 +32085,10 @@ function HireEmployerPortalPage() {
       try { await supabase.rpc("foreign_employer_logout", { p_session_token: token }); } catch {}
     }
     setForeignHirePortalToken("");
+    // End a Supabase Auth test login too; normal company-ID users are unaffected.
+    if (supabase) {
+      try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+    }
     window.location.assign("/hire/login");
   }
 
@@ -35657,12 +35647,10 @@ function SiteAnalyticsTracker() {
         if (cancelled) return;
 
         const sessionUser = sessionResult.data?.session?.user || null;
-        const email = String(sessionUser?.email || "").trim().toLowerCase();
-
-        if (
-          email === "4floss@gmail.com" ||
-          email === "tattoo.staponas@gmail.com"
-        ) {
+        const signedInAdministrator = sessionUser
+          ? (await supabase.rpc("is_admin")).data === true
+          : false;
+        if (signedInAdministrator || sessionUser?.app_metadata?.analytics_excluded === true) {
           window.localStorage.setItem(observerKey, "1");
           return;
         }
