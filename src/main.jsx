@@ -2189,19 +2189,14 @@ function AuthModal({
         });
 
         if (error) throw error;
-        // A server-authorized portal account opens its isolated employer portal,
-        // while ordinary users keep their existing website sign-in behavior.
-        try {
-          const { data: hireData, error: hireError } = await supabase.rpc("foreign_employer_admin_test_login");
-          const hireToken = (Array.isArray(hireData) ? hireData[0]?.session_token : hireData?.session_token) || "";
-          if (!hireError && hireToken) {
-            setForeignHirePortalToken(hireToken);
-            window.location.replace("/hire/portal");
-            return;
-          }
-        } catch (portalAccessError) {
-          // The ordinary website login stays available; the dedicated employer
-          // login is handled only at /hire/login.
+        // Existing employer test access is decided only by the server. Other
+        // accounts continue through the ordinary website login flow.
+        const { data: hireData, error: hireError } = await supabase.rpc("foreign_employer_admin_test_login");
+        const hireToken = !hireError && ((Array.isArray(hireData) ? hireData[0]?.session_token : hireData?.session_token) || "");
+        if (hireToken) {
+          setForeignHirePortalToken(hireToken);
+          window.location.replace("/hire/portal");
+          return;
         }
         onClose();
       } else {
@@ -31353,7 +31348,7 @@ function setForeignHirePortalToken(token) {
 
 const HIRE_PORTAL_LOGIN_COPY = {
   en:{metaTitle:"Employer portal login | Statybos24",eyebrow:"FOR INTERNATIONAL EMPLOYERS",heroTitle:"Your private recruitment workspace.",heroCopy:"Review your agreement, complete the workforce brief and follow the candidates introduced by Statybos24.",heroFoot:"Direct construction recruitment from Lithuania.",portal:"EMPLOYER PORTAL",signIn:"Sign in",intro:"Use the private access details sent to you by Statybos24.",companyId:"LOGIN",companyPlaceholder:"e.g. ID-123456",password:"PASSWORD",passwordPlaceholder:"Your password",missing:"Enter your login details.",accessDenied:"Incorrect login details.",sessionError:"Could not create a portal session.",signInError:"Incorrect login details.",busy:"Signing in...",submit:"Sign in to employer portal",help:"Questions about your access or agreement? Reply to the Statybos24 email from which you received your login details, or contact"},
-  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"PRISIJUNGIMO DUOMENYS",companyPlaceholder:"pvz., ID-123456",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite prisijungimo duomenis.",accessDenied:"Neteisingi prisijungimo duomenys.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingi prisijungimo duomenys.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
+  lt:{metaTitle:"Darbdavio portalo prisijungimas | Statybos24",eyebrow:"TARPTAUTINIAMS DARBDAVIAMS",heroTitle:"Jūsų privati darbuotojų atrankos erdvė.",heroCopy:"Peržiūrėkite sutartį, užpildykite pilną darbuotojų poreikį ir stebėkite Statybos24 pristatomus kandidatus.",heroFoot:"Tiesioginė statybų darbuotojų atranka iš Lietuvos.",portal:"DARBDAVIO PORTALAS",signIn:"Prisijungti",intro:"Naudokite privačius prisijungimo duomenis, kuriuos jums atsiuntė Statybos24.",companyId:"PRISIJUNGIMO ID",companyPlaceholder:"Įveskite prisijungimo ID",password:"SLAPTAŽODIS",passwordPlaceholder:"Jūsų slaptažodis",missing:"Įveskite prisijungimo duomenis.",accessDenied:"Neteisingi prisijungimo duomenys.",sessionError:"Nepavyko sukurti portalo sesijos.",signInError:"Neteisingi prisijungimo duomenys.",busy:"Jungiamasi...",submit:"Prisijungti prie darbdavio portalo",help:"Klausimų dėl prisijungimo ar sutarties? Atsakykite į Statybos24 el. laišką, iš kurio gavote prisijungimo duomenis, arba rašykite"},
   de:{metaTitle:"Arbeitgeberportal Login | Statybos24",eyebrow:"FÜR INTERNATIONALE ARBEITGEBER",heroTitle:"Ihr privater Recruiting-Arbeitsbereich.",heroCopy:"Prüfen Sie Ihre Vereinbarung, vervollständigen Sie den Personalbedarf und verfolgen Sie die von Statybos24 vorgestellten Kandidaten.",heroFoot:"Direkte Baurekrutierung aus Litauen.",portal:"ARBEITGEBERPORTAL",signIn:"Anmelden",intro:"Verwenden Sie die privaten Zugangsdaten, die Ihnen Statybos24 zugesandt hat.",companyId:"ANMELDUNG",companyPlaceholder:"z. B. ID-123456",password:"PASSWORT",passwordPlaceholder:"Ihr Passwort",missing:"Geben Sie Ihre Unternehmens-ID und Ihr Passwort ein.",accessDenied:"Anmeldedaten sind ungültig.",sessionError:"Die Portalsitzung konnte nicht erstellt werden.",signInError:"Unternehmens-ID oder Passwort ist falsch.",busy:"Anmeldung...",submit:"Zum Arbeitgeberportal anmelden",help:"Fragen zu Ihrem Zugang oder Vertrag? Antworten Sie auf die Statybos24-E-Mail mit Ihren Zugangsdaten oder kontaktieren Sie"},
   nl:{metaTitle:"Werkgeversportaal login | Statybos24",eyebrow:"VOOR INTERNATIONALE WERKGEVERS",heroTitle:"Uw private recruitmentomgeving.",heroCopy:"Bekijk uw overeenkomst, vul de personeelsbehoefte volledig in en volg de kandidaten die Statybos24 voorstelt.",heroFoot:"Directe bouwrecruitment vanuit Litouwen.",portal:"WERKGEVERSPORTAAL",signIn:"Inloggen",intro:"Gebruik de privé-inloggegevens die Statybos24 u heeft gestuurd.",companyId:"INLOGGEGEVENS",companyPlaceholder:"bijv. ID-123456",password:"WACHTWOORD",passwordPlaceholder:"Uw wachtwoord",missing:"Vul uw bedrijfs-ID en wachtwoord in.",accessDenied:"Onjuiste inloggegevens.",sessionError:"De portalsessie kon niet worden aangemaakt.",signInError:"Bedrijfs-ID of wachtwoord is onjuist.",busy:"Inloggen...",submit:"Inloggen op werkgeversportaal",help:"Vragen over uw toegang of overeenkomst? Beantwoord de Statybos24-e-mail met uw inloggegevens of neem contact op via"},
   no:{metaTitle:"Arbeidsgiverportal innlogging | Statybos24",eyebrow:"FOR INTERNASJONALE ARBEIDSGIVERE",heroTitle:"Deres private rekrutteringsområde.",heroCopy:"Les avtalen, fyll ut hele bemanningsbehovet og følg kandidatene som Statybos24 presenterer.",heroFoot:"Direkte rekruttering til bygg fra Litauen.",portal:"ARBEIDSGIVERPORTAL",signIn:"Logg inn",intro:"Bruk de private innloggingsopplysningene dere har mottatt fra Statybos24.",companyId:"INNLOGGING",companyPlaceholder:"f.eks. ID-123456",password:"PASSORD",passwordPlaceholder:"Passordet deres",missing:"Skriv inn bedrifts-ID og passord.",accessDenied:"Ugyldige innloggingsopplysninger.",sessionError:"Kunne ikke opprette portalsesjon.",signInError:"Bedrifts-ID eller passord er feil.",busy:"Logger inn...",submit:"Logg inn på arbeidsgiverportalen",help:"Spørsmål om tilgang eller avtale? Svar på Statybos24-e-posten der dere mottok innloggingsopplysningene, eller kontakt"},
@@ -32815,6 +32810,25 @@ function App() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !supabase || passwordRecovery) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("foreign_employer_admin_test_login");
+        if (cancelled || error) return;
+        const token = (Array.isArray(data) ? data[0]?.session_token : data?.session_token) || "";
+        if (token) {
+          setForeignHirePortalToken(token);
+          window.location.replace("/hire/portal");
+        }
+      } catch {
+        // Other account types retain the original main-site experience.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, passwordRecovery]);
 
   useEffect(() => {
     if (!user || accountRole !== "admin") {
