@@ -24611,10 +24611,67 @@ function AdminPrivateMessageComposer({ target, onClose, onSent }) {
   );
 }
 
-function WorkAbroadPreference({user}) {
-  const [choice,setChoice]=useState(user?.user_metadata?.work_abroad_interested === true ? "yes" : user?.user_metadata?.work_abroad_interested === false ? "no" : "");
-  const [busy,setBusy]=useState(false); const [message,setMessage]=useState("");
-  return <section style={{background:"#fff",border:"1px solid #dfe7ed",borderRadius:14,padding:16}}><h3 style={{margin:"0 0 8px",fontSize:16}}>Darbas užsienyje</h3><div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:12}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{fontSize:13,display:"flex",gap:6,alignItems:"center"}}><input type="radio" name="profile-work-abroad" value={value} checked={choice===value} onChange={()=>{setChoice(value);setMessage("");}} disabled={busy}/>{label}</label>)}<button type="button" className="btn" disabled={!choice || busy} onClick={async()=>{setBusy(true);setMessage("");try{const result=await supabase.auth.updateUser({data:{work_abroad_interested:choice==="yes",work_abroad_interest_updated_at:new Date().toISOString()}});if(result.error)throw result.error;setMessage("Pasirinkimas išsaugotas.");}catch(e){setMessage(e.message || "Nepavyko išsaugoti.");}finally{setBusy(false);}}}>{busy ? "Saugoma…" : "Išsaugoti pasirinkimą"}</button></div>{message && <p role="status" style={{fontSize:12}}>{message}</p>}</section>;
+function WorkAbroadPreference({ user }) {
+  const initialInterest = user?.user_metadata?.work_abroad_interested;
+  const [choice, setChoice] = useState(initialInterest === true ? "yes" : initialInterest === false ? "no" : "");
+  const [saved, setSaved] = useState(typeof initialInterest === "boolean");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // An already saved answer must not reappear when the profile is reopened.
+  useEffect(() => {
+    if (typeof user?.user_metadata?.work_abroad_interested === "boolean") {
+      setSaved(true);
+    }
+  }, [user?.user_metadata?.work_abroad_interested]);
+
+  if (saved) return null;
+
+  async function savePreference() {
+    if (!choice || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          work_abroad_interested: choice === "yes",
+          work_abroad_interest_updated_at: new Date().toISOString(),
+        },
+      });
+      if (updateError) throw updateError;
+      setSaved(true); // Hide the entire block after successful saving.
+    } catch (err) {
+      setError(err?.message || "Nepavyko išsaugoti pasirinkimo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section style={{ background: "#fff", border: "1px solid #dfe7ed", borderRadius: 14, padding: 18, marginBottom: 18 }}>
+      <h3 style={{ margin: "0 0 12px", fontSize: 16, color: "#102438" }}>Darbas užsienyje</h3>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "stretch" }}>
+        {[["yes", "Taip, domina"], ["no", "Ne, nedomina"]].map(([value, label]) => (
+          <label key={value} style={{
+            display: "inline-flex", alignItems: "center", gap: 9, cursor: busy ? "not-allowed" : "pointer",
+            padding: "12px 14px", minHeight: 44, border: `1px solid ${choice === value ? "#f0a64c" : "#dfe7ed"}`,
+            borderRadius: 10, background: choice === value ? "#fff8f0" : "#fff", fontSize: 13,
+          }}>
+            <input type="radio" name="profile-work-abroad" value={value}
+              checked={choice === value} disabled={busy}
+              onChange={() => { setChoice(value); setError(""); }} />
+            {label}
+          </label>
+        ))}
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <button type="button" className="btn" disabled={!choice || busy} onClick={savePreference}>
+          {busy ? "Saugoma…" : "Išsaugoti pasirinkimą"}
+        </button>
+      </div>
+      {error && <p role="alert" style={{ margin: "10px 0 0", fontSize: 12, color: "#b43e29" }}>{error}</p>}
+    </section>
+  );
 }
 
 function AdminWorkAbroadInterests({onOpenProfile}) {
@@ -27333,7 +27390,7 @@ function AdminDashboard({
                 </div>
 
                 <div>
-                  <div className="admin-traffic-subtitle">Miestai šiandien</div>
+                  <div className="admin-traffic-subtitle">Lietuvos miestai šiandien</div>
                   <div className="admin-traffic-cities">
                     {trafficCities.length ? (
                       trafficCities.map((item) => (
@@ -27347,7 +27404,7 @@ function AdminDashboard({
                       ))
                     ) : (
                       <div className="admin-muted">
-                        Šiandien lankytojų dar neužfiksuota.
+                        Šiandien lankytojų iš Lietuvos dar neužfiksuota.
                       </div>
                     )}
                   </div>
