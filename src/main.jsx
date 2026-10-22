@@ -2292,13 +2292,48 @@ function AuthModal({
           onClose();
         } else {
           setSuccess(true);
-          setMessage(
-            "Registracija sėkminga. Patikrinkite el. paštą ir patvirtinkite paskyrą."
-          );
+          setMessage("Paskyra sukurta. Patvirtinkite el. paštą nuoroda iš laiško, tada spauskite „Atidaryti paskyrą“.");
         }
       }
     } catch (error) {
       setMessage(error?.message || "Nepavyko. Bandykite dar kartą.");
+    } finally {
+      submitting.current = false;
+      setLoading(false);
+    }
+  }
+
+  // Registration creates the Auth user but email confirmation may defer the session.
+  // Never repeat signUp when the user presses the finish button: sign in instead.
+  async function openRegisteredAccount() {
+    if (submitting.current || !supabase) return;
+    submitting.current = true;
+    setLoading(true);
+    setMessage("");
+    try {
+      // A verification link may be opened in another browser; password sign-in
+      // establishes the session in the original Facebook in-app browser.
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email.trim(),
+        password: form.password,
+      });
+      if (error) {
+        const confirmationPending = error.code === "email_not_confirmed" ||
+          /email.*not confirmed|confirm.*email/i.test(error.message || "");
+        if (confirmationPending) {
+          setMessage("Paskyra sukurta. Pirmiausia patvirtinkite el. paštą paspausdami laiške esančią nuorodą, tada čia paspauskite „Atidaryti paskyrą“ dar kartą.");
+        } else {
+          setMessage(error.message || "Nepavyko prisijungti. Galite bandyti prisijungti įprastai.");
+        }
+        return;
+      }
+      if (!data?.session?.user) {
+        setMessage("Prisijungimo sesija dar nesukurta. Patvirtinkite el. paštą ir bandykite dar kartą.");
+        return;
+      }
+      onClose(); // App.onAuthStateChange automatically opens the account dashboard.
+    } catch (error) {
+      setMessage(error?.message || "Prisijungti nepavyko. Bandykite dar kartą.");
     } finally {
       submitting.current = false;
       setLoading(false);
@@ -2411,6 +2446,25 @@ function AuthModal({
           </button>
         </div>
 
+        {mode === "signup" && success ? (
+          <div style={{ display: "grid", gap: 16 }}>
+            <div role="status" style={{ padding: 18, borderRadius: 14, background: "#edf8f3", color: "#102438" }}>
+              <h3 style={{ margin: "0 0 8px", fontSize: 19 }}>Paskyra sukurta!</h3>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>
+                SMS kodas patvirtintas. Patvirtinkite ir el. paštą paspausdami nuorodą iš laiško.
+                Jeigu el. paštą jau patvirtinote, spauskite žemiau ir atsidarys jūsų paskyra.
+              </p>
+            </div>
+            {message && <div role="status" style={{ fontSize: 14, lineHeight: 1.5, padding: "11px 12px", borderRadius: 10, background: "#f3f6f8" }}>{message}</div>}
+            <button type="button" className="btn primary" disabled={loading} onClick={openRegisteredAccount}
+              style={{ width: "100%", justifyContent: "center" }}>
+              {loading ? <SilentLoader size={16} minHeight={18} /> : "Atidaryti paskyrą"}
+            </button>
+            <button type="button" className="btn ghost" disabled={loading} onClick={() => { setMode("login"); setSuccess(false); setMessage(""); }}
+              style={{ width: "100%", justifyContent: "center" }}>Prisijungti įprastai</button>
+          </div>
+        ) : (
+          <>
         {mode !== "signup" && (
         <div style={{ ...twoColumns, marginBottom: 18 }}>
           <button
@@ -2739,6 +2793,8 @@ function AuthModal({
               : phoneVerification.config?.enabled ? "Užbaigti registraciją" : "Sukurti paskyrą"}
           </button>
         </form>
+          </>
+        )}
         </div>
         <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
         <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
