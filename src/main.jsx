@@ -58,8 +58,21 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Capture the recovery callback before Supabase removes auth tokens from the URL.
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
-const supabase =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// The main site and /hire have independent browser authentication sessions.
+// The /hire app uses its own memory-only Supabase Auth client for the private
+// test sign-in and keeps the issued employer portal token separately.
+// Do not load, persist, or broadcast main-site sessions when visiting /hire.
+const isHireProjectPath = /^\/hire(?:\/|$)/.test(window.location.pathname);
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey, isHireProjectPath ? {
+      auth: {
+        storageKey: "statybos24-hire-private-auth-v1",
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    } : undefined)
+  : null;
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
 const PRIVACY_VERSION = "2026-10-06-v6";
@@ -2189,15 +2202,8 @@ function AuthModal({
         });
 
         if (error) throw error;
-        // Existing employer test access is decided only by the server. Other
-        // accounts continue through the ordinary website login flow.
-        const { data: hireData, error: hireError } = await supabase.rpc("foreign_employer_admin_test_login");
-        const hireToken = !hireError && ((Array.isArray(hireData) ? hireData[0]?.session_token : hireData?.session_token) || "");
-        if (hireToken) {
-          setForeignHirePortalToken(hireToken);
-          window.location.replace("/hire/portal");
-          return;
-        }
+        // This form belongs to statybos24.lt only. It never signs users in
+        // to the independent /hire employer portal or redirects there.
         onClose();
       } else {
         if (!termsAccepted) {
@@ -32876,25 +32882,6 @@ function App() {
       cancelled = true;
     };
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!user?.id || !supabase || passwordRecovery) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase.rpc("foreign_employer_admin_test_login");
-        if (cancelled || error) return;
-        const token = (Array.isArray(data) ? data[0]?.session_token : data?.session_token) || "";
-        if (token) {
-          setForeignHirePortalToken(token);
-          window.location.replace("/hire/portal");
-        }
-      } catch {
-        // Other account types retain the original main-site experience.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id, passwordRecovery]);
 
   useEffect(() => {
     if (!user || accountRole !== "admin") {
