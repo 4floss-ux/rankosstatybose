@@ -27818,6 +27818,9 @@ function AdminDashboard({
                           {worker.email || "—"} ·{" "}
                           {worker.city || "Miestas nenurodytas"}
                         </span>
+                        <span style={{ fontWeight: 750, color: "#405264" }}>
+                          Tel.: {worker.phone || "Nenurodytas"}
+                        </span>
                         {suspended && (
                           <span style={{ color: "#b64d2a", fontWeight: 800 }}>
                             Paskyra suspenduota iki {formatAdminDate(worker.suspended_until)}
@@ -27985,6 +27988,9 @@ function AdminDashboard({
                         <span>
                           {employer.email || "—"} ·{" "}
                           {employer.city || "Miestas nenurodytas"}
+                        </span>
+                        <span style={{ fontWeight: 750, color: "#405264" }}>
+                          Tel.: {employer.phone || "Nenurodytas"}
                         </span>
                         <span style={{ fontWeight: 800, color: "#405264" }}>
                           Planas: {employerPlanName(employer.plan_key)} ·{" "}
