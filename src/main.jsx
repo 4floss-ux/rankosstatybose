@@ -24645,6 +24645,27 @@ function AdminDashboard({
     });
   }
   const [activeTab, setActiveTab] = useState(() => initialTab === "foreignHire" ? "foreignHire" : "overview");
+  const [extraMenuOpen, setExtraMenuOpen] = useState(false);
+  const extraMenuRef = useRef(null);
+  const extraMenuTriggerRef = useRef(null);
+  // Close the custom admin menu when clicking elsewhere or pressing Escape.
+  useEffect(() => {
+    if (!extraMenuOpen) return undefined;
+    const onOutsidePointer = (event) => {
+      if (!extraMenuRef.current?.contains(event.target)) setExtraMenuOpen(false);
+    };
+    const onEscape = (event) => {
+      if (event.key !== "Escape") return;
+      setExtraMenuOpen(false);
+      extraMenuTriggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", onOutsidePointer);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("pointerdown", onOutsidePointer);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [extraMenuOpen]);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24807,6 +24828,25 @@ function AdminDashboard({
   const mainAdminTabs = ["overview", "workers", "employers"];
   const extraAdminTabs = tabs.filter(([key]) => !mainAdminTabs.includes(key));
   const extraSectionActive = !mainAdminTabs.includes(activeTab);
+
+  function handleExtraMenuKeyDown(event) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = Array.from(extraMenuRef.current?.querySelectorAll('[role="menuitem"]') || []);
+    if (!extraMenuOpen) {
+      event.preventDefault();
+      setExtraMenuOpen(true);
+      window.requestAnimationFrame(() => extraMenuRef.current?.querySelector('[role="menuitem"]')?.focus());
+      return;
+    }
+    if (!items.length) return;
+    event.preventDefault();
+    const currentIndex = items.indexOf(document.activeElement);
+    const nextIndex = event.key === "Home" ? 0
+      : event.key === "End" ? items.length - 1
+      : event.key === "ArrowDown" ? (currentIndex + 1) % items.length
+      : (currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length);
+    items[nextIndex]?.focus();
+  }
 
   useEffect(() => {
     loadAdminData();
@@ -26959,8 +26999,21 @@ function AdminDashboard({
         .admin-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:20px}
         .admin-tab{width:100%;min-height:46px;border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;line-height:1.25;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
-        .admin-tab-more{display:block;min-width:0;appearance:auto;text-align:center;text-align-last:center;padding-right:20px;cursor:pointer}
-        .admin-tab-more option{background:#fff;color:#102438;text-align:left;font-weight:700}
+        /* Custom sections dropdown uses the site's own visual language, not a native select. */
+        .admin-tabs{position:relative;z-index:5}
+        .admin-extra-wrap{position:relative;min-width:0}
+        .admin-extra-trigger{gap:10px;position:relative;transition:background .15s ease,border-color .15s ease}
+        .admin-extra-trigger:hover:not(.active){background:#f8fafb;border-color:#c9d7e0;color:#102438}
+        .admin-extra-trigger:focus-visible{outline:2px solid #f08a28;outline-offset:3px}
+        .admin-extra-chevron{width:14px;height:14px;flex:none;transition:transform .15s ease;stroke:currentColor}
+        .admin-extra-trigger[aria-expanded="true"] .admin-extra-chevron{transform:rotate(180deg)}
+        .admin-extra-panel{position:absolute;top:calc(100% + 8px);right:0;width:max(100%,290px);max-width:calc(100vw - 32px);max-height:min(440px,65vh);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;padding:8px;background:#fff;border:1px solid #dbe4ea;border-radius:14px;box-shadow:0 18px 48px rgba(16,36,56,.16),0 4px 12px rgba(16,36,56,.07)}
+        .admin-extra-heading{padding:10px 12px 9px;margin:0 0 3px;border-bottom:1px solid #edf1f4;color:#7a8996;font-size:11px;font-weight:800;letter-spacing:.035em}
+        .admin-extra-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:42px;margin:2px 0;padding:10px 12px;box-sizing:border-box;background:transparent;border:0;border-radius:9px;color:#102438;text-align:left;font:inherit;font-size:12.5px;font-weight:750;line-height:1.3;cursor:pointer;transition:background .12s ease,color .12s ease}
+        .admin-extra-item:hover,.admin-extra-item:focus-visible{background:#f2f6f9;color:#102438}
+        .admin-extra-item:focus-visible{outline:2px solid #f08a28;outline-offset:-2px}
+        .admin-extra-item.selected,.admin-extra-item.selected:hover{background:#102438;color:#fff}
+        .admin-extra-check{font-size:14px;font-weight:900;flex:none}
         .admin-tab.bug-alert,.admin-tab.dispute-alert,.admin-tab.foreign-hire-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
         .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover,.admin-tab.foreign-hire-alert:hover{background:#b7362d;border-color:#b7362d}
         .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active,.admin-tab.foreign-hire-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
@@ -27112,19 +27165,44 @@ function AdminDashboard({
               {label}
             </button>
           ))}
-          <select
-            className={`admin-tab admin-tab-more ${extraSectionActive ? "active" : ""}`}
-            aria-label="Kiti administravimo skyriai"
-            value={extraSectionActive ? activeTab : ""}
-            onChange={(event) => {
-              if (event.target.value) setActiveTab(event.target.value);
-            }}
-          >
-            <option value="" disabled>Kiti skyriai</option>
-            {extraAdminTabs.map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+          <div className="admin-extra-wrap" ref={extraMenuRef} onKeyDown={handleExtraMenuKeyDown}>
+            <button
+              type="button"
+              ref={extraMenuTriggerRef}
+              className={`admin-tab admin-extra-trigger ${extraSectionActive ? "active" : ""}`}
+              aria-label="Kiti administravimo skyriai"
+              aria-expanded={extraMenuOpen}
+              aria-haspopup="menu"
+              aria-controls="admin-extra-sections"
+              onClick={() => setExtraMenuOpen((value) => !value)}
+            >
+              <span>Kiti skyriai</span>
+              <svg className="admin-extra-chevron" viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            {extraMenuOpen && (
+              <div id="admin-extra-sections" className="admin-extra-panel" role="menu" aria-label="Pasirinkti administravimo skyrių">
+                <div className="admin-extra-heading">PASIRINKITE SKYRIŲ</div>
+                {extraAdminTabs.map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="menuitem"
+                    className={`admin-extra-item ${activeTab === key ? "selected" : ""}`}
+                    aria-current={activeTab === key ? "page" : undefined}
+                    onClick={() => {
+                      setActiveTab(key);
+                      setExtraMenuOpen(false);
+                    }}
+                  >
+                    <span>{label}</span>
+                    {activeTab === key && <span className="admin-extra-check" aria-hidden="true">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
 
@@ -35031,10 +35109,14 @@ const mobileResponsiveFixStyles = `
       text-align: center !important;
     }
 
-    .admin-tabs .admin-tab-more {
-      display: block !important;
-      text-align-last: center;
-      padding-right: 16px !important;
+    .admin-tabs .admin-extra-trigger {
+      display: flex !important;
+      gap: 8px;
+      padding-right: 8px !important;
+    }
+
+    .admin-tabs .admin-extra-panel {
+      max-height: min(55vh, 420px);
     }
 
     .admin-kpis {
