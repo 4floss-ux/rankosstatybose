@@ -24802,6 +24802,11 @@ function AdminDashboard({
     ["bugs", `Svetainės klaidos${activeSiteBugCount ? ` (${activeSiteBugCount})` : ""}`],
     ["foreignHire", `Tarptautinė atranka${foreignHireAlertCount ? ` (${foreignHireAlertCount})` : ""}`],
   ];
+  // The admin bar shows the three essential sections and one compact selector.
+  // The original tab keys and their content remain unchanged.
+  const mainAdminTabs = ["overview", "workers", "employers"];
+  const extraAdminTabs = tabs.filter(([key]) => !mainAdminTabs.includes(key));
+  const extraSectionActive = !mainAdminTabs.includes(activeTab);
 
   useEffect(() => {
     loadAdminData();
@@ -26951,9 +26956,11 @@ function AdminDashboard({
         .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
         .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
-        .admin-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:20px}
+        .admin-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:20px}
         .admin-tab{width:100%;min-height:46px;border:1px solid #dbe4ea;background:#fff;color:#526374;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;line-height:1.25;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
         .admin-tab.active{background:#102438;color:#fff;border-color:#102438}
+        .admin-tab-more{display:block;min-width:0;appearance:auto;text-align:center;text-align-last:center;padding-right:20px;cursor:pointer}
+        .admin-tab-more option{background:#fff;color:#102438;text-align:left;font-weight:700}
         .admin-tab.bug-alert,.admin-tab.dispute-alert,.admin-tab.foreign-hire-alert{background:#c63f34;color:#fff;border-color:#c63f34;box-shadow:0 7px 18px rgba(198,63,52,.18)}
         .admin-tab.bug-alert:hover,.admin-tab.dispute-alert:hover,.admin-tab.foreign-hire-alert:hover{background:#b7362d;border-color:#b7362d}
         .admin-tab.bug-alert.active,.admin-tab.dispute-alert.active,.admin-tab.foreign-hire-alert.active{background:#a92f27;border-color:#a92f27;color:#fff}
@@ -27093,23 +27100,32 @@ function AdminDashboard({
           </div>
         )}
 
-        <div className="admin-tabs">
-          {tabs.map(([key, label]) => (
+        <nav className="admin-tabs" aria-label="Administravimo skyriai">
+          {tabs.filter(([key]) => mainAdminTabs.includes(key)).map(([key, label]) => (
             <button
               key={key}
-              className={`admin-tab ${activeTab === key ? "active" : ""} ${
-                key === "bugs" && activeSiteBugCount ? "bug-alert" : ""
-              } ${
-                key === "disputes" && activeDisputeCount ? "dispute-alert" : ""
-              } ${
-                key === "foreignHire" && foreignHireAlertCount ? "foreign-hire-alert" : ""
-              }`}
+              type="button"
+              className={`admin-tab ${activeTab === key ? "active" : ""}`}
+              aria-current={activeTab === key ? "page" : undefined}
               onClick={() => setActiveTab(key)}
             >
               {label}
             </button>
           ))}
-        </div>
+          <select
+            className={`admin-tab admin-tab-more ${extraSectionActive ? "active" : ""}`}
+            aria-label="Kiti administravimo skyriai"
+            value={extraSectionActive ? activeTab : ""}
+            onChange={(event) => {
+              if (event.target.value) setActiveTab(event.target.value);
+            }}
+          >
+            <option value="" disabled>Kiti skyriai</option>
+            {extraAdminTabs.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </nav>
 
 
         {activeTab === "workAbroadInterest" && <AdminWorkAbroadInterests onOpenProfile={openAbroadWorkerProfile}/>}
@@ -34993,11 +35009,11 @@ const mobileResponsiveFixStyles = `
 
 
 
-  /* Phone admin compact grid: navigation 3 per row, overview stats 2 per row. */
+  /* Phone admin compact grid: four navigation controls in two rows. */
   @media (max-width: 620px) {
     .admin-tabs {
       display: grid !important;
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       gap: 8px !important;
       width: 100% !important;
     }
@@ -35013,6 +35029,12 @@ const mobileResponsiveFixStyles = `
       white-space: normal !important;
       overflow-wrap: anywhere !important;
       text-align: center !important;
+    }
+
+    .admin-tabs .admin-tab-more {
+      display: block !important;
+      text-align-last: center;
+      padding-right: 16px !important;
     }
 
     .admin-kpis {
