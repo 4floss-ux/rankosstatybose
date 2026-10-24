@@ -6036,11 +6036,14 @@ function MainSiteInPageAlerts({ user, kind }) {
   );
 }
 
-function WebPushSettings({ user }) {
+function WebPushSettings({ user, kind = "worker" }) {
   const [mode, setMode] = useState("checking");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  const [consentOpen, setConsentOpen] = useState(false);
   const userOptOutKey = `s24-webpush-disabled:${user?.id || "guest"}`;
+  // Remember a deliberate "Ne" on this device; don't show the popup on every visit.
+  const consentSeenKey = `s24-webpush-consent-seen:${user?.id || "guest"}`;
   const supported = typeof window !== "undefined" &&
     "serviceWorker" in navigator && "PushManager" in window && "Notification" in window &&
     window.isSecureContext;
@@ -6052,8 +6055,40 @@ function WebPushSettings({ user }) {
     return data;
   }
 
+  // Reuse the same authenticated registration path both after consent and after reopening
+  // the installed PWA. Granted permission alone is not an active Push subscription.
+  async function ensurePushSubscription() {
+    const registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {
+      scope: "/", updateViaCache: "none",
+    });
+    const config = await pushRequest({ action: "config" });
+    if (!config?.public_key) throw new Error("Pranešimų serveris dar neparuoštas.");
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      const keyString = config.public_key.replace(/-/g,"+").replace(/_/g,"/");
+      const raw = atob(keyString.padEnd(Math.ceil(keyString.length / 4) * 4, "="));
+      const applicationServerKey = Uint8Array.from(raw, c => c.charCodeAt(0));
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true, applicationServerKey,
+      });
+    }
+    const data = subscription.toJSON();
+    // Always sync the current browser endpoint with the authenticated account.
+    // The Edge Function is idempotent when the subscription already exists.
+    await pushRequest({ action: "subscribe", subscription: {
+      endpoint: subscription.endpoint,
+      keys: { p256dh: data.keys?.p256dh, auth: data.keys?.auth },
+    } });
+  }
+
+  function rememberConsentChoice() {
+    try { window.localStorage.setItem(consentSeenKey, "1"); } catch {}
+  }
+
   useEffect(() => {
     let active = true;
+    setConsentOpen(false);
+    setProblem("");
     if (!supported || !user?.id) {
       setMode("unsupported");
       return undefined;
@@ -6064,88 +6099,123 @@ function WebPushSettings({ user }) {
     }
     (async () => {
       try {
-        let registration = await navigator.serviceWorker.getRegistration("/");
-        let subscription = registration ? await registration.pushManager.getSubscription() : null;
-        if (!active) return;
         let disabled = false;
-        try { disabled = window.localStorage.getItem(userOptOutKey) === "1"; } catch {}
-        // Never request OS/browser permission automatically. Only reuse prior permission.
-        // Respect a previous explicit "off" choice in this account.
+        let seen = false;
+        try {
+          disabled = window.localStorage.getItem(userOptOutKey) === "1";
+          seen = window.localStorage.getItem(consentSeenKey) === "1";
+        } catch {}
+        if (!active) return;
         if (disabled) { setMode("off"); return; }
         if (Notification.permission === "granted") {
-          if (!subscription) {
-            registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {scope:"/",updateViaCache:"none"});
-            const config = await pushRequest({ action:"config" });
-            if (!config?.public_key) { if (active) setMode("off"); return; }
-            const keyString = config.public_key.replace(/-/g,"+").replace(/_/g,"/");
-            const raw = atob(keyString.padEnd(Math.ceil(keyString.length/4)*4,"="));
-            subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});
-          }
-          const response = await pushRequest({ action:"status", endpoint:subscription.endpoint });
-          if (!response?.enabled) {
-            const data = subscription.toJSON();
-            await pushRequest({ action:"subscribe", subscription:{endpoint:subscription.endpoint,keys:{p256dh:data.keys?.p256dh,auth:data.keys?.auth}} });
-          }
+          await ensurePushSubscription();
           if (active) setMode("on");
         } else {
           setMode("off");
+          // Browser permission requests need a user gesture. Show the simple consent
+          // dialog on first authenticated visit; its "Taip" button supplies that gesture.
+          if (!seen) setConsentOpen(true);
         }
-      } catch { if (active) setMode("off"); }
+      } catch (e) {
+        if (active) {
+          setMode("off");
+          setProblem(e instanceof Error ? e.message : "Nepavyko įjungti telefono pranešimų.");
+        }
+      }
     })();
     return () => { active = false; };
   }, [user?.id]);
 
-  async function changePreference() {
-    if (busy || !supported) return;
+  async function enableNotifications() {
+    if (busy || !supported || !user?.id) return;
+    // This function is called directly from a real "Taip" or settings button click.
+    // Call requestPermission before *any* await so Android can display its native prompt.
+    const permissionPromise = Notification.permission === "granted"
+      ? Promise.resolve("granted")
+      : Notification.requestPermission();
+    setConsentOpen(false);
+    rememberConsentChoice();
     setBusy(true);
     setProblem("");
     try {
-      if (mode === "on") {
-        const registration = await navigator.serviceWorker.getRegistration("/");
-        const subscription = registration ? await registration.pushManager.getSubscription() : null;
-        if (subscription) {
-          await pushRequest({ action:"unsubscribe", endpoint:subscription.endpoint });
-          await subscription.unsubscribe();
-        }
-        try { window.localStorage.setItem(userOptOutKey,"1"); } catch {}
-        setMode("off");
-      } else {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-          setMode(permission === "denied" ? "blocked" : "off");
-          setProblem("Pranešimai neįjungti. Juos galite leisti naršyklės nustatymuose.");
-          return;
-        }
-        // Requires /statybos24-push-sw.js in the website's *public root*, beside index.html.
-        const registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {scope:"/", updateViaCache:"none"});
-        await navigator.serviceWorker.ready;
-        const config = await pushRequest({ action:"config" });
-        if (!config?.public_key) throw new Error("Pranešimų serveris dar neparuoštas.");
-        const raw = atob(config.public_key.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(config.public_key.length/4)*4,"="));
-        const applicationServerKey = Uint8Array.from(raw, c=>c.charCodeAt(0));
-        let subscription = await registration.pushManager.getSubscription();
-        if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey});
-        const data = subscription.toJSON();
-        await pushRequest({ action:"subscribe", subscription:{endpoint:subscription.endpoint,keys:{p256dh:data.keys?.p256dh,auth:data.keys?.auth}} });
-        try { window.localStorage.removeItem(userOptOutKey); } catch {}
-        setMode("on");
+      const permission = await permissionPromise;
+      if (permission !== "granted") {
+        setMode(permission === "denied" ? "blocked" : "off");
+        setProblem(permission === "denied"
+          ? "Pranešimai užblokuoti. Leiskite juos telefono ir naršyklės nustatymuose."
+          : "Pranešimai neįjungti. Galite įjungti juos vėliau paskyroje.");
+        return;
       }
+      await ensurePushSubscription();
+      try { window.localStorage.removeItem(userOptOutKey); } catch {}
+      setMode("on");
     } catch (e) {
-      setProblem(e instanceof Error ? e.message : "Nepavyko pakeisti pranešimų nustatymo.");
+      setMode(Notification.permission === "denied" ? "blocked" : "off");
+      setProblem(e instanceof Error ? e.message : "Nepavyko užregistruoti telefono pranešimams.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changePreference() {
+    if (busy || !supported) return;
+    if (mode !== "on") {
+      // The click invokes the OS request directly, not through a delayed effect.
+      void enableNotifications();
+      return;
+    }
+    setBusy(true);
+    setProblem("");
+    try {
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
+      if (subscription) {
+        await pushRequest({ action: "unsubscribe", endpoint: subscription.endpoint });
+        await subscription.unsubscribe();
+      }
+      try { window.localStorage.setItem(userOptOutKey, "1"); } catch {}
+      rememberConsentChoice();
+      setMode("off");
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "Nepavyko išjungti pranešimų.");
     } finally { setBusy(false); }
   }
+
   if (!user?.id || isHireProjectPath) return null;
-  const label = mode === "on" ? "Telefono pranešimai įjungti" : "Pranešimai telefone";
+  const label = mode === "on" ? "Telefono pranešimai įjungti" : "Įjungti telefono pranešimus";
   return (
-    <div className="s24-push-controls" aria-live="polite" style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}>
-      <button type="button" className="btn ghost" disabled={busy || mode === "checking" || mode === "unsupported" || mode === "blocked"} onClick={changePreference}
-        title="Pranešimai apie darbo kvietimus, žinutes ir artėjančius darbus telefone">
-        {mode === "on" ? "🔔 " : "🔕 "}{busy ? "Jungiama..." : label}
-      </button>
-      {mode === "unsupported" && <small style={{fontSize:11,color:"#667788"}}>Ši naršyklė nepalaiko pranešimų. „iPhone“ pridėkite svetainę į pradžios ekraną.</small>}
-      {mode === "blocked" && <small style={{fontSize:11,color:"#a7550d"}}>Pranešimai užblokuoti naršyklėje.</small>}
-      {problem && <small role="alert" style={{fontSize:11,color:"#a7550d",maxWidth:260}}>{problem}</small>}
-    </div>
+    <>
+      <div className="s24-push-controls" aria-live="polite" style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}>
+        <button type="button" className="btn ghost"
+          disabled={busy || mode === "checking" || mode === "unsupported" || mode === "blocked"}
+          onClick={changePreference}
+          title="Pranešimai apie darbo kvietimus, žinutes ir artėjančius darbus telefone">
+          {busy ? "Jungiama..." : label}
+        </button>
+        {mode === "unsupported" && <small style={{fontSize:11,color:"#667788"}}>Ši naršyklė nepalaiko telefono pranešimų. iPhone programėlę atidarykite iš pradžios ekrano.</small>}
+        {mode === "blocked" && <small style={{fontSize:11,color:"#a7550d"}}>Pranešimai užblokuoti. Leiskite juos programėlės ir naršyklės nustatymuose.</small>}
+        {problem && <small role="alert" style={{fontSize:11,color:"#a7550d",maxWidth:290}}>{problem}</small>}
+      </div>
+      {consentOpen && createPortal(
+        <div role="presentation" style={{position:"fixed",inset:0,display:"grid",placeItems:"center",background:"rgba(16,36,56,.62)",zIndex:7600,padding:16}}>
+          <section role="alertdialog" aria-modal="true" aria-labelledby="s24-existing-push-title" aria-describedby="s24-existing-push-description"
+            style={{width:"min(390px,100%)",background:"#fff",color:"#102438",border:"1px solid #dfe7ed",borderRadius:18,padding:"28px 24px",boxShadow:"0 22px 70px rgba(16,36,56,.27)",textAlign:"center"}}>
+            <h3 id="s24-existing-push-title" style={{fontSize:20,lineHeight:1.3,margin:"0 0 15px",fontWeight:800}}>Ar sutinkate gauti pranešimus?</h3>
+            <p id="s24-existing-push-description" style={{fontSize:14,lineHeight:1.65,margin:"0 0 22px",color:"#405264"}}>
+              {kind === "employer"
+                ? "Sutikdami gausite pranešimus apie darbuotojų atsakymus, darbo atnaujinimus ir priminimus."
+                : "Sutikdami gausite pranešimus apie gautus darbo pasiūlymus, darbo atnaujinimus ir priminimus."}
+            </p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <button type="button" className="btn ghost" onClick={() => { rememberConsentChoice();setConsentOpen(false); }}
+                style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#102438",fontSize:15,fontWeight:750,justifyContent:"center"}}>Ne</button>
+              <button type="button" className="btn ghost" onClick={enableNotifications} disabled={busy}
+                style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#102438",fontSize:15,fontWeight:750,justifyContent:"center"}}>Taip</button>
+            </div>
+          </section>
+        </div>,document.body
+      )}
+    </>
   );
 }
 
@@ -9101,7 +9171,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             )}
             {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
-            {!onAdminReturn && <WebPushSettings user={user} />}
+            {!onAdminReturn && <WebPushSettings user={user} kind="worker" />}
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -18490,7 +18560,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
 
             {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
-            {!onAdminReturn && <WebPushSettings user={user} />}
+            {!onAdminReturn && <WebPushSettings user={user} kind="employer" />}
 
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
