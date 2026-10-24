@@ -6036,7 +6036,13 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
       setPushStatus("unsupported");
       return undefined;
     }
-    if (Notification.permission === "denied") setPushStatus("blocked");
+    // Chrome will NOT show a native prompt for a previously blocked origin.
+    // Do not show a misleading Yes/No popup that cannot enable anything.
+    if (Notification.permission === "denied") {
+      setPushStatus("blocked");
+      setConsentOpen(false);
+      return undefined;
+    }
 
     (async () => {
       let savedDecision = null;
@@ -6046,14 +6052,14 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
         previouslyDisabled = window.localStorage.getItem(legacyOptOutKey) === "1";
       } catch {}
       if (!active) return;
-      if (savedDecision === "declined") {
+      if (savedDecision === "declined" || savedDecision === "later") {
         setPushStatus("off");
         return;
       }
 
-      // Permission already granted: automatically re-register the endpoint on sign-in.
-      // Respect a previous explicit opt-out until the user chooses "Taip" again.
-      if (savedDecision === "accepted" && Notification.permission === "granted" && !previouslyDisabled) {
+      // Browser permission is already enough: no extra confirmation click.
+      // Respect a previous explicit opt-out until changed in Profile.
+      if (Notification.permission === "granted" && !previouslyDisabled) {
         try {
           await ensurePushSubscription();
           if (active) {
@@ -6063,39 +6069,46 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
         } catch (error) {
           if (active) {
             setPushStatus("off");
+            // A temporary network/registration error must not block the account.
+            // Details are available inside Profile → Pranešimai instead.
             setProblem(readablePushError(error));
-            setConsentOpen(true);
+            setConsentOpen(false);
           }
         }
       } else if (active) {
         setPushStatus(Notification.permission === "denied" ? "blocked" : "off");
-        if (Notification.permission === "denied") {
-          setProblem("Pranešimai užblokuoti. Leiskite juos telefono programėlės arba naršyklės nustatymuose.");
-        }
-        setConsentOpen(true);
+        // Only ask when the native browser grant can actually be requested.
+        setConsentOpen(Notification.permission === "default");
       }
     })();
     return () => { active = false; };
   }, [user?.id]);
 
-  async function decline() {
+  async function decline(event) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     if (busy) return;
-    setBusy(true);
+    // "Ne" closes the consent immediately. Network errors must never trap anyone.
+    try { window.localStorage.setItem(legacyOptOutKey, "1"); } catch {}
+    rememberDecision("declined");
+    setPushStatus("off");
+    setConsentOpen(false);
+    setPushStep("");
     setProblem("");
+    setBusy(true);
     try {
-      // A "Ne" must also stop an older active subscription, if any.
+      // Stop existing notifications on this device if the person previously opted in.
       const registration = await navigator.serviceWorker.getRegistration("/");
       const subscription = registration ? await registration.pushManager.getSubscription() : null;
       if (subscription) {
+        // Unsubscribe locally first, even when the backend is temporarily unavailable.
+        const removed = await subscription.unsubscribe();
+        if (!removed) throw new Error("Nepavyko išjungti pranešimų šiame įrenginyje.");
         await pushRequest({ action: "unsubscribe", endpoint: subscription.endpoint });
-        await subscription.unsubscribe();
       }
-      try { window.localStorage.setItem(legacyOptOutKey, "1"); } catch {}
-      rememberDecision("declined");
-      setPushStatus("off");
-      setConsentOpen(false);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "Nepavyko išjungti pranešimų. Bandykite dar kartą.");
+      // Any issue can be handled later in Profile, but the dialog stays closed.
+      setProblem(readablePushError(error));
     } finally {
       setBusy(false);
     }
@@ -6107,6 +6120,12 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     if (busy || !supported || !user?.id) return;
+    if (Notification.permission === "denied") {
+      setPushStatus("blocked");
+      setProblem("");
+      setConsentOpen(false);
+      return;
+    }
 
     // Persist the user's positive choice BEFORE opening Android's native permission UI.
     // Some installed PWAs suspend/reload while this system UI is opening. On the next
@@ -6124,7 +6143,10 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
         ? Promise.resolve("granted")
         : Notification.requestPermission();
     } catch (error) {
+      // If opening Android permission UI fails, the person can still use the app.
+      rememberDecision("later");
       setProblem(readablePushError(error));
+      setConsentOpen(false);
       setPushStep("");
       setPushStatus("off");
       setBusy(false);
@@ -6134,9 +6156,11 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
       const permission = await permissionPromise;
       if (permission !== "granted") {
         setPushStatus(permission === "denied" ? "blocked" : "off");
-        setProblem(permission === "denied"
-          ? "Pranešimai užblokuoti. Leiskite juos programėlės arba „Chrome“ nustatymuose ir bandykite dar kartą."
-          : "Telefonas dar nesuteikė leidimo. Patikrinkite pranešimų leidimus ir bandykite dar kartą.");
+        // No lengthy instructions or retry loop: dismiss the onboarding.
+        // A dismissed browser prompt can be enabled later in Profile.
+        if (permission === "default") rememberDecision("later");
+        setProblem("");
+        setConsentOpen(false);
         return;
       }
       setPushStep("Registruojami šio įrenginio pranešimai…");
@@ -6145,9 +6169,11 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
       setPushStatus("on");
       setConsentOpen(false);
     } catch (error) {
-      setPushStatus("off");
+      // Native permission may be granted while a network request fails.
+      // Keep the accepted choice for automatic retry on the next sign-in.
+      setPushStatus(Notification.permission === "denied" ? "blocked" : "off");
       setProblem(readablePushError(error));
-      setConsentOpen(true);
+      setConsentOpen(false);
     } finally {
       setPushStep("");
       setBusy(false);
