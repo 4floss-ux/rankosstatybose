@@ -1,0 +1,16 @@
+{
+  "name": "Statybos24.lt",
+  "short_name": "Statybos24",
+  "description": "Darbo pasiūlymai ir darbuotojai statybose",
+  "lang": "lt",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "theme_color": "#102438",
+  "background_color": "#ffffff",
+  "icons": [
+    {"src": "/statybos24-pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/statybos24-push-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
