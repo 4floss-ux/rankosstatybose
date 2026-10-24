@@ -33714,6 +33714,12 @@ function App() {
   };
 
   if (!authSessionChecked || (user && !accountStatusChecked)) {
+    // Standalone PWA already displays the OS-generated launch screen.
+    // Keep login initialization visually quiet; do not show a second logo/spinner.
+    // Website and separate /hire portal keep their original loading views.
+    if (!isHireProjectPath && statybos24IsStandalone()) {
+      return <div role="status" aria-label="Įkeliama" style={{ minHeight: "100vh", background: "#ffffff" }} />;
+    }
     return <AppBootLoader />;
   }
 
