@@ -5952,6 +5952,7 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
   const [consentOpen, setConsentOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  const [pushStep, setPushStep] = useState("");
   const [pushStatus, setPushStatus] = useState("checking");
   const [profileAnchor, setProfileAnchor] = useState(null);
   // A new login-only consent version gives accounts that saw the older signup flow
@@ -5969,9 +5970,12 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
   }
 
   async function ensurePushSubscription() {
-    const registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {
+    await navigator.serviceWorker.register("/statybos24-push-sw.js", {
       scope: "/", updateViaCache: "none",
     });
+    // Browser installs the worker asynchronously; PushManager needs an ACTIVE worker.
+    // In an installed Android PWA this is often the very first registration.
+    const registration = await navigator.serviceWorker.ready;
     const config = await pushRequest({ action: "config" });
     if (!config?.public_key) throw new Error("Pranešimų serveris dar neparuoštas.");
     let subscription = await registration.pushManager.getSubscription();
@@ -5994,6 +5998,21 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
     try { window.localStorage.setItem(decisionKey, value); } catch {}
   }
 
+  function readablePushError(error) {
+    const name = String(error?.name || "");
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return "Telefonas arba naršyklė neleidžia pranešimų. Patikrinkite programėlės ir „Chrome“ pranešimų leidimus nustatymuose.";
+    }
+    if (name === "InvalidStateError") {
+      return "Nepavyko paruošti pranešimų paslaugos. Uždarykite programėlę, atidarykite iš naujo ir bandykite dar kartą.";
+    }
+    if (name === "AbortError") {
+      return "Telefono pranešimų registracija nutrūko. Bandykite dar kartą.";
+    }
+    return error instanceof Error && error.message
+      ? error.message : "Nepavyko užregistruoti šio įrenginio pranešimams.";
+  }
+
   // The status control lives INSIDE profile settings; nothing is rendered
   // beside the header's Profile / Log out controls.
   useEffect(() => {
@@ -6009,6 +6028,7 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
   useEffect(() => {
     let active = true;
     setProblem("");
+    setPushStep("");
     setConsentOpen(false);
     setPushStatus("checking");
     if (isHireProjectPath || !user?.id) return undefined;
@@ -6043,7 +6063,7 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
         } catch (error) {
           if (active) {
             setPushStatus("off");
-            setProblem(error instanceof Error ? error.message : "Nepavyko užregistruoti telefono.");
+            setProblem(readablePushError(error));
             setConsentOpen(true);
           }
         }
@@ -6081,38 +6101,55 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
     }
   }
 
-  async function accept() {
+  async function accept(event) {
+    // A React portal can still bubble click events through its React parent.
+    // Prevent accidental form/header actions in the installed app.
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     if (busy || !supported || !user?.id) return;
-    // Must run immediately in the "Taip" click before an async call: browser user gesture.
+
+    // Persist the user's positive choice BEFORE opening Android's native permission UI.
+    // Some installed PWAs suspend/reload while this system UI is opening. On the next
+    // startup, useEffect will resume subscription if permission became "granted".
+    rememberDecision("accepted");
+    try { window.localStorage.removeItem(legacyOptOutKey); } catch {}
+    setBusy(true);
+    setProblem("");
+    setPushStep("Tikrinamas įrenginio pranešimų leidimas…");
+
+    // Must run directly from the click handler, before any awaited call.
     let permissionPromise;
     try {
       permissionPromise = Notification.permission === "granted"
         ? Promise.resolve("granted")
         : Notification.requestPermission();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "Telefonas neleido paprašyti pranešimų leidimo.");
+      setProblem(readablePushError(error));
+      setPushStep("");
+      setPushStatus("off");
+      setBusy(false);
       return;
     }
-    setBusy(true);
-    setProblem("");
     try {
       const permission = await permissionPromise;
       if (permission !== "granted") {
         setPushStatus(permission === "denied" ? "blocked" : "off");
         setProblem(permission === "denied"
-          ? "Pranešimai užblokuoti. Leiskite juos telefono programėlės arba naršyklės nustatymuose."
-          : "Telefonas dar nesuteikė leidimo. Spauskite „Taip“, kai būsite pasiruošę.");
+          ? "Pranešimai užblokuoti. Leiskite juos programėlės arba „Chrome“ nustatymuose ir bandykite dar kartą."
+          : "Telefonas dar nesuteikė leidimo. Patikrinkite pranešimų leidimus ir bandykite dar kartą.");
         return;
       }
+      setPushStep("Registruojami šio įrenginio pranešimai…");
       await ensurePushSubscription();
-      try { window.localStorage.removeItem(legacyOptOutKey); } catch {}
       rememberDecision("accepted");
       setPushStatus("on");
       setConsentOpen(false);
     } catch (error) {
       setPushStatus("off");
-      setProblem(error instanceof Error ? error.message : "Nepavyko užregistruoti telefono pranešimams.");
+      setProblem(readablePushError(error));
+      setConsentOpen(true);
     } finally {
+      setPushStep("");
       setBusy(false);
     }
   }
@@ -6149,6 +6186,7 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
             ? "Sutikdami gausite pranešimus apie darbuotojų atsakymus, darbo atnaujinimus ir priminimus."
             : "Sutikdami gausite pranešimus apie gautus darbo pasiūlymus, darbo atnaujinimus, grafiko atnaujinimą ir priminimus."}
         </p>
+        {pushStep && <p role="status" style={{fontSize:13,lineHeight:1.5,color:"#405264",margin:"0 0 14px"}}>{pushStep}</p>}
         {problem && <p role="alert" style={{fontSize:13,lineHeight:1.5,color:"#9e4013",margin:"0 0 14px"}}>{problem}</p>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <button type="button" className="btn ghost" onClick={decline} disabled={busy}
