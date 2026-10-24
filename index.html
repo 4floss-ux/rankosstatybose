@@ -14,6 +14,20 @@
     <link rel="canonical" href="https://statybos24.lt/" />
     <link rel="icon" type="image/png" href="/favicon.png" />
 
+    <!-- PWA nuorodos prieš kraunant React; niekada netaikoma atskiram /hire projektui. -->
+    <script>
+      if (!/^\/hire(?:\/|$)/.test(window.location.pathname)) {
+        const manifest = document.createElement("link");
+        manifest.rel = "manifest";
+        manifest.href = "/statybos24.webmanifest?v=3";
+        document.head.appendChild(manifest);
+        const touchIcon = document.createElement("link");
+        touchIcon.rel = "apple-touch-icon";
+        touchIcon.href = "/statybos24-touch-icon-v2.png";
+        document.head.appendChild(touchIcon);
+      }
+    </script>
+
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="lt_LT" />
     <meta property="og:site_name" content="statybos24.lt" />
