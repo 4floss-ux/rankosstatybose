@@ -68,13 +68,13 @@ if (!isHireProjectPath && typeof document !== "undefined") {
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifest = document.createElement("link");
     manifest.rel = "manifest";
-    manifest.href = "/statybos24.webmanifest";
+    manifest.href = "/statybos24.webmanifest?v=2";
     document.head.appendChild(manifest);
   }
   if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     const touchIcon = document.createElement("link");
     touchIcon.rel = "apple-touch-icon";
-    touchIcon.href = "/statybos24-touch-icon.png";
+    touchIcon.href = "/statybos24-touch-icon-v2.png";
     document.head.appendChild(touchIcon);
   }
 }
@@ -5985,7 +5985,6 @@ function MainSiteInPageAlerts({ user, kind }) {
           borderRadius:14,boxShadow:"0 12px 38px rgba(16,36,56,.18)",
           fontFamily:"Inter,system-ui,sans-serif",color:"#102438",pointerEvents:"auto",
         }}>
-          <span aria-hidden="true" style={{fontSize:19,lineHeight:1.2}}>🔔</span>
           <div style={{flex:1,minWidth:0}}>
             <strong style={{display:"block",fontSize:13,lineHeight:1.35}}>Statybos24</strong>
             <span style={{display:"block",fontSize:12,lineHeight:1.5,marginTop:3}}>{alert.title}</span>
@@ -30321,6 +30320,41 @@ function PublicLandingPage({
         @media(min-width:701px){.home-page .home-audience-head{flex-direction:column;align-items:flex-start;gap:14px}.home-page .home-audience-head .home-intro{max-width:820px}.home-page .home-price-copy{max-width:none;min-width:0;flex:1}.home-page .home-price-title{color:var(--navy)}.home-page .home-price-subtitle{display:block;margin-top:14px;color:var(--muted);font:400 14px/1.65 Inter,sans-serif;letter-spacing:normal}}
         @media(max-width:700px){.home-wrap{width:calc(100% - 28px)}.home-nav{min-height:68px;justify-content:space-between;gap:8px}.home-actions{gap:5px}.home-actions>.home-btn{font-size:11px;padding:8px 10px;min-height:40px}.home-login{font-size:11px;min-height:40px;padding:8px 4px}.home-hero-grid{padding:48px 0}.home-hero h1{font-size:clamp(37px,11vw,48px)}.home-lead{font-size:16px}.home-proof{gap:6px}.home-proof span{font-size:10px}.home-summary{padding:20px;border-radius:18px}.home-summary h2{font-size:22px}.home-section{padding:52px 0}.home-section-head,.home-price-head{align-items:flex-start;flex-direction:column}.home-services,.home-audiences,.home-prices{grid-template-columns:1fr}.home-service{padding:18px}.home-live-panel{grid-template-columns:1fr;padding:22px;gap:20px}.home-live-copy h2{font-size:34px}.home-live-copy p{font-size:14px}.home-toggle{width:100%}.home-toggle button{flex:1}.home-plan-sub{min-height:0}.home-cta{padding:50px 0}.home-cta-buttons{width:100%}.home-cta .home-btn{flex:1}.home-footer-inner{flex-direction:column;align-items:flex-start}}
         @media(max-width:420px){.home-brand{font-size:13px}.home-actions{margin-left:0}.home-live-panel{padding:18px}.home-live-copy h2{font-size:30px}.home-live-row{grid-template-columns:38px minmax(0,1fr);padding:13px}.home-live-row.active{padding-right:62px}.home-live-step{width:38px;height:38px}.home-live-status{right:10px}.home-hero-actions{display:grid}.home-hero-actions .home-btn{width:100%}.home-cta-buttons{display:grid}.home-cta .home-btn{width:100%}.home-summary-row{grid-template-columns:36px minmax(0,1fr);padding:12px}.home-summary-icon{width:36px;height:36px}}
+        /* STATYBOS24 MOBILE: home-page CTAs side by side, never affecting /hire */
+        @media(max-width:700px){
+          .home-page .home-hero-actions,
+          .home-page .home-cta-buttons{
+            display:grid!important;
+            grid-template-columns:repeat(2,minmax(0,1fr))!important;
+            gap:9px!important;
+            width:100%!important;
+            max-width:540px;
+            justify-content:stretch!important;
+          }
+          .home-page .home-hero-actions .home-btn,
+          .home-page .home-cta-buttons .home-btn{
+            box-sizing:border-box!important;
+            display:flex!important;
+            width:100%!important;
+            min-width:0!important;
+            min-height:48px!important;
+            margin:0!important;
+            padding:10px 4px!important;
+            font-size:clamp(11px,3.3vw,14px)!important;
+            font-weight:750!important;
+            line-height:1.2!important;
+            letter-spacing:-.025em!important;
+            text-align:center!important;
+            white-space:nowrap!important;
+          }
+        }
+        @media(max-width:350px){
+          .home-page .home-hero-actions .home-btn,
+          .home-page .home-cta-buttons .home-btn{
+            font-size:10.5px!important;
+            padding-inline:2px!important;
+          }
+        }
         @media(prefers-reduced-motion:reduce){.home-page *{scroll-behavior:auto!important;transition:none!important}}
       `}</style>
 
