@@ -98,9 +98,9 @@
         outline-offset: 3px;
       }
 
-      /* Tik pagrindinio puslapio poraštė; kitų logotipų neliečiame. */
-      .home-page .home-footer .home-footer-inner > .home-brand {
-        display: none;
+      /* Tik apatinės poraštės logotipas: React komponentas turi inline display:inline-flex. */
+      .home-page .home-footer .home-footer-inner > a.home-brand {
+        display: none !important;
       }
     </style>
 
