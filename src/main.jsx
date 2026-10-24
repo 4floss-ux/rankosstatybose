@@ -63,6 +63,21 @@ const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href
 // test sign-in and keeps the issued employer portal token separately.
 // Do not load, persist, or broadcast main-site sessions when visiting /hire.
 const isHireProjectPath = /^\/hire(?:\/|$)/.test(window.location.pathname);
+// PWA branding is registered only for the main statybos24.lt project, never /hire.
+if (!isHireProjectPath && typeof document !== "undefined") {
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.href = "/statybos24.webmanifest";
+    document.head.appendChild(manifest);
+  }
+  if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+    const touchIcon = document.createElement("link");
+    touchIcon.rel = "apple-touch-icon";
+    touchIcon.href = "/statybos24-touch-icon.png";
+    document.head.appendChild(touchIcon);
+  }
+}
 const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey, isHireProjectPath ? {
       auth: {
@@ -1563,6 +1578,7 @@ function PlatformTermsDialog({ open, onClose }) {
         <p><b>Paieška ir patikimumas.</b> Paieškoje vertinamas patvirtintas grafikas, aktyvumas, vieta, darbo laikas, esami įsipareigojimai ir paskyros apribojimai. Darbo dienos žymėjimai, įvertinimai ir ginčų eiga padeda susidaryti patikimumo vaizdą. Šie duomenys mažina neaiškumą, bet negarantuoja atvykimo, darbo kokybės ar apmokėjimo.</p>
         <p><b>Neatvykimas, nemokėjimas ir ginčai.</b> Jei darbuotojas neatvyksta arba darbdavys neatsiskaito, nukentėjusi šalis pirmiausia kreipiasi į kitą susitarimo šalį. Platformoje numatyti pranešimai, darbo dienos žymėjimai ir ginčo nagrinėjimas dėl platformos įrašų bei reputacijos. Toks nagrinėjimas savaime nepakeičia šalių susitarimo, neišieško atlygio ir nepanaikina jų teisės kreiptis į kompetentingas institucijas. Platforma neatsako už kitos šalies neįvykdytus įsipareigojimus tiek, kiek tai leidžia taikytina teisė; ji atsako už savo pačios pareigas pagal teisės aktus.</p>
         <p><b>Naudojimasis paskyra.</b> Vartotojai pateikia teisingus duomenis, laikosi teisės aktų ir nenaudoja platformos apgaulingiems ar neteisėtiems pasiūlymams. Už pažeidimus paskyra gali būti apribota; apie ginčų ir apribojimų priežastis pranešama platformos tvarka.</p>
+        <p><b>Svarbūs darbo pranešimai.</b> Platforma paskyroje pateikia informaciją apie kvietimus, su darbais susijusias žinutes, patvirtinimus, atvykimą ir pasikeitimus. Registracijos metu prašome patvirtinti, kad suprantate šią būtiną paslaugos dalį. Pranešimams telefono ekrane reikalingas atskiras naršyklės arba įrenginio leidimas; registracijos varnelė jo nesuteikia.</p>
         <p><b>Įmonių Business išbandymas.</b> Naujas darbdavys, registracijos metu pasirinkęs tipą „Įmonė“, automatiškai gauna 30 dienų Business planą nemokamai, be mokėjimo kortelės ir be automatinio apmokestinimo. Privatiems darbdaviams automatinis Business išbandymas netaikomas. Pasibaigus 30 dienų laikotarpiui įmonės planas automatiškai tampa Basic, nebent iki tol pasirenkama mokama Business arba Business Pro prenumerata.</p>
         <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
         <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
@@ -1639,6 +1655,7 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Paskyros ištrynimas.</b> Prašant ištrinti paskyrą gali būti pašalinti su ja susiję platformos duomenys, išskyrus informaciją, kurią būtina toliau saugoti dėl teisinių pareigų, teisinių reikalavimų, saugumo, sukčiavimo prevencijos ar jau įvykusių sandorių ir ginčų dokumentavimo.</p>
 
+        <p><b>Pranešimai apie darbą.</b> Prisijungus platformoje pateikiami su paskyra ir darbo organizavimu susiję pranešimai. Registracijos metu išsaugome patvirtinimo, kad perskaitėte šią informaciją, laiką. Telefono „Web Push“ pranešimai veikia tik naršyklei arba įrenginiui suteikus leidimą. Juos galite išjungti įrenginio ar naršyklės nustatymuose. Registracijos patvirtinimas nereiškia, kad suteiktas telefono leidimas.</p>
         <p><b>Slapukai ir techninė saugykla.</b> Platforma gali naudoti techniškai būtinus autentifikavimo, sesijos ir saugumo identifikatorius, kad vartotojas galėtų prisijungti ir naudotis sistema. Atskiros reklaminės ar rinkodaros sekimo priemonės šiame privatumo pranešime nenumatytos; jei jos būtų įdiegtos, informacija ir pasirinkimai būtų pateikti atskirai.</p>
 
         <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
@@ -2138,6 +2155,10 @@ function AuthModal({
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Required confirmation of essential in-account service notices, NOT Web Push permission.
+  const [serviceNoticesAcknowledged, setServiceNoticesAcknowledged] = useState(false);
+  const [signupPushStatus, setSignupPushStatus] = useState("");
+  const [pushConsentDialog, setPushConsentDialog] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const submitting = useRef(false);
@@ -2152,6 +2173,9 @@ function AuthModal({
       setMessage("");
       setSuccess(false);
       setTermsAccepted(false);
+      setServiceNoticesAcknowledged(false);
+      setSignupPushStatus("");
+      setPushConsentDialog(false);
 
       if (teamInvite) {
         const invitedName = String(teamInvite.invited_name || "").trim();
@@ -2170,6 +2194,51 @@ function AuthModal({
 
   const setField = (key) => (e) =>
     setForm((current) => ({ ...current, [key]: e.target.value }));
+
+  function handleServiceNoticesAcknowledgedChange(event) {
+    if (!event.target.checked) {
+      setServiceNoticesAcknowledged(false);
+      setPushConsentDialog(false);
+      setSignupPushStatus("");
+      return;
+    }
+    // Show the simple Statybos24 confirmation in the registration form.
+    // Browser permission can only be requested after the user's own click.
+    setPushConsentDialog(true);
+  }
+
+  function handlePushConsentChoice(accepted) {
+    setPushConsentDialog(false);
+    setServiceNoticesAcknowledged(accepted);
+    setSignupPushStatus("");
+    if (!accepted || isHireProjectPath) return;
+
+    // Request the operating-system permission directly in the "Taip" click.
+    // The operating-system prompt is owned by the browser and cannot be styled.
+    if (typeof window === "undefined" || !window.isSecureContext ||
+        !("Notification" in window) || !("serviceWorker" in navigator) ||
+        !("PushManager" in window)) {
+      setSignupPushStatus("unsupported");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      setSignupPushStatus("granted");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setSignupPushStatus("blocked");
+      return;
+    }
+    try {
+      Promise.resolve(Notification.requestPermission())
+        .then(permission => setSignupPushStatus(
+          permission === "granted" ? "granted" : permission === "denied" ? "blocked" : "dismissed"
+        ))
+        .catch(() => setSignupPushStatus("unsupported"));
+    } catch {
+      setSignupPushStatus("unsupported");
+    }
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -2208,6 +2277,9 @@ function AuthModal({
       } else {
         if (!termsAccepted) {
           throw new Error("Norėdami registruotis, susipažinkite su naudojimosi sąlygomis ir jas patvirtinkite.");
+        }
+        if (!serviceNoticesAcknowledged) {
+          throw new Error("Patvirtinkite pranešimų sutikimą.");
         }
         if (!form.firstName.trim()) {
           throw new Error("Įveskite vardą.");
@@ -2263,6 +2335,8 @@ function AuthModal({
             data: {
               terms_accepted: true,
               terms_version: TERMS_VERSION,
+              // Stores the registration notice acknowledgment; not a browser Push permission grant.
+              service_notices_acknowledged_at: new Date().toISOString(),
               role: teamInvite ? "employer" : role,
               preferred_plan: "basic",
               preferred_billing_interval: "monthly",
@@ -2763,6 +2837,19 @@ function AuthModal({
             </label>
           )}
 
+          {mode === "signup" && (
+            <label style={{ display: "flex", alignItems: "center", gap: 10, color: "#405264", fontSize: 13, lineHeight: 1.5, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={serviceNoticesAcknowledged}
+                onChange={handleServiceNoticesAcknowledgedChange}
+                required
+                style={{ accentColor: "#f08a28", width: 17, height: 17, flexShrink: 0, margin: 0 }}
+              />
+              <span>Pranešimų sutikimas</span>
+            </label>
+          )}
+
           {message && (
             <div
               role={success ? "status" : "alert"}
@@ -2804,6 +2891,27 @@ function AuthModal({
         </div>
         <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
         <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+        {pushConsentDialog && createPortal(
+          <div role="presentation" style={{position:"fixed",inset:0,display:"grid",placeItems:"center",background:"rgba(16,36,56,.62)",zIndex:7500,padding:16}}>
+            <section role="alertdialog" aria-modal="true" aria-labelledby="push-consent-title" aria-describedby="push-consent-description"
+              style={{width:"min(390px,100%)",background:"#fff",color:"#102438",border:"1px solid #dfe7ed",borderRadius:18,padding:"28px 24px",boxShadow:"0 22px 70px rgba(16,36,56,.27)",textAlign:"center"}}>
+              <h3 id="push-consent-title" style={{fontSize:20,lineHeight:1.3,margin:"0 0 15px",fontWeight:800}}>Ar sutinkate gauti pranešimus?</h3>
+              <p id="push-consent-description" style={{fontSize:14,lineHeight:1.65,margin:"0 0 22px",color:"#405264"}}>
+                {role === "employer"
+                  ? "Sutikdami gausite pranešimus apie darbuotojų atsakymus, darbo atnaujinimus ir priminimus."
+                  : "Sutikdami gausite pranešimus apie gautus darbo pasiūlymus, darbo atnaujinimus ir priminimus."}
+              </p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                {[[false,"Ne"],[true,"Taip"]].map(([choice,label])=>(
+                  <button key={label} type="button" className="btn ghost" onClick={()=>handlePushConsentChoice(choice)}
+                    style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#102438",fontSize:15,fontWeight:750}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>,document.body
+        )}
       </div>
     </div>
   );
@@ -5759,6 +5867,251 @@ function BugResolutionNotice({ userId }) {
 }
 
 
+// Web Push belongs to the main statybos24.lt project only, never /hire.
+// First-party, consent-free in-page alerts for the primary Statybos24 project.
+// Unlike system Web Push, these require the main website to be open.
+function MainSiteInPageAlerts({ user, kind }) {
+  const [alerts, setAlerts] = useState([]);
+  const seenRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!user?.id || !supabase || isHireProjectPath) return undefined;
+    let stopped = false;
+    let busy = false;
+    const timeouts = new Set();
+    const storageKey = `s24-in-page-alerts-v1:${user.id}`;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+      if (Array.isArray(stored)) seenRef.current = new Set(stored.slice(-150));
+    } catch { seenRef.current = new Set(); }
+    setAlerts([]);
+
+    const descriptions = {
+      message: "Gavote naują žinutę",
+      invitation_accepted: "Darbuotojas priėmė kvietimą",
+      invitation_declined: "Darbuotojas atmetė kvietimą",
+      invitation_cancelled: "Darbo kvietimas atšauktas",
+      invitation_expired: "Darbo kvietimas nebegalioja",
+      job_updated: "Pakeista darbo informacija",
+      worker_checked_in: "Darbuotojas pažymėjo atvykimą",
+      employer_checked_in: "Atvykimas patvirtintas",
+      attendance_action_required: "Reikia atlikti veiksmą dėl darbo dienos",
+      attendance_review_required: "Peržiūrėkite darbo dieną",
+      attendance_finalized: "Darbo diena užbaigta",
+      attendance_disputed: "Gautas darbo dienos ginčas",
+      attendance_resolved: "Darbo dienos ginčas išspręstas",
+      attendance_resolved_in_favor: "Ginčas išspręstas",
+      attendance_resolved_against: "Ginčas išspręstas",
+    };
+
+    async function checkNewAlerts() {
+      if (stopped || busy || document.visibilityState === "hidden") return;
+      busy = true;
+      try {
+        const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const requests = [supabase.from("job_notifications")
+          .select("id,event_type,created_at")
+          .eq("recipient_id", user.id).is("read_at", null)
+          .gte("created_at", since)
+          .order("created_at", { ascending: false }).limit(15)];
+        if (kind === "worker") {
+          requests.push(supabase.from("job_invitations")
+            .select("id,invited_at")
+            .eq("worker_id", user.id).eq("status", "pending")
+            .gte("invited_at", since)
+            .order("invited_at", { ascending: false }).limit(15));
+        }
+        const result = await Promise.all(requests);
+        if (stopped) return;
+        const entries = [];
+        if (!result[0]?.error) {
+          for (const row of result[0]?.data || []) {
+            entries.push({ key:`notice:${row.id}`, time:row.created_at,
+              title:descriptions[row.event_type] || "Naujas pranešimas" });
+          }
+        }
+        if (kind === "worker" && !result[1]?.error) {
+          for (const row of result[1]?.data || []) {
+            entries.push({ key:`invite:${row.id}`, time:row.invited_at,
+              title:"Gavote naują darbo kvietimą" });
+          }
+        }
+        const unseen = entries
+          .filter(item => !seenRef.current.has(item.key))
+          .sort((a,b) => String(a.time).localeCompare(String(b.time)));
+        // Show at most two at a time, without replaying the same event after refresh.
+        for (const item of unseen.slice(0,2)) {
+          seenRef.current.add(item.key);
+          const timer = window.setTimeout(() => {
+            timeouts.delete(timer);
+            if (!stopped) setAlerts(current => current.filter(a => a.key !== item.key));
+          }, 9000);
+          timeouts.add(timer);
+        }
+        if (unseen.length) {
+          try { window.localStorage.setItem(storageKey, JSON.stringify([...seenRef.current].slice(-150))); } catch {}
+          const shown = unseen.slice(0,2);
+          setAlerts(current => [...current, ...shown].slice(-3));
+        }
+      } catch {
+        // A notification check must never prevent ordinary website use.
+      } finally { busy = false; }
+    }
+
+    checkNewAlerts();
+    const interval = window.setInterval(checkNewAlerts, 20000);
+    document.addEventListener("visibilitychange", checkNewAlerts);
+    window.addEventListener("focus", checkNewAlerts);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkNewAlerts);
+      window.removeEventListener("focus", checkNewAlerts);
+      for (const timer of timeouts) window.clearTimeout(timer);
+    };
+  }, [user?.id, kind]);
+
+  if (!user?.id || isHireProjectPath || !alerts.length) return null;
+  return createPortal(
+    <div aria-live="polite" aria-relevant="additions" style={{
+      position:"fixed",top:"max(15px, env(safe-area-inset-top, 0px))",right:12,
+      width:"min(365px, calc(100vw - 24px))",display:"grid",gap:9,
+      zIndex:6500,pointerEvents:"none",
+    }}>
+      {alerts.map(alert => (
+        <div key={alert.key} role="status" style={{
+          display:"flex",gap:12,alignItems:"flex-start",padding:"13px 14px",
+          background:"#fff",border:"1px solid #dfE7ED",borderLeft:"4px solid #f08a28",
+          borderRadius:14,boxShadow:"0 12px 38px rgba(16,36,56,.18)",
+          fontFamily:"Inter,system-ui,sans-serif",color:"#102438",pointerEvents:"auto",
+        }}>
+          <span aria-hidden="true" style={{fontSize:19,lineHeight:1.2}}>🔔</span>
+          <div style={{flex:1,minWidth:0}}>
+            <strong style={{display:"block",fontSize:13,lineHeight:1.35}}>Statybos24</strong>
+            <span style={{display:"block",fontSize:12,lineHeight:1.5,marginTop:3}}>{alert.title}</span>
+          </div>
+          <button type="button" aria-label="Uždaryti pranešimą" onClick={() => setAlerts(current => current.filter(a => a.key !== alert.key))}
+            style={{cursor:"pointer",border:0,background:"#f1f4f6",color:"#526374",width:28,height:28,
+              flex:"0 0 28px",borderRadius:8,fontSize:17,lineHeight:1}}>×</button>
+        </div>
+      ))}
+    </div>,document.body
+  );
+}
+
+function WebPushSettings({ user }) {
+  const [mode, setMode] = useState("checking");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const userOptOutKey = `s24-webpush-disabled:${user?.id || "guest"}`;
+  const supported = typeof window !== "undefined" &&
+    "serviceWorker" in navigator && "PushManager" in window && "Notification" in window &&
+    window.isSecureContext;
+
+  async function pushRequest(body) {
+    const { data, error } = await supabase.functions.invoke("statybos24-webpush", { body });
+    if (error) throw new Error("Nepavyko susisiekti su pranešimų paslauga.");
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  useEffect(() => {
+    let active = true;
+    if (!supported || !user?.id) {
+      setMode("unsupported");
+      return undefined;
+    }
+    if (Notification.permission === "denied") {
+      setMode("blocked");
+      return undefined;
+    }
+    (async () => {
+      try {
+        let registration = await navigator.serviceWorker.getRegistration("/");
+        let subscription = registration ? await registration.pushManager.getSubscription() : null;
+        if (!active) return;
+        let disabled = false;
+        try { disabled = window.localStorage.getItem(userOptOutKey) === "1"; } catch {}
+        // Never request OS/browser permission automatically. Only reuse prior permission.
+        // Respect a previous explicit "off" choice in this account.
+        if (disabled) { setMode("off"); return; }
+        if (Notification.permission === "granted") {
+          if (!subscription) {
+            registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {scope:"/",updateViaCache:"none"});
+            const config = await pushRequest({ action:"config" });
+            if (!config?.public_key) { if (active) setMode("off"); return; }
+            const keyString = config.public_key.replace(/-/g,"+").replace(/_/g,"/");
+            const raw = atob(keyString.padEnd(Math.ceil(keyString.length/4)*4,"="));
+            subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});
+          }
+          const response = await pushRequest({ action:"status", endpoint:subscription.endpoint });
+          if (!response?.enabled) {
+            const data = subscription.toJSON();
+            await pushRequest({ action:"subscribe", subscription:{endpoint:subscription.endpoint,keys:{p256dh:data.keys?.p256dh,auth:data.keys?.auth}} });
+          }
+          if (active) setMode("on");
+        } else {
+          setMode("off");
+        }
+      } catch { if (active) setMode("off"); }
+    })();
+    return () => { active = false; };
+  }, [user?.id]);
+
+  async function changePreference() {
+    if (busy || !supported) return;
+    setBusy(true);
+    setProblem("");
+    try {
+      if (mode === "on") {
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        const subscription = registration ? await registration.pushManager.getSubscription() : null;
+        if (subscription) {
+          await pushRequest({ action:"unsubscribe", endpoint:subscription.endpoint });
+          await subscription.unsubscribe();
+        }
+        try { window.localStorage.setItem(userOptOutKey,"1"); } catch {}
+        setMode("off");
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          setMode(permission === "denied" ? "blocked" : "off");
+          setProblem("Pranešimai neįjungti. Juos galite leisti naršyklės nustatymuose.");
+          return;
+        }
+        // Requires /statybos24-push-sw.js in the website's *public root*, beside index.html.
+        const registration = await navigator.serviceWorker.register("/statybos24-push-sw.js", {scope:"/", updateViaCache:"none"});
+        await navigator.serviceWorker.ready;
+        const config = await pushRequest({ action:"config" });
+        if (!config?.public_key) throw new Error("Pranešimų serveris dar neparuoštas.");
+        const raw = atob(config.public_key.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(config.public_key.length/4)*4,"="));
+        const applicationServerKey = Uint8Array.from(raw, c=>c.charCodeAt(0));
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey});
+        const data = subscription.toJSON();
+        await pushRequest({ action:"subscribe", subscription:{endpoint:subscription.endpoint,keys:{p256dh:data.keys?.p256dh,auth:data.keys?.auth}} });
+        try { window.localStorage.removeItem(userOptOutKey); } catch {}
+        setMode("on");
+      }
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "Nepavyko pakeisti pranešimų nustatymo.");
+    } finally { setBusy(false); }
+  }
+  if (!user?.id || isHireProjectPath) return null;
+  const label = mode === "on" ? "Telefono pranešimai įjungti" : "Pranešimai telefone";
+  return (
+    <div className="s24-push-controls" aria-live="polite" style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}>
+      <button type="button" className="btn ghost" disabled={busy || mode === "checking" || mode === "unsupported" || mode === "blocked"} onClick={changePreference}
+        title="Pranešimai apie darbo kvietimus, žinutes ir artėjančius darbus telefone">
+        {mode === "on" ? "🔔 " : "🔕 "}{busy ? "Jungiama..." : label}
+      </button>
+      {mode === "unsupported" && <small style={{fontSize:11,color:"#667788"}}>Ši naršyklė nepalaiko pranešimų. „iPhone“ pridėkite svetainę į pradžios ekraną.</small>}
+      {mode === "blocked" && <small style={{fontSize:11,color:"#a7550d"}}>Pranešimai užblokuoti naršyklėje.</small>}
+      {problem && <small role="alert" style={{fontSize:11,color:"#a7550d",maxWidth:260}}>{problem}</small>}
+    </div>
+  );
+}
+
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
@@ -8515,6 +8868,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   return (
     <div className="wd-page">
+      {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
         .wd-page{min-height:100vh;background:#f6f8fa;color:#102438;padding-bottom:56px}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
@@ -8680,7 +9034,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                     width: "100%",
                     justifyContent: "center",
                     gap: 8,
-                    flexWrap: "nowrap",
+                    flexWrap: "wrap",
                   }
                 : { display: "flex", alignItems: "center", gap: 9 }
             }
@@ -8710,6 +9064,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             )}
             {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
+            {!onAdminReturn && <WebPushSettings user={user} />}
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
             </button>
@@ -17764,6 +18119,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   return (
     <div className="ed-page">
+      {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
         .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
@@ -18097,6 +18453,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
 
             {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
+            {!onAdminReturn && <WebPushSettings user={user} />}
 
             <button className="btn ghost" onClick={onLogout}>
               Atsijungti
