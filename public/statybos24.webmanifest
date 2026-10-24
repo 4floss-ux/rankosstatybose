@@ -10,7 +10,23 @@
   "theme_color": "#102438",
   "background_color": "#ffffff",
   "icons": [
-    {"src": "/statybos24-pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "/statybos24-push-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+    {
+      "src": "/statybos24-app-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/statybos24-app-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/statybos24-maskable-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

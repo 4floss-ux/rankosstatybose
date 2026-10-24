@@ -1,4 +1,4 @@
-/* Only Statybos24.lt main-site push messages. Does not fetch or read /hire data. */
+/* Statybos24.lt Web Push (without custom notification icons). /hire remains separate. */
 self.addEventListener('push', (event) => {
   let message = {};
   try { message = event.data ? event.data.json() : {}; } catch {}
@@ -7,8 +7,6 @@ self.addEventListener('push', (event) => {
   const target = '/'; // Intentionally never route notification clicks into /hire.
   event.waitUntil(self.registration.showNotification(title, {
     body,
-    icon: '/statybos24-push-logo.png',
-    badge: '/statybos24-push-logo.png',
     tag: 'statybos24-' + String(message.id || Date.now()),
     renotify: false,
     // One optional native action; OS/browser chooses whether to show it.
