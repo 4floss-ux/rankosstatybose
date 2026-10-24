@@ -78,6 +78,44 @@ if (!isHireProjectPath && typeof document !== "undefined") {
     document.head.appendChild(touchIcon);
   }
 }
+// The install prompt is a short-lived browser event. Capture it before React mounts.
+// This applies only to the main Statybos24.lt project, never /hire.
+let statybos24DeferredInstallPrompt = null;
+let statybos24PwaInstalledInSession = false;
+const statybos24InstallListeners = new Set();
+function statybos24IsStandalone() {
+  if (typeof window === "undefined") return false;
+  return statybos24PwaInstalledInSession ||
+    window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+    window.navigator?.standalone === true;
+}
+function statybos24NotifyInstallListeners() {
+  for (const callback of statybos24InstallListeners) callback();
+}
+if (!isHireProjectPath && typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    statybos24DeferredInstallPrompt = event;
+    statybos24NotifyInstallListeners();
+  });
+  window.addEventListener("appinstalled", () => {
+    statybos24PwaInstalledInSession = true;
+    statybos24DeferredInstallPrompt = null;
+    statybos24NotifyInstallListeners();
+  });
+  // Register the existing push service worker on initial visit too, not just
+  // after users opt in to notifications. Registration does NOT ask for push permission.
+  if (window.isSecureContext && "serviceWorker" in navigator) {
+    const registerMainSiteWorker = () => {
+      navigator.serviceWorker.register("/statybos24-push-sw.js", {
+        scope: "/", updateViaCache: "none",
+      }).catch(() => {});
+    };
+    if (document.readyState === "complete") registerMainSiteWorker();
+    else window.addEventListener("load", registerMainSiteWorker, {once: true});
+  }
+}
+
 const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey, isHireProjectPath ? {
       auth: {
@@ -30251,6 +30289,54 @@ function PublicLandingPage({
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [businessDetailsOpen, setBusinessDetailsOpen] = useState(false);
+  const [installPromptReady, setInstallPromptReady] = useState(Boolean(statybos24DeferredInstallPrompt));
+  const [pwaInstalled, setPwaInstalled] = useState(statybos24IsStandalone());
+  const [installGuide, setInstallGuide] = useState("");
+
+  useEffect(() => {
+    const updateInstallStatus = () => {
+      setInstallPromptReady(Boolean(statybos24DeferredInstallPrompt));
+      setPwaInstalled(statybos24IsStandalone());
+    };
+    statybos24InstallListeners.add(updateInstallStatus);
+    const display = window.matchMedia?.("(display-mode: standalone)");
+    display?.addEventListener?.("change", updateInstallStatus);
+    updateInstallStatus();
+    return () => {
+      statybos24InstallListeners.delete(updateInstallStatus);
+      display?.removeEventListener?.("change", updateInstallStatus);
+    };
+  }, []);
+
+  async function handleInstallFromLanding() {
+    const promptEvent = statybos24DeferredInstallPrompt;
+    if (promptEvent) {
+      statybos24DeferredInstallPrompt = null; // Browser prompts can only be used once.
+      setInstallPromptReady(false);
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice?.outcome === "accepted") {
+          setInstallGuide("Programėlės įdiegimas patvirtintas. Atidarykite ją telefono pradžios ekrane.");
+        } else {
+          setInstallGuide("Įdiegimą galėsite pasirinkti vėliau per naršyklės meniu.");
+        }
+      } catch {
+        setInstallGuide("Atidarykite „Chrome“ meniu ⋮ ir pasirinkite „Pridėti prie pagrindinio ekrano“ arba „Įdiegti programėlę“.");
+      }
+      return;
+    }
+    const ua = navigator.userAgent || "";
+    const isAppleMobile = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    setInstallGuide(isAppleMobile
+      ? "Paspauskite naršyklės „Bendrinti“ mygtuką ir pasirinkite „Pridėti prie pradžios ekrano“."
+      : isAndroid
+      ? "Atidarykite „Chrome“ meniu ⋮ ir pasirinkite „Pridėti prie pagrindinio ekrano“ arba „Įdiegti programėlę“. Jei matote tik nuorodos pridėjimą, jūsų telefone ši naršyklė gali nepalaikyti pilno PWA diegimo."
+      : "Naršyklės meniu pasirinkite „Įdiegti programėlę“ arba „Pridėti prie pagrindinio ekrano“."
+    );
+  }
+
 
   const serviceItems = [
     {
@@ -30300,6 +30386,14 @@ function PublicLandingPage({
         .home-audiences{display:grid;grid-template-columns:1fr 1fr;gap:16px}.home-audience{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:28px;background:#fff}.home-audience.employer{background:linear-gradient(135deg,#fff8f1,#fff 58%)}.home-audience.worker{background:linear-gradient(135deg,#f1f7fb,#fff 58%)}.home-audience-tag{display:inline-flex;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.home-audience h3{font:850 24px/1.2 Manrope,Inter,sans-serif;margin:13px 0 8px}.home-audience p{color:var(--muted);font-size:13px;line-height:1.6;margin:0}.home-audience ul{list-style:none;padding:0;display:grid;gap:9px;margin:20px 0 22px}.home-audience li{font-size:12.5px;padding-left:22px;position:relative}.home-audience li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}
         .home-price-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}.home-price-copy{max-width:680px}.home-free-worker{display:inline-flex;margin-top:12px;padding:7px 10px;border-radius:999px;background:#e9f7f1;color:#167a54;font-size:11px;font-weight:850}.home-trial-offer{display:block;margin-top:10px;color:#8a531d;font-size:12px;font-weight:800;line-height:1.5}.home-toggle{display:flex;background:#e8eef2;border-radius:11px;padding:4px;flex:none}.home-toggle button{border:0;background:transparent;border-radius:8px;padding:9px 12px;color:#526374;font-size:11.5px;font-weight:800}.home-toggle button.selected{background:#fff;color:var(--navy);box-shadow:0 1px 5px rgba(16,36,56,.12)}.home-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.home-plan{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}.home-plan.featured{border:2px solid var(--orange);box-shadow:0 16px 36px rgba(240,138,40,.12)}.home-plan-badge{position:absolute;right:18px;top:-12px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.06em}.home-plan-badge.pro{background:var(--navy)}.home-plan h3{font:850 20px Manrope,Inter,sans-serif;margin:0}.home-plan-sub{color:var(--muted);font-size:11.5px;line-height:1.5;min-height:35px;margin:8px 0 14px}.home-plan-trial{margin:-5px 0 13px;padding:9px 10px;border:1px solid #f2d7bc;border-radius:10px;background:#fff7ef;color:#8a531d;font-size:10.5px;font-weight:800;line-height:1.4}.home-amount{font:900 33px Manrope,Inter,sans-serif;letter-spacing:-.03em}.home-amount small{font:700 11px Inter,sans-serif;color:var(--muted);letter-spacing:0}.home-year-note{min-height:23px;color:#167a54;font-size:10.5px;font-weight:750;margin-top:4px}.home-plan ul{list-style:none;padding:0;display:grid;gap:8px;margin:14px 0 20px;flex:1}.home-plan li{font-size:11.5px;padding-left:20px;position:relative;color:#405264}.home-plan li:before{content:'✓';position:absolute;left:0;color:#16845b;font-weight:900}.home-plan .home-btn{width:100%}
         .home-cta{padding:64px 0;background:linear-gradient(135deg,#102438,#17364f);color:#fff}.home-cta-inner{display:flex;align-items:center;justify-content:space-between;gap:30px}.home-cta h2{margin:0 0 8px;color:#fff}.home-cta p{margin:0;color:#bfd0dc;max-width:650px;font-size:13.5px}.home-cta-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;flex:none}.home-cta .home-btn.outline{border-color:rgba(255,255,255,.32);background:transparent;color:#fff}.home-cta .home-btn.outline:hover{background:rgba(255,255,255,.08)}
+        .home-app-install{padding:28px 0 34px;background:#f5f8fa;border-top:1px solid #e2e9ee}
+        .home-app-install-card{display:grid;grid-template-columns:84px minmax(0,1fr) auto;align-items:center;gap:21px;padding:20px 24px;background:#fff;border:1px solid #e1e9ef;border-radius:19px;box-shadow:0 12px 32px rgba(16,36,56,.055)}
+        .home-app-install-icon{width:76px;height:76px;border-radius:19px;display:block;background:#fff;object-fit:contain;border:1px solid #edf0f3;box-shadow:0 7px 19px rgba(16,36,56,.10)}
+        .home-app-install-copy{min-width:0}.home-app-install-copy h2{margin:0 0 6px;font:850 22px/1.25 Manrope,Inter,sans-serif;letter-spacing:-.025em;color:var(--navy)}
+        .home-app-install-copy p{margin:0;color:#607180;font-size:13px;line-height:1.55;max-width:610px}
+        .home-app-install-help{margin:11px 0 0!important;color:#31526a!important;font-size:12px!important;line-height:1.55!important}
+        .home-app-install-actions{display:flex;align-items:center;justify-content:flex-end}.home-app-install-actions .home-btn{min-width:178px}
+        @media(max-width:700px){.home-app-install{padding:18px 0 24px}.home-app-install-card{grid-template-columns:64px minmax(0,1fr);gap:12px;padding:17px;border-radius:16px}.home-app-install-icon{width:64px;height:64px;border-radius:16px}.home-app-install-copy h2{font-size:17px;line-height:1.26}.home-app-install-copy p{font-size:12px}.home-app-install-actions{grid-column:1/-1}.home-app-install-actions .home-btn{width:100%;min-height:46px}.home-app-install-help{font-size:12px!important}}
         .home-footer{padding:24px 0;background:#0b1c2c;color:#9cb0bf}.home-footer-inner{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:11.5px}.home-footer .home-brand{color:#fff}.home-legal-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.home-terms-link{border:0;background:none;color:#d3dee6;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
         @media(min-width:901px) and (hover:hover) and (pointer:fine){
           .home-page .home-plan{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;transform-origin:center center}
@@ -30564,6 +30658,30 @@ function PublicLandingPage({
             </div>
           </div>
         </section>
+        {!pwaInstalled && (
+          <section className="home-app-install" aria-labelledby="home-app-install-title">
+            <div className="home-wrap">
+              <div className="home-app-install-card">
+                <img
+                  className="home-app-install-icon"
+                  src="/statybos24-app-192-v2.png"
+                  alt="Statybos24 programėlės ikonėlė"
+                  width="76" height="76" loading="lazy"
+                />
+                <div className="home-app-install-copy">
+                  <h2 id="home-app-install-title">Įsidiekite „Statybos24“ telefone</h2>
+                  <p>Pasiekite darbus, kvietimus ir savo grafiką vienu paspaudimu iš telefono pradžios ekrano.</p>
+                  {installGuide && <p className="home-app-install-help" role="status">{installGuide}</p>}
+                </div>
+                <div className="home-app-install-actions">
+                  <button className="home-btn" type="button" onClick={handleInstallFromLanding}>
+                    Įdiegti programėlę
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="home-footer">
