@@ -6122,11 +6122,11 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
     {profileAnchor && createPortal(
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",padding:"15px 17px",border:"1px solid #e2e9ee",background:"#f7f9fb",borderRadius:12,margin:"10px 0 20px"}}>
         <div style={{flex:"1 1 215px",minWidth:0}}>
-          <strong style={{display:"block",fontSize:15,color:"#102438",marginBottom:5}}>Telefono pranešimai</strong>
+          <strong style={{display:"block",fontSize:15,color:"#102438",marginBottom:5}}>Pranešimai</strong>
           <div style={{fontSize:12,lineHeight:1.5,color:"#607180"}}>
-            {pushStatus === "on" ? "Įjungti šiame telefone."
-              : pushStatus === "blocked" ? "Užblokuoti telefone. Leidimą pakeiskite telefono programėlės arba „Chrome“ nustatymuose."
-              : pushStatus === "unsupported" ? "Šiame telefone ar naršyklėje pranešimai nepalaikomi."
+            {pushStatus === "on" ? "Įjungti šiame įrenginyje."
+              : pushStatus === "blocked" ? "Užblokuoti šiame įrenginyje. Leidimą pakeiskite naršyklės ar įrenginio nustatymuose."
+              : pushStatus === "unsupported" ? "Šiame įrenginyje ar naršyklėje pranešimai nepalaikomi."
               : kind === "employer" ? "Pranešimai apie darbuotojų atsakymus ir darbus."
               : "Darbo pasiūlymai, atnaujinimai ir grafiko priminimai."}
           </div>
