@@ -73,6 +73,35 @@
         content-visibility: auto;
         contain-intrinsic-size: auto 760px;
       }
+
+      /* Tik pagrindinio puslapio apatiniai CTA mygtukai ir poraštės logotipas. */
+      .home-page .home-cta .home-cta-buttons > .home-btn,
+      .home-page .home-cta .home-cta-buttons > .home-btn.outline {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, .55);
+        color: #fff;
+        box-shadow: none;
+        transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .home-page .home-cta .home-cta-buttons > .home-btn:hover,
+        .home-page .home-cta .home-cta-buttons > .home-btn.outline:hover {
+          background: #f08a28;
+          border-color: #f08a28;
+          color: #fff;
+        }
+      }
+
+      .home-page .home-cta .home-cta-buttons > .home-btn:focus-visible {
+        outline: 2px solid #f08a28;
+        outline-offset: 3px;
+      }
+
+      /* Tik pagrindinio puslapio poraštė; kitų logotipų neliečiame. */
+      .home-page .home-footer .home-footer-inner > .home-brand {
+        display: none;
+      }
     </style>
 
     <script type="application/ld+json">
