@@ -128,11 +128,13 @@ const supabase = supabaseUrl && supabaseKey
   : null;
 const TERMS_VERSION = "2026-10-05-v6";
 const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";
-const PRIVACY_VERSION = "2026-10-06-v6";
+const PRIVACY_VERSION = "2026-10-26-v7";
 const PRIVACY_CONTACT_EMAIL = "info@statybos24.lt";
 const PUBLIC_BUSINESS_NAME = "Statybos24";
 const PUBLIC_BUSINESS_ACTIVITY = "Individuali veikla pagal pažymą";
 const PUBLIC_BUSINESS_NUMBER = "1521110";
+// Individualios veiklos vykdytojas ir duomenų valdytojas (sutampa su rekvizitais).
+const PUBLIC_CONTROLLER_FULL_NAME = "Alanas Staponas";
 
 function getVilniusTodayISO() {
   return new Intl.DateTimeFormat("sv-SE", {
@@ -1595,21 +1597,21 @@ function AddressAutocomplete({
   );
 }
 
-function PlatformTermsDialog({ open, onClose }) {
-  if (!open) return null;
+function PlatformTermsDialog({ open, onClose, page = false }) {
+  if (!open && !page) return null;
 
   return (
     <div
-      role="presentation"
-      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
+      role={page ? undefined : "presentation"}
+      onMouseDown={page ? undefined : (event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={page ? { width: "100%" } : { position: "fixed", inset: 0, zIndex: 1200, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-terms-title" style={{ width: "min(680px,100%)", maxHeight: "min(780px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role={page ? undefined : "dialog"} aria-modal={page ? undefined : "true"} aria-labelledby="platform-terms-title" style={page ? { width: "100%", color: "#102438", lineHeight: 1.75 } : { width: "min(680px,100%)", maxHeight: "min(780px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
-          <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2></div>
-          <button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
+          <div><div className="eyebrow">STATYBOS24.LT</div>{page ? <h1 id="platform-terms-title" style={{ margin: "6px 0 22px", fontSize: "clamp(26px,4vw,34px)" }}>Naudojimosi sąlygos</h1> : <h2 id="platform-terms-title" style={{ margin: "6px 0 16px" }}>Naudojimosi sąlygos</h2>}</div>
+          {!page && (<button type="button" aria-label="Uždaryti sąlygas" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>)}
         </div>
-        <p><b>Paslaugos teikėjas.</b> {PUBLIC_BUSINESS_ACTIVITY}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>, veiklos pavadinimas <b>{PUBLIC_BUSINESS_NAME}</b>. Kontaktinis el. paštas: <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
+        <p><b>Paslaugos teikėjas.</b> <b>{PUBLIC_CONTROLLER_FULL_NAME}</b>, {PUBLIC_BUSINESS_ACTIVITY.toLowerCase()}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>, veiklos pavadinimas <b>{PUBLIC_BUSINESS_NAME}</b>. Kontaktinis el. paštas: <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e" }}>{PRIVACY_CONTACT_EMAIL}</a>.</p>
         <p><b>Platformos vaidmuo.</b> statybos24.lt yra darbuotojų ir darbdavių suvedimo bei darbo organizavimo platforma. Padedame rasti vieniems kitus, perduoti darbo pasiūlymo informaciją, bendrauti ir fiksuoti darbo eigą. Vien naudojimasis platforma nepadaro statybos24.lt konkretaus darbo darbdaviu, rangovu ar darbo užmokesčio mokėtoju, o atlygio už paskelbtą darbą platforma nepriima ir neperveda.</p>
         <p><b>Darbdavio pareigos ir darbo reikalavimai.</b> Darbdavys atsako už savo paskelbtos informacijos tikslumą, sutarto atlygio sumokėjimą, teisėtą darbo organizavimą, saugias darbo sąlygas, privalomą instruktavimą ir konkrečiam darbui taikomų teisės aktų laikymąsi. Jei darbui reikalinga konkreti kvalifikacija, pažymėjimas, leidimas, dokumentai, speciali apranga, asmeninės apsaugos priemonės, įrankiai ar kiti reikalavimai, darbdavys turi juos aiškiai ir išsamiai nurodyti darbo aprašyme prieš siųsdamas kvietimus.</p>
         <p><b>Darbuotojo sprendimas.</b> Darbuotojas prieš priimdamas kvietimą turi įvertinti darbo vietą, laiką, atlygį, aprašymą ir visus nurodytus reikalavimus. Priimdamas darbą darbuotojas patvirtina, kad pateikta informacija jam suprantama ir jis pats sprendžia, ar pasiūlymas bei reikalavimai jam tinka. Darbuotojas atsako už savo pateiktą prieinamumą ir prisiimtų įsipareigojimų vykdymą.</p>
@@ -1619,59 +1621,60 @@ function PlatformTermsDialog({ open, onClose }) {
         <p><b>Svarbūs darbo pranešimai.</b> Platforma paskyroje pateikia informaciją apie kvietimus, su darbais susijusias žinutes, patvirtinimus, atvykimą ir pasikeitimus. Registracijos metu prašome patvirtinti, kad suprantate šią būtiną paslaugos dalį. Pranešimams telefono ekrane reikalingas atskiras naršyklės arba įrenginio leidimas; registracijos varnelė jo nesuteikia.</p>
         <p><b>Įmonių Business išbandymas.</b> Naujas darbdavys, registracijos metu pasirinkęs tipą „Įmonė“, automatiškai gauna 30 dienų Business planą nemokamai, be mokėjimo kortelės ir be automatinio apmokestinimo. Privatiems darbdaviams automatinis Business išbandymas netaikomas. Pasibaigus 30 dienų laikotarpiui įmonės planas automatiškai tampa Basic, nebent iki tol pasirenkama mokama Business arba Business Pro prenumerata.</p>
         <p style={{ fontSize: 13, color: "#607180" }}>Sąlygų versija: {TERMS_VERSION}. Šios sąlygos apibūdina platformos ir naudotojų vaidmenis. Mokamo plano kaina bei funkcijos pateikiamos kainodaroje. Asmens duomenų tvarkymas turi būti atskirai aprašytas privatumo pranešime.</p>
-        <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+        {!page && (<button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>)}
       </section>
     </div>
   );
 }
 
 
-function PlatformBusinessDetailsDialog({ open, onClose }) {
-  if (!open) return null;
+function PlatformBusinessDetailsDialog({ open, onClose, page = false }) {
+  if (!open && !page) return null;
 
   return (
     <div
-      role="presentation"
-      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 1220, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
+      role={page ? undefined : "presentation"}
+      onMouseDown={page ? undefined : (event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={page ? { width: "100%" } : { position: "fixed", inset: 0, zIndex: 1220, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-business-details-title" style={{ width: "min(560px,100%)", maxHeight: "min(720px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,34px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role={page ? undefined : "dialog"} aria-modal={page ? undefined : "true"} aria-labelledby="platform-business-details-title" style={page ? { width: "100%", color: "#102438", lineHeight: 1.75 } : { width: "min(560px,100%)", maxHeight: "min(720px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,34px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
-          <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-business-details-title" style={{ margin: "6px 0 16px" }}>Rekvizitai</h2></div>
-          <button type="button" aria-label="Uždaryti rekvizitus" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
+          <div><div className="eyebrow">STATYBOS24.LT</div>{page ? <h1 id="platform-business-details-title" style={{ margin: "6px 0 22px", fontSize: "clamp(26px,4vw,34px)" }}>Rekvizitai</h1> : <h2 id="platform-business-details-title" style={{ margin: "6px 0 16px" }}>Rekvizitai</h2>}</div>
+          {!page && (<button type="button" aria-label="Uždaryti rekvizitus" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>)}
         </div>
 
         <div style={{ display: "grid", gap: 10, fontSize: 14 }}>
+          <div><b>Individualios veiklos vykdytojas:</b> {PUBLIC_CONTROLLER_FULL_NAME}</div>
           <div><b>Veiklos forma:</b> {PUBLIC_BUSINESS_ACTIVITY}</div>
           <div><b>Individualios veiklos Nr.:</b> {PUBLIC_BUSINESS_NUMBER}</div>
           <div><b>Veiklos pavadinimas:</b> {PUBLIC_BUSINESS_NAME}</div>
           <div><b>El. paštas:</b> <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e", fontWeight: 800 }}>{PRIVACY_CONTACT_EMAIL}</a></div>
-          <div><b>Svetainė:</b> statybos24.lt</div>
+          <div><b>Svetainė:</b> <a href="https://statybos24.lt" style={{ color: "#b85f0e", fontWeight: 700 }}>statybos24.lt</a></div>
         </div>
 
-        <button type="button" onClick={onClose} style={{ marginTop: 20, border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+        {!page && (<button type="button" onClick={onClose} style={{ marginTop: 20, border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>)}
       </section>
     </div>
   );
 }
 
 
-function PlatformPrivacyDialog({ open, onClose }) {
-  if (!open) return null;
+function PlatformPrivacyDialog({ open, onClose, page = false }) {
+  if (!open && !page) return null;
 
   return (
     <div
-      role="presentation"
-      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
+      role={page ? undefined : "presentation"}
+      onMouseDown={page ? undefined : (event) => { if (event.target === event.currentTarget) onClose(); }}
+      style={page ? { width: "100%" } : { position: "fixed", inset: 0, zIndex: 1210, background: "rgba(16,36,56,.68)", display: "grid", placeItems: "center", padding: 16 }}
     >
-      <section role="dialog" aria-modal="true" aria-labelledby="platform-privacy-title" style={{ width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
+      <section role={page ? undefined : "dialog"} aria-modal={page ? undefined : "true"} aria-labelledby="platform-privacy-title" style={page ? { width: "100%", color: "#102438", lineHeight: 1.75 } : { width: "min(760px,100%)", maxHeight: "min(820px,calc(100dvh - 32px))", overflowY: "auto", background: "#fff", color: "#102438", borderRadius: 18, padding: "28px clamp(18px,4vw,36px)", boxShadow: "0 24px 80px #10243840", lineHeight: 1.6 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
-          <div><div className="eyebrow">STATYBOS24.LT</div><h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2></div>
-          <button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>
+          <div><div className="eyebrow">STATYBOS24.LT</div>{page ? <h1 id="platform-privacy-title" style={{ margin: "6px 0 22px", fontSize: "clamp(26px,4vw,34px)" }}>Privatumo politika</h1> : <h2 id="platform-privacy-title" style={{ margin: "6px 0 16px" }}>Privatumo politika</h2>}</div>
+          {!page && (<button type="button" aria-label="Uždaryti privatumo politiką" onClick={onClose} style={{ border: 0, background: "#f2f5f7", borderRadius: 9, width: 38, height: 38, cursor: "pointer", fontSize: 22 }}><CloseMark /></button>)}
         </div>
 
-        <p><b>Duomenų valdytojas.</b> statybos24.lt platformos duomenų valdytojo veiklos rekvizitas: {PUBLIC_BUSINESS_ACTIVITY}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>. Dėl privatumo ir duomenų subjektų teisių galima kreiptis el. paštu <b>{PRIVACY_CONTACT_EMAIL}</b>.</p>
+        <p><b>Duomenų valdytojas.</b> <b>{PUBLIC_CONTROLLER_FULL_NAME}</b>, {PUBLIC_BUSINESS_ACTIVITY.toLowerCase()}, individualios veiklos Nr. <b>{PUBLIC_BUSINESS_NUMBER}</b>, veiklos pavadinimas <b>{PUBLIC_BUSINESS_NAME}</b>. Kontaktai privatumo klausimais: <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e" }}>{PRIVACY_CONTACT_EMAIL}</a>. Svetainė: <a href="https://statybos24.lt" style={{ color: "#b85f0e" }}>statybos24.lt</a>.</p>
 
         <p><b>Kokius duomenis tvarkome.</b> Priklausomai nuo naudojimosi platforma, tvarkome paskyros ir kontaktinius duomenis (pvz., vardą, el. paštą, telefono numerį, miestą), darbuotojo gimimo datą (saugoma privačiai, darbdaviams nerodoma), darbuotojo profesinę informaciją ir įgūdžius, prieinamumo grafiką bei aktyvumo būseną, darbdavio ir įmonės duomenis, darbų skelbimų informaciją, kvietimus, rezervacijas, atvykimo ir darbo dienos užbaigimo įrašus, reitingus, patikimumo rodiklius, favoritus, ginčų informaciją, darbo ir komandos pokalbių turinį bei techninius ir saugumo įrašus.</p>
 
@@ -1687,6 +1690,20 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p><b>Duomenų saugojimas.</b> Duomenys saugomi ne ilgiau, nei būtina tikslams, kuriems jie surinkti, paskyros ir paslaugos veikimui, ginčams ar teisiniams reikalavimams administruoti bei teisės aktuose nustatytoms pareigoms vykdyti. Konkretus terminas priklauso nuo duomenų kategorijos, paskyros būsenos ir galimų teisinių saugojimo pareigų. Kai duomenų nebereikia ir nėra teisinio pagrindo jų saugoti, jie ištrinami arba anonimizuojami.</p>
 
+        <section aria-labelledby="business-marketing-privacy" style={{ margin: "28px 0", paddingTop: 20, borderTop: "1px solid #dfe7ed" }}>
+          <h2 id="business-marketing-privacy" style={{ margin: "0 0 16px", fontSize: "clamp(20px,3vw,24px)", lineHeight: 1.35 }}>Įmonių kontaktinių duomenų rinkimas ir tiesioginė rinkodara</h2>
+          <p><b>Tikslas.</b> Statybos24.lt siekia informuoti statybos, remonto, renovacijos, montavimo, projektavimo, inžinerijos ir kitas su statybų sektoriumi susijusias paslaugas teikiančias įmones apie platformos galimybes, bendradarbiavimą ir siūlomas paslaugas. Šiuo tikslu galime siųsti aktualius komercinius pasiūlymus juridiniams asmenims jų viešai nurodytais verslo kontaktiniais el. pašto adresais, laikydamiesi toliau nurodytų sąlygų.</p>
+          <p><b>Duomenų šaltiniai.</b> Įmonių kontaktinius duomenis galime rinkti iš viešai prieinamų šaltinių: oficialių įmonių interneto svetainių, viešų įmonių katalogų, registrų, paieškos sistemų ir kitų teisėtai prieinamų verslo informacijos šaltinių.</p>
+          <p><b>Tvarkomi duomenys.</b> Galime tvarkyti įmonės pavadinimą, juridinio asmens kodą, veiklos sritį, interneto svetainės adresą, viešą kontaktinį el. pašto adresą, duomenų šaltinį, kontaktavimo datą, išsiųstų pranešimų istoriją ir atsisakymo gauti pasiūlymus informaciją.</p>
+          <p><b>Teisinis pagrindas.</b> Tiesioginė rinkodara juridiniams asmenims vykdoma vadovaujantis Lietuvos Respublikos elektroninių ryšių įstatymo 81 straipsniu. Kai abonentas ar registruotasis elektroninių ryšių paslaugų gavėjas yra juridinis asmuo, išankstinio sutikimo nereikia, tačiau turi būti užtikrinta aiški, nemokama ir lengvai įgyvendinama galimybė atsisakyti tolesnės rinkodaros. Kai tvarkomi asmens duomenys, taikomos Bendrojo duomenų apsaugos reglamento nuostatos, įskaitant 6 straipsnio 1 dalies f punkte numatytą teisėto intereso pagrindą, kai jis taikytinas įvertinus duomenų subjektų teises ir interesus. Prieš remiantis teisėtu interesu atliekamas ir dokumentuojamas interesų pusiausvyros vertinimas. Vien tai, kad kontaktas paskelbtas viešai, savaime nepanaikina kitų teisinių reikalavimų.</p>
+          <p><b>Automatizuota kontaktų paieška.</b> Įmonių paieškai, veiklos atitikčiai ir kontaktų patikrai gali būti naudojamos automatizuotos programinės priemonės, įskaitant dirbtinio intelekto technologijas. Šios priemonės padeda nustatyti įmonės veiklos pobūdį, patikrinti viešus kontaktus ir išvengti pasikartojančių pranešimų. Jos nenaudojamos sprendimams, sukeliantiems fiziniams asmenims teisines ar panašiai reikšmingas pasekmes.</p>
+          <p><b>Duomenų gavėjai.</b> Kontaktinius duomenis gali tvarkyti mūsų naudojami techninės infrastruktūros, duomenų saugojimo, paieškos ir elektroninio pašto paslaugų teikėjai tiek, kiek būtina šioms paslaugoms vykdyti ir laikantis taikomų duomenų apsaugos reikalavimų.</p>
+          <p><b>Galimybė atsisakyti.</b> Kiekviename rinkodaros el. laiške pateikiama aiški ir nemokama galimybė atsisakyti tolesnių pasiūlymų, pasinaudojant laiške esančia nuoroda „Atsisakyti“ arba parašant el. paštu <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e" }}>{PRIVACY_CONTACT_EMAIL}</a>. Gavus atsisakymą, tolesnis rinkodaros pranešimų siuntimas atitinkamu kontaktu nutraukiamas nepagrįstai nedelsiant. Saugojame minimalų atsisakymo faktą, kad kontaktas nebūtų įtrauktas iš naujo.</p>
+          <p><b>Duomenų saugojimas.</b> Verslo kontaktiniai duomenys saugomi tik tiek, kiek būtina įmonių informavimo, komunikacijos administravimo ir teisėtų interesų užtikrinimo tikslams. Neaktualūs ar netinkami kontaktai šalinami. Atsisakymo gauti rinkodaros pranešimus faktas ir minimalūs tam reikalingi duomenys gali būti saugomi ilgiau, siekiant užtikrinti, kad pasiūlymai nebūtų siunčiami pakartotinai.</p>
+          <p><b>Duomenų subjektų teisės.</b> Kai tvarkomi asmens duomenys, asmenys turi teisę susipažinti su savo duomenimis, prašyti juos ištaisyti ar ištrinti, apriboti tvarkymą ir nesutikti su duomenų naudojimu tiesioginės rinkodaros tikslais. Prašymus galima teikti el. paštu <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} style={{ color: "#b85f0e" }}>{PRIVACY_CONTACT_EMAIL}</a>. Taip pat galima pateikti skundą Valstybinei duomenų apsaugos inspekcijai.</p>
+        </section>
+
+
         <p><b>Automatinis vertinimas ir paieška.</b> Platformoje darbuotojų paieška ir kai kurie patikimumo rodikliai gali būti apskaičiuojami pagal tokius duomenis kaip patvirtintas prieinamumas, aktyvumas, vieta, darbo laikas, ankstesni atvykimo ir darbo dienos rezultatai, reitingai ir paskyros apribojimai. Šie rodikliai padeda organizuoti paiešką ir pateikti informaciją naudotojams; ginčijamas darbo dienos rezultatas turi atskirą ginčo procesą ir gali būti peržiūrėtas administratoriaus.</p>
 
         <p><b>Jūsų teisės.</b> Pagal taikytinus duomenų apsaugos teisės aktus galite prašyti susipažinti su savo duomenimis, juos ištaisyti, tam tikrais atvejais ištrinti ar apriboti jų tvarkymą, gauti perduodamus duomenis, nesutikti su tam tikru tvarkymu ir, kai tvarkymas grindžiamas sutikimu, jį atšaukti. Taip pat turite teisę pateikti skundą kompetentingai duomenų apsaugos priežiūros institucijai.</p>
@@ -1698,8 +1715,53 @@ function PlatformPrivacyDialog({ open, onClose }) {
 
         <p style={{ fontSize: 13, color: "#607180" }}>Privatumo politikos versija: {PRIVACY_VERSION}. Šis tekstas yra parengtas pagal dabartines statybos24.lt funkcijas.</p>
 
-        <button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>
+        {!page && (<button type="button" onClick={onClose} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "11px 18px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Uždaryti</button>)}
       </section>
+    </div>
+  );
+}
+
+
+// Public legal documents are real URLs rather than pop-up dialogs.
+// Content is shared with the original dialogs so their legal wording stays unchanged.
+function PlatformLegalDocumentPage({ kind }) {
+  const titles = {
+    terms: "Naudojimosi sąlygos",
+    privacy: "Privatumo politika",
+    business: "Rekvizitai",
+  };
+  useEffect(() => {
+    const previous = document.title;
+    document.title = `${titles[kind] || "Informacija"} – Statybos24.lt`;
+    return () => { document.title = previous; };
+  }, [kind]);
+
+  const destinations = [
+    ["/naudojimosi-salygos", titles.terms],
+    ["/privatumo-politika", titles.privacy],
+    ["/rekvizitai", titles.business],
+  ];
+  const current = kind === "terms" ? destinations[0][0] : kind === "privacy" ? destinations[1][0] : destinations[2][0];
+  return (
+    <div style={{ minHeight: "100dvh", background: "#fff", color: "#102438", display: "flex", flexDirection: "column", fontFamily: "Inter,system-ui,sans-serif" }}>
+      <header style={{ background: "#0b1c2c", color: "#fff" }}>
+        <div style={{ width: "min(100%,880px)", margin: "0 auto", padding: "19px clamp(20px,4vw,40px)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <a href="/" style={{ color: "#fff", textDecoration: "none", fontWeight: 850, fontSize: 18 }}>statybos24.lt</a>
+          <a href="/" style={{ color: "#fff", fontSize: 14, textDecoration: "underline", textUnderlineOffset: 4 }}>← Į pagrindinį puslapį</a>
+        </div>
+      </header>
+      <main style={{ width: "min(100%,880px)", margin: "0 auto", padding: "38px clamp(20px,4vw,40px) 64px", flex: 1 }}>
+        {kind === "terms" ? <PlatformTermsDialog open page /> :
+         kind === "privacy" ? <PlatformPrivacyDialog open page /> :
+         <PlatformBusinessDetailsDialog open page />}
+      </main>
+      <footer style={{ background: "#0b1c2c", color: "#d3dee6" }}>
+        <nav aria-label="Teisinė informacija" style={{ width: "min(100%,880px)", margin: "0 auto", padding: "23px clamp(20px,4vw,40px)", display: "flex", flexWrap: "wrap", gap: "14px 22px" }}>
+          {destinations.map(([href, label]) => (
+            <a key={href} href={href} aria-current={current === href ? "page" : undefined} style={{ color: "#d3dee6", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: current === href ? 800 : 500 }}>{label}</a>
+          ))}
+        </nav>
+      </footer>
     </div>
   );
 }
@@ -2194,8 +2256,6 @@ function AuthModal({
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const [termsOpen, setTermsOpen] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const submitting = useRef(false);
   const phoneVerification = usePhoneVerification({
     active: open && mode === "signup", purpose: "signup", phone: form.phone, email: form.email,
@@ -2810,12 +2870,12 @@ function AuthModal({
               />
               <span>
                 Susipažinau ir sutinku su{" "}
-                <button type="button" onClick={(event) => { event.preventDefault(); setTermsOpen(true); }} style={{ border: 0, background: "none", padding: 0, color: "#b85f0e", font: "inherit", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>
+                <a href="/naudojimosi-salygos" target="_blank" rel="noopener noreferrer" style={{ color: "#b85f0e", fontWeight: 800, textDecoration: "underline" }}>
                   naudojimosi sąlygomis
-                </button>{" "}ir susipažinau su{" "}
-                <button type="button" onClick={(event) => { event.preventDefault(); setPrivacyOpen(true); }} style={{ border: 0, background: "none", padding: 0, color: "#b85f0e", font: "inherit", fontWeight: 800, textDecoration: "underline", cursor: "pointer" }}>
+                </a>{" "}ir susipažinau su{" "}
+                <a href="/privatumo-politika" target="_blank" rel="noopener noreferrer" style={{ color: "#b85f0e", fontWeight: 800, textDecoration: "underline" }}>
                   privatumo politika
-                </button>.
+                </a>.
               </span>
             </label>
           )}
@@ -2859,8 +2919,7 @@ function AuthModal({
           </>
         )}
         </div>
-        <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
-        <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+
       </div>
     </div>
   );
@@ -30375,9 +30434,6 @@ function PublicLandingPage({
 }) {
   const plans = EMPLOYER_PLANS;
   const [mobilePlanIndex,setMobilePlanIndex] = useState(0);
-  const [termsOpen, setTermsOpen] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [businessDetailsOpen, setBusinessDetailsOpen] = useState(false);
   const [installPromptReady, setInstallPromptReady] = useState(Boolean(statybos24DeferredInstallPrompt));
   const [pwaInstalled, setPwaInstalled] = useState(statybos24IsStandalone());
   const [installGuide, setInstallGuide] = useState("");
@@ -30777,17 +30833,15 @@ function PublicLandingPage({
         <div className="home-wrap home-footer-inner">
           <BrandLogo className="home-brand" href="#pradzia" height={42} style={{ background: "#fff", padding: "8px 12px", borderRadius: 12 }} />
           <div className="home-legal-links">
-            <button className="home-terms-link" type="button" onClick={() => setTermsOpen(true)}>Naudojimosi sąlygos</button>
-            <button className="home-terms-link" type="button" onClick={() => setPrivacyOpen(true)}>Privatumo politika</button>
-            <button className="home-terms-link" type="button" onClick={() => setBusinessDetailsOpen(true)}>Rekvizitai</button>
+            <a className="home-terms-link" href="/naudojimosi-salygos">Naudojimosi sąlygos</a>
+            <a className="home-terms-link" href="/privatumo-politika">Privatumo politika</a>
+            <a className="home-terms-link" href="/rekvizitai">Rekvizitai</a>
           </div>
           <span>© 2026 statybos24.lt</span>
         </div>
       </footer>
 
-      <PlatformTermsDialog open={termsOpen} onClose={() => setTermsOpen(false)} />
-      <PlatformPrivacyDialog open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
-      <PlatformBusinessDetailsDialog open={businessDetailsOpen} onClose={() => setBusinessDetailsOpen(false)} />
+
     </div>
   );
 }
@@ -36911,6 +36965,12 @@ async function mountSiteWhenFontsReady() {
       <HireEmployerPortalPage />
     ) : isHireRoute ? (
       <HirePage />
+    ) : currentPath === "/naudojimosi-salygos" ? (
+      <PlatformLegalDocumentPage kind="terms" />
+    ) : currentPath === "/privatumo-politika" ? (
+      <PlatformLegalDocumentPage kind="privacy" />
+    ) : currentPath === "/rekvizitai" ? (
+      <PlatformLegalDocumentPage kind="business" />
     ) : (
       <>
         <style>{unifiedCloseStyles}</style>
