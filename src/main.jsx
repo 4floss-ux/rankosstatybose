@@ -1768,7 +1768,6 @@ function PlatformLegalDocumentPage({ kind }) {
         .s24-legal-card p b, .s24-legal-card p strong { color:var(--legal-navy); }
         .s24-legal-card a { overflow-wrap:anywhere; }
         .s24-legal-card [id] { scroll-margin-top:110px; }
-        .s24-legal-bottom-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-top:32px; padding-top:24px; border-top:1px solid var(--legal-line); }
         .s24-legal-footer { background:#0b1c2c; color:#9cb0bf; padding:25px 0; }
         .s24-legal-footer-inner { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; font-size:12px; }
         .s24-legal-footer nav { display:flex; align-items:center; gap:12px 22px; flex-wrap:wrap; }
@@ -1776,7 +1775,7 @@ function PlatformLegalDocumentPage({ kind }) {
         .s24-legal-footer a[aria-current="page"] { color:#fff; font-weight:800; }
         .s24-legal-page a:focus-visible { outline:3px solid var(--legal-orange); outline-offset:3px; }
         @media(max-width:900px) { .s24-legal-header-links { display:none; } .s24-legal-main { padding-block:40px 60px; } }
-        @media(max-width:600px) { .s24-legal-wrap { width:calc(100% - 28px); } .s24-legal-header-inner { min-height:68px; gap:10px; } .s24-legal-brand { min-width:0; flex:0 1 auto; } .s24-legal-brand img { max-width:min(176px,100%); max-height:43px; } .s24-legal-header .s24-legal-btn { min-height:40px; padding:8px 11px; font-size:11px; } .s24-legal-main { padding-block:26px 46px; } .s24-legal-card { border-radius:14px; padding:23px 18px; } .s24-legal-card p { font-size:14px; line-height:1.7; } .s24-legal-card h1 { line-height:1.2; } .s24-legal-bottom-actions .s24-legal-btn { width:100%; } .s24-legal-footer-inner { flex-direction:column; align-items:flex-start; } }
+        @media(max-width:600px) { .s24-legal-wrap { width:calc(100% - 28px); } .s24-legal-header-inner { min-height:68px; gap:10px; } .s24-legal-brand { min-width:0; flex:0 1 auto; } .s24-legal-brand img { max-width:min(176px,100%); max-height:43px; } .s24-legal-header .s24-legal-btn { min-height:40px; padding:8px 11px; font-size:11px; } .s24-legal-main { padding-block:26px 46px; } .s24-legal-card { border-radius:14px; padding:23px 18px; } .s24-legal-card p { font-size:14px; line-height:1.7; } .s24-legal-card h1 { line-height:1.2; } .s24-legal-footer-inner { flex-direction:column; align-items:flex-start; } }
         @media(prefers-reduced-motion:reduce) { .s24-legal-page a { transition:none; } }
       `}</style>
       <a className="home-skip-link" href="#s24-legal-content" style={{ position: "absolute", left: -9999, top: 0 }}>Pereiti prie dokumento</a>
@@ -1797,9 +1796,6 @@ function PlatformLegalDocumentPage({ kind }) {
           {kind === "terms" ? <PlatformTermsDialog open page /> :
            kind === "privacy" ? <PlatformPrivacyDialog open page /> :
            <PlatformBusinessDetailsDialog open page />}
-          <div className="s24-legal-bottom-actions">
-            <a className="s24-legal-btn" href="/">← Grįžti į pradžią</a>
-          </div>
         </article>
       </main>
       <footer className="s24-legal-footer">
