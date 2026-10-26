@@ -1730,11 +1730,12 @@ function PlatformLegalDocumentPage({ kind }) {
     privacy: "Privatumo politika",
     business: "Rekvizitai",
   };
+  const title = titles[kind] || "Teisinė informacija";
   useEffect(() => {
     const previous = document.title;
-    document.title = `${titles[kind] || "Informacija"} – Statybos24.lt`;
+    document.title = `${title} – Statybos24.lt`;
     return () => { document.title = previous; };
-  }, [kind]);
+  }, [title]);
 
   const destinations = [
     ["/naudojimosi-salygos", titles.terms],
@@ -1743,24 +1744,117 @@ function PlatformLegalDocumentPage({ kind }) {
   ];
   const current = kind === "terms" ? destinations[0][0] : kind === "privacy" ? destinations[1][0] : destinations[2][0];
   return (
-    <div style={{ minHeight: "100dvh", background: "#fff", color: "#102438", display: "flex", flexDirection: "column", fontFamily: "Inter,system-ui,sans-serif" }}>
-      <header style={{ background: "#0b1c2c", color: "#fff" }}>
-        <div style={{ width: "min(100%,880px)", margin: "0 auto", padding: "19px clamp(20px,4vw,40px)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <a href="/" style={{ color: "#fff", textDecoration: "none", fontWeight: 850, fontSize: 18 }}>statybos24.lt</a>
-          <a href="/" style={{ color: "#fff", fontSize: 14, textDecoration: "underline", textUnderlineOffset: 4 }}>← Į pagrindinį puslapį</a>
+    <div className="s24-legal-page">
+      <style>{`
+        .s24-legal-page {
+          --legal-navy: #102438; --legal-orange: #f08a28; --legal-dark-orange: #d87319;
+          --legal-muted: #607180; --legal-line: #e2e9ee;
+          min-height: 100dvh; display: flex; flex-direction: column;
+          background: #f5f8fa; color: var(--legal-navy);
+          font-family: Inter,system-ui,sans-serif; line-height: 1.6;
+        }
+        .s24-legal-page *, .s24-legal-page *::before, .s24-legal-page *::after { box-sizing: border-box; }
+        .s24-legal-wrap { width: min(1120px,calc(100% - 40px)); margin-inline: auto; }
+        .s24-legal-header {
+          position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.97);
+          backdrop-filter: blur(12px); border-bottom: 1px solid var(--legal-line);
+        }
+        .s24-legal-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 78px; }
+        .s24-legal-brand { display: inline-flex; min-width: 0; flex-shrink: 1; }
+        .s24-legal-brand img { max-width: min(230px,100%); }
+        .s24-legal-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+          min-height: 46px; border-radius: 11px; padding: 11px 18px;
+          border: 1px solid var(--legal-orange); background: var(--legal-orange);
+          color: #fff !important; font: inherit; font-size: 13px; font-weight: 850;
+          text-decoration: none !important; text-align: center; cursor: pointer;
+          transition: background-color .18s ease,border-color .18s ease,transform .18s ease;
+        }
+        .s24-legal-btn:hover { background: var(--legal-dark-orange); border-color: var(--legal-dark-orange); transform: translateY(-1px); }
+        .s24-legal-btn-outline { background: #fff; border-color: #cbd7df; color: var(--legal-navy) !important; }
+        .s24-legal-btn-outline:hover { background: #f7f9fb; border-color: #aabdc9; }
+        .s24-legal-main { flex: 1; padding-block: 30px 64px; }
+        .s24-legal-breadcrumb { margin-bottom: 14px; color: #607180; font-size: 12px; font-weight: 650; }
+        .s24-legal-breadcrumb a { color: #526374; text-decoration: none; }
+        .s24-legal-breadcrumb a:hover { color: var(--legal-dark-orange); text-decoration: underline; }
+        .s24-legal-document-nav { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 20px; }
+        .s24-legal-document-nav a {
+          display: inline-flex; align-items: center; justify-content: center; min-height: 43px;
+          padding: 10px 16px; background: #fff; border: 1px solid var(--legal-line);
+          border-radius: 11px; color: #526374; text-align: center; text-decoration: none;
+          font-size: 13px; font-weight: 750; transition: border-color .18s,background-color .18s;
+        }
+        .s24-legal-document-nav a:hover { border-color: #e7b788; background: #fffaf5; color: #9a541b; }
+        .s24-legal-document-nav a[aria-current="page"] {
+          color: #994d10; background: #fff4e8; border-color: var(--legal-orange);
+          box-shadow: inset 0 -2px 0 var(--legal-orange);
+        }
+        .s24-legal-card {
+          max-width: 970px; background: #fff; border: 1px solid var(--legal-line);
+          border-radius: 18px; padding: clamp(22px,4vw,48px);
+          box-shadow: 0 18px 55px rgba(16,36,56,.06);
+        }
+        .s24-legal-card .eyebrow { color: #b8641a; font-size: 11px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+        .s24-legal-card h1 { color: var(--legal-navy); font-family: Manrope,Inter,system-ui,sans-serif; font-weight: 900; letter-spacing: -.025em; }
+        .s24-legal-card p { margin: 0 0 18px; color: #405264; line-height: 1.77; }
+        .s24-legal-card p b, .s24-legal-card p strong { color: var(--legal-navy); }
+        .s24-legal-card a { overflow-wrap: anywhere; }
+        .s24-legal-card [id] { scroll-margin-top: 110px; }
+        .s24-legal-bottom-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--legal-line); }
+        .s24-legal-footer { background: #0b1c2c; color: #9cb0bf; padding: 25px 0; }
+        .s24-legal-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; font-size: 12px; }
+        .s24-legal-footer nav { display: flex; align-items: center; gap: 12px 22px; flex-wrap: wrap; }
+        .s24-legal-footer a { color: #d3dee6; text-decoration: underline; text-underline-offset: 3px; }
+        .s24-legal-footer a[aria-current="page"] { color: #fff; font-weight: 800; }
+        .s24-legal-page a:focus-visible { outline: 3px solid var(--legal-orange); outline-offset: 3px; }
+        @media (max-width: 600px) {
+          .s24-legal-wrap { width: calc(100% - 28px); }
+          .s24-legal-header-inner { min-height: 70px; gap: 10px; }
+          .s24-legal-brand img { max-height: 39px; max-width: min(176px,100%); }
+          .s24-legal-header .s24-legal-btn { min-height: 42px; padding: 9px 12px; font-size: 12px; white-space: nowrap; }
+          .s24-legal-main { padding-block: 21px 42px; }
+          .s24-legal-document-nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-bottom: 14px; }
+          .s24-legal-document-nav a { padding: 10px 5px; min-height: 53px; font-size: 11px; line-height: 1.25; }
+          .s24-legal-card { border-radius: 14px; padding: 22px 17px; }
+          .s24-legal-card h1 { line-height: 1.2; }
+          .s24-legal-bottom-actions .s24-legal-btn { flex: 1 1 auto; }
+          .s24-legal-footer-inner { flex-direction: column; align-items: flex-start; }
+        }
+        @media (prefers-reduced-motion: reduce) { .s24-legal-page a { transition: none; } }
+      `}</style>
+      <a className="home-skip-link" href="#s24-legal-content" style={{ position: "absolute", left: -9999, top: 0 }}>Pereiti prie dokumento</a>
+      <header className="s24-legal-header">
+        <div className="s24-legal-wrap s24-legal-header-inner">
+          <BrandLogo className="s24-legal-brand" href="/" height={48} alt="Statybos24.lt – pagrindinis puslapis" />
+          <a className="s24-legal-btn" href="/">← Grįžti į pradžią</a>
         </div>
       </header>
-      <main style={{ width: "min(100%,880px)", margin: "0 auto", padding: "38px clamp(20px,4vw,40px) 64px", flex: 1 }}>
-        {kind === "terms" ? <PlatformTermsDialog open page /> :
-         kind === "privacy" ? <PlatformPrivacyDialog open page /> :
-         <PlatformBusinessDetailsDialog open page />}
-      </main>
-      <footer style={{ background: "#0b1c2c", color: "#d3dee6" }}>
-        <nav aria-label="Teisinė informacija" style={{ width: "min(100%,880px)", margin: "0 auto", padding: "23px clamp(20px,4vw,40px)", display: "flex", flexWrap: "wrap", gap: "14px 22px" }}>
+      <main id="s24-legal-content" className="s24-legal-wrap s24-legal-main">
+        <div className="s24-legal-breadcrumb"><a href="/">Pagrindinis</a> / Teisinė informacija / {title}</div>
+        <nav aria-label="Teisiniai dokumentai" className="s24-legal-document-nav">
           {destinations.map(([href, label]) => (
-            <a key={href} href={href} aria-current={current === href ? "page" : undefined} style={{ color: "#d3dee6", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: current === href ? 800 : 500 }}>{label}</a>
+            <a key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</a>
           ))}
         </nav>
+        <article className="s24-legal-card">
+          {kind === "terms" ? <PlatformTermsDialog open page /> :
+           kind === "privacy" ? <PlatformPrivacyDialog open page /> :
+           <PlatformBusinessDetailsDialog open page />}
+          <div className="s24-legal-bottom-actions">
+            <a className="s24-legal-btn" href="/">← Grįžti į pradžią</a>
+            <a className="s24-legal-btn s24-legal-btn-outline" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>Susisiekti</a>
+          </div>
+        </article>
+      </main>
+      <footer className="s24-legal-footer">
+        <div className="s24-legal-wrap s24-legal-footer-inner">
+          <nav aria-label="Teisinė informacija">
+            {destinations.map(([href, label]) => (
+              <a key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</a>
+            ))}
+          </nav>
+          <span>© 2026 statybos24.lt</span>
+        </div>
       </footer>
     </div>
   );
