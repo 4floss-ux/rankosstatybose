@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 // Only the desktop navigation shell changes; business actions stay in each dashboard.
 const glyphs = {
@@ -27,6 +27,7 @@ export function scrollToDashboardTarget(selector) {
 
 export function DashboardSidebar({ role, items, logo, initialActive = "overview" }) {
   const [active, setActive] = useState(initialActive);
+  useEffect(() => { setActive(initialActive); }, [initialActive]);
   return (
     <aside className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
       <div className="s24-dashboard-brand" aria-label="Statybos24">
