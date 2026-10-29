@@ -46,7 +46,9 @@ export function useDashboardSection(role) {
     const url = new URL(window.location.href);
     url.searchParams.set('section', role + '.' + value);
     if (value !== 'calendar') url.searchParams.delete('employerView');
-    window.history.pushState(window.history.state, '', url.pathname + url.search + url.hash);
+    const marker = { ...(window.history.state || {}), s24SectionTransition: true };
+    window.history.replaceState(marker, '', window.location.href);
+    window.history.pushState(marker, '', url.pathname + url.search + url.hash);
     setSection(value);
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (window.innerWidth < 1100) document.querySelector('.s24-menu-toggle[aria-expanded="true"]')?.click();

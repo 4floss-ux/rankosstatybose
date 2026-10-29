@@ -9420,29 +9420,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         )}</>)}
 
-        {(dashboardSection === "profile") && (<>{!onAdminReturn &&
-          (!form.displayName.trim() ||
-            !form.phone.trim() ||
-            availableCount === 0) && (
-            <section className="wd-onboarding-card">
-              <div className="wd-onboarding-top">
-                <div>
-                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį kvietimams į darbą</h3>
-                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
-                </div>
-                <div className="wd-onboarding-actions">
-                  <button className="wd-onboarding-btn secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
-                  <button className="wd-onboarding-btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
-                </div>
-              </div>
-              <div className="wd-onboarding-steps">
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
-              </div>
-            </section>
-          )}</>)}
+        
         {(dashboardSection === "statistics") && (<><div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div></>)}
 
         {(dashboardSection === "statistics") && (<><div className="wd-overview">
@@ -18769,34 +18747,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         <div style={{display: calendarVisible ? "none" : "contents"}}>
         {dashboardSection === "search" && !currentJob && <section className="ed-card s24-screen-empty"><h2>Darbuotojų paieška</h2><p>Pirmiausia pasirinkite darbą, kad galėtume parodyti darbuotojus pagal jo vietą ir laiką.</p><button className="ed-primary" onClick={()=>openEmployerScreen("work")}>Pasirinkti darbą</button><button className="ed-secondary" onClick={openNewJobForm}>Sukurti darbą</button></section>}
 
-        {(dashboardSection === "profile") && (<>{!onAdminReturn && jobs.length === 0 && (
-          <section
-            style={{
-              marginBottom: 18,
-              padding: 16,
-              border: "1px solid #dfe7ed",
-              borderRadius: 16,
-              background: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Sukurkite pirmą darbo poreikį</h3>
-                <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
-                <button className="ed-primary" type="button" onClick={openNewJobForm}>Sukurti pirmą darbą</button>
-              </div>
-            </div>
-            <div className="ed-onboarding-steps">
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#fff7ef", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
-            </div>
-          </section>
-        )}</>)}
+        
         {(dashboardSection === "profile") && (<>{showCompanyEditor && (
           <section
             ref={companyEditorRef}
@@ -19070,7 +19021,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   className="ed-secondary"
                   type="button"
                   disabled={companySaving}
-                  onClick={() => setShowCompanyEditor(false)}
+                  onClick={() => {setShowCompanyEditor(false); navigateDashboardSection("statistics");}}
                 >
                   Uždaryti
                 </button>
@@ -36915,7 +36866,7 @@ function MobilePopupBackGuard() {
       }
 
       const popup = topPopup();
-      if (!popup && window.history.state?.employerCalendarTransition) return;
+      if (!popup && (window.history.state?.employerCalendarTransition || window.history.state?.s24SectionTransition)) return;
 
       if (popup) {
         closeTopPopup();
