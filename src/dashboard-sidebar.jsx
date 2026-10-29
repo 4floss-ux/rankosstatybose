@@ -16,10 +16,13 @@ const glyphs = {
 
 export function scrollToDashboardTarget(selector) {
   if (typeof document === "undefined") return false;
-  const target = document.querySelector(selector);
-  if (!target) return false;
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
-  return true;
+  for (const candidate of selector.split(",")) {
+    const target = document.querySelector(candidate.trim());
+    if (!target) continue;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    return true;
+  }
+  return false;
 }
 
 export function DashboardSidebar({ role, items }) {
@@ -37,7 +40,7 @@ export function DashboardSidebar({ role, items }) {
             key={item.key}
             type="button"
             className={"s24-dashboard-nav-item" + (active === item.key ? " is-active" : "")}
-            aria-current={active === item.key ? "page" : undefined}
+            aria-current={active === item.key ? "location" : undefined}
             onClick={() => {
               const completed = item.onClick();
               if (completed !== false) setActive(item.key);
