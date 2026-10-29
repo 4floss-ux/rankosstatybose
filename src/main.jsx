@@ -14124,6 +14124,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return true;
   }
 
+  function openEmployerSidebarSection(selector) {
+    if (!calendarVisible) return scrollToDashboardTarget(selector);
+    navigateEmployerCalendar(false);
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => scrollToDashboardTarget(selector))
+    );
+    return true;
+  }
+
   const [billingStatus, setBillingStatus] = useState(null);
   const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
@@ -18665,12 +18674,16 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         initialActive={calendarVisible ? "calendar" : "overview"}
         items={[
           { key: "overview", label: "Apžvalga", icon: "overview", onClick: () => { navigateEmployerCalendar(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
-          { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => scrollToDashboardTarget(".ed-jobs, .ed-jobs-empty, .ed-heading") },
+          { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => openEmployerSidebarSection(".ed-jobs, .ed-jobs-empty, .ed-heading") },
           { key: "calendar", label: "Darbų kalendorius", icon: "calendar", onClick: () => navigateEmployerCalendar(true) },
-          { key: "search", label: "Darbuotojų paieška", icon: "search", onClick: () => scrollToDashboardTarget(".ed-results, .ed-worker-source, .ed-heading") },
-          { key: "create", label: "Sukurti darbą", icon: "plus", onClick: () => openNewJobForm() },
+          { key: "search", label: "Darbuotojų paieška", icon: "search", onClick: () => openEmployerSidebarSection(".ed-worker-source, .ed-results, .ed-heading") },
+          { key: "create", label: "Sukurti darbą", icon: "plus", onClick: () => { navigateEmployerCalendar(false); return openNewJobForm(); } },
+          { key: "statistics", label: "Statistika", icon: "chart", onClick: () => { setShowEmployerStats(true); return openEmployerSidebarSection(".ed-stats-section"); } },
+          { key: "favorites", label: "Darbuotojai favoritai", icon: "heart", onClick: () => openSavedWorkerTeam() },
+          { key: "team", label: "Įmonės komanda", icon: "team", onClick: () => openCompanyTeam() },
+          { key: "chat", label: "Komandos pokalbis", icon: "chat", onClick: () => openCompanyTeamChat() },
           { key: "plan", label: "Mano planas", icon: "plan", onClick: () => setShowPlans(true) },
-          { key: "profile", label: "Įmonės profilis", icon: "person", onClick: () => setShowCompanyEditor(true) },
+          { key: "profile", label: "Įmonės profilis", icon: "person", onClick: () => { navigateEmployerCalendar(false); setShowCompanyEditor(true); } },
         ]}
       />
       <header className="ed-topbar">
