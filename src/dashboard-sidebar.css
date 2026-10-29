@@ -237,3 +237,5 @@
   .s24-menu-toggle span { display: none; }
   .wd-page .wd-topbar, .ed-page .ed-topbar, .admin-page .admin-topbar { padding-left: 60px !important; }
 }
+
+.admin-page .admin-topbar { z-index: 30 !important; }
