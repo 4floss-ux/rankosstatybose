@@ -100,6 +100,14 @@
     font-size: 11px;
   }
 
+  /* The brand now lives in the sidebar; keep existing topbar actions. */
+  .wd-page .wd-topbar-inner > div:first-child,
+  .ed-page .ed-topbar-inner > a.brand,
+  .admin-page .admin-topbar-inner > a.brand { display: none !important; }
+  .wd-page .wd-topbar-inner,
+  .ed-page .ed-topbar-inner,
+  .admin-page .admin-topbar-inner { justify-content: flex-end; }
+
   /* The admin dashboard already has working role-aware navigation.
      Change only its presentation, not tab state or permissions. */
   .admin-page .admin-tabs {
@@ -122,14 +130,12 @@
     box-shadow: 3px 0 14px rgba(16, 36, 56, .025);
   }
   .admin-page .admin-tabs::before {
-    content: "STATYBOS24  /  ADMIN";
+    content: "";
     display: block;
+    height: 65px;
     margin: 0 7px 22px;
-    padding: 13px 3px 23px;
     border-bottom: 1px solid #eef0f3;
-    font: 900 13px/1.2 Manrope, Inter, sans-serif;
-    letter-spacing: -.015em;
-    color: #102438;
+    background: url("/brand-logo.png") left center / 165px auto no-repeat;
   }
   .admin-page .admin-tab {
     justify-content: flex-start;
@@ -178,6 +184,28 @@
     border-radius: 15px;
     box-shadow: 0 3px 16px rgba(16, 36, 56, .025);
   }
+}
+
+/* At notebook widths, the sidebar reduces the effective dashboard
+   width even though the viewport still exceeds legacy breakpoints. */
+@media (min-width: 1100px) and (max-width: 1350px) {
+  .ed-page .ed-worker { grid-template-columns: minmax(0, 1fr) 120px; }
+  .ed-page .ed-worker-actions {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    max-width: none;
+  }
+  .ed-page .ed-worker .ed-tags { grid-column: 1 / -1; }
+  .ed-page .ed-job { grid-template-columns: 108px minmax(0, 1fr) 110px; }
+  .ed-page .ed-job > :nth-child(3) { display: none; }
+  .ed-page .ed-job-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ed-page .ed-team-layout { grid-template-columns: 1fr; }
+  .ed-page .ed-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ed-page .ed-plan-grid { grid-template-columns: 1fr; }
+  .admin-page .admin-row,
+  .admin-page .admin-bug-row,
+  .admin-page .admin-employment-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-page .admin-traffic-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
