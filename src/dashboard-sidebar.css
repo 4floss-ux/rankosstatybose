@@ -5,7 +5,7 @@
  */
 .s24-dashboard-sidebar { display: none; }
 
-@media (min-width: 1100px) {
+@media (min-width: 0px) {
   .wd-page, .ed-page, .admin-page {
     padding-left: 244px;
     box-sizing: border-box;
@@ -210,4 +210,30 @@
 
 @media (prefers-reduced-motion: reduce) {
   .s24-dashboard-nav-item { transition: none; }
+}
+
+/* One navigation on every screen; the toggle stays available when hidden. */
+.wd-page.s24-menu-collapsed, .ed-page.s24-menu-collapsed, .admin-page.s24-menu-collapsed { padding-left: 0 !important; }
+.s24-menu-collapsed .s24-dashboard-sidebar, .s24-menu-collapsed .admin-tabs { display: none !important; }
+.s24-menu-toggle { position: fixed; top: 14px; left: 254px; z-index: 90; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid #dbe4ea; border-radius: 10px; background: white; color: #102438; font: 750 13px Inter,sans-serif; cursor: pointer; }
+.s24-menu-collapsed .s24-menu-toggle { left: 12px; }
+.s24-menu-toggle:focus-visible { outline: 2px solid #f08a28; outline-offset: 3px; }
+.s24-menu-backdrop { display: none; }
+.wd-page .wd-topbar, .ed-page .ed-topbar, .admin-page .admin-topbar { min-height: 72px !important; height: auto !important; padding-left: 110px !important; box-sizing: border-box; }
+.wd-page .wd-topbar-inner, .ed-page .ed-topbar-inner, .admin-page .admin-topbar-inner { display: flex !important; flex-direction: row !important; justify-content: flex-end !important; padding: 10px 0 !important; min-width: 0; }
+.s24-duplicate-navigation, [data-sidebar-duplicate], .wd-page .wd-mobile-profile-btn, .wd-page .wd-heading-actions > .wd-edit-profile,
+.ed-page .ed-heading-actions, .admin-page .admin-top-actions > :not(:last-child) { display: none !important; }
+.admin-page .admin-top-actions { display: flex !important; width: auto !important; }
+.admin-page .admin-tabs { display: grid !important; grid-template-columns: minmax(0,1fr) !important; width: 244px !important; position: fixed !important; padding-top: 22px !important; }
+.admin-page.s24-menu-collapsed .admin-tabs { display: none !important; }
+.admin-page .admin-sidebar-actions { display: grid; gap: 8px; padding-top: 18px; margin-top: 18px; border-top: 1px solid #eef0f3; }
+.admin-sidebar-actions > button { width: 100%; min-height: 44px; white-space: normal; }
+@media (max-width: 1099px) {
+  .wd-page, .ed-page, .admin-page { padding-left: 0 !important; }
+  .s24-menu-backdrop { display: block; position: fixed; inset: 0; z-index: 70; border: 0; background: rgba(16,36,56,.35); }
+}
+@media (max-width: 420px) {
+  .s24-menu-toggle { padding: 10px; }
+  .s24-menu-toggle span { display: none; }
+  .wd-page .wd-topbar, .ed-page .ed-topbar, .admin-page .admin-topbar { padding-left: 60px !important; }
 }

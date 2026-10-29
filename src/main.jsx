@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/react";
 import "./styles.css";
 import "./dashboard-sidebar.css";
-import { DashboardSidebar, scrollToDashboardTarget } from "./dashboard-sidebar.jsx";
+import { DashboardMenuToggle, DashboardSidebar, scrollToDashboardTarget } from "./dashboard-sidebar.jsx";
 
 import { isTestEnvironment, testSupabaseUrl, testSupabaseKey } from "./test-environment.js";
 
@@ -9242,6 +9242,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         ]}
       />
       <header className="wd-topbar">
+        <DashboardMenuToggle />
         <div
           className="wd-topbar-inner"
           style={
@@ -18679,6 +18680,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => openEmployerSidebarSection(".ed-jobs, .ed-jobs-empty, .ed-heading") },
           { key: "calendar", label: "Darbų kalendorius", icon: "calendar", onClick: () => navigateEmployerCalendar(true) },
           { key: "search", label: "Darbuotojų paieška", icon: "search", onClick: () => openEmployerSidebarSection(".ed-worker-source, .ed-results, .ed-heading") },
+          { key: "urgent", label: "Skubi paieška", icon: "search", onClick: () => openUrgentSearch() },
+          ...(companyMemberRole === "owner" ? [{ key: "hire", label: "Įdarbinti darbuotoją", icon: "briefcase", onClick: () => openLongTermEmployment("hire") }] : []),
           { key: "create", label: "Sukurti darbą", icon: "plus", onClick: () => { navigateEmployerCalendar(false); return openNewJobForm(); } },
           { key: "statistics", label: "Statistika", icon: "chart", onClick: () => { setShowEmployerStats(true); window.requestAnimationFrame(() => openEmployerSidebarSection(".ed-stats-section")); return true; } },
           { key: "favorites", label: "Darbuotojai favoritai", icon: "heart", onClick: () => openSavedWorkerTeam() },
@@ -18689,13 +18692,14 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         ]}
       />
       <header className="ed-topbar">
+        <DashboardMenuToggle />
         <div className="ed-topbar-inner">
           <BrandLogo className="brand" href="#" height={46} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {company && planSummary && (
               <button
-                className="ed-plan-badge"
+                className="ed-plan-badge s24-duplicate-navigation"
                 type="button"
                 onClick={() => setShowPlans(true)}
                 title="Peržiūrėti planą"
@@ -18706,7 +18710,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {company && (
               <button
-                className="btn ghost"
+                className="btn ghost s24-duplicate-navigation"
                 type="button"
                 onClick={() =>
                   setShowCompanyEditor((current) => !current)
@@ -27778,6 +27782,7 @@ function AdminDashboard({
       `}</style>
 
       <header className="admin-topbar">
+        <DashboardMenuToggle />
         <div className="admin-topbar-inner">
           <BrandLogo className="brand" href="#" height={46} />
 
@@ -27842,7 +27847,7 @@ function AdminDashboard({
           </div>
         )}
 
-        <nav className="admin-tabs" aria-label="Administravimo skyriai">
+        <nav id="s24-account-navigation" className="admin-tabs" aria-label="Administravimo skyriai">
           {tabs.filter(([key]) => mainAdminTabs.includes(key)).map(([key, label]) => (
             <button
               key={key}
@@ -27891,6 +27896,30 @@ function AdminDashboard({
                 ))}
               </div>
             )}
+          </div>
+        <div className="admin-sidebar-actions">
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenWorker}
+            >
+              Darbuotojo režimas
+            </button>
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenEmployer}
+            >
+              Darbdavio režimas
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
+              onClick={() => setDeleteAccountOpen(true)}
+            >
+              Ištrinti paskyrą
+            </button>
           </div>
         </nav>
 

@@ -1,4 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+
+export function DashboardMenuToggle() {
+  const button = useRef(null);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { const saved = localStorage.getItem('s24-dashboard-menu-collapsed'); return saved === null ? window.innerWidth < 1100 : saved === 'true'; }
+    catch { return window.innerWidth < 1100; }
+  });
+  useLayoutEffect(() => {
+    const page = button.current?.closest('.wd-page, .ed-page, .admin-page');
+    page?.classList.toggle('s24-menu-collapsed', collapsed);
+    try { localStorage.setItem('s24-dashboard-menu-collapsed', String(collapsed)); } catch {}
+    return () => page?.classList.remove('s24-menu-collapsed');
+  }, [collapsed]);
+  useEffect(() => {
+    const escape = event => { if (event.key === 'Escape' && !collapsed) { setCollapsed(true); button.current?.focus(); } };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [collapsed]);
+  return <>
+    <button ref={button} className="s24-menu-toggle" type="button"
+      aria-label={collapsed ? 'Rodyti meniu' : 'Slėpti meniu'} aria-expanded={!collapsed}
+      aria-controls="s24-account-navigation" onClick={() => setCollapsed(value => !value)}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        {collapsed ? <path d="M4 6h16M4 12h16M4 18h16" /> : <path d="m14 6-6 6 6 6" />}
+      </svg><span>{collapsed ? 'Meniu' : 'Slėpti'}</span>
+    </button>
+    {!collapsed && <button type="button" className="s24-menu-backdrop" aria-label="Uždaryti meniu" onClick={() => setCollapsed(true)} />}
+  </>;
+}
 
 // Only the desktop navigation shell changes; business actions stay in each dashboard.
 const glyphs = {
@@ -35,7 +65,7 @@ export function DashboardSidebar({ role, items, logo, initialActive = "overview"
       : current === "calendar" ? "overview" : current);
   }, [initialActive]);
   return (
-    <aside className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
+    <aside id="s24-account-navigation" className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
       <div className="s24-dashboard-brand" aria-label="Statybos24">
         {logo || (
           <>
