@@ -9229,6 +9229,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <DashboardSidebar
         role="DARBUOTOJO PASKYRA"
+        logo={<BrandLogo className="brand" href="#" height={43} />}
         items={[
           { key: "overview", label: "Apžvalga", icon: "overview", onClick: () => scrollToDashboardTarget(".wd-heading") },
           { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => openWorkerDashboardTarget("workdays") },
@@ -14110,8 +14111,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return () => window.removeEventListener("popstate", sync);
   }, []);
   function navigateEmployerCalendar(open) {
-    if (open && !calendarPreviewEnabled) return;
-    if (open && !calendarAllowed) { setShowPlans(true); return; }
+    if (open && !calendarPreviewEnabled) return false;
+    if (open && !calendarAllowed) { setShowPlans(true); return false; }
     const url = new URL(window.location.href);
     if (open) url.searchParams.set("employerView", "calendar");
     else url.searchParams.delete("employerView");
@@ -14120,6 +14121,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     window.history.pushState(marker, "", url.pathname + url.search + url.hash);
     setCalendarRequested(open);
     window.scrollTo({top:0, behavior:"auto"});
+    return true;
   }
 
   const [billingStatus, setBillingStatus] = useState(null);
@@ -18659,6 +18661,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       <DashboardSidebar
         role="DARBDAVIO PASKYRA"
+        logo={<BrandLogo className="brand" href="#" height={43} />}
+        initialActive={calendarVisible ? "calendar" : "overview"}
         items={[
           { key: "overview", label: "Apžvalga", icon: "overview", onClick: () => { navigateEmployerCalendar(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
           { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => scrollToDashboardTarget(".ed-jobs, .ed-jobs-empty, .ed-heading") },
