@@ -11,6 +11,8 @@ const glyphs = {
   plus: <><path d="M12 5v14M5 12h14" /></>,
   team: <><circle cx="9" cy="8" r="3" /><path d="M2 20v-1a7 7 0 0 1 14 0v1M16 5a3 3 0 0 1 0 6m3 9v-1a7 7 0 0 0-3-5.74" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+  heart: <><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></>,
+  chat: <><path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-3.7-.8L3 20l1.1-4.5A8.5 8.5 0 1 1 20 11.5Z" /></>,
   plan: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></>,
 };
 
@@ -27,7 +29,11 @@ export function scrollToDashboardTarget(selector) {
 
 export function DashboardSidebar({ role, items, logo, initialActive = "overview" }) {
   const [active, setActive] = useState(initialActive);
-  useEffect(() => { setActive(initialActive); }, [initialActive]);
+  useEffect(() => {
+    setActive((current) => initialActive === "calendar"
+      ? "calendar"
+      : current === "calendar" ? "overview" : current);
+  }, [initialActive]);
   return (
     <aside className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
       <div className="s24-dashboard-brand" aria-label="Statybos24">
