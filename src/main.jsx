@@ -7,6 +7,8 @@ import "./styles.css";
 import "./dashboard-sidebar.css";
 import { DashboardSidebar, scrollToDashboardTarget } from "./dashboard-sidebar.jsx";
 
+import { isTestEnvironment, testSupabaseUrl, testSupabaseKey } from "./test-environment.js";
+
 const SENTRY_DSN =
   "https://eb5281a0e8cff473a77d220ecacb2a9c@o4512187961376768.ingest.de.sentry.io/4512187977760848";
 
@@ -22,7 +24,7 @@ function sanitizeSentryUrl(value) {
 
 Sentry.init({
   dsn: SENTRY_DSN,
-  enabled: import.meta.env.PROD,
+  enabled: import.meta.env.PROD && !isTestEnvironment,
   environment: import.meta.env.PROD ? "production" : "development",
   sendDefaultPii: false,
   attachStacktrace: true,
@@ -56,8 +58,8 @@ Sentry.init({
   },
 });
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = isTestEnvironment ? testSupabaseUrl : import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = isTestEnvironment ? testSupabaseKey : import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Capture the recovery callback before Supabase removes auth tokens from the URL.
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 // The main site and /hire have independent browser authentication sessions.
@@ -107,7 +109,7 @@ if (!isHireProjectPath && typeof window !== "undefined") {
   });
   // Register the existing push service worker on initial visit too, not just
   // after users opt in to notifications. Registration does NOT ask for push permission.
-  if (window.isSecureContext && "serviceWorker" in navigator) {
+  if (!isTestEnvironment && window.isSecureContext && "serviceWorker" in navigator) {
     const registerMainSiteWorker = () => {
       navigator.serviceWorker.register("/statybos24-push-sw.js", {
         scope: "/", updateViaCache: "none",
@@ -18678,7 +18680,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           { key: "calendar", label: "Darbų kalendorius", icon: "calendar", onClick: () => navigateEmployerCalendar(true) },
           { key: "search", label: "Darbuotojų paieška", icon: "search", onClick: () => openEmployerSidebarSection(".ed-worker-source, .ed-results, .ed-heading") },
           { key: "create", label: "Sukurti darbą", icon: "plus", onClick: () => { navigateEmployerCalendar(false); return openNewJobForm(); } },
-          { key: "statistics", label: "Statistika", icon: "chart", onClick: () => { setShowEmployerStats(true); return openEmployerSidebarSection(".ed-stats-section"); } },
+          { key: "statistics", label: "Statistika", icon: "chart", onClick: () => { setShowEmployerStats(true); window.requestAnimationFrame(() => openEmployerSidebarSection(".ed-stats-section")); return true; } },
           { key: "favorites", label: "Darbuotojai favoritai", icon: "heart", onClick: () => openSavedWorkerTeam() },
           { key: "team", label: "Įmonės komanda", icon: "team", onClick: () => openCompanyTeam() },
           { key: "chat", label: "Komandos pokalbis", icon: "chat", onClick: () => openCompanyTeamChat() },

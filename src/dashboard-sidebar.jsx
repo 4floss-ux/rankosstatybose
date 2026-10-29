@@ -21,7 +21,7 @@ export function scrollToDashboardTarget(selector) {
   for (const candidate of selector.split(",")) {
     const target = document.querySelector(candidate.trim());
     if (!target) continue;
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     return true;
   }
   return false;

@@ -5,6 +5,11 @@ on:
     paths:
       - "src/**"
       - "package.json"
+      - "package-lock.json"
+      - "worker.staging.js"
+      - "wrangler.staging.jsonc"
+      - "staging.test.js"
+      - ".github/workflows/**"
       - "vite.config.js"
   push:
     branches:
@@ -23,6 +28,10 @@ jobs:
         with:
           node-version: "22"
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Verify production bundle builds
         run: npm run build
+      - name: Verify staging isolation
+        run: node --test staging.test.js
+      - name: Verify staging bundle builds
+        run: npm run build:staging
