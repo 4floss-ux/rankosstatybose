@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/react";
 import "./styles.css";
+import "./dashboard-sidebar.css";
+import { DashboardSidebar, scrollToDashboardTarget } from "./dashboard-sidebar.jsx";
 
 const SENTRY_DSN =
   "https://eb5281a0e8cff473a77d220ecacb2a9c@o4512187961376768.ingest.de.sentry.io/4512187977760848";
@@ -9225,6 +9227,17 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         }
       `}</style>
 
+      <DashboardSidebar
+        role="DARBUOTOJO PASKYRA"
+        items={[
+          { key: "overview", label: "Apžvalga", icon: "overview", onClick: () => scrollToDashboardTarget(".wd-heading") },
+          { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => openWorkerDashboardTarget("workdays") },
+          { key: "invitations", label: "Kvietimai", icon: "invitation", onClick: () => openWorkerDashboardTarget("invitations") },
+          { key: "availability", label: "Užimtumo kalendorius", icon: "calendar", onClick: () => openWorkerDashboardTarget("availability") },
+          { key: "statistics", label: "Statistika", icon: "chart", onClick: () => scrollToDashboardTarget(".wd-stats-section") },
+          { key: "profile", label: "Mano profilis", icon: "person", onClick: () => openWorkerDashboardTarget("profile") },
+        ]}
+      />
       <header className="wd-topbar">
         <div
           className="wd-topbar-inner"
@@ -18644,6 +18657,18 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
+      <DashboardSidebar
+        role="DARBDAVIO PASKYRA"
+        items={[
+          { key: "overview", label: "Apžvalga", icon: "overview", onClick: () => { navigateEmployerCalendar(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
+          { key: "work", label: "Mano darbai", icon: "briefcase", onClick: () => scrollToDashboardTarget(".ed-jobs, .ed-jobs-empty, .ed-heading") },
+          { key: "calendar", label: "Darbų kalendorius", icon: "calendar", onClick: () => navigateEmployerCalendar(true) },
+          { key: "search", label: "Darbuotojų paieška", icon: "search", onClick: () => scrollToDashboardTarget(".ed-results, .ed-worker-source, .ed-heading") },
+          { key: "create", label: "Sukurti darbą", icon: "plus", onClick: () => openNewJobForm() },
+          { key: "plan", label: "Mano planas", icon: "plan", onClick: () => setShowPlans(true) },
+          { key: "profile", label: "Įmonės profilis", icon: "person", onClick: () => setShowCompanyEditor(true) },
+        ]}
+      />
       <header className="ed-topbar">
         <div className="ed-topbar-inner">
           <BrandLogo className="brand" href="#" height={46} />
