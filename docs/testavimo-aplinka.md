@@ -63,3 +63,7 @@ Atkuriant šaką šiuos laukus reikia vėl suderinti; tai nėra produkcinė migr
   RLS lenteles be politikų (uždaryta prieiga). Tai nėra visos schemos saugumo auditas.
   https://supabase.com/docs/guides/database/database-linter
 - Vite rodo ankstesnius /hire vertimų pasikartojančių raktų ir didelio paketo perspėjimus.
+
+Administratoriaus prisijungimas patikrintas; ekrane nustatytos trūkstamos RPC
+`admin_get_account_day_stats` ir `get_admin_foreign_hire_requests`.
+Šių integracijų ir visos desktop/mobile matricos patikra neužbaigta.
