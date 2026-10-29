@@ -33884,6 +33884,10 @@ function App() {
   };
 
   const logout = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("section");
+    url.searchParams.delete("employerView");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     if (supabase) await supabase.auth.signOut();
   };
 
