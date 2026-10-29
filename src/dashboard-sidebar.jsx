@@ -1,14 +1,16 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 
 export function DashboardMenuToggle() {
   const button = useRef(null);
+  const anchor = useRef(null);
   const [collapsed, setCollapsed] = useState(() => {
     try { const saved = localStorage.getItem('s24-dashboard-menu-collapsed'); return saved === null ? window.innerWidth < 1100 : saved === 'true'; }
     catch { return window.innerWidth < 1100; }
   });
   useLayoutEffect(() => {
-    const page = button.current?.closest('.wd-page, .ed-page, .admin-page');
+    const page = anchor.current?.closest('.wd-page, .ed-page, .admin-page');
     page?.classList.toggle('s24-menu-collapsed', collapsed);
     try { localStorage.setItem('s24-dashboard-menu-collapsed', String(collapsed)); } catch {}
     return () => page?.classList.remove('s24-menu-collapsed');
@@ -18,16 +20,16 @@ export function DashboardMenuToggle() {
     window.addEventListener('keydown', escape);
     return () => window.removeEventListener('keydown', escape);
   }, [collapsed]);
-  return <>
-    <button ref={button} className="s24-menu-toggle" type="button"
+  return <><span ref={anchor} className="s24-menu-anchor" />{createPortal(<>
+    <button ref={button} className={"s24-menu-toggle" + (collapsed ? " is-collapsed" : "")} type="button"
       aria-label={collapsed ? 'Rodyti meniu' : 'Slėpti meniu'} aria-expanded={!collapsed}
       aria-controls="s24-account-navigation" onClick={() => setCollapsed(value => !value)}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        {collapsed ? <path d="M4 6h16M4 12h16M4 18h16" /> : <path d="m14 6-6 6 6 6" />}
+        {collapsed ? <path d="M4 6h16M4 12h16M4 18h16" /> : <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16m7-11-3 3 3 3" /></>}
       </svg><span>{collapsed ? 'Meniu' : 'Slėpti'}</span>
     </button>
     {!collapsed && <button type="button" className="s24-menu-backdrop" aria-label="Uždaryti meniu" onClick={() => setCollapsed(true)} />}
-  </>;
+  </>, document.body)}</>;
 }
 
 // Only the desktop navigation shell changes; business actions stay in each dashboard.

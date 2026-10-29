@@ -239,3 +239,14 @@
 }
 
 .admin-page .admin-topbar { z-index: 30 !important; }
+
+/* The collapse control occupies the logo row's right-hand slot. */
+.s24-menu-anchor { display: none; }
+.s24-menu-toggle { left: 190px; top: 22px; width: 40px; min-height: 40px; padding: 9px; justify-content: center; border-color: transparent; background: transparent; }
+.s24-menu-toggle:hover { background: #fff1e4; border-color: #ffe2c7; }
+.s24-menu-toggle span { display: none; }
+.s24-menu-toggle.is-collapsed { left: 12px; top: 16px; background: white; border-color: #dbe4ea; }
+.s24-dashboard-brand { padding-right: 38px; justify-content: center; }
+.s24-dashboard-brand .brand, .s24-dashboard-brand .brand img { max-width: 148px !important; }
+.s24-dashboard-brand .brand img { height: auto !important; }
+.admin-page .admin-tabs::before { background-size: 148px auto; }
