@@ -250,3 +250,17 @@
 .s24-dashboard-brand .brand, .s24-dashboard-brand .brand img { max-width: 148px !important; }
 .s24-dashboard-brand .brand img { height: auto !important; }
 .admin-page .admin-tabs::before { background-size: 148px auto; }
+
+/* Compact navigation keeps the full account menu visible on laptop screens. */
+.wd-page > .s24-dashboard-sidebar, .ed-page > .s24-dashboard-sidebar { padding: 16px 12px 10px; }
+.s24-dashboard-brand { min-height: 40px; padding-bottom: 10px; }
+.s24-dashboard-menu-label { margin: 14px 10px 8px; font-size: 9px; }
+.s24-dashboard-nav { gap: 2px; }
+.s24-dashboard-nav-item { min-height: 31px; padding: 6px 10px; gap: 9px; border-radius: 8px; font-size: 12px; line-height: 1.25; }
+.s24-dashboard-nav-item svg { width: 17px; height: 17px; }
+.s24-dashboard-sidebar-foot { padding: 10px 10px 2px; font-size: 10px; }
+.admin-page .admin-tabs { gap: 3px !important; padding: 16px 12px 10px !important; }
+.admin-page .admin-tabs::before { height: 50px; margin-bottom: 12px; }
+.admin-page .admin-tab { min-height: 34px !important; padding: 7px 10px !important; border-radius: 8px !important; font-size: 12px !important; }
+.admin-page .admin-sidebar-actions { gap: 5px; padding-top: 12px; margin-top: 12px; }
+.admin-sidebar-actions > button { min-height: 34px; padding: 7px 10px; font-size: 12px; }
