@@ -25,13 +25,17 @@ export function scrollToDashboardTarget(selector) {
   return false;
 }
 
-export function DashboardSidebar({ role, items }) {
-  const [active, setActive] = useState("overview");
+export function DashboardSidebar({ role, items, logo, initialActive = "overview" }) {
+  const [active, setActive] = useState(initialActive);
   return (
     <aside className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
       <div className="s24-dashboard-brand" aria-label="Statybos24">
-        <span className="s24-dashboard-mark" aria-hidden="true">S<span>24</span></span>
-        <span className="s24-dashboard-brand-copy"><strong>STATYBOS<span>24</span></strong><small>Valdymo aplinka</small></span>
+        {logo || (
+          <>
+            <span className="s24-dashboard-mark" aria-hidden="true">S<span>24</span></span>
+            <span className="s24-dashboard-brand-copy"><strong>STATYBOS<span>24</span></strong><small>Valdymo aplinka</small></span>
+          </>
+        )}
       </div>
       <div className="s24-dashboard-menu-label">{role}</div>
       <nav className="s24-dashboard-nav" aria-label="Paskyros skyriai">
