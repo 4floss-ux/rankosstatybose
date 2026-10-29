@@ -152,11 +152,23 @@
     outline-offset: 2px;
   }
   .admin-page .admin-extra-wrap { min-width: 0; }
-  .admin-page .admin-extra-panel { max-width: 320px; }
+  .admin-page .admin-extra-panel {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 350px);
+    margin-top: 7px;
+    box-shadow: 0 8px 24px rgba(16, 36, 56, .08);
+  }
 
   .wd-page .wd-shell,
   .ed-page .ed-shell,
   .admin-page .admin-shell { scroll-margin-top: 90px; }
+  .wd-page .wd-heading,
+  .wd-page .wd-stats-section,
+  .ed-page .ed-heading,
+  .ed-page .ed-results,
+  .ed-page .ed-jobs,
   .wd-page [id^="worker-"],
   .ed-page [id^="employer-"] { scroll-margin-top: 92px; }
 
