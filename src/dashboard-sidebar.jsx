@@ -32,6 +32,54 @@ export function DashboardMenuToggle() {
   </>, document.body)}</>;
 }
 
+
+export function useDashboardSection(role) {
+  const read = () => {
+    const value = new URLSearchParams(window.location.search).get('section') || '';
+    const candidate = value.startsWith(role + '.') ? value.slice(role.length + 1) : 'statistics';
+    const allowed = role === 'worker' ? ['statistics','work','history','invitations','availability','profile'] : ['statistics','work','history','search','create','profile','job','calendar','favorites','team','chat','plan','urgent','hire'];
+    return allowed.includes(candidate) ? candidate : 'statistics';
+  };
+  const [section, setSection] = useState(read);
+  useEffect(() => { const sync = () => setSection(read()); window.addEventListener('popstate', sync); return () => window.removeEventListener('popstate', sync); }, [role]);
+  const navigate = value => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('section', role + '.' + value);
+    if (value !== 'calendar') url.searchParams.delete('employerView');
+    window.history.pushState(window.history.state, '', url.pathname + url.search + url.hash);
+    setSection(value);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (window.innerWidth < 1100) document.querySelector('.s24-menu-toggle[aria-expanded="true"]')?.click();
+    return true;
+  };
+  return [section, navigate];
+}
+
+export function SidebarAccount({ name, avatar, subtitle, onProfile, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+  const trigger = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = event => { if (!root.current?.contains(event.target)) setOpen(false); };
+    const escape = event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+    document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [open]);
+  const initials = String(name || 'Paskyra').split(/\s+/).map(part => part[0]).slice(0,2).join('').toUpperCase();
+  return <div className="s24-account" ref={root}>
+    {open && <div className="s24-account-actions" aria-label="Paskyros veiksmai">
+      <button type="button" onClick={() => { setOpen(false); onProfile(); }}>Mano profilis ir nuotrauka</button>
+      <button type="button" onClick={onLogout}>Atsijungti</button>
+    </div>}
+    <button type="button" className="s24-account-identity" onClick={onProfile} aria-label={'Atidaryti profilį: ' + name}>
+      <span className="s24-account-avatar">{avatar ? <img src={avatar} alt="" /> : initials}</span>
+      <span className="s24-account-copy"><strong>{name || 'Mano paskyra'}</strong><small>{subtitle}</small></span>
+    </button>
+    <button type="button" ref={trigger} className="s24-account-more" aria-label="Paskyros veiksmai" aria-expanded={open} onClick={() => setOpen(value => !value)}>⋮</button>
+  </div>;
+}
+
 // Only the desktop navigation shell changes; business actions stay in each dashboard.
 const glyphs = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
@@ -59,12 +107,10 @@ export function scrollToDashboardTarget(selector) {
   return false;
 }
 
-export function DashboardSidebar({ role, items, logo, initialActive = "overview" }) {
+export function DashboardSidebar({ role, items, logo, initialActive = "statistics", account }) {
   const [active, setActive] = useState(initialActive);
   useEffect(() => {
-    setActive((current) => initialActive === "calendar"
-      ? "calendar"
-      : current === "calendar" ? "overview" : current);
+    setActive(initialActive);
   }, [initialActive]);
   return (
     <aside id="s24-account-navigation" className="s24-dashboard-sidebar" aria-label={role + " navigacija"}>
@@ -96,7 +142,7 @@ export function DashboardSidebar({ role, items, logo, initialActive = "overview"
           </button>
         ))}
       </nav>
-      <div className="s24-dashboard-sidebar-foot">Statybos24.lt</div>
+      {account ? <SidebarAccount {...account} /> : <div className="s24-dashboard-sidebar-foot">Statybos24.lt</div>}
     </aside>
   );
 }
