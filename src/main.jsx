@@ -4,6 +4,10 @@ import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/react";
 import "./styles.css";
+import "./dashboard-sidebar.css";
+import { DashboardMenuToggle, DashboardSidebar, SidebarAccount, useDashboardSection, scrollToDashboardTarget } from "./dashboard-sidebar.jsx";
+
+import { isTestEnvironment, testSupabaseUrl, testSupabaseKey } from "./test-environment.js";
 
 const SENTRY_DSN =
   "https://eb5281a0e8cff473a77d220ecacb2a9c@o4512187961376768.ingest.de.sentry.io/4512187977760848";
@@ -20,7 +24,7 @@ function sanitizeSentryUrl(value) {
 
 Sentry.init({
   dsn: SENTRY_DSN,
-  enabled: import.meta.env.PROD,
+  enabled: import.meta.env.PROD && !isTestEnvironment,
   environment: import.meta.env.PROD ? "production" : "development",
   sendDefaultPii: false,
   attachStacktrace: true,
@@ -54,8 +58,8 @@ Sentry.init({
   },
 });
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = isTestEnvironment ? testSupabaseUrl : import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = isTestEnvironment ? testSupabaseKey : import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Capture the recovery callback before Supabase removes auth tokens from the URL.
 const initialPasswordRecovery = getPasswordRecoveryLocation(window.location.href);
 // The main site and /hire have independent browser authentication sessions.
@@ -105,7 +109,7 @@ if (!isHireProjectPath && typeof window !== "undefined") {
   });
   // Register the existing push service worker on initial visit too, not just
   // after users opt in to notifications. Registration does NOT ask for push permission.
-  if (window.isSecureContext && "serviceWorker" in navigator) {
+  if (!isTestEnvironment && window.isSecureContext && "serviceWorker" in navigator) {
     const registerMainSiteWorker = () => {
       navigator.serviceWorker.register("/statybos24-push-sw.js", {
         scope: "/", updateViaCache: "none",
@@ -6332,6 +6336,7 @@ function WebPushSettings({ user, kind = "worker", profileOpen = false }) {
 }
 
 function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
+  const [dashboardSection, navigateDashboardSection] = useDashboardSection("worker");
   const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -9027,6 +9032,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function openWorkerProfileEditor(target = "profile") {
+    navigateDashboardSection(target === "availability" ? "availability" : "profile");
     setWorkerProfileEditorTarget(target);
     setProfileFormErrors({});
     setAvailabilityValidationMessages({});
@@ -9040,34 +9046,16 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function openWorkerDashboardTarget(target) {
-    if (target === "profile") {
-      openWorkerProfileEditor("profile");
-      return;
-    }
-
-    if (target === "availability") {
-      if (needsAvailabilityConfirm) {
-        confirmCurrentAvailability();
-      } else {
-        openWorkerProfileEditor("availability");
-      }
-      return;
-    }
-
-    if (target === "availability-review") {
-      document
-        .getElementById("worker-availability-alert")
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-
-    document
-      .getElementById(
-        target === "invitations" ? "worker-invitations" : "worker-workdays"
-      )
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (target === "profile" || target === "availability" || target === "availability-review") { openWorkerProfileEditor(target === "profile" ? "profile" : "availability"); return true; }
+    navigateDashboardSection(target === "invitations" ? "invitations" : target === "history" ? "history" : "work");
+    return true;
   }
 
+  useEffect(() => {
+    const editing = dashboardSection === "profile" || dashboardSection === "availability";
+    setShowProfileEditor(editing);
+    if (editing) setWorkerProfileEditorTarget(dashboardSection);
+  }, [dashboardSection]);
   const pendingLongTermOffers = longTermOffers.filter(
     (offer) => offer.status === "offered"
   );
@@ -9086,7 +9074,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   return (
-    <div className="wd-page">
+    <div className="wd-page" data-s24-section={dashboardSection}>
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
         .wd-page{min-height:100vh;background:#f6f8fa;color:#102438;padding-bottom:56px}
@@ -9225,7 +9213,18 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         }
       `}</style>
 
+      <DashboardSidebar role="DARBUOTOJO PASKYRA" logo={<BrandLogo className="brand" href="#" height={43} />} initialActive={dashboardSection}
+ account={{name:form.displayName || user.email,avatar:profileAvatarUrl,subtitle:"Darbuotojo paskyra",onProfile:()=>openWorkerProfileEditor("profile"),onLogout}}
+ items={[
+ {key:"statistics",label:"Statistika",icon:"chart",onClick:()=>navigateDashboardSection("statistics")},
+ {key:"work",label:"Darbai",icon:"briefcase",onClick:()=>openWorkerDashboardTarget("workdays")},
+ {key:"history",label:"Pasibaigę darbai",icon:"briefcase",onClick:()=>openWorkerDashboardTarget("history")},
+ {key:"invitations",label:"Kvietimai",icon:"invitation",onClick:()=>openWorkerDashboardTarget("invitations")},
+ {key:"availability",label:"Užimtumo kalendorius",icon:"calendar",onClick:()=>openWorkerProfileEditor("availability")},
+ {key:"profile",label:"Mano profilis",icon:"person",onClick:()=>openWorkerProfileEditor("profile")}
+ ]} />
       <header className="wd-topbar">
+        <DashboardMenuToggle />
         <div
           className="wd-topbar-inner"
           style={
@@ -9297,12 +9296,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       {!onAdminReturn && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
 
       <main className="wd-shell">
-        {showProfileEditor && <WorkAbroadPreference user={user}/>}
+        {(dashboardSection === "profile") && (<>{showProfileEditor && <WorkAbroadPreference user={user}/>}</>)}
 
         <div className="wd-heading">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
-            <h1>Mano darbai ir statistika</h1>
+            <h1>{{statistics:"Statistika",work:"Darbai",history:"Pasibaigę darbai",invitations:"Kvietimai",availability:"Užimtumo kalendorius",profile:"Mano profilis"}[dashboardSection] || "Mano paskyra"}</h1>
             <p>
               Čia matote aktyvius darbus, neuždarytas darbo dienas ir savo
               patikimumo statistiką.
@@ -9406,7 +9405,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
 
-        {showWorkTimeLoginReminder && (
+        {(dashboardSection === "availability") && (<>{showWorkTimeLoginReminder && (
           <div className="wd-worktime-login-reminder" role="status">
             <div className="wd-worktime-login-reminder-copy">
               <b>Būtinai atnaujinkite darbo laikus</b>
@@ -9419,34 +9418,12 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               Atnaujinti
             </button>
           </div>
-        )}
+        )}</>)}
 
-        {!onAdminReturn &&
-          (!form.displayName.trim() ||
-            !form.phone.trim() ||
-            availableCount === 0) && (
-            <section className="wd-onboarding-card">
-              <div className="wd-onboarding-top">
-                <div>
-                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                  <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Paruoškite profilį kvietimams į darbą</h3>
-                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
-                </div>
-                <div className="wd-onboarding-actions">
-                  <button className="wd-onboarding-btn secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
-                  <button className="wd-onboarding-btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
-                </div>
-              </div>
-              <div className="wd-onboarding-steps">
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
-              </div>
-            </section>
-          )}
-        <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
+        
+        {(dashboardSection === "statistics") && (<><div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div></>)}
 
-        <div className="wd-overview">
+        {(dashboardSection === "statistics") && (<><div className="wd-overview">
           <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
             <div className="wd-overview-card-top">
               <span>Nauji kvietimai</span>
@@ -9581,9 +9558,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </small>
           </div>
 
-        </div>
+        </div></>)}
 
-        {showProfileEditor && (
+        {(dashboardSection === "profile" || dashboardSection === "availability") && (<>{showProfileEditor && (
           <section
             ref={workerProfileEditorRef}
             id="worker-profile-editor"
@@ -9604,7 +9581,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 className="wd-profile-editor-close"
                 type="button"
                 disabled={saving}
-                onClick={() => setShowProfileEditor(false)}
+                onClick={() => { setShowProfileEditor(false); navigateDashboardSection("statistics"); }}
                 aria-label="Uždaryti"
               >
                 <CloseMark />
@@ -10101,9 +10078,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             />
           </section>
-        )}
+        )}</>)}
 
-        {needsAvailabilityConfirm && (
+        {(dashboardSection === "availability") && (<>{needsAvailabilityConfirm && (
           <div id="worker-availability-alert" className="wd-availability-alert" style={{ scrollMarginTop: 88 }}>
             <div>
               <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
@@ -10136,11 +10113,11 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
           </div>
-        )}
+        )}</>)}
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="wd-stats-section">
+        {(dashboardSection === "statistics") && (<><section className="wd-stats-section">
           <div className="wd-stats-head">
             <button
               className={`wd-stats-toggle ${showWorkerStats ? "open" : ""}`}
@@ -10153,7 +10130,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </button>
           </div>
 
-          {showWorkerStats && (
+          {(showWorkerStats || dashboardSection === "statistics") && (
             <div className="wd-kpis">
               <div className="wd-kpi">
                 <span>Šį mėnesį išdirbta</span>
@@ -10203,10 +10180,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
           )}
-        </section>
+        </section></>)}
 
 
-        {employerReviewOpportunities.length > 0 && (
+        {(dashboardSection === "history") && (<>{employerReviewOpportunities.length > 0 && (
           <section
             className="wd-card"
             style={{
@@ -10264,9 +10241,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               ))}
             </div>
           </section>
-        )}
+        )}</>)}
 
-        {pendingLongTermOffers.length > 0 && (
+        {(dashboardSection === "invitations") && (<>{pendingLongTermOffers.length > 0 && (
         <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
           <div
             style={{
@@ -10381,10 +10358,10 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               ))}
             </div>
         </section>
-        )}
+        )}</>)}
 
         <div className="wd-form">
-          <section className="wd-card wd-invitations-section" id="worker-invitations">
+          {(dashboardSection === "invitations") && (<><section className="wd-card wd-invitations-section" id="worker-invitations">
             <h2>Kvietimai į darbą</h2>
 
             {invitations.length ? (
@@ -10596,9 +10573,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
             )}
-          </section>
+          </section></>)}
 
-          <section className="wd-card wd-active-jobs-section" id="worker-workdays">
+          {(dashboardSection === "work") && (<><section className="wd-card wd-active-jobs-section" id="worker-workdays">
             <h2>Mano darbai</h2>
 
             {activeWorkerWorkdays.length > 0 && (
@@ -11121,9 +11098,9 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
             )}
-          </section>
+          </section></>)}
 
-          <section className="wd-card" id="worker-job-history">
+          {(dashboardSection === "history") && (<><section className="wd-card" id="worker-job-history">
             <div className="wd-history-section-head">
               <h2>Darbų istorija</h2>
               {isPhoneLayout && workerWorkHistory.length > 0 && (
@@ -11195,7 +11172,7 @@ function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 </div>
               </div>
             )}
-          </section>
+          </section></>)}
         </div>
       </main>
 
@@ -14042,6 +14019,7 @@ function EmployerWorkCalendar({ jobs, jobScope, canSeeAllCompanyJobs, onScopeCha
 }
 
 function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+  const [dashboardSection, navigateDashboardSection] = useDashboardSection("employer");
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
   const preferredPlanKey = EMPLOYER_PLANS.some(
@@ -14097,8 +14075,8 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return () => window.removeEventListener("popstate", sync);
   }, []);
   function navigateEmployerCalendar(open) {
-    if (open && !calendarPreviewEnabled) return;
-    if (open && !calendarAllowed) { setShowPlans(true); return; }
+    if (open && !calendarPreviewEnabled) return false;
+    if (open && !calendarAllowed) { setShowPlans(true); return false; }
     const url = new URL(window.location.href);
     if (open) url.searchParams.set("employerView", "calendar");
     else url.searchParams.delete("employerView");
@@ -14107,6 +14085,25 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     window.history.pushState(marker, "", url.pathname + url.search + url.hash);
     setCalendarRequested(open);
     window.scrollTo({top:0, behavior:"auto"});
+    return true;
+  }
+
+  function openEmployerScreen(section) {
+    setCalendarRequested(false);
+    setShowTeam(false); setShowTeamChat(false); setShowSavedWorkers(false); setShowPlans(false); setShowUrgentSearch(false); setShowLongTermEmployment(false);
+    setShowCompanyEditor(section === "profile");
+    if (section !== "create") setShowJobForm(false);
+    return navigateDashboardSection(section);
+  }
+  useEffect(() => { setShowCompanyEditor(dashboardSection === "profile"); }, [dashboardSection]);
+
+  function openEmployerSidebarSection(selector) {
+    if (!calendarVisible) return scrollToDashboardTarget(selector);
+    navigateEmployerCalendar(false);
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => scrollToDashboardTarget(selector))
+    );
+    return true;
   }
 
   const [billingStatus, setBillingStatus] = useState(null);
@@ -14304,6 +14301,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const editingCoreTermsLocked = Boolean(editingJobId) &&
     (editingInvitationCount > 0 || editingConfirmedCount > 0);
   const [showJobForm, setShowJobForm] = useState(false);
+  useEffect(() => { if (showJobForm) navigateDashboardSection("create"); }, [showJobForm]);
   const [cityWorkerSignal, setCityWorkerSignal] = useState(null);
   const [cityWorkerSignalLoading, setCityWorkerSignalLoading] = useState(false);
   const [cancelJobTarget, setCancelJobTarget] = useState(null);
@@ -17327,6 +17325,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openExistingJob(job) {
+    openEmployerScreen("job");
     const requestId = ++jobOpenRequestRef.current;
     setNotice("");
     setError("");
@@ -18338,12 +18337,17 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     ? ""
     : companyAvatarPreview || companyAvatarUrl(companyForm.avatarPath);
 
+  useEffect(() => {
+    if (showPlans && dashboardSection !== "plan") navigateDashboardSection("plan");
+    const states = {team:showTeam,chat:showTeamChat,favorites:showSavedWorkers,urgent:showUrgentSearch,hire:showLongTermEmployment,plan:showPlans};
+    if (Object.prototype.hasOwnProperty.call(states,dashboardSection) && !states[dashboardSection] && !showPlans) navigateDashboardSection("statistics");
+  }, [showTeam,showTeamChat,showSavedWorkers,showUrgentSearch,showLongTermEmployment,showPlans]);
   if (loading) {
     return <SilentLoader fullscreen size={28} />;
   }
 
   return (
-    <div className="ed-page">
+    <div className="ed-page" data-s24-section={dashboardSection}>
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
         .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
@@ -18644,14 +18648,32 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
+      <DashboardSidebar role="DARBDAVIO PASKYRA" logo={<BrandLogo className="brand" href="#" height={43} />} initialActive={calendarVisible ? "calendar" : dashboardSection}
+ account={{name:currentTeamMember?.display_name || [user.user_metadata?.first_name,user.user_metadata?.last_name].filter(Boolean).join(" ") || user.email,avatar:currentCompanyAvatarUrl,subtitle:company?.name || "Darbdavio paskyra",onProfile:()=>openEmployerScreen("profile"),onLogout}}
+ items={[
+ {key:"statistics",label:"Statistika",icon:"chart",onClick:()=>openEmployerScreen("statistics")},
+ {key:"work",label:"Darbai",icon:"briefcase",onClick:()=>openEmployerScreen("work")},
+ {key:"history",label:"Pasibaigę darbai",icon:"briefcase",onClick:()=>openEmployerScreen("history")},
+ {key:"create",label:"Sukurti darbą",icon:"plus",onClick:()=>openNewJobForm()},
+ ...(calendarPreviewEnabled ? [{key:"calendar",label:"Darbų kalendorius",icon:"calendar",onClick:()=>{if(navigateEmployerCalendar(true)){navigateDashboardSection("calendar"); return true;} return false;}}] : []),
+ {key:"search",label:"Darbuotojų paieška",icon:"search",onClick:()=>openEmployerScreen("search")},
+ {key:"urgent",label:"Skubi paieška",icon:"search",onClick:()=>{openEmployerScreen("urgent"); return openUrgentSearch();}},
+ ...(companyMemberRole === "owner" ? [{key:"hire",label:"Įdarbinti darbuotoją",icon:"briefcase",onClick:()=>{openEmployerScreen("hire"); return openLongTermEmployment("hire");}}] : []),
+ {key:"favorites",label:"Darbuotojai favoritai",icon:"heart",onClick:()=>{openEmployerScreen("favorites"); return openSavedWorkerTeam();}},
+ {key:"team",label:"Įmonės komanda",icon:"team",onClick:()=>{openEmployerScreen("team"); return openCompanyTeam();}},
+ {key:"chat",label:"Komandos pokalbis",icon:"chat",onClick:()=>{openEmployerScreen("chat"); return openCompanyTeamChat();}},
+ {key:"plan",label:"Mano planas",icon:"plan",onClick:()=>{openEmployerScreen("plan"); return setShowPlans(true);}},
+ {key:"profile",label:"Įmonės profilis",icon:"person",onClick:()=>openEmployerScreen("profile")}
+ ]} />
       <header className="ed-topbar">
+        <DashboardMenuToggle />
         <div className="ed-topbar-inner">
           <BrandLogo className="brand" href="#" height={46} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {company && planSummary && (
               <button
-                className="ed-plan-badge"
+                className="ed-plan-badge s24-duplicate-navigation"
                 type="button"
                 onClick={() => setShowPlans(true)}
                 title="Peržiūrėti planą"
@@ -18662,7 +18684,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
             {company && (
               <button
-                className="btn ghost"
+                className="btn ghost s24-duplicate-navigation"
                 type="button"
                 onClick={() =>
                   setShowCompanyEditor((current) => !current)
@@ -18718,41 +18740,15 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           jobScope={jobScope}
           canSeeAllCompanyJobs={canSeeAllCompanyJobs}
           onScopeChange={scope => setJobScope(scope === "all" && canSeeAllCompanyJobs ? "all" : "mine")}
-          onBack={() => navigateEmployerCalendar(false)}
+          onBack={() => {navigateEmployerCalendar(false); openEmployerScreen("statistics");}}
           onCreateJob={options => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm(options)); }}
           onOpenJob={(job, favorites) => { navigateEmployerCalendar(false); requestAnimationFrame(async () => { if (await openExistingJob(job)) { if (favorites && planSummary?.can_saved_workers) setWorkerSource("team"); } }); }}
         />}
         <div style={{display: calendarVisible ? "none" : "contents"}}>
+        {dashboardSection === "search" && !currentJob && <section className="ed-card s24-screen-empty"><h2>Darbuotojų paieška</h2><p>Pirmiausia pasirinkite darbą, kad galėtume parodyti darbuotojus pagal jo vietą ir laiką.</p><button className="ed-primary" onClick={()=>openEmployerScreen("work")}>Pasirinkti darbą</button><button className="ed-secondary" onClick={openNewJobForm}>Sukurti darbą</button></section>}
 
-        {!onAdminReturn && jobs.length === 0 && (
-          <section
-            style={{
-              marginBottom: 18,
-              padding: 16,
-              border: "1px solid #dfe7ed",
-              borderRadius: 16,
-              background: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Sukurkite pirmą darbo poreikį</h3>
-                <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
-                <button className="ed-primary" type="button" onClick={openNewJobForm}>Sukurti pirmą darbą</button>
-              </div>
-            </div>
-            <div className="ed-onboarding-steps">
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#fff7ef", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
-            </div>
-          </section>
-        )}
-        {showCompanyEditor && (
+        
+        {(dashboardSection === "profile") && (<>{showCompanyEditor && (
           <section
             ref={companyEditorRef}
             id="employer-profile-editor"
@@ -19025,7 +19021,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   className="ed-secondary"
                   type="button"
                   disabled={companySaving}
-                  onClick={() => setShowCompanyEditor(false)}
+                  onClick={() => {setShowCompanyEditor(false); navigateDashboardSection("statistics");}}
                 >
                   Uždaryti
                 </button>
@@ -19061,13 +19057,13 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               }}
             />
           </section>
-        )}
+        )}</>)}
 
-        {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
+        {(dashboardSection === "calendar") && (<>{employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}</>)}
         <div className="ed-heading">
           <div>
             <div className="eyebrow">DARBDAVIO PASKYRA</div>
-            <h1>Sukurkite darbuotojų kvietimą</h1>
+            <h1>{{statistics:"Statistika",work:"Darbai",history:"Pasibaigę darbai",search:"Darbuotojų paieška",create:"Sukurti darbą",profile:"Įmonės profilis",job:"Darbo informacija",favorites:"Darbuotojai favoritai",team:"Įmonės komanda",chat:"Komandos pokalbis",plan:"Mano planas",urgent:"Skubi paieška",hire:"Įdarbinti darbuotoją"}[dashboardSection] || "Mano paskyra"}</h1>
             <p>
               Sistema rodys darbuotojus, kurie tą dieną ir tuo laiku pažymėjo,
               kad gali dirbti ir yra arčiausiai jūsų vietovės.
@@ -19171,7 +19167,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         {notice && <div className="ed-note ok">{notice}</div>}
         {error && <div className="ed-note err">{error}</div>}
 
-        {showJobForm && (
+        {(dashboardSection === "create") && (<>{showJobForm && (
         <section
           className="ed-card"
           id="employer-job-form"
@@ -19582,11 +19578,11 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </button>
           </div>
         </section>
-        )}
+        )}</>)}
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="ed-stats-section">
+        {(dashboardSection === "statistics") && (<><section className="ed-stats-section">
           <div className="ed-stats-head">
             <button
               className={`ed-stats-toggle ${showEmployerStats ? "open" : ""}`}
@@ -19602,7 +19598,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </button>
           </div>
 
-          {showEmployerStats && (
+          {(showEmployerStats || dashboardSection === "statistics") && (
             <>
           <div
             className={`ed-kpis ${
@@ -19699,10 +19695,10 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
             </>
           )}
-        </section>
+        </section></>)}
 
 
-        {currentJob && (
+        {(dashboardSection === "job" || dashboardSection === "search") && (<>{currentJob && (
           <section
             className="ed-card"
             id="employer-open-job"
@@ -20586,9 +20582,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
 
           </section>
-        )}
+        )}</>)}
 
-        <section className="ed-card ed-active-jobs-section">
+        {(dashboardSection === "work") && (<><section className="ed-card ed-active-jobs-section">
           <div
             style={{
               display: "flex",
@@ -20897,9 +20893,9 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
           )}
-        </section>
+        </section></>)}
 
-        <section className="ed-card">
+        {(dashboardSection === "history") && (<><section className="ed-card">
           <div>
             <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
           </div>
@@ -21046,7 +21042,7 @@ function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
           )}
-        </section>
+        </section></>)}
         </div>
       </main>
 
@@ -27734,6 +27730,7 @@ function AdminDashboard({
       `}</style>
 
       <header className="admin-topbar">
+        <DashboardMenuToggle />
         <div className="admin-topbar-inner">
           <BrandLogo className="brand" href="#" height={46} />
 
@@ -27798,7 +27795,7 @@ function AdminDashboard({
           </div>
         )}
 
-        <nav className="admin-tabs" aria-label="Administravimo skyriai">
+        <nav id="s24-account-navigation" className="admin-tabs" aria-label="Administravimo skyriai">
           {tabs.filter(([key]) => mainAdminTabs.includes(key)).map(([key, label]) => (
             <button
               key={key}
@@ -27848,6 +27845,31 @@ function AdminDashboard({
               </div>
             )}
           </div>
+        <div className="admin-sidebar-actions">
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenWorker}
+            >
+              Darbuotojo režimas
+            </button>
+            <button
+              className="admin-mode"
+              type="button"
+              onClick={onOpenEmployer}
+            >
+              Darbdavio režimas
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
+              onClick={() => setDeleteAccountOpen(true)}
+            >
+              Ištrinti paskyrą
+            </button>
+          </div>
+        <SidebarAccount name={[user.user_metadata?.first_name,user.user_metadata?.last_name].filter(Boolean).join(" ") || user.email} avatar={user.user_metadata?.avatar_url} subtitle="Administratoriaus paskyra" onLogout={onLogout} onProfile={()=>{const url=new URL(window.location.href);url.searchParams.set("section","worker.profile");window.history.replaceState(window.history.state,"",url);onOpenWorker();}} />
         </nav>
 
 
@@ -33813,6 +33835,10 @@ function App() {
   };
 
   const logout = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("section");
+    url.searchParams.delete("employerView");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     if (supabase) await supabase.auth.signOut();
   };
 
@@ -36840,7 +36866,7 @@ function MobilePopupBackGuard() {
       }
 
       const popup = topPopup();
-      if (!popup && window.history.state?.employerCalendarTransition) return;
+      if (!popup && (window.history.state?.employerCalendarTransition || window.history.state?.s24SectionTransition)) return;
 
       if (popup) {
         closeTopPopup();

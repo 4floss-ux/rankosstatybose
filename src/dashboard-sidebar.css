@@ -1,0 +1,369 @@
+/*
+ * Statybos24 desktop dashboard layout.
+ * Restricted to logged-in dashboard roots, never the public homepage or /hire.
+ * Existing mobile layouts remain untouched.
+ */
+.s24-dashboard-sidebar { display: none; }
+
+@media (min-width: 0px) {
+  .wd-page, .ed-page, .admin-page {
+    padding-left: 244px;
+    box-sizing: border-box;
+  }
+
+  .wd-page > .s24-dashboard-sidebar,
+  .ed-page > .s24-dashboard-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    display: flex;
+    flex-direction: column;
+    width: 244px;
+    height: 100dvh;
+    padding: 22px 14px 16px;
+    box-sizing: border-box;
+    background: #fff;
+    border-right: 1px solid #e9edf0;
+    box-shadow: 3px 0 14px rgba(16, 36, 56, .025);
+    color: #102438;
+    z-index: 75;
+    overflow-y: auto;
+  }
+
+  .s24-dashboard-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 51px;
+    padding: 2px 7px 18px;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .s24-dashboard-mark {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    color: #fff;
+    background: #f08a28;
+    border-radius: 12px;
+    min-width: 42px;
+    height: 42px;
+    line-height: 42px;
+    font: 900 19px/42px Manrope, Inter, sans-serif;
+    letter-spacing: -.07em;
+  }
+  .s24-dashboard-mark span { font-size: 10px; letter-spacing: -.05em; }
+  .s24-dashboard-brand-copy { min-width: 0; display: grid; gap: 3px; }
+  .s24-dashboard-brand-copy strong { font: 900 15px/1.1 Manrope, Inter, sans-serif; letter-spacing: -.04em; }
+  .s24-dashboard-brand-copy strong span { color: #f08a28; }
+  .s24-dashboard-brand-copy small { color: #7a8997; font-size: 10px; letter-spacing: .03em; }
+  .s24-dashboard-menu-label {
+    margin: 26px 12px 11px;
+    color: #86929b;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .s24-dashboard-nav { display: grid; gap: 5px; }
+  .s24-dashboard-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 43px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    text-align: left;
+    color: #596878;
+    font: 750 13px/1.3 Inter, sans-serif;
+    cursor: pointer;
+    transition: background-color .16s ease, color .16s ease, border-color .16s ease;
+  }
+  .s24-dashboard-nav-item svg { flex: 0 0 auto; }
+  .s24-dashboard-nav-item:hover { color: #102438; background: #f7f8fa; }
+  .s24-dashboard-nav-item.is-active {
+    color: #b95b0f;
+    background: #fff1e4;
+    border-color: #ffe2c7;
+    font-weight: 850;
+  }
+  .s24-dashboard-nav-item:focus-visible {
+    outline: 2px solid #f08a28;
+    outline-offset: 2px;
+  }
+  .s24-dashboard-sidebar-foot {
+    padding: 16px 12px 4px;
+    margin-top: auto;
+    border-top: 1px solid #eef0f3;
+    color: #91a0a9;
+    font-size: 11px;
+  }
+
+  /* The brand now lives in the sidebar; keep existing topbar actions. */
+  .wd-page .wd-topbar-inner > div:first-child,
+  .ed-page .ed-topbar-inner > a.brand,
+  .admin-page .admin-topbar-inner > a.brand { display: none !important; }
+  .wd-page .wd-topbar-inner,
+  .ed-page .ed-topbar-inner,
+  .admin-page .admin-topbar-inner { justify-content: flex-end; }
+
+  /* The admin dashboard already has working role-aware navigation.
+     Change only its presentation, not tab state or permissions. */
+  .admin-page .admin-tabs {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 75;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    align-content: start;
+    gap: 5px;
+    width: 244px;
+    height: 100dvh;
+    box-sizing: border-box;
+    padding: 22px 14px 16px;
+    margin: 0;
+    overflow-y: auto;
+    background: #fff;
+    border-right: 1px solid #e9edf0;
+    box-shadow: 3px 0 14px rgba(16, 36, 56, .025);
+  }
+  .admin-page .admin-tabs::before {
+    content: "";
+    display: block;
+    height: 65px;
+    margin: 0 7px 22px;
+    border-bottom: 1px solid #eef0f3;
+    background: url("/brand-logo.png") left center / 165px auto no-repeat;
+  }
+  .admin-page .admin-tab {
+    justify-content: flex-start;
+    text-align: left;
+    min-height: 43px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border-color: transparent;
+    background: transparent;
+    color: #596878;
+  }
+  .admin-page .admin-tab:hover { background: #f7f8fa; color: #102438; }
+  .admin-page .admin-tab.active {
+    border-color: #ffe2c7;
+    background: #fff1e4;
+    color: #b95b0f;
+  }
+  .admin-page .admin-tab:focus-visible {
+    outline: 2px solid #f08a28;
+    outline-offset: 2px;
+  }
+  .admin-page .admin-extra-wrap { min-width: 0; }
+  .admin-page .admin-extra-panel {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 350px);
+    margin-top: 7px;
+    box-shadow: 0 8px 24px rgba(16, 36, 56, .08);
+  }
+
+  .wd-page .wd-shell,
+  .ed-page .ed-shell,
+  .admin-page .admin-shell { scroll-margin-top: 90px; }
+  .wd-page .wd-heading,
+  .wd-page .wd-stats-section,
+  .ed-page .ed-heading,
+  .ed-page .ed-results,
+  .ed-page .ed-jobs,
+  .wd-page [id^="worker-"],
+  .ed-page [id^="employer-"] { scroll-margin-top: 92px; }
+
+  .wd-page .wd-overview-card,
+  .ed-page .ed-card,
+  .admin-page .admin-section {
+    border-radius: 15px;
+    box-shadow: 0 3px 16px rgba(16, 36, 56, .025);
+  }
+}
+
+/* At notebook widths, the sidebar reduces the effective dashboard
+   width even though the viewport still exceeds legacy breakpoints. */
+@media (min-width: 1100px) and (max-width: 1350px) {
+  .ed-page .ed-worker { grid-template-columns: minmax(0, 1fr) 120px; }
+  .ed-page .ed-worker-actions {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    max-width: none;
+  }
+  .ed-page .ed-worker .ed-tags { grid-column: 1 / -1; }
+  .ed-page .ed-job { grid-template-columns: 108px minmax(0, 1fr) 110px; }
+  .ed-page .ed-job > :nth-child(3) { display: none; }
+  .ed-page .ed-job-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ed-page .ed-team-layout { grid-template-columns: 1fr; }
+  .ed-page .ed-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ed-page .ed-plan-grid { grid-template-columns: 1fr; }
+  .admin-page .admin-row,
+  .admin-page .admin-bug-row,
+  .admin-page .admin-employment-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-page .admin-traffic-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .s24-dashboard-nav-item { transition: none; }
+}
+
+/* One navigation on every screen; the toggle stays available when hidden. */
+.wd-page.s24-menu-collapsed, .ed-page.s24-menu-collapsed, .admin-page.s24-menu-collapsed { padding-left: 0 !important; }
+.s24-menu-collapsed .s24-dashboard-sidebar, .s24-menu-collapsed .admin-tabs { display: none !important; }
+.s24-menu-toggle { position: fixed; top: 14px; left: 254px; z-index: 90; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px; border: 1px solid #dbe4ea; border-radius: 10px; background: white; color: #102438; font: 750 13px Inter,sans-serif; cursor: pointer; }
+.s24-menu-collapsed .s24-menu-toggle { left: 12px; }
+.s24-menu-toggle:focus-visible { outline: 2px solid #f08a28; outline-offset: 3px; }
+.s24-menu-backdrop { display: none; }
+.wd-page .wd-topbar, .ed-page .ed-topbar, .admin-page .admin-topbar { min-height: 72px !important; height: auto !important; padding-left: 110px !important; box-sizing: border-box; }
+.wd-page .wd-topbar-inner, .ed-page .ed-topbar-inner, .admin-page .admin-topbar-inner { display: flex !important; flex-direction: row !important; justify-content: flex-end !important; padding: 10px 0 !important; min-width: 0; }
+.s24-duplicate-navigation, [data-sidebar-duplicate], .wd-page .wd-mobile-profile-btn, .wd-page .wd-heading-actions > .wd-edit-profile,
+.ed-page .ed-heading-actions, .admin-page .admin-top-actions > :not(:last-child) { display: none !important; }
+.admin-page .admin-top-actions { display: flex !important; width: auto !important; }
+.admin-page .admin-tabs { display: grid !important; grid-template-columns: minmax(0,1fr) !important; width: 244px !important; position: fixed !important; padding-top: 22px !important; }
+.admin-page.s24-menu-collapsed .admin-tabs { display: none !important; }
+.admin-page .admin-sidebar-actions { display: grid; gap: 8px; padding-top: 18px; margin-top: 18px; border-top: 1px solid #eef0f3; }
+.admin-sidebar-actions > button { width: 100%; min-height: 44px; white-space: normal; }
+@media (max-width: 1099px) {
+  .wd-page, .ed-page, .admin-page { padding-left: 0 !important; }
+  .s24-menu-backdrop { display: block; position: fixed; inset: 0; z-index: 70; border: 0; background: rgba(16,36,56,.35); }
+}
+@media (max-width: 420px) {
+  .s24-menu-toggle { padding: 10px; }
+  .s24-menu-toggle span { display: none; }
+  .wd-page .wd-topbar, .ed-page .ed-topbar, .admin-page .admin-topbar { padding-left: 60px !important; }
+}
+
+.admin-page .admin-topbar { z-index: 30 !important; }
+
+/* The collapse control occupies the logo row's right-hand slot. */
+.s24-menu-anchor { display: none; }
+.s24-menu-toggle { left: 190px; top: 22px; width: 40px; min-height: 40px; padding: 9px; justify-content: center; border-color: transparent; background: transparent; }
+.s24-menu-toggle:hover { background: #fff1e4; border-color: #ffe2c7; }
+.s24-menu-toggle span { display: none; }
+.s24-menu-toggle.is-collapsed { left: 12px; top: 16px; background: white; border-color: #dbe4ea; }
+.s24-dashboard-brand { padding-right: 38px; justify-content: center; }
+.s24-dashboard-brand .brand, .s24-dashboard-brand .brand img { max-width: 148px !important; }
+.s24-dashboard-brand .brand img { height: auto !important; }
+.admin-page .admin-tabs::before { background-size: 148px auto; }
+
+/* Compact navigation keeps the full account menu visible on laptop screens. */
+.wd-page > .s24-dashboard-sidebar, .ed-page > .s24-dashboard-sidebar { padding: 16px 12px 10px; }
+.s24-dashboard-brand { min-height: 40px; padding-bottom: 10px; }
+.s24-dashboard-menu-label { margin: 14px 10px 8px; font-size: 9px; }
+.s24-dashboard-nav { gap: 2px; }
+.s24-dashboard-nav-item { min-height: 31px; padding: 6px 10px; gap: 9px; border-radius: 8px; font-size: 12px; line-height: 1.25; }
+.s24-dashboard-nav-item svg { width: 17px; height: 17px; }
+.s24-dashboard-sidebar-foot { padding: 10px 10px 2px; font-size: 10px; }
+.admin-page .admin-tabs { gap: 3px !important; padding: 16px 12px 10px !important; }
+.admin-page .admin-tabs::before { height: 50px; margin-bottom: 12px; }
+.admin-page .admin-tab { min-height: 34px !important; padding: 7px 10px !important; border-radius: 8px !important; font-size: 12px !important; }
+.admin-page .admin-sidebar-actions { gap: 5px; padding-top: 12px; margin-top: 12px; }
+.admin-sidebar-actions > button { min-height: 34px; padding: 7px 10px; font-size: 12px; }
+
+/* Account identity anchors the panel; each main section renders independently. */
+.s24-dashboard-nav { flex: 1; align-content: start; overflow-y: auto; min-height: 0; }
+.s24-account { flex: 0 0 auto; position: relative; display: flex; align-items: center; gap: 4px; padding-top: 12px; margin-top: auto; border-top: 1px solid #e9edf0; background: #fff; }
+.s24-account-identity { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; padding: 6px 2px; border: 0; background: transparent; text-align: left; color: #102438; cursor: pointer; }
+.s24-account-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%; background: #fff1e4; color: #b95b0f; font-size: 12px; font-weight: 800; overflow: hidden; }
+.s24-account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.s24-account-copy { display: grid; gap: 3px; min-width: 0; }
+.s24-account-copy strong { font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.s24-account-copy small { font-size: 10px; color: #7a8997; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.s24-account-more { flex: 0 0 30px; min-height: 36px; border: 0; border-radius: 8px; background: transparent; font-size: 24px; color: #607180; cursor: pointer; }
+.s24-account-more:hover { background: #fff1e4; }
+.s24-account-actions { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; padding: 6px; background: white; border: 1px solid #e9edf0; box-shadow: 0 8px 28px #10243820; border-radius: 10px; }
+.s24-account-actions button { display: block; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: white; color: #102438; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.s24-account-actions button:hover { background: #fff1e4; }
+.s24-account button:focus-visible { outline: 2px solid #f08a28; outline-offset: 2px; }
+.wd-page .wd-heading-actions, .wd-page .wd-heading p, .ed-page .ed-heading p,
+.wd-page .wd-stats-head, .ed-page .ed-stats-head { display: none !important; }
+.wd-page[data-s24-section="profile"] #worker-availability-editor { display: none; }
+.wd-page[data-s24-section="availability"] .wd-profile-editor-section:not(#worker-availability-editor) { display: none; }
+.wd-page .wd-form { display: block; }
+.s24-screen-empty { padding: 28px; }
+.s24-screen-empty button { margin: 10px 10px 0 0; }
+.admin-page .admin-tabs { display: flex !important; flex-direction: column; }
+.admin-page .admin-tabs::before { flex-shrink: 0; }
+.admin-page .s24-account { margin-top: auto; }
+
+/* Menu destinations use the main workspace; confirmation dialogs stay modal. */
+.ed-page[data-s24-section="team"] > .ed-team-overlay,
+.ed-page[data-s24-section="chat"] > .ctc-overlay,
+.ed-page[data-s24-section="favorites"] > .ed-saved-overlay,
+.ed-page[data-s24-section="urgent"] > .ed-urgent-overlay,
+.ed-page[data-s24-section="plan"] > .ed-plan-overlay,
+.ed-page[data-s24-section="hire"] > .lt-employment-overlay {
+  position: relative !important; inset: auto !important; z-index: auto !important;
+  width: min(1180px,calc(100% - 40px)); margin: 0 auto 40px; padding: 0 !important;
+  background: transparent !important; backdrop-filter: none !important; display: block !important;
+}
+.ed-page[data-s24-section="team"] > .ed-team-overlay > .ed-team-modal,
+.ed-page[data-s24-section="chat"] > .ctc-overlay > .ctc-modal,
+.ed-page[data-s24-section="favorites"] > .ed-saved-overlay > div,
+.ed-page[data-s24-section="urgent"] > .ed-urgent-overlay > div,
+.ed-page[data-s24-section="plan"] > .ed-plan-overlay > div,
+.ed-page[data-s24-section="hire"] > .lt-employment-overlay > div {
+  width: 100% !important; max-width: none !important; max-height: none !important;
+  box-sizing: border-box; box-shadow: none !important;
+}
+
+.ed-page[data-s24-section="profile"] .ed-heading { display: none; }
+
+/* One coherent worker priority panel, with consistent status tiles. */
+.wd-page[data-s24-section="statistics"] .wd-overview-heading {
+  margin: 0 !important; padding: 20px 20px 14px !important; background: #fff;
+  border: 1px solid #e5eaf0; border-bottom: 0; border-radius: 16px 16px 0 0;
+  font-size: 11px !important; font-weight: 800; letter-spacing: .09em !important; color: #667788;
+}
+.wd-page[data-s24-section="statistics"] .wd-overview {
+  display: grid; grid-template-columns: repeat(5,minmax(0,1fr)) !important;
+  gap: 12px !important; padding: 0 20px 20px; margin: 0 0 24px !important;
+  background: #fff; border: 1px solid #e5eaf0; border-top: 0;
+  border-radius: 0 0 16px 16px; box-sizing: border-box; align-items: stretch;
+}
+.wd-page .wd-overview > .wd-overview-card {
+  grid-column: auto !important; min-height: 180px !important; min-width: 0;
+  display: flex; flex-direction: column; padding: 16px !important; box-sizing: border-box;
+  border: 1px solid #e9edf2; border-radius: 12px !important; background: #f8fafc;
+  box-shadow: none; border-top: 3px solid transparent;
+}
+.wd-page .wd-overview > .wd-overview-card.action { background: #fffaf5; border-color: #f4e5d6; border-top-color: #f08a28; }
+.wd-page .wd-overview > .wd-overview-card.danger { background: #fffaf8; border-color: #f0dfd9; border-top-color: #ce7358; }
+.wd-page .wd-overview > .wd-overview-card.live { background: #f6fbf8; border-color: #dfece4; border-top-color: #39956b; }
+.wd-page .wd-overview-card-top { align-items: flex-start; flex-wrap: wrap; gap: 6px !important; min-height: 56px !important; }
+.wd-page .wd-overview-card-top > span { color: #607180; font-size: 11px !important; line-height: 1.4 !important; letter-spacing: .02em !important; font-weight: 750; }
+.wd-page .wd-overview-card > b, .wd-page .wd-overview-card.next-work > b {
+  margin: 10px 0 6px !important; color: #102438; font-size: 26px !important;
+  line-height: 1.2 !important; font-weight: 800; letter-spacing: -.03em; overflow-wrap: anywhere;
+}
+.wd-page .wd-overview-card > small {
+  display: block !important; margin: auto 0 0 !important; font-size: 11px !important;
+  line-height: 1.5 !important; color: #738190; white-space: normal !important;
+  overflow: visible !important; -webkit-line-clamp: unset !important;
+}
+.wd-page .wd-overview-open { min-height: 25px; padding: 4px 7px !important; border: 0; border-radius: 6px !important; background: #fff0e2; color: #a75c1d; font-size: 10px !important; font-weight: 750; }
+.wd-page .wd-overview-open:focus-visible { outline: 2px solid #f08a28; outline-offset: 3px; }
+@media (max-width: 800px) {
+  .wd-page[data-s24-section="statistics"] .wd-overview-heading { padding: 18px 16px 12px !important; }
+  .wd-page[data-s24-section="statistics"] .wd-overview { grid-template-columns: 1fr !important; gap: 8px !important; padding: 0 16px 16px; }
+  .wd-page .wd-overview > .wd-overview-card {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "label value" "help value";
+    align-items: center; gap: 5px 16px; min-height: 90px !important; padding: 14px 16px !important;
+    border-top: 1px solid #e9edf2; border-left: 3px solid transparent;
+  }
+  .wd-page .wd-overview > .wd-overview-card.action { border-top-color: #f4e5d6; border-left-color: #f08a28; }
+  .wd-page .wd-overview > .wd-overview-card.danger { border-top-color: #f0dfd9; border-left-color: #ce7358; }
+  .wd-page .wd-overview > .wd-overview-card.live { border-top-color: #dfece4; border-left-color: #39956b; }
+  .wd-page .wd-overview-card-top { grid-area: label; min-height: 0 !important; align-items: center; }
+  .wd-page .wd-overview-card > b, .wd-page .wd-overview-card.next-work > b { grid-area: value; max-width: 160px; text-align: right; margin: 0 !important; font-size: 24px !important; }
+  .wd-page .wd-overview-card > small { grid-area: help; margin: 0 !important; }
+}
+@media (max-width: 420px) {
+  .wd-page .wd-overview-card.next-work > b { max-width: 112px; font-size: 18px !important; }
+  .wd-page .wd-overview-card-top { gap: 4px !important; }
+}
