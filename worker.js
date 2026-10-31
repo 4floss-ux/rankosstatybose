@@ -272,7 +272,15 @@ async function adminLogin(request, env) {
     body: "{}",
   }).catch(() => null);
   const isAdmin = check && check.ok ? (await check.json().catch(() => false)) === true : false;
-  if (!isAdmin) return fail();
+  // Testuotojai: tik Cloudflare kintamajame MAINTENANCE_TESTERS išvardyti el. paštai (pvz. testinės paskyros).
+  // Slaptažodį vis tiek patikrina Supabase, el. paštas imamas iš Supabase atsakymo, ne iš formos.
+  const testers = String(env?.MAINTENANCE_TESTERS || "")
+    .split(/[\s,;]+/)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const sessionEmail = String(session.user.email || "").trim().toLowerCase();
+  const isTester = Boolean(sessionEmail) && testers.includes(sessionEmail);
+  if (!isAdmin && !isTester) return fail();
 
   loginAttempts.delete(ip);
   const exp = Math.floor(Date.now() / 1000) + BYPASS_SECONDS;
