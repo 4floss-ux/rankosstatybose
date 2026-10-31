@@ -214,7 +214,7 @@ function maintenanceResponse(env, url, error = "") {
       "retry-after": "900",
       "x-robots-tag": "noindex, nofollow",
       "x-frame-options": "DENY",
-      "referrer-policy": "no-referrer",
+      "referrer-policy": "same-origin",
       "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     },
   });
@@ -228,8 +228,14 @@ function redirect(location, cookie) {
 
 async function adminLogin(request, env) {
   if (request.method !== "POST") return redirect("/");
+  // Tik iš tos pačios svetainės (naršyklė siunčia Sec-Fetch-Site; „Origin: null“ nebeišmeta klaidos)
+  const site = request.headers.get("sec-fetch-site");
   const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) return new Response("Forbidden", { status: 403 });
+  let sameOrigin = site ? site === "same-origin" : true;
+  if (!site && origin && origin !== "null") {
+    try { sameOrigin = new URL(origin).host === new URL(request.url).host; } catch { sameOrigin = false; }
+  }
+  if (!sameOrigin) return new Response("Forbidden", { status: 403 });
 
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
   const now = Date.now();
@@ -276,7 +282,19 @@ async function adminLogin(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    try {
+      return await handle(request, env, ctx);
+    } catch (err) {
+      console.error("worker error", err);
+      // Klaidos atveju atnaujinimo metu vis tiek rodomas atnaujinimo puslapis, o ne Cloudflare klaida
+      if (maintenanceOn(env)) return maintenanceResponse(env, new URL(request.url), "failed");
+      throw err;
+    }
+  },
+};
+
+async function handle(request, env) {
     const url = new URL(request.url);
 
     // Atnaujinimo režimas – tikrinama prieš bet ką kita
@@ -307,5 +325,4 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
-  },
-};
+}
