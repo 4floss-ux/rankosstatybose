@@ -14,6 +14,11 @@ const ICONS = {
   x: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
   menu: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
+  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>',
+  team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 5.8"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  home: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/>',
   heart: '<path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z"/>',
   bell: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 21a2 2 0 0 0 4 0"/>',
@@ -37,6 +42,8 @@ export const appShellStyles = `
   .s24-side-top a{display:flex;align-items:center;min-height:40px}
   .s24-side-top img{height:30px;width:auto;display:block}
   .s24-side-close{display:none}
+  .s24-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:42px;border:0;border-radius:5px;background:#6b5b95;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .s24-cta:hover{background:#584a7d}
   .s24-nav{display:flex;flex-direction:column;gap:12px;overflow-y:auto;overflow-x:hidden;min-height:0;margin:0 -4px;padding:0 4px}
   .s24-glabel{padding:0 10px 4px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.6);white-space:nowrap}
   .s24-item{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:0 10px;border:0;border-radius:5px;background:transparent;color:rgba(255,255,255,.86);font:inherit;font-size:13px;font-weight:600;text-align:left;white-space:nowrap;cursor:pointer}
@@ -77,12 +84,13 @@ export const appShellStyles = `
     .s24-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border:0;border-radius:5px;background:transparent;color:rgba(255,255,255,.86);font:inherit;font-size:10.5px;font-weight:600;padding:0 2px;cursor:pointer}
     .s24-tab[aria-current="page"]{background:rgba(107,91,149,.28);color:#fff;font-weight:700}
     .s24-tab[aria-current="page"] svg{color:#b3a6dc}
+    .s24-tab.plus .s24-plus{width:52px;height:52px;margin-top:-26px;border-radius:999px;background:#6b5b95;color:#fff;border:4px solid var(--s24-navy);display:flex;align-items:center;justify-content:center}
     .s24-tab .s24-dot{position:absolute;top:6px;right:calc(50% - 17px);width:10px;height:10px;border-radius:999px;background:#9d86e0;border:2px solid var(--s24-navy)}
   }
   @media (min-width:900px){.s24-utility-right{display:flex;align-items:center;gap:8px}}
 `;
 
-export function AppShell({ groups, tabs, current, onGo, who, footer, utility, children }) {
+export function AppShell({ groups, tabs, current, onGo, who, footer, utility, cta, children }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return undefined;
@@ -102,6 +110,12 @@ export function AppShell({ groups, tabs, current, onGo, who, footer, utility, ch
           </a>
           <button type="button" className="s24-side-close" onClick={() => setOpen(false)} aria-label="Uždaryti meniu"><NavIcon name="x" size={18} /></button>
         </div>
+        {cta && (
+          <button type="button" className="s24-cta" onClick={() => { setOpen(false); cta.onClick(); }}>
+            <NavIcon name="plus" size={18} width={2.4} />
+            {cta.label}
+          </button>
+        )}
         <nav className="s24-nav" aria-label="Pagrindinis meniu">
           {groups.map(([label, items]) => (
             <div key={label}>
@@ -145,7 +159,11 @@ export function AppShell({ groups, tabs, current, onGo, who, footer, utility, ch
         {children}
       </div>
       <nav className="s24-tabbar" aria-label="Apatinis meniu" style={{ gridTemplateColumns: `repeat(${tabs.length + 1},minmax(0,1fr))` }}>
-        {tabs.map((tab) => (
+        {tabs.map((tab) => tab.plus ? (
+          <button key={tab.key} type="button" className="s24-tab plus" onClick={() => go(tab.key)} aria-label={tab.label}>
+            <span className="s24-plus"><NavIcon name="plus" size={24} width={2.6} /></span>
+          </button>
+        ) : (
           <button key={tab.key} type="button" className="s24-tab" aria-current={current === tab.key ? "page" : undefined} onClick={() => go(tab.key)}>
             {tab.badge ? <span className="s24-dot" /> : null}
             <NavIcon name={tab.icon} size={22} />

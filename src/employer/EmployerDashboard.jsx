@@ -15,6 +15,7 @@ import { MonthlyAwardMiniList, MonthlyAwardsPanel, monthlyAwardPreviousMonthISO 
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
+import { AppShell } from "../ui/appShell.jsx";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
@@ -30,6 +31,14 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerAwardsById, setWorkerAwardsById] = useState({});
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [employerView, setEmployerView] = useState(() => {
+    try {
+      const saved = window.sessionStorage.getItem("s24-employer-view");
+      return ["overview", "active", "ended"].includes(saved) ? saved : "overview";
+    } catch {
+      return "overview";
+    }
+  });
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [bugReportNotice, setBugReportNotice] = useState("");
@@ -748,6 +757,39 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     } finally {
       setTeamLoading(false);
     }
+  }
+
+  function goEmployerView(view) {
+    const actions = {
+      favorites: openSavedWorkerTeam,
+      urgent: openUrgentSearch,
+      longterm: () => openLongTermEmployment("hire"),
+      teamchat: openCompanyTeamChat,
+      team: openCompanyTeam,
+      plans: () => setShowPlans(true),
+    };
+    if (actions[view]) {
+      actions[view]();
+      return;
+    }
+    if (view === "new") {
+      openNewJobForm();
+      return;
+    }
+    if (view === "calendar") {
+      navigateEmployerCalendar(true);
+      return;
+    }
+    if (calendarVisible) navigateEmployerCalendar(false);
+    if (view === "company") {
+      setShowCompanyEditor(true);
+      setEmployerView("company");
+      return;
+    }
+    setShowCompanyEditor(false);
+    if (showJobForm) setShowJobForm(false);
+    setEmployerView(view);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   }
 
   async function openCompanyTeam() {
@@ -4309,6 +4351,26 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (member) => member.user_id === user.id
   );
 
+  useEffect(() => {
+    try { window.sessionStorage.setItem("s24-employer-view", employerView); } catch {}
+  }, [employerView]);
+  useEffect(() => {
+    if (showJobForm) setEmployerView("new");
+    else setEmployerView((current) => (current === "new" ? (currentJob ? "active" : "overview") : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showJobForm]);
+  useEffect(() => {
+    if (showCompanyEditor) setEmployerView("company");
+    else setEmployerView((current) => (current === "company" ? "overview" : current));
+  }, [showCompanyEditor]);
+  useEffect(() => {
+    if (currentJob?.id && !showJobForm) setEmployerView("active");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentJob?.id]);
+
+  const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
+  const employerShellView = calendarVisible ? "calendar" : employerView;
+
   const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
     ? ""
     : companyAvatarPreview || companyAvatarUrl(companyForm.avatarPath);
@@ -4317,16 +4379,54 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const employerPlanLocked = (flag, label) => (planSummary?.[flag] ? 0 : label);
   return (
+    <AppShell
+      current={employerShellView}
+      onGo={goEmployerView}
+      cta={{ label: "Naujas darbo pasiūlymas", onClick: () => goEmployerView("new") }}
+      groups={[
+        ["Darbai", [
+          { key: "overview", label: "Apžvalga", icon: "overview" },
+          { key: "active", label: "Aktyvūs darbai", icon: "jobs", badge: activeVisibleJobs.length },
+          { key: "ended", label: "Pasibaigę darbai", icon: "history" },
+          ...(calendarPreviewEnabled ? [{ key: "calendar", label: "Darbų kalendorius", icon: "cal", badge: calendarAllowed ? 0 : "Pro" }] : []),
+        ]],
+        ["Darbuotojai", [
+          { key: "favorites", label: "Mėgstami darbuotojai", icon: "heart", badge: planSummary?.can_saved_workers ? savedWorkers.length : "Business" },
+          { key: "urgent", label: "Skubiai!", icon: "bolt", badge: employerPlanLocked("can_team_management", "Pro") },
+          ...(companyMemberRole === "owner" ? [{ key: "longterm", label: "Įdarbinti darbuotoją", icon: "briefcase", badge: employerLongTermUnread }] : []),
+        ]],
+        ["Įmonė", [
+          { key: "teamchat", label: "Vadovų pokalbis", icon: "chat", badge: planSummary?.can_team_chat ? teamChatUnread : "Pro" },
+          { key: "team", label: "Komanda", icon: "team", badge: employerPlanLocked("can_team_management", "Pro") },
+          ...(planSummary ? [{ key: "plans", label: "Planai", icon: "card", badge: planSummary.plan_name || 0 }] : []),
+          ...(company ? [{ key: "company", label: "Įmonės profilis", icon: "home" }] : []),
+        ]],
+      ]}
+      tabs={[
+        { key: "overview", label: "Apžvalga", icon: "overview" },
+        { key: "active", label: "Darbai", icon: "jobs", badge: activeVisibleJobs.length },
+        { key: "new", label: "Naujas darbo pasiūlymas", icon: "plus", plus: true },
+        { key: "ended", label: "Istorija", icon: "history" },
+      ]}
+      who={company ? { name: company.name || "Įmonė", sub: planSummary?.plan_name ? `Planas: ${planSummary.plan_name}` : "Darbdavys", initials: String(company.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl } : null}
+      footer={[
+        ...(onAdminReturn ? [{ key: "admin", label: "Grįžti į administravimą", icon: "back", onClick: onAdminReturn }] : []),
+        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
+      ]}
+      utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
+    >
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:100vh;background:#f6f8fa;color:#222631}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
-        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 0;display:grid;gap:20px;padding-bottom:70px}
+        .ed-shell{width:min(1240px,100%);margin:8px auto 0;display:grid;gap:20px;padding-bottom:40px}
+        @media(max-width:899px){.ed-shell{width:calc(100% - 32px)!important;margin-top:16px}}
         .ed-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
         .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;min-width:300px}
         .ed-heading-actions>button{width:100%}
@@ -4619,55 +4719,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
-      <header className="ed-topbar">
-        <div className="ed-topbar-inner">
-          <BrandLogo className="brand" href="#" height={46} />
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {company && planSummary && (
-              <button
-                className="ed-plan-badge"
-                type="button"
-                onClick={() => setShowPlans(true)}
-                title="Peržiūrėti planą"
-              >
-                Planas: <strong>{planSummary.plan_name}</strong>
-              </button>
-            )}
-
-            {company && (
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={() =>
-                  setShowCompanyEditor((current) => !current)
-                }
-              >
-                {showCompanyEditor ? "Uždaryti profilį" : "Profilis"}
-              </button>
-            )}
-
-            {onAdminReturn && (
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={onAdminReturn}
-              >
-                ← Administravimas
-              </button>
-            )}
-
-            {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
-
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
       {!onAdminReturn && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
 
-      <main className="ed-shell">
+      <main className="ed-shell" data-view={employerView}>
         {calendarVisible && <EmployerWorkCalendar
           jobs={canSeeAllCompanyJobs ? jobs : myEmployerJobs}
           currentUserId={user.id}
@@ -4701,6 +4756,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         {!onAdminReturn && jobs.length === 0 && (
           <section
+            data-wv="overview active"
             style={{
               marginBottom: 18,
               padding: 16,
@@ -4731,6 +4787,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           <section
             ref={companyEditorRef}
             id="employer-profile-editor"
+            data-wv="company"
             className="ed-company-editor"
             style={{ scrollMarginTop: 88 }}
           >
@@ -5039,7 +5096,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
-        <div className="ed-heading">
+        <div className="ed-heading" data-wv="overview">
           <div>
             <div className="eyebrow">DARBDAVIO PASKYRA</div>
             <h1>Sukurkite darbuotojų kvietimą</h1>
@@ -5150,6 +5207,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         <section
           className="ed-card"
           id="employer-job-form"
+          data-wv="new"
         >
           <h2>
             {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
@@ -5561,7 +5619,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="ed-stats-section">
+        <section className="ed-stats-section" data-wv="overview">
           <div className="ed-stats-head">
             <button
               className={`ed-stats-toggle ${showEmployerStats ? "open" : ""}`}
@@ -5681,6 +5739,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           <section
             className="ed-card"
             id="employer-open-job"
+            data-wv="active"
             style={{ scrollMarginTop: 96 }}
           >
             <div className="ed-current-job-overview">
@@ -6563,7 +6622,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        <section className="ed-card ed-active-jobs-section">
+        <section className="ed-card ed-active-jobs-section" data-wv="active overview">
           <div
             style={{
               display: "flex",
@@ -6874,7 +6933,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
         </section>
 
-        <section className="ed-card">
+        <section className="ed-card" data-wv="ended">
           <div>
             <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
           </div>
@@ -9814,5 +9873,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
+    </AppShell>
   );
 }
