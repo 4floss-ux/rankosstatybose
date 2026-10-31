@@ -226,7 +226,7 @@ export function PhoneVerificationFields({ verification: v }) {
   const canRequest = !v.checkingNumber && !v.availabilityError && !v.busy && v.retrySeconds === 0 && (!signup || Boolean(v.captchaToken));
   return (
     <div style={style}>
-      <b style={{ color: "#142f46", fontSize: 15 }}>{v.challenge
+      <b style={{ color: "#252935", fontSize: 15 }}>{v.challenge
         ? signup ? "Registracijai patvirtinti įveskite kodą" : "Telefono numeriui patvirtinti įveskite kodą"
         : signup ? "Registracijos patvirtinimas" : "Naujo telefono numerio patvirtinimas"}</b>
       <p style={{ margin: "5px 0 12px", color: "#526374" }}>{v.challenge
@@ -234,7 +234,7 @@ export function PhoneVerificationFields({ verification: v }) {
         : "Į jūsų telefoną atsiųsime 6 skaitmenų patvirtinimo kodą."}</p>
       {v.challenge ? <>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "end" }}>
-        <label style={{ flex: "1 1 150px", minWidth: 0, color: "#142f46", fontSize: 13 }}>Patvirtinimo kodas
+        <label style={{ flex: "1 1 150px", minWidth: 0, color: "#252935", fontSize: 13 }}>Patvirtinimo kodas
           <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
             aria-label="6 skaitmenų SMS kodas" placeholder="000000" value={v.code} disabled={v.busy} autoFocus
             onChange={(event) => v.setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}

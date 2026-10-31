@@ -1080,7 +1080,7 @@ export const mobileResponsiveFixStyles = `
       border-radius: 999px !important;
       border: 1px solid #d9e3ea !important;
       background: #fff !important;
-      color: #102438 !important;
+      color: #222631 !important;
       font-size: 12px !important;
       font-weight: 800 !important;
       cursor: pointer !important;
@@ -1588,7 +1588,7 @@ export const mobileResponsiveFixStyles = `
       border-radius: 12px !important;
       border: 1px solid #d7e1e8 !important;
       background: #fff !important;
-      color: #102438 !important;
+      color: #222631 !important;
       font-size: 20px !important;
       font-weight: 800 !important;
       line-height: 1 !important;
@@ -2390,7 +2390,7 @@ export const mobileResponsiveFixStyles = `
     .ed-active-carousel-nav b,
     .wd-availability-carousel-nav b {
       display: block !important;
-      color: #102438 !important;
+      color: #222631 !important;
       font-size: 11.5px !important;
       line-height: 1.25 !important;
     }
@@ -2412,7 +2412,7 @@ export const mobileResponsiveFixStyles = `
       border: 1px solid #d7e1e8 !important;
       border-radius: 10px !important;
       background: #fff !important;
-      color: #102438 !important;
+      color: #222631 !important;
       font-size: 20px !important;
       line-height: 1 !important;
       font-weight: 900 !important;

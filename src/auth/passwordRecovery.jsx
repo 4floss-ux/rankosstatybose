@@ -162,7 +162,7 @@ export function PasswordRecoveryPage({ user, checking, authorized, error, onDone
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center",
       padding: 20, background: "#f3f6f8" }}>
       <section aria-labelledby="password-recovery-title" style={{ width: "min(480px, 100%)",
-        padding: 28, borderRadius: 20, background: "#fff", boxShadow: "0 16px 60px rgba(16,36,56,.12)" }}>
+        padding: 28, borderRadius: 20, background: "#fff", boxShadow: "0 16px 60px rgba(34,38,49,.12)" }}>
         <div className="eyebrow">SLAPTAŽODŽIO ATKŪRIMAS</div>
         <h1 id="password-recovery-title" style={{ fontSize: 28, margin: "8px 0 18px" }}>
           {completed ? "Slaptažodis pakeistas" : "Nustatykite naują slaptažodį"}

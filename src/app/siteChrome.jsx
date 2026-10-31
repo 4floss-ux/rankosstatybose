@@ -346,7 +346,7 @@ export function BackToTopButton() {
         borderRadius: "50%",
         background: "rgba(255,255,255,.94)",
         color: "#526374",
-        boxShadow: "0 6px 20px rgba(16,36,56,.12)",
+        boxShadow: "0 6px 20px rgba(34,38,49,.12)",
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
@@ -378,7 +378,7 @@ export function FatalAppError() {
         placeItems: "center",
         padding: 24,
         background: "#f4f7f9",
-        color: "#102438",
+        color: "#222631",
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
@@ -405,7 +405,7 @@ export function FatalAppError() {
             border: 0,
             borderRadius: 10,
             background: "#f0b429",
-            color: "#102438",
+            color: "#222631",
             fontWeight: 800,
             cursor: "pointer",
           }}

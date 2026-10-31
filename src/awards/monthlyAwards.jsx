@@ -97,7 +97,7 @@ export function activeMonthlyAwards(awards) {
 export const MONTHLY_AWARD_TOOLTIP_STYLES = `
   .monthly-award-hover{position:relative;display:inline-grid;place-items:center;flex:0 0 auto;border-radius:999px;outline:none;cursor:help}
   .monthly-award-hover>img{display:block;object-fit:contain;border-radius:999px;transition:transform .15s ease,filter .15s ease}
-  .monthly-award-hover:hover>img,.monthly-award-hover:focus-visible>img{transform:translateY(-1px);filter:drop-shadow(0 5px 9px rgba(16,36,56,.16))}
+  .monthly-award-hover:hover>img,.monthly-award-hover:focus-visible>img{transform:translateY(-1px);filter:drop-shadow(0 5px 9px rgba(34,38,49,.16))}
 `;
 
 export function monthlyAwardAriaText(award) {
@@ -189,8 +189,8 @@ export function MonthlyAwardTopBadge({ awards, size = 31, tooltipLimit = 6 }) {
               border: "1px solid #ead3a2",
               borderRadius: 13,
               background: "#fffdf7",
-              boxShadow: "0 14px 32px rgba(16,36,56,.16)",
-              color: "#102438",
+              boxShadow: "0 14px 32px rgba(34,38,49,.16)",
+              color: "#222631",
               fontSize: 11,
               lineHeight: 1.4,
               pointerEvents: "none",
@@ -210,7 +210,7 @@ export function MonthlyAwardTopBadge({ awards, size = 31, tooltipLimit = 6 }) {
                     borderTop: index ? "1px solid #f0e5cf" : 0,
                   }}
                 >
-                  <strong style={{ display: "block", color: "#9f5d0b", fontSize: 11.5 }}>
+                  <strong style={{ display: "block", color: "#433960", fontSize: 11.5 }}>
                     {meta.title}
                   </strong>
                   <span style={{ display: "block", color: "#6c7a88", marginTop: 2 }}>
@@ -330,11 +330,11 @@ export function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false })
                       flexWrap: "wrap",
                     }}
                   >
-                    <b style={{ color: "#102438", fontSize: 12.5, lineHeight: 1.3 }}>
+                    <b style={{ color: "#222631", fontSize: 12.5, lineHeight: 1.3 }}>
                       {meta.title}
                     </b>
                     {isActive && (
-                      <span style={{ color: "#9f5d0b", fontSize: 9.5, fontWeight: 900, letterSpacing: ".04em" }}>
+                      <span style={{ color: "#433960", fontSize: 9.5, fontWeight: 900, letterSpacing: ".04em" }}>
                         AKTYVUS
                       </span>
                     )}
@@ -358,7 +358,7 @@ export function MonthlyAwardsPanel({ awards, recipientType, showEmpty = false })
             background: "#f8fafb",
           }}
         >
-          <b style={{ display: "block", color: "#102438", marginBottom: 5 }}>
+          <b style={{ display: "block", color: "#222631", marginBottom: 5 }}>
             TOP pasiekimų dar nėra
           </b>
           <span>
