@@ -14,7 +14,7 @@ export function SuspendedAccount({
         display: "grid",
         placeItems: "center",
         padding: 20,
-        color: "#102438",
+        color: "#222631",
       }}
     >
       <div
@@ -24,7 +24,7 @@ export function SuspendedAccount({
           border: "1px solid #e4ebf0",
           borderRadius: 18,
           padding: 26,
-          boxShadow: "0 18px 55px rgba(16,36,56,.10)",
+          boxShadow: "0 18px 55px rgba(34,38,49,.10)",
         }}
       >
         <div className="eyebrow">
@@ -62,8 +62,8 @@ export function SuspendedAccount({
               marginTop: 14,
               padding: 13,
               borderRadius: 10,
-              background: "#fff3e7",
-              color: "#8a531d",
+              background: "#f1eef8",
+              color: "#433960",
               lineHeight: 1.5,
             }}
           >

@@ -24,24 +24,24 @@ export function AdminSetupModal({
       }}
     >
       <style>{`
-        .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px}
-        .admin-setup-card{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:24px;color:#102438}
+        .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px}
+        .admin-setup-card{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(34,38,49,.30);padding:24px;color:#222631}
         .admin-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
         .admin-setup-head h2{font-family:Manrope,Inter,sans-serif;margin:4px 0 0;font-size:25px}
         .admin-setup-head p{margin:7px 0 0;color:#6c7a88;line-height:1.5;max-width:620px}
-        .admin-setup-close{border:0;background:#f1f4f6;color:#102438;border-radius:9px;width:38px;height:38px;font:inherit;font-size:20px;cursor:pointer}
+        .admin-setup-close{border:0;background:#f1f4f6;color:#222631;border-radius:9px;width:38px;height:38px;font:inherit;font-size:20px;cursor:pointer}
         .admin-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
         .admin-setup-wide{grid-column:1/-1}
         .admin-setup-label{display:grid;gap:6px;font-size:13px;font-weight:800;color:#526374}
-        .admin-setup-input{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:11px 12px;font:inherit;color:#102438;background:#fff;outline:none}
-        .admin-setup-input:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
+        .admin-setup-input{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:11px 12px;font:inherit;color:#222631;background:#fff;outline:none}
+        .admin-setup-input:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
         .admin-setup-textarea{min-height:105px;resize:vertical}
-        .admin-setup-check{display:flex;align-items:center;gap:9px;min-height:44px;color:#102438;font-size:13px;font-weight:800}
+        .admin-setup-check{display:flex;align-items:center;gap:9px;min-height:44px;color:#222631;font-size:13px;font-weight:800}
         .admin-setup-error{margin-bottom:14px;border-radius:10px;padding:11px 12px;background:#fff0ec;color:#b64d2a;font-size:13px;font-weight:700}
         .admin-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
         .admin-setup-cancel,.admin-setup-save{border-radius:10px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer}
-        .admin-setup-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438}
-        .admin-setup-save{border:0;background:#f08a28;color:#fff}
+        .admin-setup-cancel{border:1px solid #dbe4ea;background:#fff;color:#222631}
+        .admin-setup-save{border:0;background:#6b5b95;color:#fff}
         .admin-setup-save:disabled,.admin-setup-cancel:disabled{opacity:.55;cursor:wait}
         @media(max-width:620px){.admin-setup-grid{grid-template-columns:1fr}.admin-setup-wide{grid-column:auto}.admin-setup-card{padding:18px}}
       `}</style>
@@ -615,19 +615,19 @@ export function AdminJobChatModal({ job, user, onClose }) {
       }}
     >
       <style>{`
-        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.30);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
+        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .admin-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(34,38,49,.30);padding:22px;color:#222631;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
         .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
         .admin-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
-        .admin-chat-info.cancelled{background:#fff3e7;color:#8a531d}.admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow-y:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
-        .admin-chat-message{max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(16,36,56,.04)}
-        .admin-chat-message.mine{margin-left:auto;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}.admin-chat-message.admin-other{background:#eef3f8;border-color:#d7e4ef}
+        .admin-chat-info.cancelled{background:#f1eef8;color:#433960}.admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow-y:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
+        .admin-chat-message{max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(34,38,49,.04)}
+        .admin-chat-message.mine{margin-left:auto;background:#f5f3fa;border-color:#c9c2de;border-radius:14px 14px 5px 14px}.admin-chat-message.admin-other{background:#eef3f8;border-color:#d7e4ef}
         .admin-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}.admin-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
         .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}.admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
         .admin-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-        .admin-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
-        .admin-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-chat-form button:disabled{opacity:.55;cursor:wait}
+        .admin-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#222631;outline:none}.admin-chat-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
+        .admin-chat-form button{border:0;background:#6b5b95;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-chat-form button:disabled{opacity:.55;cursor:wait}
         @media(max-width:560px){.admin-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:92%}}
       `}</style>
 
@@ -843,19 +843,19 @@ export function AdminCompanyTeamChatModal({ chat, user, onClose }) {
       }}
     >
       <style>{`
-        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(16,36,56,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(16,36,56,.3);padding:22px;color:#102438;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
+        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(34,38,49,.3);padding:22px;color:#222631;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
         .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
         .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
         .admin-team-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
         .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
         .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
-        .admin-team-chat-message{width:fit-content;max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(16,36,56,.04)}
-        .admin-team-chat-message.mine{justify-self:end;background:#fff6ee;border-color:#f3d4b7;border-radius:14px 14px 5px 14px}.admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+        .admin-team-chat-message{width:fit-content;max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(34,38,49,.04)}
+        .admin-team-chat-message.mine{justify-self:end;background:#f5f3fa;border-color:#c9c2de;border-radius:14px 14px 5px 14px}.admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
         .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-team-chat-role{font-weight:600;color:#7a8996}.admin-team-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
         .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}.admin-team-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-        .admin-team-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#102438;outline:none}.admin-team-chat-form textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.12)}
-        .admin-team-chat-form button{border:0;background:#f08a28;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
+        .admin-team-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#222631;outline:none}.admin-team-chat-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
+        .admin-team-chat-form button{border:0;background:#6b5b95;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
         @media(max-width:560px){.admin-team-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-team-chat-message{max-width:92%}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
       `}</style>
 
@@ -1052,11 +1052,11 @@ export function AdminPrivateInboxButton({ user }) {
           gap:12px !important;
           padding:18px 16px !important;
           margin:0 !important;
-          border:1px solid #efd3b7;
+          border:1px solid #c7bfdd;
           border-radius:16px;
           background:#fff;
-          box-shadow:0 18px 54px rgba(16,36,56,.22);
-          color:#102438;
+          box-shadow:0 18px 54px rgba(34,38,49,.22);
+          color:#222631;
           text-align:center
         }
         .apm-notice-title{
@@ -1069,7 +1069,7 @@ export function AdminPrivateInboxButton({ user }) {
           cursor:pointer;
           padding:10px 18px;
           border-radius:10px;
-          background:#102438;
+          background:#222631;
           color:#fff;
           font-size:12px;
           font-weight:850
@@ -1082,7 +1082,7 @@ export function AdminPrivateInboxButton({ user }) {
           display:grid;
           place-items:center;
           padding:18px;
-          background:rgba(16,36,56,.52);
+          background:rgba(34,38,49,.52);
           backdrop-filter:blur(2px)
         }
         .apm-message-card{
@@ -1095,7 +1095,7 @@ export function AdminPrivateInboxButton({ user }) {
           border:1px solid #e2e9ee;
           border-radius:18px;
           padding:22px 58px 22px 22px;
-          box-shadow:0 28px 90px rgba(16,36,56,.28);
+          box-shadow:0 28px 90px rgba(34,38,49,.28);
           scrollbar-width:none
         }
         .apm-message-card::-webkit-scrollbar{width:0;height:0}
@@ -1118,7 +1118,7 @@ export function AdminPrivateInboxButton({ user }) {
           border:0;
           border-radius:10px;
           background:#f2f5f7;
-          color:#102438;
+          color:#222631;
           cursor:pointer
         }
         @media(max-width:620px){
@@ -1333,9 +1333,9 @@ export function AdminPrivateMessageComposer({ target, onClose, onSent }) {
             disabled={sending || !body.trim()}
             onClick={sendMessage}
             style={{
-              background: "#102438",
+              background: "#222631",
               color: "#fff",
-              borderColor: "#102438",
+              borderColor: "#222631",
               minWidth: 120,
             }}
           >

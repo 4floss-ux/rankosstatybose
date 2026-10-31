@@ -11,10 +11,10 @@ export function ChatConductNotice() {
         gap: 9,
         padding: "9px 11px",
         marginBottom: 12,
-        border: "1px solid #f2d3b8",
+        border: "1px solid #c9c2de",
         borderRadius: 12,
         background: "#fff8f1",
-        color: "#8a531d",
+        color: "#433960",
         fontSize: 12,
         lineHeight: 1.45,
       }}
@@ -28,7 +28,7 @@ export function ChatConductNotice() {
           display: "grid",
           placeItems: "center",
           flex: "0 0 22px",
-          background: "#f08a28",
+          background: "#6b5b95",
           color: "#fff",
           fontWeight: 900,
           fontSize: 13,
@@ -116,7 +116,7 @@ export function StyledConfirmDialog({ dialog, onResolve }) {
         display: "grid",
         placeItems: "center",
         padding: 20,
-        background: "rgba(16,36,56,.62)",
+        background: "rgba(34,38,49,.62)",
       }}
     >
       <section
@@ -128,8 +128,8 @@ export function StyledConfirmDialog({ dialog, onResolve }) {
           background: "#fff",
           borderRadius: 18,
           padding: 22,
-          color: "#102438",
-          boxShadow: "0 26px 80px rgba(16,36,56,.25)",
+          color: "#222631",
+          boxShadow: "0 26px 80px rgba(34,38,49,.25)",
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
@@ -145,7 +145,7 @@ export function StyledConfirmDialog({ dialog, onResolve }) {
             onClick={() => onResolve(false)}
             style={{
               border: 0, background: "#f1f4f6", borderRadius: 10, width: 40, height: 40,
-              display: "grid", placeItems: "center", color: "#102438", flex: "0 0 auto",
+              display: "grid", placeItems: "center", color: "#222631", flex: "0 0 auto",
             }}
           >
             <CloseMark />
@@ -157,7 +157,7 @@ export function StyledConfirmDialog({ dialog, onResolve }) {
             <button
               type="button"
               onClick={() => onResolve(false)}
-              style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#102438", fontWeight: 800 }}
+              style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#222631", fontWeight: 800 }}
             >
               {dialog.cancelLabel || "Atšaukti"}
             </button>
@@ -165,7 +165,7 @@ export function StyledConfirmDialog({ dialog, onResolve }) {
           <button
             type="button"
             onClick={() => onResolve(true)}
-            style={{ minHeight: 42, padding: "9px 16px", border: 0, borderRadius: 10, background: dialog.danger ? "#b64d2a" : "#f08a28", color: "#fff", fontWeight: 850 }}
+            style={{ minHeight: 42, padding: "9px 16px", border: 0, borderRadius: 10, background: dialog.danger ? "#b64d2a" : "#6b5b95", color: "#fff", fontWeight: 850 }}
           >
             {dialog.confirmLabel || "Patvirtinti"}
           </button>
@@ -261,7 +261,7 @@ export function RoundedSelect({ value, options, disabled, onChange, className = 
         <span aria-hidden="true" style={{ marginLeft: 12 }}>⌄</span>
       </button>
       {open && !disabled && (
-        <div role="listbox" aria-label={ariaLabel} style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(16,36,56,.14)" }}>
+        <div role="listbox" aria-label={ariaLabel} style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(34,38,49,.14)" }}>
           {options.map((option) => (
             <button
               key={option.value}
@@ -276,7 +276,7 @@ export function RoundedSelect({ value, options, disabled, onChange, className = 
                 const next = buttons.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1);
                 buttons[(next + buttons.length) % buttons.length]?.focus();
               }}
-              style={{ display: "block", width: "100%", padding: "10px 12px", textAlign: "left", border: 0, borderRadius: 8, background: option.value === value ? "#fff1e5" : "#fff", color: "#102438", font: "inherit", cursor: "pointer" }}
+              style={{ display: "block", width: "100%", padding: "10px 12px", textAlign: "left", border: 0, borderRadius: 8, background: option.value === value ? "#f0edf7" : "#fff", color: "#222631", font: "inherit", cursor: "pointer" }}
             >
               {option.label}
             </button>
@@ -629,7 +629,7 @@ export function ArrivalTimeDialog({
         position: "fixed",
         inset: 0,
         zIndex: 14000,
-        background: "rgba(16,36,56,.68)",
+        background: "rgba(34,38,49,.68)",
         display: "grid",
         placeItems: "center",
         padding: 16,
@@ -644,11 +644,11 @@ export function ArrivalTimeDialog({
           background: "#fff",
           borderRadius: 18,
           padding: 22,
-          color: "#102438",
-          boxShadow: "0 24px 80px rgba(16,36,56,.28)",
+          color: "#222631",
+          boxShadow: "0 24px 80px rgba(34,38,49,.28)",
         }}
       >
-        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", color: "#b85f0e" }}>
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", color: "#453a63" }}>
           FAKTINIS ATVYKIMAS
         </div>
         <h2 style={{ margin: "6px 0 8px", font: "850 22px/1.25 Manrope,Inter,sans-serif" }}>
@@ -670,7 +670,7 @@ export function ArrivalTimeDialog({
             lineHeight: 1.5,
           }}
         >
-          {scheduledTime ? <>Numatyta darbo pradžia: <b style={{ color: "#102438" }}>{scheduledTime}</b>. </> : null}
+          {scheduledTime ? <>Numatyta darbo pradžia: <b style={{ color: "#222631" }}>{scheduledTime}</b>. </> : null}
           Atvykimo laikas negali būti ankstesnis už darbo pradžią ar vėlesnis nei dabar.
         </div>
         <label style={{ display: "grid", gap: 7, fontSize: 12, fontWeight: 850 }}>
@@ -690,7 +690,7 @@ export function ArrivalTimeDialog({
             style={{
               border: "1px solid #d7e0e6",
               background: "#fff",
-              color: "#102438",
+              color: "#222631",
               borderRadius: 10,
               padding: "10px 14px",
               font: "inherit",
@@ -706,7 +706,7 @@ export function ArrivalTimeDialog({
             onClick={onConfirm}
             style={{
               border: 0,
-              background: "#f08a28",
+              background: "#6b5b95",
               color: "#fff",
               borderRadius: 10,
               padding: "10px 15px",
@@ -732,25 +732,25 @@ export const unifiedCloseStyles = `
     display:inline-flex !important; align-items:center !important; justify-content:center !important;
     width:44px !important; height:44px !important; min-width:44px !important; flex:0 0 44px !important;
     padding:0 !important; border:0 !important; border-radius:12px !important;
-    background:#f1f4f6 !important; color:#102438 !important; cursor:pointer;
+    background:#f1f4f6 !important; color:#222631 !important; cursor:pointer;
     line-height:1 !important;
   }
   .unified-close-mark { display:block; width:20px; height:20px; pointer-events:none; }
   button.rs-close:focus-visible, button.ctc-close:focus-visible,
   button.wd-profile-editor-close:focus-visible, button.reliability-modal-close:focus-visible,
   button.admin-setup-close:focus-visible, button[aria-label^="Uždaryti"]:focus-visible {
-    outline:2px solid #f08a28; outline-offset:2px;
+    outline:2px solid #6b5b95; outline-offset:2px;
   }
   .wd-time-trigger{
     width:100%!important;min-width:0!important;min-height:46px!important;box-sizing:border-box!important;
     display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
     padding:11px 13px!important;border:1px solid #dbe4ea!important;border-radius:10px!important;
-    background:#fff!important;color:#102438!important;font:inherit!important;font-variant-numeric:tabular-nums!important;
+    background:#fff!important;color:#222631!important;font:inherit!important;font-variant-numeric:tabular-nums!important;
     text-align:left!important;cursor:pointer!important;box-shadow:none!important;
     transition:border-color .15s ease,box-shadow .15s ease,background .15s ease!important;
   }
   .wd-time-trigger:hover:not(:disabled){border-color:#c8d5dd!important;background:#fbfcfd!important}
-  .wd-time-trigger:focus-visible{outline:none!important;border-color:#f08a28!important;box-shadow:0 0 0 3px rgba(240,138,40,.11)!important}
+  .wd-time-trigger:focus-visible{outline:none!important;border-color:#6b5b95!important;box-shadow:0 0 0 3px rgba(107,91,149,.11)!important}
   .wd-time-trigger>span:first-child{font-weight:750!important}
   .wd-time-trigger>span:last-child{display:grid!important;place-items:center!important;width:22px!important;height:22px!important;flex:0 0 22px!important;color:#607180!important;font-size:17px!important;line-height:1!important}
   .wd-time-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;border-color:#e2e8ec!important;cursor:not-allowed!important}
@@ -758,7 +758,7 @@ export const unifiedCloseStyles = `
     position:absolute!important;top:calc(100% + 7px)!important;z-index:9600!important;
     width:min(350px,calc(100vw - 40px))!important;display:grid!important;grid-template-columns:1fr!important;
     gap:12px!important;padding:12px!important;background:#fff!important;border:1px solid #dfe7ed!important;
-    border-radius:14px!important;box-shadow:0 16px 40px rgba(16,36,56,.16)!important;box-sizing:border-box!important;
+    border-radius:14px!important;box-shadow:0 16px 40px rgba(34,38,49,.16)!important;box-sizing:border-box!important;
     max-height:none!important;overflow:visible!important;
   }
   .wd-time-compact-section{min-width:0!important}
@@ -770,8 +770,8 @@ export const unifiedCloseStyles = `
     font-weight:750!important;font-variant-numeric:tabular-nums!important;text-align:center!important;cursor:pointer!important;
     transition:background .12s ease,border-color .12s ease,color .12s ease,transform .12s ease!important;
   }
-  .wd-time-compact-grid button:hover:not(:disabled){background:#fff5ec!important;border-color:#efc59e!important;color:#9c5417!important}
-  .wd-time-compact-grid button.selected{background:#f08a28!important;border-color:#f08a28!important;color:#fff!important;font-weight:900!important;box-shadow:0 3px 8px rgba(240,138,40,.18)!important}
+  .wd-time-compact-grid button:hover:not(:disabled){background:#f4f2f9!important;border-color:#b9afd4!important;color:#433960!important}
+  .wd-time-compact-grid button.selected{background:#6b5b95!important;border-color:#6b5b95!important;color:#fff!important;font-weight:900!important;box-shadow:0 3px 8px rgba(107,91,149,.18)!important}
   .wd-time-compact-grid button:active:not(:disabled){transform:translateY(1px)!important}
   .wd-time-compact-grid button:disabled{opacity:.3!important;cursor:not-allowed!important;background:#f5f7f8!important;color:#95a1ab!important;border-color:#edf1f3!important}
   @media (max-width:520px){
@@ -788,13 +788,13 @@ export const unifiedCloseStyles = `
       padding:14px!important;gap:12px!important;
       border-radius:18px!important;
       border:1px solid #dfe7ed!important;
-      box-shadow:0 -10px 34px rgba(16,36,56,.18),0 0 0 100vmax rgba(16,36,56,.16)!important;
+      box-shadow:0 -10px 34px rgba(34,38,49,.18),0 0 0 100vmax rgba(34,38,49,.16)!important;
       overscroll-behavior:contain!important;
     }
     .wd-time-compact-grid{gap:6px!important}
     .wd-time-compact-grid button{min-height:42px!important;padding:8px 2px!important;font-size:12.5px!important;border-radius:10px!important}
     .wd-time-compact-section>b{margin-bottom:8px!important;font-size:11px!important}
   }
-  .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(16,36,56,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#102438;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#102438;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#fff1e5;color:#9c5417}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#102438;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#fff1e5;color:#9c5417}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #efb07a;color:#a85a18}.wd-date-grid button.selected{background:#f08a28;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#9c5417;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#fff1e5}
+  .wd-date-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;min-height:44px;text-align:left!important;cursor:pointer}.wd-date-trigger:disabled{background:#f4f6f8!important;color:#a0aab3!important;cursor:not-allowed}.wd-date-icon{font-size:18px;line-height:1;color:#607180}.wd-date-popover{position:absolute;top:calc(100% + 6px);z-index:9600;width:min(320px,calc(100vw - 48px));padding:12px;background:#fff;border:1px solid #dfe7ed;border-radius:14px;box-shadow:0 14px 35px rgba(34,38,49,.16)}.wd-date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:0 2px}.wd-date-head>b{text-transform:capitalize;color:#222631;font-size:14px}.wd-date-nav{display:flex;gap:5px}.wd-date-nav button{width:34px;height:34px;border:0;border-radius:9px;background:#f4f6f8;color:#222631;font:inherit;font-size:24px;line-height:1;cursor:pointer}.wd-date-nav button:hover{background:#f0edf7;color:#433960}.wd-date-weekdays,.wd-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.wd-date-weekdays{margin-bottom:4px}.wd-date-weekdays span{display:grid;place-items:center;height:26px;color:#7a8895;font-size:11px;font-weight:800}.wd-date-grid button{aspect-ratio:1;border:0;border-radius:9px;background:#fff;color:#222631;font:inherit;font-size:12px;cursor:pointer}.wd-date-grid button:hover{background:#f0edf7;color:#433960}.wd-date-grid button.outside{color:#a7b1ba}.wd-date-grid button.today{box-shadow:inset 0 0 0 1px #a498c7;color:#433960}.wd-date-grid button.selected{background:#6b5b95;color:#fff;font-weight:800;box-shadow:none}.wd-date-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}.wd-date-actions button{border:0;background:transparent;color:#433960;padding:7px 8px;border-radius:8px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wd-date-actions button:hover{background:#f0edf7}
 
 `;

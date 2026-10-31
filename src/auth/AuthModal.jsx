@@ -244,7 +244,7 @@ export function AuthModal({
   const overlay = {
     position: "fixed",
     inset: 0,
-    background: "rgba(16,36,56,.58)",
+    background: "rgba(34,38,49,.58)",
     zIndex: 1000,
     display: "grid",
     placeItems: "center",
@@ -257,7 +257,7 @@ export function AuthModal({
     overflow: "hidden",
     background: "#fff",
     borderRadius: 20,
-    boxShadow: "0 24px 80px rgba(16,36,56,.24)",
+    boxShadow: "0 24px 80px rgba(34,38,49,.24)",
     padding: 0,
   };
 
@@ -279,8 +279,8 @@ export function AuthModal({
     border: "1px solid #dfe7ed",
     borderRadius: 10,
     padding: "11px 12px",
-    background: active ? "#102438" : "#fff",
-    color: active ? "#fff" : "#102438",
+    background: active ? "#222631" : "#fff",
+    color: active ? "#fff" : "#222631",
     fontWeight: 700,
     cursor: "pointer",
   });
@@ -349,7 +349,7 @@ export function AuthModal({
 
         {mode === "signup" && success ? (
           <div style={{ display: "grid", gap: 16 }}>
-            <div role="status" style={{ padding: 18, borderRadius: 14, background: "#edf8f3", color: "#102438" }}>
+            <div role="status" style={{ padding: 18, borderRadius: 14, background: "#edf8f3", color: "#222631" }}>
               <h3 style={{ margin: "0 0 8px", fontSize: 19 }}>Paskyra sukurta!</h3>
               <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>
                 SMS kodas patvirtintas. Patvirtinkite ir el. paštą paspausdami nuorodą iš laiško.
@@ -420,7 +420,7 @@ export function AuthModal({
               {role === "employer" && !teamInvite && (
                 <>
                   <div style={{ display: "grid", gap: 7 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#102438" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#222631" }}>
                       Darbdavio tipas
                     </span>
                     <div
@@ -454,14 +454,14 @@ export function AuthModal({
                             border: 0,
                             borderRadius: 9,
                             background: form.employerType === value ? "#fff" : "transparent",
-                            color: "#102438",
+                            color: "#222631",
                             font: "inherit",
                             fontSize: 13,
                             fontWeight: 800,
                             cursor: "pointer",
                             boxShadow:
                               form.employerType === value
-                                ? "0 1px 5px rgba(16,36,56,.10)"
+                                ? "0 1px 5px rgba(34,38,49,.10)"
                                 : "none",
                           }}
                         >
@@ -543,7 +543,7 @@ export function AuthModal({
                 </label>
               )}
 
-              {role === "worker" && <fieldset style={{border:"1px solid #dfe7ed",borderRadius:12,padding:14,margin:0}}><legend style={{fontSize:13,fontWeight:800,color:"#102438"}}>Ar domina darbas užsienyje? *</legend><div style={{display:"flex",gap:18,flexWrap:"wrap"}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,cursor:"pointer"}}><input type="radio" name="signup-work-abroad" value={value} checked={form.workAbroadChoice===value} onChange={()=>setForm(current=>({...current,workAbroadChoice:value}))} required disabled={loading}/>{label}</label>)}</div></fieldset>}
+              {role === "worker" && <fieldset style={{border:"1px solid #dfe7ed",borderRadius:12,padding:14,margin:0}}><legend style={{fontSize:13,fontWeight:800,color:"#222631"}}>Ar domina darbas užsienyje? *</legend><div style={{display:"flex",gap:18,flexWrap:"wrap"}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,cursor:"pointer"}}><input type="radio" name="signup-work-abroad" value={value} checked={form.workAbroadChoice===value} onChange={()=>setForm(current=>({...current,workAbroadChoice:value}))} required disabled={loading}/>{label}</label>)}</div></fieldset>}
 
               <div style={twoColumns}>
                 <label style={labelStyle}>
@@ -630,7 +630,7 @@ export function AuthModal({
                 setMessage("");
                 setSuccess(false);
               }}
-              style={{ border: 0, padding: 0, background: "none", color: "#b85f0e",
+              style={{ border: 0, padding: 0, background: "none", color: "#453a63",
                 font: "inherit", fontSize: 13, lineHeight: 1.2, fontWeight: 750,
                 cursor: "pointer", textAlign: "right" }}>
               Pamiršau slaptažodį
@@ -644,14 +644,14 @@ export function AuthModal({
                 checked={termsAccepted}
                 onChange={(event) => setTermsAccepted(event.target.checked)}
                 required
-                style={{ marginTop: 3, accentColor: "#f08a28", width: 17, height: 17, flexShrink: 0 }}
+                style={{ marginTop: 3, accentColor: "#6b5b95", width: 17, height: 17, flexShrink: 0 }}
               />
               <span>
                 Susipažinau ir sutinku su{" "}
-                <a href="/naudojimosi-salygos" target="_blank" rel="noopener noreferrer" style={{ color: "#b85f0e", fontWeight: 800, textDecoration: "underline" }}>
+                <a href="/naudojimosi-salygos" target="_blank" rel="noopener noreferrer" style={{ color: "#453a63", fontWeight: 800, textDecoration: "underline" }}>
                   naudojimosi sąlygomis
                 </a>{" "}ir susipažinau su{" "}
-                <a href="/privatumo-politika" target="_blank" rel="noopener noreferrer" style={{ color: "#b85f0e", fontWeight: 800, textDecoration: "underline" }}>
+                <a href="/privatumo-politika" target="_blank" rel="noopener noreferrer" style={{ color: "#453a63", fontWeight: 800, textDecoration: "underline" }}>
                   privatumo politika
                 </a>.
               </span>
@@ -665,7 +665,7 @@ export function AuthModal({
                 padding: "11px 12px",
                 borderRadius: 10,
                 background: success ? "#edf8f3" : "#fff3ed",
-                color: "#102438",
+                color: "#222631",
                 fontSize: 14,
                 lineHeight: 1.45,
               }}

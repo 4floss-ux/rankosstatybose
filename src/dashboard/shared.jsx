@@ -18,7 +18,7 @@ export const RELIABILITY_MODAL_STYLES = `
     display:grid;
     place-items:center;
     padding:24px;
-    background:rgba(16,36,56,.62);
+    background:rgba(34,38,49,.62);
     backdrop-filter:blur(2px);
     font-family:Inter,sans-serif;
   }
@@ -27,11 +27,11 @@ export const RELIABILITY_MODAL_STYLES = `
     max-height:calc(100dvh - 48px);
     overflow:hidden;
     background:#fff;
-    border:1px solid rgba(16,36,56,.08);
+    border:1px solid rgba(34,38,49,.08);
     border-radius:20px;
-    box-shadow:0 28px 90px rgba(16,36,56,.28);
+    box-shadow:0 28px 90px rgba(34,38,49,.28);
     padding:0;
-    color:#102438;
+    color:#222631;
   }
   .reliability-modal-scroll{
     max-height:calc(100dvh - 48px);
@@ -55,7 +55,7 @@ export const RELIABILITY_MODAL_STYLES = `
     margin-bottom:20px;
   }
   .reliability-modal-eyebrow{
-    color:#f08a28;
+    color:#6b5b95;
     font-size:12px;
     font-weight:800;
     letter-spacing:.08em;
@@ -67,7 +67,7 @@ export const RELIABILITY_MODAL_STYLES = `
     font-size:28px;
     line-height:1.15;
     letter-spacing:-.025em;
-    color:#102438;
+    color:#222631;
   }
   .reliability-modal-close{
     width:38px;
@@ -76,7 +76,7 @@ export const RELIABILITY_MODAL_STYLES = `
     border:0;
     border-radius:10px;
     background:#f1f4f6;
-    color:#102438;
+    color:#222631;
     font-family:Inter,sans-serif;
     font-size:22px;
     line-height:1;
@@ -131,8 +131,8 @@ export const RELIABILITY_MODAL_STYLES = `
     margin-top:16px;
     padding:13px 14px;
     border-radius:12px;
-    background:#fff3e7;
-    color:#8a531d;
+    background:#f1eef8;
+    color:#433960;
     font-size:13px;
     line-height:1.5;
   }
@@ -152,7 +152,7 @@ export const RELIABILITY_MODAL_STYLES = `
     margin:0;
     font-family:Manrope,Inter,sans-serif;
     font-size:16px;
-    color:#102438;
+    color:#222631;
   }
   .reliability-history-head span{font-size:11px;color:#8a98a6}
   .reliability-history-list{display:grid;gap:8px}
@@ -180,7 +180,7 @@ export const RELIABILITY_MODAL_STYLES = `
   .reliability-history-copy{min-width:0}
   .reliability-history-copy b{
     display:block;
-    color:#102438;
+    color:#222631;
     font-size:12px;
     line-height:1.35;
   }
@@ -214,7 +214,7 @@ export const RELIABILITY_MODAL_STYLES = `
     border:0;
     border-radius:10px;
     padding:11px 17px;
-    background:#f08a28;
+    background:#6b5b95;
     color:#fff;
     font-family:Manrope,Inter,sans-serif;
     font-weight:800;
@@ -282,7 +282,7 @@ export function DashboardPagination({ page, totalItems, onPageChange }) {
         style={{
           border: "1px solid #dbe4ea",
           background: "#fff",
-          color: "#102438",
+          color: "#222631",
           borderRadius: 10,
           padding: "9px 13px",
           font: "inherit",
@@ -305,7 +305,7 @@ export function DashboardPagination({ page, totalItems, onPageChange }) {
         style={{
           border: "1px solid #dbe4ea",
           background: "#fff",
-          color: "#102438",
+          color: "#222631",
           borderRadius: 10,
           padding: "9px 13px",
           font: "inherit",
@@ -383,14 +383,14 @@ export function DeleteAccountModal({ open, onClose, accountKind = "paskyra" }) {
       }}
     >
       <style>{`
-        .account-delete-overlay{position:fixed;inset:0;z-index:12000;background:rgba(16,36,56,.66);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .account-delete-modal{width:min(560px,100%);background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(16,36,56,.34);padding:22px;color:#102438}
-        .account-delete-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.account-delete-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}.account-delete-close{width:40px;height:40px;border:0;border-radius:11px;background:#f1f4f6;color:#102438;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
+        .account-delete-overlay{position:fixed;inset:0;z-index:12000;background:rgba(34,38,49,.66);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
+        .account-delete-modal{width:min(560px,100%);background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(34,38,49,.34);padding:22px;color:#222631}
+        .account-delete-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.account-delete-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}.account-delete-close{width:40px;height:40px;border:0;border-radius:11px;background:#f1f4f6;color:#222631;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
         .account-delete-warning{margin-top:16px;padding:14px;border:1px solid #efc7bb;border-radius:14px;background:#fff5f2;color:#8f4029;font-size:13px;line-height:1.55}.account-delete-warning b{display:block;color:#9f4529;margin-bottom:5px}
         .account-delete-list{margin:9px 0 0;padding-left:18px}.account-delete-list li+li{margin-top:5px}
-        .account-delete-label{display:grid;gap:7px;margin-top:16px;font-size:12px;font-weight:800;color:#526374}.account-delete-input{width:100%;border:1px solid #d7e0e7;border-radius:11px;padding:11px 12px;font:inherit;color:#102438;outline:none}.account-delete-input:focus{border-color:#c65b37;box-shadow:0 0 0 3px rgba(198,91,55,.11)}
-        .account-delete-error{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff0ec;color:#b64d2a;font-size:12px}.account-delete-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.account-delete-cancel,.account-delete-confirm{border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}.account-delete-cancel{border:1px solid #dbe4ea;background:#fff;color:#102438}.account-delete-confirm{border:1px solid #d46c4d;background:#c65b37;color:#fff}.account-delete-confirm:disabled,.account-delete-cancel:disabled,.account-delete-close:disabled{opacity:.55;cursor:not-allowed}
-        .account-delete-zone{margin-top:20px;padding:15px 16px;border:1px solid #efc7bb;border-radius:13px;background:#fffafa;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.account-delete-zone b{display:block;color:#102438;font-size:13px;margin-bottom:3px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.45;max-width:680px}.account-delete-open{border:1px solid #e1a18e;background:#fff;color:#b64d2a;border-radius:10px;padding:9px 12px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;white-space:nowrap}
+        .account-delete-label{display:grid;gap:7px;margin-top:16px;font-size:12px;font-weight:800;color:#526374}.account-delete-input{width:100%;border:1px solid #d7e0e7;border-radius:11px;padding:11px 12px;font:inherit;color:#222631;outline:none}.account-delete-input:focus{border-color:#c65b37;box-shadow:0 0 0 3px rgba(198,91,55,.11)}
+        .account-delete-error{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff0ec;color:#b64d2a;font-size:12px}.account-delete-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.account-delete-cancel,.account-delete-confirm{border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}.account-delete-cancel{border:1px solid #dbe4ea;background:#fff;color:#222631}.account-delete-confirm{border:1px solid #d46c4d;background:#c65b37;color:#fff}.account-delete-confirm:disabled,.account-delete-cancel:disabled,.account-delete-close:disabled{opacity:.55;cursor:not-allowed}
+        .account-delete-zone{margin-top:20px;padding:15px 16px;border:1px solid #efc7bb;border-radius:13px;background:#fffafa;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.account-delete-zone b{display:block;color:#222631;font-size:13px;margin-bottom:3px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.45;max-width:680px}.account-delete-open{border:1px solid #e1a18e;background:#fff;color:#b64d2a;border-radius:10px;padding:9px 12px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;white-space:nowrap}
         @media(max-width:560px){.account-delete-overlay{padding:10px}.account-delete-modal{padding:18px;border-radius:16px}.account-delete-actions{display:grid;grid-template-columns:1fr}.account-delete-actions button{width:100%}.account-delete-zone{align-items:stretch}.account-delete-open{width:100%}}
       `}</style>
 
@@ -465,7 +465,7 @@ export function AccountDeleteZone({ onDelete, description }) {
     <div className="account-delete-zone">
       <style>{`
         .account-delete-zone{margin-top:22px;padding:16px 18px;border:1px solid #efd5cc;border-radius:14px;background:#fffaf8;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
-        .account-delete-zone b{display:block;color:#102438;font-size:14px;margin-bottom:4px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.5;max-width:720px}
+        .account-delete-zone b{display:block;color:#222631;font-size:14px;margin-bottom:4px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.5;max-width:720px}
         .account-delete-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #e7a894;background:#fff;color:#b64d2a;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(182,77,42,.05);transition:background .15s ease,border-color .15s ease,transform .15s ease}
         .account-delete-open:hover{background:#fff2ed;border-color:#d98569}.account-delete-open:active{transform:translateY(1px)}
         @media(max-width:560px){.account-delete-zone{align-items:stretch}.account-delete-open{width:100%}}
@@ -494,8 +494,8 @@ export function AccountBugReportZone({ onOpen, successMessage = "" }) {
       <style>{`
         .account-bug-success{margin-top:12px;padding:12px 16px;border:1px solid #bfe1d0;border-radius:12px;background:#eef9f3;color:#167a54;font-size:13px;font-weight:800;line-height:1.45}
         .account-bug-zone{margin-top:12px;padding:16px 18px;border:1px solid #dbe5eb;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
-        .account-bug-zone b{display:block;color:#102438;font-size:14px;margin-bottom:4px}.account-bug-zone span{display:block;color:#6c7a88;font-size:12px;line-height:1.5;max-width:720px}
-        .account-bug-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #d4dee5;background:#fff;color:#102438;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(16,36,56,.04)}
+        .account-bug-zone b{display:block;color:#222631;font-size:14px;margin-bottom:4px}.account-bug-zone span{display:block;color:#6c7a88;font-size:12px;line-height:1.5;max-width:720px}
+        .account-bug-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #d4dee5;background:#fff;color:#222631;border-radius:11px;padding:9px 15px;font:inherit;font-size:13px;font-weight:850;cursor:pointer;white-space:nowrap;box-shadow:0 2px 7px rgba(34,38,49,.04)}
         .account-bug-open:hover{background:#f7fafb;border-color:#c2d0da}
         @media(max-width:560px){.account-bug-zone{align-items:stretch}.account-bug-open{width:100%}}
       `}</style>
@@ -547,15 +547,15 @@ export function BugReportModal({ open, onClose, onSubmitted }) {
   return (
     <div
       onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
-      style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(16,36,56,.62)" }}
+      style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(34,38,49,.62)" }}
     >
-      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100dvh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(16,36,56,.28)", color: "#102438" }}>
+      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100dvh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(34,38,49,.28)", color: "#222631" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
           <div>
             <div className="eyebrow">SVETAINĖS KLAIDA</div>
             <h2>Pranešti administratoriui</h2>
           </div>
-          <button type="button" disabled={busy} onClick={onClose} style={{ border: 0, background: "#f2f5f7", color: "#102438", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
+          <button type="button" disabled={busy} onClick={onClose} style={{ border: 0, background: "#f2f5f7", color: "#222631", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
         </div>
         <div style={{ padding: "0 2px 2px" }}>
           <p style={{ margin: "0 0 12px", color: "#6c7a88", fontSize: 13, lineHeight: 1.5 }}>
@@ -566,12 +566,12 @@ export function BugReportModal({ open, onClose, onSubmitted }) {
             maxLength={4000}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Pvz. paspaudus „Išsaugoti“ pasirodė baltas ekranas..."
-            style={{ width: "100%", minHeight: 150, resize: "vertical", border: "1px solid #d8e2e8", borderRadius: 12, padding: 12, font: "inherit", color: "#102438", boxSizing: "border-box", outline: "none" }}
+            style={{ width: "100%", minHeight: 150, resize: "vertical", border: "1px solid #d8e2e8", borderRadius: 12, padding: 12, font: "inherit", color: "#222631", boxSizing: "border-box", outline: "none" }}
           />
           {error && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#fff1ef", border: "1px solid #f0c9c2", color: "#a23b2f", fontSize: 12, fontWeight: 700 }}>{error}</div>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 14 }}>
-            <button type="button" disabled={busy} onClick={onClose} style={{ border: "1px solid #d8e2e8", background: "#fff", color: "#102438", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Atšaukti</button>
-            <button type="button" disabled={busy || message.trim().length < 10} onClick={submitBugReport} style={{ border: 0, background: "#f08a28", color: "#fff", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 850, cursor: busy || message.trim().length < 10 ? "not-allowed" : "pointer", opacity: busy || message.trim().length < 10 ? .55 : 1 }}>
+            <button type="button" disabled={busy} onClick={onClose} style={{ border: "1px solid #d8e2e8", background: "#fff", color: "#222631", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Atšaukti</button>
+            <button type="button" disabled={busy || message.trim().length < 10} onClick={submitBugReport} style={{ border: 0, background: "#6b5b95", color: "#fff", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 850, cursor: busy || message.trim().length < 10 ? "not-allowed" : "pointer", opacity: busy || message.trim().length < 10 ? .55 : 1 }}>
               {busy ? "Siunčiama..." : "Išsiųsti pranešimą"}
             </button>
           </div>
@@ -633,7 +633,7 @@ export function BugResolutionNotice({ userId }) {
   return (
     <div className="bug-resolution-banner" role="status">
       <style>{`
-        .bug-resolution-banner{width:100%;min-width:0;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border:1px solid #b9decf;border-radius:13px;background:#eef8f3;color:#125f45;box-shadow:0 4px 14px rgba(16,36,56,.035);display:flex;align-items:center;justify-content:space-between;gap:14px;clear:both}
+        .bug-resolution-banner{width:100%;min-width:0;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border:1px solid #b9decf;border-radius:13px;background:#eef8f3;color:#125f45;box-shadow:0 4px 14px rgba(34,38,49,.035);display:flex;align-items:center;justify-content:space-between;gap:14px;clear:both}
         .bug-resolution-banner-copy{display:grid;gap:2px;min-width:0}
         .bug-resolution-banner-copy b{color:#146f4d;font-size:13px;line-height:1.35}
         .bug-resolution-banner-copy span{font-size:12px;line-height:1.45;color:#356f5b}
@@ -777,9 +777,9 @@ export function MainSiteInPageAlerts({ user, kind }) {
       {alerts.map(alert => (
         <div key={alert.key} role="status" style={{
           display:"flex",gap:12,alignItems:"flex-start",padding:"13px 14px",
-          background:"#fff",border:"1px solid #dfE7ED",borderLeft:"4px solid #f08a28",
-          borderRadius:14,boxShadow:"0 12px 38px rgba(16,36,56,.18)",
-          fontFamily:"Inter,system-ui,sans-serif",color:"#102438",pointerEvents:"auto",
+          background:"#fff",border:"1px solid #dfE7ED",borderLeft:"4px solid #6b5b95",
+          borderRadius:14,boxShadow:"0 12px 38px rgba(34,38,49,.18)",
+          fontFamily:"Inter,system-ui,sans-serif",color:"#222631",pointerEvents:"auto",
         }}>
           <div style={{flex:1,minWidth:0}}>
             <strong style={{display:"block",fontSize:13,lineHeight:1.35}}>Statybos24</strong>
@@ -1032,7 +1032,7 @@ export function WebPushSettings({ user, kind = "worker", profileOpen = false }) 
     {profileAnchor && createPortal(
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",padding:"15px 17px",border:"1px solid #e2e9ee",background:"#f7f9fb",borderRadius:12,margin:"10px 0 20px"}}>
         <div style={{flex:"1 1 215px",minWidth:0}}>
-          <strong style={{display:"block",fontSize:15,color:"#102438",marginBottom:5}}>Pranešimai</strong>
+          <strong style={{display:"block",fontSize:15,color:"#222631",marginBottom:5}}>Pranešimai</strong>
           <div style={{fontSize:12,lineHeight:1.5,color:"#607180"}}>
             {pushStatus === "on" ? "Įjungti šiame įrenginyje."
               : pushStatus === "blocked" ? "Užblokuoti šiame įrenginyje. Leidimą pakeiskite naršyklės ar įrenginio nustatymuose."
@@ -1040,19 +1040,19 @@ export function WebPushSettings({ user, kind = "worker", profileOpen = false }) 
               : kind === "employer" ? "Pranešimai apie darbuotojų atsakymus ir darbus."
               : "Darbo pasiūlymai, atnaujinimai ir grafiko priminimai."}
           </div>
-          {problem && <div role="alert" style={{fontSize:12,lineHeight:1.5,color:"#a04c16",marginTop:6}}>{problem}</div>}
+          {problem && <div role="alert" style={{fontSize:12,lineHeight:1.5,color:"#433960",marginTop:6}}>{problem}</div>}
         </div>
         <button type="button" className="btn ghost" onClick={pushStatus === "on" ? decline : accept}
           disabled={busy || pushStatus === "checking" || pushStatus === "unsupported" || pushStatus === "blocked"}
-          style={{minHeight:42,border:"1px solid #d4dce4",borderRadius:9,background:"#fff",color:"#102438",fontWeight:650,justifyContent:"center",padding:"8px 14px"}}>
+          style={{minHeight:42,border:"1px solid #d4dce4",borderRadius:9,background:"#fff",color:"#222631",fontWeight:650,justifyContent:"center",padding:"8px 14px"}}>
           {busy ? "Vykdoma..." : pushStatus === "on" ? "Išjungti" : pushStatus === "blocked" ? "Užblokuota" : pushStatus === "unsupported" ? "Nepalaikoma" : "Įjungti"}
         </button>
       </div>, profileAnchor
     )}
     {supported && consentOpen && createPortal(
-    <div role="presentation" style={{position:"fixed",inset:0,display:"grid",placeItems:"center",background:"rgba(16,36,56,.62)",zIndex:7600,padding:16}}>
+    <div role="presentation" style={{position:"fixed",inset:0,display:"grid",placeItems:"center",background:"rgba(34,38,49,.62)",zIndex:7600,padding:16}}>
       <section role="alertdialog" aria-modal="true" aria-labelledby="s24-login-push-title" aria-describedby="s24-login-push-description"
-        style={{width:"min(390px,100%)",background:"#fff",color:"#102438",border:"1px solid #dfe7ed",borderRadius:18,padding:"28px 24px",boxShadow:"0 22px 70px rgba(16,36,56,.27)",textAlign:"center"}}>
+        style={{width:"min(390px,100%)",background:"#fff",color:"#222631",border:"1px solid #dfe7ed",borderRadius:18,padding:"28px 24px",boxShadow:"0 22px 70px rgba(34,38,49,.27)",textAlign:"center"}}>
         <h3 id="s24-login-push-title" style={{fontSize:20,lineHeight:1.3,margin:"0 0 15px",fontWeight:800}}>Ar sutinkate gauti pranešimus?</h3>
         <p id="s24-login-push-description" style={{fontSize:14,lineHeight:1.65,margin:"0 0 22px",color:"#405264"}}>
           {kind === "employer"
@@ -1063,9 +1063,9 @@ export function WebPushSettings({ user, kind = "worker", profileOpen = false }) 
         {problem && <p role="alert" style={{fontSize:13,lineHeight:1.5,color:"#9e4013",margin:"0 0 14px"}}>{problem}</p>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <button type="button" className="btn ghost" onClick={decline} disabled={busy}
-            style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#102438",fontSize:15,fontWeight:750,justifyContent:"center"}}>Ne</button>
+            style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#222631",fontSize:15,fontWeight:750,justifyContent:"center"}}>Ne</button>
           <button type="button" className="btn ghost" onClick={accept} disabled={busy}
-            style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#102438",fontSize:15,fontWeight:750,justifyContent:"center"}}>{busy ? "Jungiama..." : "Taip"}</button>
+            style={{minHeight:46,border:"1px solid #d4dce4",borderRadius:10,background:"#fff",color:"#222631",fontSize:15,fontWeight:750,justifyContent:"center"}}>{busy ? "Jungiama..." : "Taip"}</button>
         </div>
       </section>
     </div>, document.body

@@ -22,7 +22,7 @@ export function TeamInvitePage({
         display: "grid",
         placeItems: "center",
         padding: 20,
-        color: "#102438",
+        color: "#222631",
       }}
     >
       <div
@@ -31,7 +31,7 @@ export function TeamInvitePage({
           background: "#fff",
           border: "1px solid #e4ebf0",
           borderRadius: 20,
-          boxShadow: "0 24px 70px rgba(16,36,56,.10)",
+          boxShadow: "0 24px 70px rgba(34,38,49,.10)",
           padding: 28,
         }}
       >
@@ -73,7 +73,7 @@ export function TeamInvitePage({
 
             <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
               Jums paruošta atskira darbdavio paskyra. Prisijungę dirbsite kaip{" "}
-              <b style={{ color: "#102438" }}>
+              <b style={{ color: "#222631" }}>
                 {invite.invited_name} · {invite.company_name}
               </b>
               .

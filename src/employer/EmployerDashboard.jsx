@@ -4321,10 +4321,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:100vh;background:#f6f8fa;color:#102438}
+        .ed-page{min-height:100vh;background:#f6f8fa;color:#222631}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
-        .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#102438;color:#fff;display:grid;place-items:center;font-weight:800}
+        .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
         .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 0;display:grid;gap:20px;padding-bottom:70px}
         .ed-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
@@ -4332,46 +4332,46 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-heading-actions>button{width:100%}
         .ed-heading-primary-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
         .ed-heading-primary-row>button{width:100%}
-        .ed-urgent-btn{border:0;border-radius:10px;background:#102438;color:#fff;padding:12px 16px;font:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
-        .ed-urgent-btn:hover{background:#1d354d}
-        .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
-        .ed-attendance-overlay{position:fixed;inset:0;z-index:9600;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-attendance-modal{width:min(560px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-urgent-btn{border:0;border-radius:10px;background:#222631;color:#fff;padding:12px 16px;font:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
+        .ed-urgent-btn:hover{background:#2b303f}
+        .ed-urgent-overlay{position:fixed;inset:0;z-index:9450;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-urgent-modal{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(34,38,49,.3)}
+        .ed-attendance-overlay{position:fixed;inset:0;z-index:9600;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-attendance-modal{width:min(560px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(34,38,49,.32);color:#222631}
         .ed-attendance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
         .ed-attendance-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
-        .ed-attendance-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
+        .ed-attendance-close{border:0;background:#f1f4f6;color:#222631;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
         .ed-attendance-close:disabled{opacity:.55;cursor:not-allowed}
         .ed-attendance-person{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:14px;margin-bottom:16px}
         .ed-attendance-person b{display:block;font-size:15px}
         .ed-attendance-person span{display:block;color:#6c7a88;margin-top:4px;font-size:13px}
         .ed-attendance-choice{display:grid;gap:10px}
         .ed-attendance-choice>button{width:100%;min-height:48px}
-        .ed-rating-overlay{position:fixed;inset:0;z-index:9700;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-rating-modal{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(16,36,56,.32);color:#102438}
+        .ed-rating-overlay{position:fixed;inset:0;z-index:9700;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-rating-modal{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 30px 100px rgba(34,38,49,.32);color:#222631}
         .ed-rating-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
         .ed-rating-head h2{margin:4px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}
-        .ed-rating-close{border:0;background:#f1f4f6;color:#102438;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
+        .ed-rating-close{border:0;background:#f1f4f6;color:#222631;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;cursor:pointer}
         .ed-rating-close:disabled{opacity:.55;cursor:not-allowed}
         .ed-rating-scores{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:8px;margin-bottom:16px}
         .ed-rating-scores>button{min-width:0;padding:10px 0}
         .ed-rating-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
         .ed-urgent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:12px}.ed-urgent-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:25px}.ed-urgent-head p{margin:0;color:#6c7a88;line-height:1.5}
         .ed-urgent-filter{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end;margin-bottom:16px}.ed-urgent-filter .ed-label{margin:0}
-        .ed-urgent-note{border:1px solid #f0d1b2;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
+        .ed-urgent-note{border:1px solid #c5bddb;background:#fffaf5;border-radius:11px;padding:11px 12px;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:14px}
         .ed-urgent-results{display:grid;gap:9px}.ed-urgent-row{border:1px solid #e4ebf0;border-radius:12px;padding:13px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
         .ed-urgent-results-nav{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;gap:10px;margin:12px auto 0;width:min(100%,240px)}
         .ed-urgent-results-nav>span{text-align:center;color:#6c7a88;font-size:12px;font-weight:850}
-        .ed-urgent-results-nav>button{width:42px;height:42px;padding:0;border:1px solid #d7e1e8;border-radius:50%;background:#fff;color:#405264;font:inherit;font-size:23px;font-weight:850;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(16,36,56,.05)}
+        .ed-urgent-results-nav>button{width:42px;height:42px;padding:0;border:1px solid #d7e1e8;border-radius:50%;background:#fff;color:#405264;font:inherit;font-size:23px;font-weight:850;line-height:1;cursor:pointer;box-shadow:0 3px 10px rgba(34,38,49,.05)}
         .ed-urgent-results-nav>button:hover{background:#f7f9fb;border-color:#c7d5de}
         .ed-urgent-worker{display:flex;align-items:center;gap:11px}.ed-urgent-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eef2f5;display:grid;place-items:center;font-weight:800;flex:0 0 44px}.ed-urgent-avatar img{width:100%;height:100%;object-fit:cover}.ed-urgent-worker b{display:block}.ed-urgent-worker span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
         .ed-urgent-contact{text-align:right}.ed-urgent-contact b{display:block;font-size:15px;margin-bottom:6px}.ed-urgent-empty{text-align:center;color:#6c7a88;padding:28px 10px}
         .ed-worker-source{display:flex;align-items:center;gap:5px;margin-top:12px;padding:4px;background:#f1f4f6;border-radius:10px;width:max-content;max-width:100%}
         .ed-worker-source button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 11px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
-        .ed-worker-source button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-worker-source button.active{background:#fff;color:#222631;box-shadow:0 1px 5px rgba(34,38,49,.10)}
         .ed-worker-source button.locked{color:#9a6a3d}
-        .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-saved-modal{width:min(850px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3)}
+        .ed-saved-overlay{position:fixed;inset:0;z-index:9440;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-saved-modal{width:min(850px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(34,38,49,.3)}
         .ed-job-info-modal{border-radius:22px!important;overflow:hidden!important;background:#fff;isolation:isolate}
         .ed-job-info-scroll{border-radius:inherit;scrollbar-width:thin;scrollbar-color:#98a5ae transparent;scrollbar-gutter:stable}.ed-job-info-scroll::-webkit-scrollbar{width:8px}.ed-job-info-scroll::-webkit-scrollbar-track{background:transparent}.ed-job-info-scroll::-webkit-scrollbar-thumb{background:#98a5ae;border-radius:999px;border:2px solid #fff}
         .ed-saved-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
@@ -4388,17 +4388,17 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-chat-btn.locked{border-style:dashed}
         .ed-chat-alert-btn{position:relative}
         .ed-chat-alert{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:none}
-        .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(16,36,56,.04)}
+        .ed-company-editor{background:#fff;border:1px solid #e4ebf0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(34,38,49,.04)}
         .ed-company-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
         .ed-company-editor-head h2{margin:3px 0 0;font-family:Manrope,Inter,sans-serif;font-size:21px}
         .ed-company-editor-head p{margin:6px 0 0;color:#6c7a88;font-size:13px;line-height:1.45}
-        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#102438;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-remove:disabled{opacity:.45;cursor:not-allowed;background:#f7f8f9;color:#8a98a6;border-color:#dfe6eb}
+        .ed-company-avatar-editor{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 18px;padding:14px;border:1px solid #e4ebf0;border-radius:13px;background:#f8fafb}.ed-company-avatar-preview{width:76px;height:76px;border-radius:50%;overflow:hidden;background:#222631;color:#fff;display:grid;place-items:center;font-family:Manrope,Inter,sans-serif;font-size:22px;font-weight:800;flex:0 0 76px}.ed-company-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block}.ed-company-avatar-copy{min-width:0}.ed-company-avatar-copy b{display:block;margin-bottom:4px}.ed-company-avatar-copy span{display:block;color:#6c7a88;font-size:12px;line-height:1.45;margin-bottom:9px}.ed-company-avatar-actions{display:flex;gap:8px;flex-wrap:wrap}.ed-company-avatar-upload{display:inline-flex;border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-upload input{display:none}.ed-company-avatar-remove{border:1px solid #efc7bb;background:#fff5f2;color:#a74428;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.ed-company-avatar-remove:disabled{opacity:.45;cursor:not-allowed;background:#f7f8f9;color:#8a98a6;border-color:#dfe6eb}
         .ed-profile-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px}
         .ed-profile-summary-card{border:1px solid #e4ebf0;background:#f8fafb;border-radius:12px;padding:14px;min-width:0}
         .ed-profile-summary-card span{display:block;color:#7a8996;font-size:11px;margin-bottom:5px}
         .ed-profile-summary-card b{display:block;font-family:Manrope,Inter,sans-serif;font-size:16px;overflow-wrap:anywhere}
         .ed-profile-summary-card small{display:block;color:#6c7a88;font-size:11px;margin-top:4px}
-        .ed-link-btn{border:0;background:transparent;color:#b85f0e;padding:0;margin-top:7px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
+        .ed-link-btn{border:0;background:transparent;color:#453a63;padding:0;margin-top:7px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
         .ed-profile-readonly-note{margin-top:16px;border-radius:10px;background:#f4f6f8;color:#6c7a88;padding:11px 13px;font-size:12px}
         .ed-company-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
         .ed-company-reviews{margin-top:18px;border-top:1px solid #e4ebf0;padding-top:18px}
@@ -4408,7 +4408,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-company-review{border:1px solid #e4ebf0;background:#f8fafb;border-radius:11px;padding:12px}
         .ed-company-review-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
         .ed-company-review-top b{font-size:13px}.ed-company-review-top span{font-size:11px;color:#7a8996}
-        .ed-review-worker{display:flex;align-items:center;gap:10px;min-width:0}.ed-review-worker-avatar{width:42px;height:42px;border-radius:50%;overflow:hidden;border:1px solid #dbe4ea;background:#eef3f6;color:#102438;display:grid;place-items:center;font-weight:800;flex:0 0 42px}.ed-review-worker-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-review-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ed-review-actions .ed-secondary{padding:7px 10px;min-height:34px;font-size:12px}
+        .ed-review-worker{display:flex;align-items:center;gap:10px;min-width:0}.ed-review-worker-avatar{width:42px;height:42px;border-radius:50%;overflow:hidden;border:1px solid #dbe4ea;background:#eef3f6;color:#222631;display:grid;place-items:center;font-weight:800;flex:0 0 42px}.ed-review-worker-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-review-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ed-review-actions .ed-secondary{padding:7px 10px;min-height:34px;font-size:12px}
         .ed-company-review-meta{font-size:11px;color:#7a8996;margin-top:3px}
         .ed-company-review p{margin:0;line-height:1.5;color:#405264;font-size:13px;white-space:pre-wrap}
         .ed-company-editor-wide{grid-column:1/-1}
@@ -4419,7 +4419,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           .ed-company-editor-actions>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:48px;height:100%;border-radius:10px;padding:11px 9px;font-size:13px;line-height:1.3;text-align:center;white-space:normal}
         }
         .ed-company-readonly{background:#f4f6f8!important;color:#6c7a88!important}
-        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:0;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#f08a28;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#c96c13}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(240,138,40,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
+        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:0;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#6b5b95;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#4f4271}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(107,91,149,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
         .ed-kpi{background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
         .ed-kpi span{display:block;font-size:13px;color:#6c7a88;line-height:1.35;min-height:36px}
         .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:10px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
@@ -4449,39 +4449,39 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           text-align:center;
         }
         .ed-reliability-title-btn:hover{
-          color:#102438;
+          color:#222631;
           text-decoration:underline;
           text-underline-offset:3px;
         }
         .ed-reliability-title-btn:focus-visible{
-          outline:2px solid rgba(240,138,40,.35);
+          outline:2px solid rgba(107,91,149,.35);
           outline-offset:4px;
           border-radius:4px;
         }
         .ed-reliability-label{font-family:Manrope,Inter,sans-serif!important;font-size:25px!important;font-weight:800!important;line-height:1!important;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:10px!important}
-        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(16,36,56,.045);padding:24px}.ed-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.ed-active-jobs-section>div:first-child h2{color:#167a54}.ed-active-jobs-section .ed-job{background:#fff}
+        .ed-card{background:#fff;border:1px solid #e4ebf0;border-radius:16px;box-shadow:0 8px 28px rgba(34,38,49,.045);padding:24px}.ed-active-jobs-section{background:#f3faf7;border-color:#cbe6da;box-shadow:0 8px 28px rgba(28,155,103,.08);position:relative;overflow:hidden}.ed-active-jobs-section>div:first-child h2{color:#167a54}.ed-active-jobs-section .ed-job{background:#fff}
         .ed-card h2{margin:0 0 6px;font-size:22px}.ed-sub{margin:0 0 20px;color:#6c7a88}
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
         .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
-        .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#102438;font:inherit;outline:none}
-        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#f08a28;box-shadow:0 0 0 3px rgba(240,138,40,.10)}
+        .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:12px 13px;background:#fff;color:#222631;font:inherit;outline:none}
+        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.10)}
         .ed-textarea{min-height:90px;resize:vertical}
         .ed-check{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;min-height:46px}.ed-check input{width:18px;height:18px;accent-color:#1c9b67}
-        .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#f08a28;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
+        .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:#6b5b95;color:#fff;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}
         .ed-note{border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700}.ed-note.ok{background:#edf8f3;color:#167a54}.ed-note.err{background:#fff0ec;color:#b64d2a}
-        .ed-plan-badge{border:1px solid #dbe4ea;background:#f8fafb;color:#102438;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
-        .ed-plan-badge strong{color:#f08a28}
+        .ed-plan-badge{border:1px solid #dbe4ea;background:#f8fafb;color:#222631;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-plan-badge strong{color:#6b5b95}
         .ed-plan-usage{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff;border:1px solid #e4ebf0;border-radius:14px;padding:14px 16px;margin-bottom:20px}
         .ed-plan-usage-copy b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;margin-bottom:3px}
         .ed-plan-usage-copy span{display:block;color:#6c7a88;font-size:13px;line-height:1.45}
         .ed-plan-usage-meter{display:flex;align-items:center;gap:10px;min-width:250px}
         .ed-plan-usage-bar{height:8px;flex:1;background:#edf1f4;border-radius:999px;overflow:hidden}
-        .ed-plan-usage-fill{height:100%;background:#f08a28;border-radius:999px}
+        .ed-plan-usage-fill{height:100%;background:#6b5b95;border-radius:999px}
         .ed-plan-usage-meter b{font-size:12px;white-space:nowrap}
         .ed-analytics-lock{margin-top:12px;border:1px dashed #d5dde4;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fafbfc}
         .ed-analytics-lock b{display:block;font-size:13px}.ed-analytics-lock span{display:block;color:#6c7a88;font-size:12px;margin-top:3px}
-        .ed-plan-overlay{position:fixed;inset:0;z-index:9400;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
+        .ed-plan-overlay{position:fixed;inset:0;z-index:9400;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-plan-modal{width:min(1040px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border:1px solid #e2e9ee;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(34,38,49,.3);background-clip:padding-box;overscroll-behavior:contain;clip-path:inset(0 round 24px);scrollbar-gutter:stable}.ed-plan-modal::-webkit-scrollbar{width:12px}.ed-plan-modal::-webkit-scrollbar-track{background:transparent;margin:14px 0}.ed-plan-modal::-webkit-scrollbar-thumb{background:#aab5bd;border:3px solid #fff;border-radius:999px}.ed-plan-modal::-webkit-scrollbar-corner{background:transparent}
         .ed-plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
         .ed-plan-modal > .ed-note{margin:0 0 16px}
         .ed-plan-modal > .ed-note.ok{margin-bottom:24px}
@@ -4490,35 +4490,35 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-billing-row>span{font-size:12px;color:#526374;font-weight:800}
         .ed-billing-toggle{display:flex;align-items:center;gap:4px;padding:4px;background:#eaf0f4;border-radius:10px}
         .ed-billing-toggle button{border:0;background:transparent;color:#526374;border-radius:8px;padding:8px 12px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
-        .ed-billing-toggle button.active{background:#fff;color:#102438;box-shadow:0 1px 5px rgba(16,36,56,.10)}
+        .ed-billing-toggle button.active{background:#fff;color:#222631;box-shadow:0 1px 5px rgba(34,38,49,.10)}
         .ed-billing-discount{display:inline-flex;align-items:center;border-radius:999px;background:#eaf8f1;color:#167a54;padding:6px 9px;font-size:10px;font-weight:900}
         .ed-billing-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
         .ed-billing-card{border:1px solid #e3eaf0;border-radius:13px;background:#fff;padding:12px 13px;min-width:0}
         .ed-billing-card span{display:block;color:#6b7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
-        .ed-billing-card b{display:block;color:#102438;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+        .ed-billing-card b{display:block;color:#222631;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
         .ed-billing-card small{display:block;color:#6b7a88;font-size:10px;line-height:1.4;margin-top:4px}
         .ed-billing-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:0 0 16px}
-        .ed-billing-warning{margin:0 0 16px;padding:12px 14px;border-radius:13px;border:1px solid #f2d7bc;background:#fff7ef;color:#102438;font-size:12px;line-height:1.55}
+        .ed-billing-warning{margin:0 0 16px;padding:12px 14px;border-radius:13px;border:1px solid #ccc4df;background:#f6f4fa;color:#222631;font-size:12px;line-height:1.55}
         .ed-billing-warning b{font-weight:900}
         .ed-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
         .ed-plan-card{border:1px solid #e1e8ed;border-radius:16px;padding:20px;display:flex;flex-direction:column;min-height:390px;background:#fff}
-        .ed-plan-card.current{border-color:#f08a28;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
-        .ed-plan-card.pro{background:#102438;color:#fff;border-color:#102438}
-        .ed-plan-card .eyebrow{margin-bottom:6px}.ed-plan-card.pro .eyebrow{color:#f5a04c}
+        .ed-plan-card.current{border-color:#6b5b95;box-shadow:0 0 0 2px rgba(107,91,149,.08)}
+        .ed-plan-card.pro{background:#222631;color:#fff;border-color:#222631}
+        .ed-plan-card .eyebrow{margin-bottom:6px}.ed-plan-card.pro .eyebrow{color:#7e6eaa}
         .ed-plan-card h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0}
         .ed-plan-price{font-family:Manrope,Inter,sans-serif;font-size:31px;font-weight:900;margin:12px 0 2px}.ed-plan-price small{font:600 12px Inter,sans-serif;color:#7a8996}.ed-plan-card.pro .ed-plan-price small{color:#b7c2cc}
         .ed-plan-yearly{min-height:30px;margin:5px 0 2px;color:#167a54;font-size:11px;font-weight:800;line-height:1.4}.ed-plan-card.pro .ed-plan-yearly{color:#65d5aa}
         .ed-plan-desc{font-size:13px;color:#6c7a88;min-height:40px;line-height:1.5}.ed-plan-card.pro .ed-plan-desc{color:#c7d0d8}
         .ed-plan-features{display:grid;gap:9px;margin:17px 0 20px;padding:0;list-style:none;flex:1}.ed-plan-features li{font-size:13px;line-height:1.4}.ed-plan-features li:before{content:"✓";color:#1c9b67;font-weight:900;margin-right:7px}.ed-plan-card.pro .ed-plan-features li:before{color:#65d5aa}
-        .ed-plan-current{display:inline-flex;width:max-content;background:#fff3e7;color:#b85f0e;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:9px}
+        .ed-plan-current{display:inline-flex;width:max-content;background:#f1eef8;color:#453a63;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:9px}
         .ed-plan-card.pro .ed-plan-current{background:rgba(255,255,255,.12);color:#fff}
         .ed-plan-card .ed-primary,.ed-plan-card .ed-secondary{width:100%;min-height:43px}
-        .ed-plan-card.pro .ed-secondary{border-color:#526779;background:#fff;color:#102438}
+        .ed-plan-card.pro .ed-secondary{border-color:#526779;background:#fff;color:#222631}
         .ed-plan-footnote{margin-top:16px;color:#778694;font-size:12px;line-height:1.5;text-align:center}
-        .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ed-team-btn{border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:10px;padding:10px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
         .ed-team-btn.locked{color:#8a98a6;background:#f8fafb}
-        .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(16,36,56,.64);display:grid;place-items:center;padding:20px}
-        .ed-team-modal{width:min(980px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(16,36,56,.30)}
+        .ed-team-overlay{position:fixed;inset:0;z-index:9450;background:rgba(34,38,49,.64);display:grid;place-items:center;padding:20px}
+        .ed-team-modal{width:min(980px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 30px 100px rgba(34,38,49,.30)}
         .ed-team-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
         .ed-team-head h2{margin:3px 0 4px;font-family:Manrope,Inter,sans-serif;font-size:25px}
         .ed-team-head p{margin:0;color:#6c7a88;font-size:13px;line-height:1.5}
@@ -4536,11 +4536,11 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-invite-form{display:grid;gap:10px}.ed-team-invite-form .ed-input,.ed-team-invite-form .ed-select{min-height:42px}
         .ed-team-role-title{display:block;font-size:12px;font-weight:800;color:#405264;margin-bottom:7px}
         .ed-team-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-        .ed-team-role-card{border:1px solid #dfe7ec;background:#fff;border-radius:12px;padding:13px;text-align:left;cursor:pointer;color:#102438;font:inherit;transition:border-color .15s,box-shadow .15s,background .15s}
+        .ed-team-role-card{border:1px solid #dfe7ec;background:#fff;border-radius:12px;padding:13px;text-align:left;cursor:pointer;color:#222631;font:inherit;transition:border-color .15s,box-shadow .15s,background .15s}
         .ed-team-role-card:hover{border-color:#bdcbd5}
-        .ed-team-role-card.active{border-color:#f08a28;background:#fff9f3;box-shadow:0 0 0 2px rgba(240,138,40,.08)}
+        .ed-team-role-card.active{border-color:#6b5b95;background:#fff9f3;box-shadow:0 0 0 2px rgba(107,91,149,.08)}
         .ed-team-role-card b{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:Manrope,Inter,sans-serif;font-size:14px;margin-bottom:5px}
-        .ed-team-role-card b span{font-family:Inter,sans-serif;font-size:10px;color:#b85f0e;background:#fff0df;border-radius:999px;padding:4px 6px;white-space:nowrap}
+        .ed-team-role-card b span{font-family:Inter,sans-serif;font-size:10px;color:#453a63;background:#ece9f5;border-radius:999px;padding:4px 6px;white-space:nowrap}
         .ed-team-role-card p{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
         .ed-team-role-card ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
         .ed-team-role-card li{font-size:12px;line-height:1.45;color:#405264}
@@ -4555,28 +4555,28 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-team-invite-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
         .ed-team-link{margin-top:12px;background:#f6f8fa;border-radius:10px;padding:11px;font-size:11px;overflow-wrap:anywhere;color:#405264}
         .ed-job-scope{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
-        .ed-job-scope button{position:relative;border:1px solid #d7e3dd;border-left:4px solid #1c9b67;background:#fff;color:#405264;border-radius:11px;padding:10px 14px 10px 13px;min-height:40px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;box-shadow:0 3px 10px rgba(16,36,56,.035);transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+        .ed-job-scope button{position:relative;border:1px solid #d7e3dd;border-left:4px solid #1c9b67;background:#fff;color:#405264;border-radius:11px;padding:10px 14px 10px 13px;min-height:40px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;box-shadow:0 3px 10px rgba(34,38,49,.035);transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
         .ed-job-scope button:hover{background:#f7fbf9;border-color:#bfdccc;border-left-color:#167a54}
         .ed-job-scope button.active{background:#eaf7f1;color:#126947;border-color:#b8ddcc;border-left-color:#167a54;box-shadow:0 4px 12px rgba(28,155,103,.09)}
-        .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-responsible-name{color:#f08a28;font-weight:800;margin-left:4px}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
+        .ed-responsible{display:inline-flex;align-items:center;margin-top:0;color:#6c7a88;padding:0;font-size:13px;font-weight:600;line-height:1.35}.ed-responsible-name{color:#6b5b95;font-weight:800;margin-left:4px}.ed-job-responsibility-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ed-job-responsibility-line .ed-responsible,.ed-job-responsibility-line .ed-attendance-badge{margin-top:0}
         .ed-results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}.ed-results-head p{margin:4px 0 0;color:#6c7a88}
         .ed-results{display:grid;gap:10px}.ed-worker{display:grid;grid-template-columns:minmax(320px,1fr) 130px 100px minmax(300px,360px);gap:18px;align-items:center;border:1px solid #e4ebf0;border-radius:13px;padding:14px 16px}
         .ed-worker.ed-worker-basic{grid-template-columns:minmax(260px,1fr) minmax(300px,360px)}
         .ed-worker-id{display:flex;align-items:flex-start;gap:10px}.ed-avatar{width:42px;height:42px;border-radius:50%;background:#eef2f5;display:grid;place-items:center;font-weight:800;overflow:hidden;flex:0 0 42px}.ed-avatar img{width:100%;height:100%;object-fit:cover;display:block}.ed-worker-id b{display:block}.ed-worker-id span{font-size:13px;color:#6c7a88}
         .ed-tags{display:flex;flex-wrap:wrap;gap:6px}.ed-tag{font-size:11px;font-weight:700;background:#f1f4f6;border-radius:999px;padding:5px 7px;color:#44576a}
         .ed-metric{display:grid;align-content:center;gap:3px;min-width:0}.ed-metric b{display:block}.ed-metric span{font-size:12px;color:#6c7a88}
-        .ed-invite{border:0;border-radius:9px;background:#f08a28;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}.ed-invite.sent.declined{background:#fff0ec;color:#b9472d;border:1px solid #f1c1b4}
-        .ed-worker-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+        .ed-invite{border:0;border-radius:9px;background:#6b5b95;color:#fff;padding:9px 12px;font:inherit;font-weight:800;cursor:pointer}.ed-invite.sent{background:#edf8f3;color:#167a54;cursor:default}.ed-invite.sent.declined{background:#fff0ec;color:#b9472d;border:1px solid #f1c1b4}
+        .ed-worker-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;width:100%;max-width:360px;justify-self:end}.ed-worker-actions>button{width:100%;min-height:38px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.ed-secondary{border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         @media(max-width:900px){.ed-worker{grid-template-columns:1fr}.ed-worker.ed-worker-basic{grid-template-columns:1fr}.ed-worker-actions{justify-self:stretch;max-width:none}}
-        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 28px rgba(16,36,56,.045)}
+        .ed-current-job-overview{margin-bottom:18px;border:1px solid #dfe8ee;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 28px rgba(34,38,49,.045)}
         .ed-current-job-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:22px;padding:20px 22px 18px;border-bottom:1px solid #edf1f4;background:#fff}
-        .ed-current-job-heading-copy{min-width:0}.ed-current-job-overview-head .eyebrow{margin-bottom:7px}.ed-current-job-overview-head h2{margin:0 0 8px;font-family:Manrope,Inter,sans-serif;font-size:25px;line-height:1.15;color:#102438}
-        .ed-current-job-head-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:#6c7a88;font-size:12.5px;line-height:1.45}.ed-current-job-head-meta i{font-style:normal;color:#c2ccd4}.ed-current-job-responsible b{color:#f08a28;font-weight:900}
+        .ed-current-job-heading-copy{min-width:0}.ed-current-job-overview-head .eyebrow{margin-bottom:7px}.ed-current-job-overview-head h2{margin:0 0 8px;font-family:Manrope,Inter,sans-serif;font-size:25px;line-height:1.15;color:#222631}
+        .ed-current-job-head-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:#6c7a88;font-size:12.5px;line-height:1.45}.ed-current-job-head-meta i{font-style:normal;color:#c2ccd4}.ed-current-job-responsible b{color:#6b5b95;font-weight:900}
         .ed-current-job-status{display:inline-flex;align-items:center;justify-content:center;min-height:32px;border-radius:999px;padding:6px 12px;background:#edf8f3;color:#167a54;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid rgba(22,122,84,.08)}.ed-current-job-status.open{background:#eef5fb;color:#245d89;border-color:#d8e7f3}.ed-current-job-status.cancelled{background:#fff0ec;color:#b64d2a;border-color:#f4d8cf}
         .ed-current-job-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:16px 18px 12px;background:#fff}
         .ed-current-job-field{min-width:0;border:1px solid #e5ebf0;border-radius:12px;background:#fbfcfd;padding:12px 13px;min-height:66px}.ed-current-job-field.wide{grid-column:span 2}
         .ed-current-job-field span{display:block;margin-bottom:5px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
-        .ed-current-job-field b{display:block;color:#102438;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+        .ed-current-job-field b{display:block;color:#222631;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
         .ed-current-job-description{margin:0 18px 18px;border:1px solid #e5ebf0;border-radius:12px;background:#fbfcfd;padding:13px 14px 14px}
         .ed-current-job-description span{display:block;margin-bottom:5px;color:#758492;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}
         .ed-current-job-description div{color:#263b4d;font-size:13px;line-height:1.55;white-space:pre-wrap}
@@ -4585,8 +4585,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-attendance-panel h2{margin:0 0 4px}
         .ed-attendance-help{margin:0;color:#6c7a88;font-size:12px;line-height:1.5}
         .ed-next-step{margin-top:9px;padding:9px 11px;border-left:3px solid #d7e0e7;border-radius:0 9px 9px 0;background:#f7f9fb;color:#526374;font-size:11.5px;line-height:1.45}
-        .ed-next-step b{display:block;color:#102438;margin-bottom:2px}
-        .ed-next-step.action{border-left-color:#f08a28;background:#fff8f1}
+        .ed-next-step b{display:block;color:#222631;margin-bottom:2px}
+        .ed-next-step.action{border-left-color:#6b5b95;background:#fff8f1}
         .ed-next-step.ok{border-left-color:#2d9b69;background:#f2faf6}
         .ed-next-step.danger{border-left-color:#c65b37;background:#fff5f2}
         .ed-attendance-list{display:grid;gap:9px;margin-top:14px}
@@ -4598,23 +4598,23 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         .ed-worker-status{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}.ed-worker-activity{display:flex;align-items:center;justify-content:center;min-width:0}.ed-worker-activity .ed-attendance-badge{margin:0;text-align:center}
         .ed-attendance-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr;gap:8px;min-width:210px}.ed-attendance-row>.ed-attendance-actions{display:grid;grid-template-columns:1fr;gap:8px;min-width:190px;width:190px}.ed-attendance-row>.ed-attendance-actions>button{width:100%;min-height:44px;justify-content:center}
         .ed-attendance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800;margin-top:5px}
-        .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#fff3e7;color:#b85f0e}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
-        .ed-progress{font-size:12px;font-weight:800;color:#102438}.ed-job-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:stretch;justify-content:center}.ed-job-actions.single{grid-template-columns:1fr}.ed-job-actions button{width:100%;min-height:34px;padding:7px 8px!important;font-size:12px!important}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
+        .ed-attendance-badge.green{background:#edf8f3;color:#167a54}.ed-attendance-badge.orange{background:#f1eef8;color:#453a63}.ed-attendance-badge.red{background:#fff0ec;color:#b64d2a}.ed-attendance-badge.muted{background:#f1f4f6;color:#667788}
+        .ed-progress{font-size:12px;font-weight:800;color:#222631}.ed-job-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:stretch;justify-content:center}.ed-job-actions.single{grid-template-columns:1fr}.ed-job-actions button{width:100%;min-height:34px;padding:7px 8px!important;font-size:12px!important}.ed-danger{border-color:#f0c8bc!important;color:#b64d2a!important}
         .rs-alert{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:800;width:max-content}
-        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#fff3e7;color:#b85f0e}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
+        .rs-alert.red{background:#fff0ec;color:#b64d2a}.rs-alert.orange{background:#f1eef8;color:#453a63}.rs-alert.green{background:#edf8f3;color:#167a54}.rs-alert.muted{background:#f1f4f6;color:#667788}
         .ed-news{margin-top:7px}.ed-news .rs-alert{margin:0}
         .ed-empty{border:1px dashed #cfd9e0;border-radius:13px;padding:24px;text-align:center;color:#6c7a88}
         .ed-empty.compact{padding:14px 16px;text-align:left;background:#f8fafb}
         .ed-jobs-empty{margin-top:16px;border:1px solid #e7edf1;background:#f8fafb;border-radius:12px;padding:16px 18px;text-align:left;display:flex;align-items:center;gap:12px;color:#6c7a88}
-        .ed-jobs-empty-icon{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #e1e8ed;display:grid;place-items:center;color:#102438;font-size:20px;font-weight:800;flex:0 0 36px}
-        .ed-jobs-empty b{display:block;color:#102438;font-size:13px;margin-bottom:2px}.ed-jobs-empty span{display:block;font-size:12px;line-height:1.45}
-        .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#102438;font-size:18px}.ed-job-overview-card.alert{border-color:#f0d0ba;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
-        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(16,36,56,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #1c9b67}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#b64d2a;border:0;padding:5px 8px}
-        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#fff1e5;color:#a7550d}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
-        .ed-job-chat-btn.has-unread{border-color:#e6a96f!important;background:#fff7ef!important;color:#9f5211!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
+        .ed-jobs-empty-icon{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #e1e8ed;display:grid;place-items:center;color:#222631;font-size:20px;font-weight:800;flex:0 0 36px}
+        .ed-jobs-empty b{display:block;color:#222631;font-size:13px;margin-bottom:2px}.ed-jobs-empty span{display:block;font-size:12px;line-height:1.45}
+        .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#6c7a88;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#222631;font-size:18px}.ed-job-overview-card.alert{border-color:#c9c2de;background:#fff8f1}.ed-job-overview-card.danger{border-color:#efc7bb;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
+        .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#dbe4ea;box-shadow:0 6px 20px rgba(34,38,49,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #1c9b67}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#b64d2a;border:0;padding:5px 8px}
+        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#f0edf7;color:#433960}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#167a54}.ed-job-state.ok{background:#edf8f3;color:#167a54}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#6c7a88;font-size:10.5px;line-height:1.3;text-align:center}
+        .ed-job-chat-btn.has-unread{border-color:#897bb1!important;background:#f6f4fa!important;color:#433960!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
         .ed-job button{border:1px solid #dbe4ea;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#167a54;width:max-content}
-        .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#f08a28;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
+        .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#6b5b95;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
         @media(max-width:980px){.ed-job-overview{grid-template-columns:1fr 1fr}.ed-team-layout{grid-template-columns:1fr}.ed-form-grid{grid-template-columns:1fr 1fr}.ed-span-4{grid-column:1/-1}.ed-worker{grid-template-columns:minmax(0,1fr) 120px}.ed-worker-actions{grid-column:1/-1;justify-self:stretch;max-width:none}.ed-worker .ed-tags{grid-column:1/-1}.ed-job{grid-template-columns:108px 1fr 110px}.ed-job>:nth-child(3){display:none}.ed-current-job-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-current-job-field.wide{grid-column:span 2}.ed-attendance-row{grid-template-columns:1fr}.ed-attendance-actions{justify-content:flex-start}.ed-attendance-row>.ed-attendance-actions{width:100%;min-width:0}.ed-member-metrics{grid-template-columns:1fr 1fr}.ed-attendance-row>.ed-member-metrics{grid-template-columns:1fr}.ed-plan-grid{grid-template-columns:1fr}.ed-plan-card{min-height:0}}
         @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
@@ -4712,7 +4712,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
                 <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                <h3 style={{ margin: "5px 0 4px", color: "#102438" }}>Sukurkite pirmą darbo poreikį</h3>
+                <h3 style={{ margin: "5px 0 4px", color: "#222631" }}>Sukurkite pirmą darbo poreikį</h3>
                 <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -4723,7 +4723,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div className="ed-onboarding-steps">
               <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
               <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#fff7ef", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
+              <div style={{ padding: 11, borderRadius: 11, background: "#f6f4fa", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
             </div>
           </section>
         )}
@@ -5071,7 +5071,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             {calendarPreviewEnabled && (
-            <button className="ed-secondary ed-calendar-launch" type="button" style={{background:"#f08a28",borderColor:"#f08a28",color:"#fff"}} onClick={() => navigateEmployerCalendar(true)}>
+            <button className="ed-secondary ed-calendar-launch" type="button" style={{background:"#6b5b95",borderColor:"#6b5b95",color:"#fff"}} onClick={() => navigateEmployerCalendar(true)}>
               {calendarAllowed ? "Darbų kalendorius" : "Darbų kalendorius · Pro"}
             </button>
             )}
@@ -5406,20 +5406,20 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 tabIndex={-1}
                 className="ed-span-4"
                 style={{
-                  border: jobFormErrors.scopeAcknowledgement ? "1px solid #d94a3a" : "1px solid #efc18f",
+                  border: jobFormErrors.scopeAcknowledgement ? "1px solid #d94a3a" : "1px solid #b0a5cf",
                   borderRadius: 13,
                   padding: "14px 15px",
                   background: "#fff8f1",
                   outline: "none",
                 }}
               >
-                <b style={{ display: "block", color: "#8a4b12", fontSize: 13, marginBottom: 6 }}>
+                <b style={{ display: "block", color: "#433960", fontSize: 13, marginBottom: 6 }}>
                   Prieš paskelbiant darbą
                 </b>
                 <div style={{ color: "#5c6874", fontSize: 12, lineHeight: 1.55 }}>
                   Padedame suvesti darbdavį ir darbuotoją bei valdyti darbo eigą, tačiau atlygio už šį darbą nemokame. Darbdavys atsako už sutartą apmokėjimą, teisėtą ir saugų darbo organizavimą, instruktavimą bei konkrečiam darbui taikomus reikalavimus. Jei reikalingi dokumentai, pažymėjimai, leidimai, kvalifikacija, speciali apranga, apsaugos priemonės ar kitos sąlygos, jos turi būti aiškiai nurodytos darbo aprašyme prieš siunčiant kvietimus.
                 </div>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11, color: "#102438", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11, color: "#222631", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={jobScopeAcknowledged}
@@ -5461,7 +5461,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                   }}
                 >
                   <div style={{ minWidth: 240, flex: "1 1 520px" }}>
-                    <b style={{ color: "#102438", fontSize: 13 }}>
+                    <b style={{ color: "#222631", fontSize: 13 }}>
                       Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
                     </b>
                     <span style={{ marginLeft: 8, color: "#6c7a87", fontSize: 11 }}>
@@ -5476,7 +5476,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                         padding: "5px 9px",
                         background: "#fff",
                         border: "1px solid #dfe7ed",
-                        color: "#102438",
+                        color: "#222631",
                         fontSize: 11,
                         fontWeight: 900,
                       }}
@@ -5498,9 +5498,9 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                           style={{
                             borderRadius: 999,
                             padding: "5px 9px",
-                            background: "#fff1e5",
-                            border: "1px solid #f3d2b1",
-                            color: "#a7550d",
+                            background: "#f0edf7",
+                            border: "1px solid #c6bedc",
+                            color: "#433960",
                             fontSize: 11,
                             fontWeight: 900,
                           }}
@@ -5517,7 +5517,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     <div
                       style={{
                         marginTop: 5,
-                        color: "#8a5d32",
+                        color: "#433960",
                         fontSize: 10.5,
                         lineHeight: 1.35,
                       }}
@@ -5813,7 +5813,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             borderRadius: 999,
                             border: "1px solid #d9e3ea",
                             background: "#fff",
-                            color: "#102438",
+                            color: "#222631",
                             fontSize: 12,
                             fontWeight: 800,
                             cursor: "pointer",
@@ -7048,7 +7048,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             position: "fixed",
             inset: 0,
             zIndex: 9600,
-            background: "rgba(16,36,56,.64)",
+            background: "rgba(34,38,49,.64)",
             display: "grid",
             placeItems: "center",
             padding: 20,
@@ -7072,8 +7072,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               background: "#fff",
               borderRadius: 20,
               padding: 22,
-              boxShadow: "0 30px 100px rgba(16,36,56,.32)",
-              color: "#102438",
+              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
+              color: "#222631",
             }}
             role="dialog"
             aria-modal="true"
@@ -7314,7 +7314,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             position: "fixed",
             inset: 0,
             zIndex: 9700,
-            background: "rgba(16,36,56,.64)",
+            background: "rgba(34,38,49,.64)",
             display: "grid",
             placeItems: "center",
             padding: 20,
@@ -7336,8 +7336,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               background: "#fff",
               borderRadius: 20,
               padding: 22,
-              boxShadow: "0 30px 100px rgba(16,36,56,.32)",
-              color: "#102438",
+              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
+              color: "#222631",
             }}
           >
             <div className="ed-rating-head">
@@ -7885,7 +7885,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                     marginTop: 6,
                     lineHeight: 1.55,
                     whiteSpace: "pre-wrap",
-                    color: "#102438",
+                    color: "#222631",
                   }}
                 >
                   {jobInfoTarget.cancellation_reason?.trim() || "Priežastis nenurodyta."}
@@ -7939,7 +7939,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               flexWrap: "wrap",
                             }}
                           >
-                            <b style={{ color: "#102438", fontSize: 13 }}>
+                            <b style={{ color: "#222631", fontSize: 13 }}>
                               {worker.name}
                             </b>
                             <span
@@ -7957,7 +7957,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                               marginTop: 7,
                               lineHeight: 1.5,
                               whiteSpace: "pre-wrap",
-                              color: "#102438",
+                              color: "#222631",
                               fontSize: 12,
                             }}
                           >
@@ -8025,7 +8025,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                             placeItems: "center",
                             overflow: "hidden",
                             background: "#eef2f5",
-                            color: "#102438",
+                            color: "#222631",
                             fontWeight: 800,
                             flex: "0 0 38px",
                           }}
@@ -8556,7 +8556,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
 
             {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
-              <div className="ed-note" style={{ background: "#fff7ef", border: "1px solid #f2d7bc", color: "#102438", marginBottom: 16 }}>
+              <div className="ed-note" style={{ background: "#f6f4fa", border: "1px solid #ccc4df", color: "#222631", marginBottom: 16 }}>
                 Jūsų pasirinkimas – {employerPlanName(preferredPlanKey)}. Žemiau patvirtinkite atsiskaitymo laikotarpį ir atlikite saugų apmokėjimą per Stripe. Iki Stripe patvirtinimo aktyvus lieka Basic planas.
               </div>
             )}
@@ -8565,9 +8565,9 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               <div
                 className="ed-note"
                 style={{
-                  background: "#fff7ef",
-                  border: "1px solid #f2d7bc",
-                  color: "#102438",
+                  background: "#f6f4fa",
+                  border: "1px solid #ccc4df",
+                  color: "#222631",
                   marginBottom: 16,
                 }}
               >
@@ -8595,7 +8595,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 style={{
                   background: "#eef6ff",
                   border: "1px solid #cfe1f4",
-                  color: "#102438",
+                  color: "#222631",
                   marginBottom: 16,
                 }}
               >
@@ -8963,8 +8963,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card">
             <style>{`
-              .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:12000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:22px;color:#102438}
+              .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:12000;display:grid;place-items:center;padding:20px}
+              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(34,38,49,.25);padding:22px;color:#222631}
               .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
               .rs-modal-head h2{margin:0;font-size:22px}
               .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -9063,7 +9063,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         >
           <div className="rs-modal-card lt-employment-modal">
             <style>{`
-              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(16,36,56,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-width:1120px;min-width:0;max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(16,36,56,.28);padding:24px;color:#102438;box-sizing:border-box;justify-self:center;align-self:center;scrollbar-width:none;-ms-overflow-style:none}.lt-employment-modal::-webkit-scrollbar{width:0;height:0;display:none}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#102438;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(16,36,56,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#102438;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#f08a28}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#102438;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#fff3e7;color:#b85f0e}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#102438}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#f1cfad;background:#fff8f1;color:#8d4e17}.lt-commitment-note b{display:block;color:#102438;margin-bottom:3px}.lt-commitment-note span{display:block}
+              .lt-employment-overlay{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:rgba(34,38,49,.58);backdrop-filter:blur(2px)}.lt-employment-modal{width:min(1120px,calc(100vw - 40px));max-width:1120px;min-width:0;max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(34,38,49,.28);padding:24px;color:#222631;box-sizing:border-box;justify-self:center;align-self:center;scrollbar-width:none;-ms-overflow-style:none}.lt-employment-modal::-webkit-scrollbar{width:0;height:0;display:none}.lt-employment-modal::-webkit-scrollbar-track{background:transparent}.lt-employment-modal::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}.lt-employment-modal .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #edf1f4}.lt-employment-modal .rs-modal-head h2{margin:5px 0 0;font-size:25px;line-height:1.2}.lt-employment-modal .rs-close{border:0;background:#f2f5f7;color:#222631;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}.lt-employment-list{display:grid;gap:10px;max-width:900px;margin:0 auto}.lt-employment-worker{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;border:1px solid #dfe7ec;border-radius:15px;padding:14px 15px;background:#fff;box-shadow:0 3px 12px rgba(34,38,49,.035)}.lt-employment-worker:hover{border-color:#cbd8e1;background:#fbfcfd}.lt-employment-worker-main{display:flex;align-items:center;gap:13px;min-width:0}.lt-employment-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#eef2f4;color:#222631;display:grid;place-items:center;font-size:16px;font-weight:850;flex:0 0 52px}.lt-employment-avatar img{width:100%;height:100%;object-fit:cover}.lt-employment-worker b{font-size:16px}.lt-employment-worker small{display:block;color:#6c7a88;margin-top:3px;line-height:1.35}.lt-employment-worker .ed-primary{min-width:112px;padding:11px 17px}.lt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.lt-wide{grid-column:1/-1}.lt-salary-row{grid-column:1/-1;display:grid;grid-template-columns:1.15fr .9fr 1.15fr;gap:12px;padding:14px;border:1px solid #e5ebef;border-radius:13px;background:#fff}.lt-schedule-editor{display:grid;gap:9px;margin-top:10px}.lt-schedule-edit-row{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:12px;border:1px solid #e5ebef;border-radius:13px;background:#fff;min-width:0}.lt-schedule-edit-row>*{min-width:0}.lt-schedule-day{display:flex;align-items:center;gap:8px;font-weight:800;min-height:42px}.lt-break-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;align-items:end;min-width:0}.lt-no-break{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;background:#f4f7f9;color:#526374;font-size:11px;font-weight:800;cursor:pointer}.lt-no-break input{accent-color:#6b5b95}.lt-contract-upload{grid-column:1/-1;border:1px dashed #cbd7df;border-radius:13px;padding:14px;background:#fff}.lt-contract-upload strong{display:block;margin-bottom:4px}.lt-contract-upload p{margin:0 0 10px;color:#607180;font-size:12px;line-height:1.5}.lt-file-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.lt-file-name{font-size:12px;color:#526374;min-width:0;overflow-wrap:anywhere}.lt-existing-offers{display:grid;gap:8px;margin-top:12px}.lt-existing-offer{border:1px solid #e4ebf0;border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.55fr) minmax(260px,.72fr);gap:16px;align-items:center;background:#fff}.lt-existing-info{min-width:0}.lt-existing-info-title{display:block;font-size:18px;line-height:1.25}.lt-existing-info-sub{margin-top:5px;color:#222631;font-size:14px;font-weight:700}.lt-existing-info-meta{margin-top:4px;color:#6c7a88;font-size:12px;line-height:1.45}.lt-existing-status{display:grid;justify-items:center;gap:7px;text-align:center;align-self:center;align-content:center;padding:6px 10px}.lt-existing-status-label{font-size:11px;letter-spacing:.08em;font-weight:800;color:#7b8a97}.lt-existing-status-main{display:inline-flex;align-items:center;justify-content:center;max-width:340px;border-radius:999px;padding:7px 11px;background:#edf8f3;color:#167a54;font-size:12px;line-height:1.35;font-weight:850}.lt-existing-status-main.waiting{background:#f1f4f6;color:#526374}.lt-existing-status-main.attention{background:#f1eef8;color:#453a63}.lt-existing-actions{display:grid;grid-template-columns:repeat(2,minmax(126px,1fr));gap:8px;align-self:center;align-content:center;min-width:0;max-width:340px;justify-self:end}.lt-existing-actions>button{width:100%;min-height:40px;justify-content:center;white-space:normal;line-height:1.2;padding:8px 12px;font-size:13px;position:relative}.lt-employed-table{display:grid;gap:8px;margin-top:10px}.lt-employed-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(140px,.55fr) minmax(390px,auto);gap:16px;align-items:center;border:1px solid #cfe7dc;border-radius:14px;padding:14px 16px;background:#f7fbf9}.lt-employed-meta{color:#607180;font-size:12px;line-height:1.45}.lt-employed-row .lt-existing-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:none;min-width:0}.lt-employed-row .lt-existing-actions>button{width:auto;min-width:118px;min-height:40px;white-space:nowrap}.lt-employed-row .lt-employee-chat-btn,.lt-employed-row .lt-employee-contract-btn{background:#fff;border-color:#d7e1e8;color:#222631}.lt-employed-row .lt-employee-chat-btn:hover,.lt-employed-row .lt-employee-contract-btn:hover{background:#f7fafb}.lt-employed-row .lt-employee-end-btn{background:#fff;border-color:#efb9aa;color:#b64d2a}.lt-employed-row .lt-employee-end-btn:hover{background:#fff5f2}.lt-section-title{font-size:17px;margin:18px 0 9px}.lt-help{color:#6c7a88;font-size:12px;line-height:1.45}.lt-modal-note{background:#f2f8f5;border:1px solid #dcefe5;border-radius:12px;padding:12px 14px;color:#476355;font-size:12px;line-height:1.5;margin-bottom:16px}.lt-commitment-note{border:1px solid #dbe5eb;border-radius:12px;padding:11px 13px;background:#fff;color:#526374;font-size:12px;line-height:1.5;text-align:center}.lt-commitment-note.warning{border-color:#c2bada;background:#fff8f1;color:#433960}.lt-commitment-note b{display:block;color:#222631;margin-bottom:3px}.lt-commitment-note span{display:block}
               @media(min-width:901px){.lt-employed-table,.lt-existing-offers{width:100%;min-width:0}.lt-employed-row,.lt-existing-offer{width:100%;min-width:0;box-sizing:border-box}.lt-employed-row>*,.lt-existing-offer>*{min-width:0}}@media(max-width:900px){.lt-schedule-edit-row{grid-template-columns:150px 1fr 1fr}.lt-break-group{grid-column:2/-1}.lt-employed-row{grid-template-columns:1fr}.lt-existing-offer{grid-template-columns:1fr}.lt-existing-status{justify-items:start;text-align:left;padding:6px 0}.lt-existing-actions{grid-template-columns:repeat(2,minmax(126px,1fr));justify-content:stretch;max-width:none;min-width:0}}
               @media(max-width:760px){.lt-employment-overlay{padding:10px}.lt-employment-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:17px}.lt-form-grid{grid-template-columns:1fr}.lt-wide{grid-column:auto}.lt-salary-row{grid-column:auto;grid-template-columns:1fr}.lt-schedule-edit-row{grid-template-columns:1fr}.lt-schedule-day,.lt-break-group{grid-column:1/-1}.lt-existing-offer,.lt-employment-worker{grid-template-columns:1fr}.lt-existing-actions{grid-template-columns:1fr}.lt-employment-worker .ed-primary{width:100%}.wd-long-term-offer-actions{width:100%;justify-content:flex-start}.wd-long-term-offer-actions>button{flex:1 1 140px}}
             `}</style>

@@ -107,7 +107,7 @@ export function SilentLoader({ size = 20, minHeight = 44, fullscreen = false }) 
           width: spinnerSize,
           height: spinnerSize,
           border: `${Math.max(2, Math.round(spinnerSize / 9))}px solid #dfe7ed`,
-          borderTopColor: "#f08a28",
+          borderTopColor: "#6b5b95",
           borderRadius: "50%",
           animation: "silent-loader-spin .75s linear infinite",
           boxSizing: "border-box",

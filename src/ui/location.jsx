@@ -295,7 +295,7 @@ export function CityAutocomplete({
             background: "#fff",
             border: "1px solid #dfe7ed",
             borderRadius: 12,
-            boxShadow: "0 14px 35px rgba(16,36,56,.14)",
+            boxShadow: "0 14px 35px rgba(34,38,49,.14)",
             padding: 5,
           }}
         >
@@ -316,9 +316,9 @@ export function CityAutocomplete({
                   border: 0,
                   background:
                     normalizeCityKey(value) === city.city_key
-                      ? "#fff1e5"
+                      ? "#f0edf7"
                       : "#fff",
-                  color: "#102438",
+                  color: "#222631",
                   textAlign: "left",
                   borderRadius: 8,
                   padding: "10px 11px",
@@ -348,7 +348,7 @@ export function CityAutocomplete({
         <div
           style={{
             marginTop: 5,
-            color: "#b85f0e",
+            color: "#453a63",
             fontSize: 11,
             fontWeight: 600,
           }}
@@ -472,7 +472,7 @@ export function AddressAutocomplete({
             background: "#fff",
             border: "1px solid #dfe7ed",
             borderRadius: 12,
-            boxShadow: "0 14px 35px rgba(16,36,56,.16)",
+            boxShadow: "0 14px 35px rgba(34,38,49,.16)",
             padding: 5,
           }}
         >
@@ -499,7 +499,7 @@ export function AddressAutocomplete({
                   width: "100%",
                   border: 0,
                   background: "#fff",
-                  color: "#102438",
+                  color: "#222631",
                   textAlign: "left",
                   borderRadius: 8,
                   padding: "10px 11px",

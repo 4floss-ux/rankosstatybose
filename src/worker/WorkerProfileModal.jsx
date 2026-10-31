@@ -166,8 +166,8 @@ export function WorkerProfileModal({
     >
       <div className="rs-modal-card worker-profile-modal">
         <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(16,36,56,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-          .worker-profile-modal{width:min(700px,100%);max-height:calc(100dvh - 40px);overflow:hidden;background:#fff;border:1px solid rgba(16,36,56,.08);border-radius:20px;box-shadow:0 26px 80px rgba(16,36,56,.25);padding:0;color:#102438}
+          .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:2000;display:grid;place-items:center;padding:20px}
+          .worker-profile-modal{width:min(700px,100%);max-height:calc(100dvh - 40px);overflow:hidden;background:#fff;border:1px solid rgba(34,38,49,.08);border-radius:20px;box-shadow:0 26px 80px rgba(34,38,49,.25);padding:0;color:#222631}
           .worker-profile-modal-scroll{max-height:calc(100dvh - 40px);overflow:auto;padding:22px;box-sizing:border-box;scrollbar-gutter:stable}
           .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
           .rs-modal-head h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
@@ -175,14 +175,14 @@ export function WorkerProfileModal({
           .rs-profile-stat{background:#f6f8fa;border:1px solid #e4ebf0;border-radius:12px;padding:13px}
           .rs-profile-stat span{display:block;font-size:11px;color:#6c7a88;margin-bottom:5px;line-height:1.3}.rs-profile-stat b{font-family:Manrope,Inter,sans-serif;font-size:18px}
           .rs-profile-phone{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-          .rs-profile-phone button{border:1px solid #dbe4ea;background:#fff;color:#102438;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+          .rs-profile-phone button{border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:8px;padding:6px 8px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
           .rs-profile-contact-error{margin-top:6px;font-size:11px;color:#b64d2a}
           .rs-profile-plan-lock{grid-column:1/-1;border:1px dashed #d7e0e7;background:#f8fafb;border-radius:12px;padding:13px 14px;color:#526374;font-size:12px;line-height:1.5}
-          .rs-profile-plan-lock b{display:block;color:#102438;font-size:13px;margin-bottom:3px}
+          .rs-profile-plan-lock b{display:block;color:#222631;font-size:13px;margin-bottom:3px}
           .rs-profile-section{margin-top:18px}.rs-profile-section> b{font-family:Manrope,Inter,sans-serif}
-          .rs-profile-experience{margin-top:18px;border:1px solid #e4ebf0;border-radius:16px;background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%);padding:16px 18px;box-shadow:0 6px 18px rgba(16,36,56,.035)}
-          .rs-profile-experience-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.rs-profile-experience-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#fff1e4;color:#d66f14;flex:0 0 34px}.rs-profile-experience-icon svg{width:18px;height:18px;display:block}
-          .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#102438}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
+          .rs-profile-experience{margin-top:18px;border:1px solid #e4ebf0;border-radius:16px;background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%);padding:16px 18px;box-shadow:0 6px 18px rgba(34,38,49,.035)}
+          .rs-profile-experience-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.rs-profile-experience-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#efecf7;color:#55477a;flex:0 0 34px}.rs-profile-experience-icon svg{width:18px;height:18px;display:block}
+          .rs-profile-experience-title{min-width:0}.rs-profile-experience-title b{display:block;font-family:Manrope,Inter,sans-serif;font-size:15px;color:#222631}.rs-profile-experience-title span{display:block;margin-top:2px;color:#7a8996;font-size:11px}
           .rs-profile-experience-text{margin:0;padding:12px 14px;border-radius:11px;background:#f6f8fa;color:#526374;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
           .rs-review-list{display:grid;gap:10px;margin-top:10px}.rs-review{border:1px solid #e4ebf0;border-radius:12px;padding:13px;background:#fff}.rs-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}.rs-review-score{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}.rs-review-date{font-size:11px;color:#8a98a6}.rs-review p{margin:0;color:#4f6070;line-height:1.5;white-space:pre-wrap}.rs-profile-reviews .rs-review-list{margin-top:12px}.rs-profile-empty-note{margin-top:12px}
           @media(max-width:620px){
@@ -214,7 +214,7 @@ export function WorkerProfileModal({
                 width: 50,
                 height: 50,
                 borderRadius: "50%",
-                background: "#102438",
+                background: "#222631",
                 color: "#fff",
                 display: "grid",
                 placeItems: "center",
@@ -246,7 +246,7 @@ export function WorkerProfileModal({
           <button className="rs-close" onClick={onClose}><CloseMark /></button>
         </div>
 
-        {worker.isDemoProfile && <div role="status" style={{marginBottom:14,padding:"11px 13px",border:"1px solid #f2d3b8",borderRadius:10,background:"#fff7ee",color:"#8a531d",fontSize:12,lineHeight:1.5}}><b>Demonstracinis profilis · Išgalvoti duomenys</b><br/>Naudojamas tikras profilio išdėstymas ir jūsų plano matomumo taisyklės. Tai nėra tikro žmogaus paskyra. Telefonas ir tikri atsiliepimai neįkeliami.</div>}
+        {worker.isDemoProfile && <div role="status" style={{marginBottom:14,padding:"11px 13px",border:"1px solid #c9c2de",borderRadius:10,background:"#f5f3fa",color:"#433960",fontSize:12,lineHeight:1.5}}><b>Demonstracinis profilis · Išgalvoti duomenys</b><br/>Naudojamas tikras profilio išdėstymas ir jūsų plano matomumo taisyklės. Tai nėra tikro žmogaus paskyra. Telefonas ir tikri atsiliepimai neįkeliami.</div>}
         <div className="rs-profile-grid">
           <div className="rs-profile-stat">
             <span>Miestas</span>
