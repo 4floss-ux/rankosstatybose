@@ -1,3 +1,5 @@
+import { maintenancePage } from "./maintenance-page.js";
+
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
@@ -148,9 +150,153 @@ async function recordVisit(request, env) {
   return jsonResponse({ ok: true });
 }
 
+
+/* ---------- Atnaujinimo režimas (MAINTENANCE_MODE) ----------
+   Įjungiama Cloudflare nustatymuose: MAINTENANCE_MODE=on, MAINTENANCE_UNTIL=2026-11-02T08:00:00+02:00,
+   MAINTENANCE_SECRET=<ilga atsitiktinė eilutė, kaip „Secret“>. Tikrinama serveryje, todėl naršyklėje apeiti neįmanoma:
+   kol režimas įjungtas, nė vienas svetainės failas (HTML, JS, CSS, paveikslėliai, /hire, /api) neatiduodamas
+   niekam, išskyrus administratorių, kurio slaptažodis ir is_admin patikrinami Supabase pusėje. */
+const BYPASS_COOKIE = "s24_maint_admin";
+const BYPASS_SECONDS = 12 * 60 * 60;
+const loginAttempts = new Map();
+
+const maintenanceOn = (env) => String(env?.MAINTENANCE_MODE || "").trim().toLowerCase() === "on";
+
+function b64url(bytes) {
+  let s = "";
+  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function hmac(secret, data) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data)));
+}
+
+function safeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function readCookie(request, name) {
+  const raw = request.headers.get("cookie") || "";
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return "";
+}
+
+async function hasAdminBypass(request, env) {
+  const secret = String(env?.MAINTENANCE_SECRET || "");
+  if (secret.length < 32) return false; // be slapto rakto apėjimas neįmanomas
+  const token = readCookie(request, BYPASS_COOKIE);
+  const [uid, exp, sig] = token.split(".");
+  if (!uid || !exp || !sig) return false;
+  if (!(Number(exp) > Math.floor(Date.now() / 1000))) return false;
+  return safeEqual(sig, await hmac(secret, `${uid}.${exp}`));
+}
+
+function safeNext(value) {
+  const v = String(value || "/");
+  return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/__admin") ? v : "/";
+}
+
+function maintenanceResponse(env, url, error = "") {
+  const html = maintenancePage({ until: String(env?.MAINTENANCE_UNTIL || ""), error, next: safeNext(url.pathname + url.search) });
+  return new Response(html, {
+    status: 503,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate",
+      "retry-after": "900",
+      "x-robots-tag": "noindex, nofollow",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    },
+  });
+}
+
+function redirect(location, cookie) {
+  const headers = { location, "cache-control": "no-store" };
+  if (cookie) headers["set-cookie"] = cookie;
+  return new Response(null, { status: 303, headers });
+}
+
+async function adminLogin(request, env) {
+  if (request.method !== "POST") return redirect("/");
+  const origin = request.headers.get("origin");
+  if (origin && new URL(origin).host !== new URL(request.url).host) return new Response("Forbidden", { status: 403 });
+
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const now = Date.now();
+  const rec = loginAttempts.get(ip) || { n: 0, t: now };
+  if (now - rec.t > 10 * 60 * 1000) { rec.n = 0; rec.t = now; }
+  if (rec.n >= 5) return redirect("/?admin=rate");
+
+  let form;
+  try { form = await request.formData(); } catch { return redirect("/?admin=failed"); }
+  const email = String(form.get("email") || "").trim().slice(0, 200);
+  const password = String(form.get("password") || "").slice(0, 200);
+  const next = safeNext(form.get("next"));
+  const secret = String(env?.MAINTENANCE_SECRET || "");
+  const fail = () => { rec.n += 1; loginAttempts.set(ip, rec); return redirect("/?admin=failed"); };
+  if (!email || !password || secret.length < 32) return fail();
+
+  const supabaseUrl = String(env?.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL).replace(/\/+$/, "");
+  const supabaseKey = String(env?.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_PUBLISHABLE_KEY);
+
+  // 1) Slaptažodį tikrina Supabase
+  const auth = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: supabaseKey, "content-type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  }).catch(() => null);
+  if (!auth || !auth.ok) return fail();
+  const session = await auth.json().catch(() => null);
+  if (!session?.access_token || !session?.user?.id) return fail();
+
+  // 2) Administratoriaus teises tikrina ta pati is_admin funkcija, kurią naudoja svetainė
+  const check = await fetch(`${supabaseUrl}/rest/v1/rpc/is_admin`, {
+    method: "POST",
+    headers: { apikey: supabaseKey, authorization: `Bearer ${session.access_token}`, "content-type": "application/json" },
+    body: "{}",
+  }).catch(() => null);
+  const isAdmin = check && check.ok ? (await check.json().catch(() => false)) === true : false;
+  if (!isAdmin) return fail();
+
+  loginAttempts.delete(ip);
+  const exp = Math.floor(Date.now() / 1000) + BYPASS_SECONDS;
+  const payload = `${session.user.id}.${exp}`;
+  const token = `${payload}.${await hmac(secret, payload)}`;
+  return redirect(next, `${BYPASS_COOKIE}=${token}; Path=/; Max-Age=${BYPASS_SECONDS}; HttpOnly; Secure; SameSite=Strict`);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // Atnaujinimo režimas – tikrinama prieš bet ką kita
+    if (url.pathname === "/api/status") {
+      const blocked = maintenanceOn(env) && !(await hasAdminBypass(request, env));
+      return jsonResponse({ ok: true, maintenance: blocked });
+    }
+    if (url.pathname === "/__admin/login") {
+      return maintenanceOn(env) ? adminLogin(request, env) : redirect("/");
+    }
+    if (url.pathname === "/__admin/logout") {
+      return redirect("/", `${BYPASS_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
+    }
+    if (maintenanceOn(env) && !(await hasAdminBypass(request, env))) {
+      if (url.pathname.startsWith("/api/") || (request.method !== "GET" && request.method !== "HEAD")) {
+        return new Response(JSON.stringify({ ok: false, error: "maintenance" }), { status: 503, headers: { ...JSON_HEADERS, "retry-after": "900" } });
+      }
+      const err = url.searchParams.get("admin");
+      return maintenanceResponse(env, url, err === "rate" ? "rate" : err === "failed" ? "failed" : "");
+    }
 
     if (url.pathname === "/api/analytics/visit") {
       return recordVisit(request, env);
