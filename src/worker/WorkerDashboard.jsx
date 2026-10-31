@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getVilniusTodayISO, supabase, workerBirthDateError } from "../lib/config.js";
-import { BrandLogo, CloseMark, SilentLoader } from "../ui/brand.jsx";
+import { CloseMark, SilentLoader } from "../ui/brand.jsx";
 import { ArrivalTimeDialog, ReviewConductNotice, RoundedSelect, RoundedTimeSelect, normalizeLithuanianMobilePhone } from "../ui/common.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { PhoneAvailabilityHint, PhoneVerificationFields, usePhoneVerification } from "../auth/phoneVerification.jsx";
@@ -13,6 +13,7 @@ import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/mo
 import { CompanyBadge, workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { WorkAbroadPreference } from "./workAbroad.jsx";
+import { AppShell } from "../ui/appShell.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextFourteenDays();
@@ -49,6 +50,14 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [workerView, setWorkerView] = useState(() => {
+    try {
+      const saved = window.sessionStorage.getItem("s24-worker-view");
+      return ["overview", "invites", "jobs", "history", "ads", "schedule", "profile"].includes(saved) ? saved : "overview";
+    } catch {
+      return "overview";
+    }
+  });
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [bugReportNotice, setBugReportNotice] = useState("");
@@ -162,6 +171,22 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         : current
     );
   }, [longTermOffers, longTermOfferTarget?.id]);
+
+  useEffect(() => {
+    try { window.sessionStorage.setItem("s24-worker-view", workerView); } catch {}
+  }, [workerView]);
+
+  useEffect(() => {
+    if (showProfileEditor) return;
+    setWorkerView((current) => (current === "schedule" || current === "profile" ? "overview" : current));
+  }, [showProfileEditor]);
+
+  useEffect(() => {
+    if (workerView === "schedule" || workerView === "profile") {
+      if (!showProfileEditor) openWorkerProfileEditor(workerView === "schedule" ? "availability" : "profile");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!showProfileEditor) return;
@@ -2709,7 +2734,24 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     openWorkdayDetails(nextConfirmedWorkday);
   }
 
+  function goWorkerView(view, scrollTargetId = "") {
+    if (view === "schedule" || view === "profile") {
+      openWorkerProfileEditor(view === "schedule" ? "availability" : "profile");
+      return;
+    }
+    setShowProfileEditor(false);
+    setWorkerView(view);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const node = scrollTargetId ? document.getElementById(scrollTargetId) : null;
+        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+        else window.scrollTo({ top: 0 });
+      });
+    });
+  }
+
   function openWorkerProfileEditor(target = "profile") {
+    setWorkerView(target === "availability" ? "schedule" : "profile");
     setWorkerProfileEditorTarget(target);
     setProfileFormErrors({});
     setAvailabilityValidationMessages({});
@@ -2738,17 +2780,14 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
 
     if (target === "availability-review") {
+      setWorkerView("overview");
       document
         .getElementById("worker-availability-alert")
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    document
-      .getElementById(
-        target === "invitations" ? "worker-invitations" : "worker-workdays"
-      )
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    goWorkerView(target === "invitations" ? "invites" : "jobs");
   }
 
   const pendingLongTermOffers = longTermOffers.filter(
@@ -2768,14 +2807,54 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const workerInitials = (form.displayName || "D")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "D";
+
   return (
+    <AppShell
+      current={workerView}
+      onGo={goWorkerView}
+      groups={[
+        ["Darbai", [
+          { key: "overview", label: "Apžvalga", icon: "overview" },
+          { key: "invites", label: "Kvietimai į darbą", icon: "mail", badge: invitations.length },
+          { key: "jobs", label: "Mano darbai", icon: "jobs", badge: activeWorkerWorkdays.length },
+          { key: "history", label: "Darbų istorija", icon: "history" },
+        ]],
+        ["Prieinamumas", [
+          { key: "schedule", label: "Darbo grafikas", icon: "cal", badge: needsAvailabilityConfirm ? "Atnaujinti" : 0 },
+        ]],
+        ["Ilgalaikis darbas", [
+          { key: "ads", label: "Ilgalaikiai pasiūlymai", icon: "briefcase", badge: pendingLongTermOffers.length },
+        ]],
+      ]}
+      tabs={[
+        { key: "overview", label: "Apžvalga", icon: "overview" },
+        { key: "invites", label: "Kvietimai", icon: "mail", badge: invitations.length },
+        { key: "jobs", label: "Darbai", icon: "jobs", badge: activeWorkerWorkdays.length },
+        { key: "schedule", label: "Grafikas", icon: "cal", badge: needsAvailabilityConfirm ? 1 : 0 },
+      ]}
+      who={{ name: form.displayName || "Darbuotojas", sub: form.city || "Darbuotojas", initials: workerInitials, avatar: profileAvatarUrl }}
+      footer={[
+        ...(onAdminReturn ? [{ key: "admin", label: "Grįžti į administravimą", icon: "back", onClick: onAdminReturn }] : []),
+        { key: "profile", label: "Mano profilis", icon: "user", onClick: () => goWorkerView("profile") },
+        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
+      ]}
+      utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
+    >
     <div className="wd-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
-        .wd-page{min-height:100vh;background:#f6f8fa;color:#222631;padding-bottom:56px}
+        .wd-page{min-height:0;background:transparent;color:#222631;padding-bottom:24px}
+        .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .wd-shell{width:min(1320px,calc(100% - 40px));margin:32px auto 0}
+        .wd-shell{width:min(1320px,100%);margin:8px auto 0}
+        @media(max-width:899px){.wd-shell{width:calc(100% - 32px);margin-top:16px}}
         .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .wd-heading p{margin:8px 0 0;color:#6c7a88;max-width:650px}
@@ -2908,81 +2987,13 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         }
       `}</style>
 
-      <header className="wd-topbar">
-        <div
-          className="wd-topbar-inner"
-          style={
-            isPhoneLayout
-              ? {
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  justifyItems: "center",
-                  gap: 10,
-                  padding: "10px 0",
-                }
-              : undefined
-          }
-        >
-          <div
-            style={
-              isPhoneLayout
-                ? { width: "100%", display: "flex", justifyContent: "center" }
-                : undefined
-            }
-          >
-            <BrandLogo className="brand" href="#" height={46} />
-          </div>
-          <div
-            className="wd-topbar-actions"
-            style={
-              isPhoneLayout
-                ? {
-                    display: "flex",
-                    width: "100%",
-                    justifyContent: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                  }
-                : { display: "flex", alignItems: "center", gap: 9 }
-            }
-          >
-            {onAdminReturn && (
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={onAdminReturn}
-              >
-                ← Administravimas
-              </button>
-            )}
-            {!onAdminReturn && isPhoneLayout && (
-              <button
-                className="btn ghost wd-mobile-profile-btn"
-                type="button"
-                onClick={() => {
-                  if (showProfileEditor) {
-                    setShowProfileEditor(false);
-                  } else {
-                    openWorkerProfileEditor("profile");
-                  }
-                }}
-              >
-                {showProfileEditor ? "Uždaryti" : "Profilis"}
-              </button>
-            )}
-            {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
+
       {!onAdminReturn && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
 
-      <main className="wd-shell">
-        {showProfileEditor && <WorkAbroadPreference user={user}/>}
+      <main className="wd-shell" data-view={workerView}>
+        {showProfileEditor && <div data-wv="profile"><WorkAbroadPreference user={user}/></div>}
 
-        <div className="wd-heading">
+        <div className="wd-heading" data-wv="overview">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
             <h1>Mano darbai ir statistika</h1>
@@ -3090,7 +3101,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
 
         {showWorkTimeLoginReminder && (
-          <div className="wd-worktime-login-reminder" role="status">
+          <div className="wd-worktime-login-reminder" role="status" data-wv="overview">
             <div className="wd-worktime-login-reminder-copy">
               <b>Būtinai atnaujinkite darbo laikus</b>
               <span>
@@ -3108,7 +3119,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           (!form.displayName.trim() ||
             !form.phone.trim() ||
             availableCount === 0) && (
-            <section className="wd-onboarding-card">
+            <section className="wd-onboarding-card" data-wv="overview">
               <div className="wd-onboarding-top">
                 <div>
                   <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
@@ -3127,9 +3138,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </section>
           )}
-        <div className="wd-overview-heading eyebrow">DABAR SVARBIAUSIA</div>
+        <div className="wd-overview-heading eyebrow" data-wv="overview">DABAR SVARBIAUSIA</div>
 
-        <div className="wd-overview">
+        <div className="wd-overview" data-wv="overview">
           <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
             <div className="wd-overview-card-top">
               <span>Nauji kvietimai</span>
@@ -3270,13 +3281,14 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           <section
             ref={workerProfileEditorRef}
             id="worker-profile-editor"
+            data-wv="schedule profile"
             className="wd-profile-editor"
             style={{ scrollMarginTop: 88 }}
           >
             <div className="wd-profile-editor-head">
               <div>
                 <div className="eyebrow">MANO INFORMACIJA</div>
-                <h2>Tvarkyti mano informaciją</h2>
+                <h2>{workerView === "schedule" ? "Darbo grafikas" : "Tvarkyti mano informaciją"}</h2>
                 <p>
                   Atnaujinkite savo profilį ir laiką, kada galite priimti darbo
                   pasiūlymus.
@@ -3294,8 +3306,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
-            <div id="s24-worker-push-settings" />
-            <div className="wd-profile-editor-section">
+            <div id="s24-worker-push-settings" data-wv="profile" />
+            <div className="wd-profile-editor-section" data-wv="profile">
               <h3>Pagrindinė informacija</h3>
 
               <div className="wd-avatar-editor">
@@ -3559,7 +3571,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </label>
             </div>
 
-            <div className="wd-profile-editor-section wd-recent-ratings-card">
+            <div className="wd-profile-editor-section wd-recent-ratings-card" data-wv="profile">
               <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
 
               {recentEmployerRatingsLoading ? (
@@ -3590,6 +3602,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div
               className="wd-profile-editor-section"
               id="worker-availability-editor"
+              data-wv={Object.keys(availabilityValidationMessages || {}).length ? "schedule profile" : "schedule"}
               style={{ scrollMarginTop: 92 }}
             >
               <h3>Kada galite dirbti?</h3>
@@ -3772,6 +3785,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </button>
             </div>
 
+            <div data-wv="profile">
             <AccountDeleteZone
               onDelete={() => setDeleteAccountOpen(true)}
               description="Ištrynus darbuotojo paskyrą bus pašalintas jūsų profilis, sukurti duomenys ir įkelti failai. Šio veiksmo atkurti nebus galima."
@@ -3783,11 +3797,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
                 setBugReportOpen(true);
               }}
             />
+            </div>
           </section>
         )}
 
         {needsAvailabilityConfirm && (
-          <div id="worker-availability-alert" className="wd-availability-alert" style={{ scrollMarginTop: 88 }}>
+          <div id="worker-availability-alert" className="wd-availability-alert" style={{ scrollMarginTop: 88 }} data-wv="overview schedule">
             <div>
               <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
               <span>
@@ -3823,7 +3838,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="wd-stats-section">
+        <section className="wd-stats-section" data-wv="overview">
           <div className="wd-stats-head">
             <button
               className={`wd-stats-toggle ${showWorkerStats ? "open" : ""}`}
@@ -3892,6 +3907,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         {employerReviewOpportunities.length > 0 && (
           <section
             className="wd-card"
+            data-wv="overview"
             style={{
               borderColor: "#b3a8d0",
               background: "#fffaf5",
@@ -3949,8 +3965,35 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
+        <section className="wd-card" data-wv="ads" style={{ marginBottom: 18 }}>
+          <div className="eyebrow">ILGALAIKIS DARBAS</div>
+          <h2 style={{ marginTop: 6 }}>Ilgalaikio darbo pasiūlymai</h2>
+          <p className="wd-card-sub">
+            Čia matote darbdavių pasiūlymus dirbti ilgiau ir savo dabartinį ilgalaikį darbą.
+          </p>
+          {activeLongTermEmployment ? (
+            <button
+              className="wd-long-term-btn"
+              type="button"
+              onClick={() => {
+                setLongTermSignedContractFile(null);
+                setLongTermOfferTarget(activeLongTermEmployment);
+              }}
+            >
+              Atidaryti dabartinį ilgalaikį darbą
+              {Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0) > 0 && (
+                <span className="wd-chat-count">
+                  {Math.min(9, Number(longTermUnreadByOffer[activeLongTermEmployment.id] || 0))}
+                </span>
+              )}
+            </button>
+          ) : pendingLongTermOffers.length === 0 ? (
+            <p className="wd-card-sub" style={{ margin: 0 }}>Šiuo metu naujų ilgalaikio darbo pasiūlymų nėra.</p>
+          ) : null}
+        </section>
+
         {pendingLongTermOffers.length > 0 && (
-        <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }}>
+        <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }} data-wv="ads overview">
           <div
             style={{
               display: "flex",
@@ -4067,7 +4110,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         <div className="wd-form">
-          <section className="wd-card wd-invitations-section" id="worker-invitations">
+          <section className="wd-card wd-invitations-section" id="worker-invitations" data-wv="invites">
             <h2>Kvietimai į darbą</h2>
 
             {invitations.length ? (
@@ -4281,7 +4324,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card wd-active-jobs-section" id="worker-workdays">
+          <section className="wd-card wd-active-jobs-section" id="worker-workdays" data-wv="jobs">
             <h2>Mano darbai</h2>
 
             {activeWorkerWorkdays.length > 0 && (
@@ -4806,7 +4849,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card" id="worker-job-history">
+          <section className="wd-card" id="worker-job-history" data-wv="history">
             <div className="wd-history-section-head">
               <h2>Darbų istorija</h2>
               {isPhoneLayout && workerWorkHistory.length > 0 && (
@@ -6922,5 +6965,6 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         accountKind="darbuotojo paskyra"
       />
     </div>
+    </AppShell>
   );
 }
