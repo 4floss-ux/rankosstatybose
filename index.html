@@ -31,8 +31,14 @@
     <!-- Atnaujinimo režimas: jei administratorius įjungia MAINTENANCE_MODE, atidaryti langai persikrauna į atnaujinimo puslapį. -->
     <script>
       (function () {
-        function check() { fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) { if (j && j.maintenance === true) location.reload(); }).catch(function () {}); }
+        // Atnaujinimo metu: administratoriui atsijungus nuo svetainės, nuimama ir prieiga per atnaujinimo langą
+        var bypass = false;
+        function hasSession() { try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (/^sb-.+-auth-token$/.test(k) && localStorage.getItem(k)) return true; } } catch (e) { return true; } return false; }
+        function guard() { if (bypass && !hasSession()) location.replace("/__admin/logout"); }
+        function check() { fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) { if (j && j.maintenance === true) location.reload(); bypass = !!(j && j.bypass === true); guard(); }).catch(function () {}); }
+        check();
         setInterval(check, 60000);
+        setInterval(guard, 1500);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
       })();
     </script>

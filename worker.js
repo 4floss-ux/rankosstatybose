@@ -278,7 +278,35 @@ async function adminLogin(request, env) {
   const exp = Math.floor(Date.now() / 1000) + BYPASS_SECONDS;
   const payload = `${session.user.id}.${exp}`;
   const token = `${payload}.${await hmac(secret, payload)}`;
-  return redirect(next, `${BYPASS_COOKIE}=${token}; Path=/; Max-Age=${BYPASS_SECONDS}; HttpOnly; Secure; SameSite=Strict`);
+  return adminWelcome(supabaseUrl, session, next, `${BYPASS_COOKIE}=${token}; Path=/; Max-Age=${BYPASS_SECONDS}; HttpOnly; Secure; SameSite=Strict`);
+}
+
+// Po prisijungimo administratorius iš karto prijungiamas ir prie pačios svetainės (ta pati Supabase sesija),
+// kad nereikėtų jungtis antrą kartą. Sesija įrašoma ten pat, kur ją laiko svetainės Supabase klientas.
+function adminWelcome(supabaseUrl, session, next, cookie) {
+  let ref = "";
+  try { ref = new URL(supabaseUrl).hostname.split(".")[0]; } catch {}
+  const stored = {
+    access_token: session.access_token,
+    token_type: session.token_type || "bearer",
+    expires_in: session.expires_in,
+    expires_at: session.expires_at || Math.floor(Date.now() / 1000) + Number(session.expires_in || 3600),
+    refresh_token: session.refresh_token,
+    user: session.user,
+  };
+  const js = (v) => JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  const html = `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>statybos24.lt</title><body style="background:#222631"><script>try{localStorage.setItem(${js(`sb-${ref}-auth-token`)},${js(JSON.stringify(stored))})}catch(e){}location.replace(${js(next)});</script></body>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "set-cookie": cookie,
+      "referrer-policy": "same-origin",
+      "x-robots-tag": "noindex, nofollow",
+      "content-security-policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+    },
+  });
 }
 
 export default {
@@ -299,8 +327,9 @@ async function handle(request, env) {
 
     // Atnaujinimo režimas – tikrinama prieš bet ką kita
     if (url.pathname === "/api/status") {
-      const blocked = maintenanceOn(env) && !(await hasAdminBypass(request, env));
-      return jsonResponse({ ok: true, maintenance: blocked });
+      const on = maintenanceOn(env);
+      const bypass = on && (await hasAdminBypass(request, env));
+      return jsonResponse({ ok: true, maintenance: on && !bypass, bypass });
     }
     if (url.pathname === "/__admin/login") {
       return maintenanceOn(env) ? adminLogin(request, env) : redirect("/");
