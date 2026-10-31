@@ -1,211 +1,437 @@
-import {
-  ArrowRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Car, Check,
-  ChevronDown, Clock3, HardHat, LayoutDashboard, MapPin, Menu, MessageSquare,
-  Search, Settings, ShieldCheck, Sparkles, Star, Users, WalletCards, Wrench
-} from 'lucide-react'
+import { useEffect, useRef, useState } from "react";
+import { initialPasswordRecovery, isHireProjectPath, statybos24IsStandalone, supabase } from "./lib/config.js";
+import { PasswordRecoveryPage, clearPasswordRecoveryUrl, rememberPasswordRecoveryUser, rememberedPasswordRecoveryUser } from "./auth/passwordRecovery.jsx";
+import { AuthModal } from "./auth/AuthModal.jsx";
+import { TeamInvitePage } from "./team/TeamInvitePage.jsx";
+import { localDateISO } from "./lib/jobs.js";
+import { WorkerDashboard } from "./worker/WorkerDashboard.jsx";
+import { BUSINESS_PRESENTATION_TOKEN } from "./employer/plans.js";
+import { EmployerDashboard } from "./employer/EmployerDashboard.jsx";
+import { AdminEmployerGateway, AdminWorkerGateway } from "./admin/adminParts.jsx";
+import { AdminDashboard } from "./admin/AdminDashboard.jsx";
+import { SuspendedAccount } from "./public/SuspendedAccount.jsx";
+import { PublicLandingPage } from "./public/PublicLandingPage.jsx";
+import { BusinessPresentationPage } from "./public/BusinessPresentationPage.jsx";
+import { AppBootLoader } from "./ui/AppBootLoader.jsx";
 
-const workers = [
-  { initials:'TK', name:'Tomas K.', status:'Laisvas rytoj', city:'Vilnius', skills:['Betonavimo pagalba','Medžiagų nešiojimas','Tvarkymas'], attendance:'97%', transport:true },
-  { initials:'MP', name:'Mantas P.', status:'Laisvas rytoj', city:'Vilnius', skills:['Medžiagų nešiojimas','Tvarkymas'], attendance:'100%', transport:true },
-  { initials:'DS', name:'Darius S.', status:'Laisvas šiandien', city:'Vilnius', skills:['Betonavimo pagalba','Krovos darbai'], attendance:'94%', transport:false },
-  { initials:'RK', name:'Rytis K.', status:'Laisvas rytoj', city:'Vilnius', skills:['Tvarkymas','Statybvietės pagalba'], attendance:'92%', transport:true },
-  { initials:'AP', name:'Andrius P.', status:'Laisvas rytoj', city:'Vilnius', skills:['Medžiagų nešiojimas','Tvarkymas'], attendance:'98%', transport:true },
-]
+export function App() {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    if(!user?.id || !supabase) return;
+    let stopped=false, busy=false, recordedDay="";
+    async function recordDay() {
+      if(stopped || busy || document.visibilityState !== "visible") return;
+      const date=localDateISO(new Date());
+      if(recordedDay===date) return;
+      busy=true;
+      try { const result=await supabase.rpc("record_my_account_day"); if(!result.error && !stopped)recordedDay=date; } catch {} finally {busy=false;}
+    }
+    recordDay();
+    const interval=window.setInterval(recordDay,60000);
+    document.addEventListener("visibilitychange",recordDay);
+    return()=>{stopped=true;window.clearInterval(interval);document.removeEventListener("visibilitychange",recordDay);};
+  },[user?.id]);
 
-function Logo() {
-  return (
-    <div className="brand">
-      <div className="brandMark"><HardHat size={20}/></div>
-      <div className="brandText"><strong>rankos</strong><span>statybose</span><b>.lt</b></div>
-    </div>
-  )
-}
+  const authUserIdRef = useRef(null);
+  const [authSessionChecked, setAuthSessionChecked] = useState(!supabase);
+  const [accountStatusChecked, setAccountStatusChecked] = useState(!supabase);
+  const [passwordRecovery, setPasswordRecovery] = useState(initialPasswordRecovery.requested);
+  const [recoveryError, setRecoveryError] = useState(initialPasswordRecovery.error);
+  const [recoveryUserId, setRecoveryUserId] = useState(() =>
+    initialPasswordRecovery.requested && !initialPasswordRecovery.error && !initialPasswordRecovery.hasCallback
+      ? rememberedPasswordRecoveryUser() : ""
+  );
+  const [accountRole, setAccountRole] = useState(null);
+  const [accountStatus, setAccountStatus] = useState({
+    isActive: true,
+    suspendedUntil: null,
+    suspensionReason: null,
+  });
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authRole, setAuthRole] = useState("worker");
+  const [pricingBillingCycle, setPricingBillingCycle] = useState("monthly");
+  const [adminMode, setAdminMode] = useState("admin");
+  const businessPresentationToken = new URLSearchParams(window.location.search).get(
+    "pristatymas"
+  );
+  const [teamInviteToken, setTeamInviteToken] = useState(() =>
+    new URLSearchParams(window.location.search).get("team_invite")
+  );
+  const [teamInvite, setTeamInvite] = useState(null);
+  const [teamInviteLoading, setTeamInviteLoading] = useState(false);
+  const [teamInviteError, setTeamInviteError] = useState("");
+  const [teamInviteAccepting, setTeamInviteAccepting] = useState(false);
 
-function SelectBox({label, icon:Icon, value}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <div className="inputLike"><Icon size={17}/><b>{value}</b><ChevronDown size={16}/></div>
-    </label>
-  )
-}
+  useEffect(() => {
+    if (!supabase) return;
 
-function MiniLogo(){
-  return (
-    <div className="miniLogo"><HardHat size={17}/><b>rankosstatybose.lt</b></div>
-  )
-}
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        const nextUser = data?.session?.user ?? null;
+        authUserIdRef.current = nextUser?.id || null;
+        setAccountStatusChecked(!nextUser);
+        setUser(nextUser);
+        if (error && initialPasswordRecovery.requested) {
+          setRecoveryError("Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.");
+        }
+        setAuthSessionChecked(true);
+      })
+      .catch(() => {
+        setAccountStatusChecked(true);
+        if (initialPasswordRecovery.requested) {
+          setRecoveryError("Nepavyko patikrinti atkūrimo nuorodos. Bandykite atidaryti ją dar kartą.");
+        }
+        setAuthSessionChecked(true);
+      });
 
-function WorkerTable(){
-  return (
-    <div className="productShell">
-      <aside className="productSide">
-        <MiniLogo/>
-        <nav>
-          <a className="active"><Search size={16}/>Darbuotojų paieška</a>
-          <a><BriefcaseBusiness size={16}/>Mano užklausos</a>
-          <a><LayoutDashboard size={16}/>Darbo skydelis</a>
-          <a><MessageSquare size={16}/>Pranešimai <em>3</em></a>
-          <a><WalletCards size={16}/>Mokėjimai</a>
-          <a><Settings size={16}/>Nustatymai</a>
-        </nav>
-      </aside>
-      <div className="productMain">
-        <div className="productTitle">
-          <div><h3>Galimi darbuotojai</h3><p>Rasta 18 darbuotojų</p></div>
-          <button className="ghost"><Bell size={16}/></button>
-        </div>
-        <div className="tinyFilters">
-          <button><MapPin size={14}/>Vilnius<ChevronDown size={13}/></button>
-          <button><CalendarDays size={14}/>Rytoj<ChevronDown size={13}/></button>
-          <button><Wrench size={14}/>Visi darbai<ChevronDown size={13}/></button>
-        </div>
-        <div className="workerList">
-          {workers.map((w) => (
-            <div className="workerRow" key={w.name}>
-              <div className="workerIdentity"><div className="avatar">{w.initials}</div><div><b>{w.name}</b><span>{w.city}</span></div></div>
-              <div><span className="status">{w.status}</span></div>
-              <div className="skillWrap">{w.skills.slice(0,2).map(x=><span className="tag" key={x}>{x}</span>)}</div>
-              <div className="metric"><BarChart3 size={15}/><b>{w.attendance}</b><small> atvykimas</small></div>
-              <div className={w.transport ? "transport yes":"transport no"}><Car size={15}/>{w.transport?'Turi transportą':'Neturi'}</div>
-              <button className="smallCta">Kviesti</button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const nextUser = session?.user ?? null;
+        const nextUserId = nextUser?.id || null;
+        if (authUserIdRef.current !== nextUserId) {
+          setAccountStatusChecked(!nextUser);
+          authUserIdRef.current = nextUserId;
+        }
+        setUser(nextUser);
+        if (event === "PASSWORD_RECOVERY" && session?.user?.id) {
+          rememberPasswordRecoveryUser(session.user.id);
+          setRecoveryUserId(session.user.id);
+          setRecoveryError("");
+          setPasswordRecovery(true);
+          setAuthOpen(false);
+          setAuthSessionChecked(true);
+        }
+      }
+    );
 
-function App(){
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!teamInviteToken || !supabase) {
+      setTeamInvite(null);
+      setTeamInviteError("");
+      setTeamInviteLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setTeamInviteLoading(true);
+    setTeamInviteError("");
+
+    supabase
+      .rpc("get_company_team_invite_public", {
+        p_token: teamInviteToken,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+
+        if (error) {
+          setTeamInvite(null);
+          setTeamInviteError(
+            error.message || "Nepavyko patikrinti komandos kvietimo."
+          );
+        } else {
+          setTeamInvite(data?.[0] || null);
+        }
+
+        setTeamInviteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamInviteToken]);
+
+  useEffect(() => {
+    if (!user || !supabase) {
+      setAccountRole(null);
+      setAccountStatus({
+        isActive: true,
+        suspendedUntil: null,
+        suspensionReason: null,
+      });
+      setAccountStatusChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+    setAccountStatusChecked(false);
+
+    supabase
+      .rpc("get_my_account_status")
+      .then(({ data, error }) => {
+        if (!cancelled) {
+          if (error) {
+            console.error(error);
+            setAccountRole(null);
+          } else {
+            const status = data?.[0] || null;
+            setAccountRole(status?.role || null);
+            setAccountStatus({
+              isActive: status?.is_active !== false,
+              suspendedUntil: status?.suspended_until || null,
+              suspensionReason: status?.suspension_reason || null,
+            });
+          }
+          setAccountStatusChecked(true);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error(error);
+          setAccountRole(null);
+          setAccountStatusChecked(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || accountRole !== "admin") {
+      setAdminMode("admin");
+    }
+  }, [user?.id, accountRole]);
+
+  const openLogin = () => {
+    setAuthMode("login");
+    setAuthRole("worker");
+    setAuthOpen(true);
+  };
+
+  const openEmployerSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const openWorkerSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("worker");
+    setAuthOpen(true);
+  };
+
+  const clearTeamInvite = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("team_invite");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setTeamInviteToken(null);
+    setTeamInvite(null);
+    setTeamInviteError("");
+  };
+
+  const openTeamInviteLogin = () => {
+    setAuthMode("login");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const openTeamInviteSignup = () => {
+    setAuthMode("signup");
+    setAuthRole("employer");
+    setAuthOpen(true);
+  };
+
+  const acceptTeamInvite = async () => {
+    if (!teamInviteToken || !user) return;
+
+    setTeamInviteAccepting(true);
+    setTeamInviteError("");
+
+    try {
+      const result = await supabase.rpc("accept_company_team_invite", {
+        p_token: teamInviteToken,
+      });
+
+      if (result.error) throw result.error;
+
+      const profileResult = await supabase.rpc("get_my_account_status");
+
+      if (profileResult.error) throw profileResult.error;
+
+      const profileStatus = profileResult.data?.[0] || null;
+      setAccountRole(profileStatus?.role || "employer");
+      setAccountStatus({
+        isActive: profileStatus?.is_active !== false,
+        suspendedUntil: profileStatus?.suspended_until || null,
+        suspensionReason: profileStatus?.suspension_reason || null,
+      });
+
+      clearTeamInvite();
+    } catch (err) {
+      setTeamInviteError(
+        err?.message || "Nepavyko prisijungti prie įmonės komandos."
+      );
+    } finally {
+      setTeamInviteAccepting(false);
+    }
+  };
+
+  const logout = async () => {
+    if (supabase) await supabase.auth.signOut();
+  };
+
+  const finishPasswordRecovery = () => {
+    clearPasswordRecoveryUrl();
+    setRecoveryUserId("");
+    setRecoveryError("");
+    setPasswordRecovery(false);
+  };
+
+  if (!authSessionChecked || (user && !accountStatusChecked)) {
+    // Standalone PWA already displays the OS-generated launch screen.
+    // Keep login initialization visually quiet; do not show a second logo/spinner.
+    // Website and separate /hire portal keep their original loading views.
+    if (!isHireProjectPath && statybos24IsStandalone()) {
+      return <div role="status" aria-label="Įkeliama" style={{ minHeight: "100vh", background: "#ffffff" }} />;
+    }
+    return <AppBootLoader />;
+  }
+
+  if (passwordRecovery) {
+    return (
+      <PasswordRecoveryPage
+        user={user}
+        checking={!authSessionChecked}
+        authorized={Boolean(user?.id && recoveryUserId === user.id)}
+        error={recoveryError}
+        onDone={finishPasswordRecovery}
+      />
+    );
+  }
+
+  if (
+    businessPresentationToken === BUSINESS_PRESENTATION_TOKEN &&
+    (!user || accountRole === "admin")
+  ) {
+    return (
+      <>
+        <BusinessPresentationPage onSignup={openEmployerSignup} />
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode="signup"
+          initialRole="employer"
+        />
+      </>
+    );
+  }
+
+  const accountIsSuspended =
+    accountRole !== "admin" &&
+    accountStatus.suspendedUntil &&
+    new Date(accountStatus.suspendedUntil) > new Date();
+
+  if (
+    user &&
+    accountRole !== "admin" &&
+    (!accountStatus.isActive || accountIsSuspended)
+  ) {
+    return (
+      <SuspendedAccount
+        onLogout={logout}
+        disabled={!accountStatus.isActive}
+        suspendedUntil={accountStatus.suspendedUntil}
+        reason={accountStatus.suspensionReason}
+      />
+    );
+  }
+
+  if (teamInviteToken) {
+    return (
+      <>
+        <TeamInvitePage
+          invite={teamInvite}
+          loading={teamInviteLoading}
+          error={teamInviteError}
+          user={user}
+          accepting={teamInviteAccepting}
+          onLogin={openTeamInviteLogin}
+          onSignup={openTeamInviteSignup}
+          onAccept={acceptTeamInvite}
+          onCancel={clearTeamInvite}
+        />
+
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          initialMode={authMode}
+          initialRole="employer"
+          teamInvite={
+            teamInvite
+              ? { ...teamInvite, token: teamInviteToken }
+              : null
+          }
+        />
+      </>
+    );
+  }
+
+  if (user && accountRole === "worker") {
+    return (
+      <WorkerDashboard user={user} onLogout={logout} />
+    );
+  }
+
+  if (user && accountRole === "employer") {
+    return (
+      <EmployerDashboard user={user} onLogout={logout} />
+    );
+  }
+
+  if (user && accountRole === "admin") {
+    if (adminMode === "worker") {
+      return (
+        <AdminWorkerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    if (adminMode === "employer") {
+      return (
+        <AdminEmployerGateway
+          user={user}
+          onLogout={logout}
+          onAdminReturn={() => setAdminMode("admin")}
+        />
+      );
+    }
+
+    return (
+      <AdminDashboard
+        user={user}
+        onLogout={logout}
+        onOpenWorker={() => setAdminMode("worker")}
+        onOpenEmployer={() => setAdminMode("employer")}
+        initialTab={new URLSearchParams(window.location.search).get("admin_tab")}
+      />
+    );
+  }
+
   return (
     <>
-      <header className="siteHeader">
-        <div className="container headerInner">
-          <Logo/>
-          <nav className="mainNav">
-            <a href="#kaip">Kaip tai veikia</a>
-            <a href="#darbdaviams">Darbdaviams</a>
-            <a href="#darbuotojams">Darbuotojams</a>
-            <a href="#kainodara">Kainodara</a>
-          </nav>
-          <div className="headerActions">
-            <button className="secondaryBtn">Prisijungti</button>
-            <button className="primaryBtn">Pateikti užklausą <ArrowRight size={17}/></button>
-          </div>
-          <button className="menuBtn"><Menu/></button>
-        </div>
-      </header>
+      <PublicLandingPage
+        onLogin={openLogin}
+        onEmployerSignup={openEmployerSignup}
+        onWorkerSignup={openWorkerSignup}
+        pricingBillingCycle={pricingBillingCycle}
+        setPricingBillingCycle={setPricingBillingCycle}
+      />
 
-      <main>
-        <section className="hero">
-          <div className="container heroGrid">
-            <div className="heroCopy">
-              <div className="eyebrow">STATYBŲ PAGALBINIAI, KAI JŲ REIKIA</div>
-              <h1>Reikia papildomų<br/>rankų objekte?</h1>
-              <p className="lead">Raskite statybų pagalbinius pagal vietą, datą ir prieinamumą. Jokio CV siuntimo, jokio chaoso — tik realiai laisvi darbuotojai.</p>
-
-              <div className="searchCard">
-                <div className="searchGrid">
-                  <SelectBox label="Miestas" icon={MapPin} value="Vilnius"/>
-                  <SelectBox label="Data" icon={CalendarDays} value="Rytoj"/>
-                  <SelectBox label="Kiek žmonių reikia?" icon={Users} value="3"/>
-                  <SelectBox label="Darbo tipas" icon={Wrench} value="Betonavimo pagalba"/>
-                  <SelectBox label="Pradžios laikas" icon={Clock3} value="08:00"/>
-                  <button className="searchBtn">Rasti darbuotojus <ArrowRight size={18}/></button>
-                </div>
-                <div className="availabilityLine"><span></span>Vilniuje rytoj laisvi <b>18 darbuotojų</b></div>
-              </div>
-            </div>
-            <WorkerTable/>
-          </div>
-        </section>
-
-        <section className="valueStrip">
-          <div className="container valueGrid">
-            <div className="valueItem"><div className="iconBox"><CalendarDays/></div><div><b>Darbuotojai žymi savo užimtumą</b><p>Matote tik tuos, kurie realiai laisvi norimą dieną.</p></div></div>
-            <div className="valueItem"><div className="iconBox"><BarChart3/></div><div><b>Matote atvykimo istoriją</b><p>Rinkitės pagal realius patikimumo duomenis.</p></div></div>
-            <div className="valueItem"><div className="iconBox"><Users/></div><div><b>Kviečiate tik laisvus darbuotojus</b><p>Mažiau skambučių, laukimo ir bereikalingo susirašinėjimo.</p></div></div>
-            <div className="valueItem"><div className="iconBox"><Sparkles/></div><div><b>Greitas pakaitinio darbuotojo suradimas</b><p>Jei žmogus neatvyksta, ieškote pakaitalo iš karto.</p></div></div>
-          </div>
-        </section>
-
-        <section className="section" id="kaip">
-          <div className="container">
-            <div className="sectionHead"><div><span className="sectionKicker">KAIP TAI VEIKIA</span><h2>Trys žingsniai iki komandos</h2></div><a href="#">Sužinoti daugiau <ArrowRight size={16}/></a></div>
-            <div className="stepsGrid">
-              <div className="step"><span>01</span><div className="stepIcon"><BriefcaseBusiness/></div><h3>Pateikiate poreikį</h3><p>Nurodote miestą, datą, darbo tipą ir reikalingą žmonių skaičių.</p></div>
-              <div className="step"><span>02</span><div className="stepIcon"><Search/></div><h3>Gaunate tinkamus darbuotojus</h3><p>Sistema parodo tik laisvus ir jūsų kriterijus atitinkančius žmones.</p></div>
-              <div className="step"><span>03</span><div className="stepIcon"><Check/></div><h3>Patvirtinate ir pradedate</h3><p>Išsirenkate darbuotojus, išsiunčiate kvietimus ir gaunate patvirtinimus.</p></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="dashboardSection" id="darbdaviams">
-          <div className="container dashboardGrid">
-            <div className="dashCopy">
-              <span className="sectionKicker">DARBDAVIAMS</span>
-              <h2>Visas darbuotojų poreikis viename darbo skydelyje</h2>
-              <p>Matykite užsakymus, laisvus žmones, patvirtinimus ir atvykimo statistiką vienoje vietoje.</p>
-              <button className="primaryBtn">Pateikti užklausą <ArrowRight size={17}/></button>
-            </div>
-            <div className="dashMock">
-              <div className="dashTop">
-                <div><small>Aktyvūs darbuotojai šiandien</small><strong>12</strong></div>
-                <div><small>Atviri poreikiai</small><strong>3</strong></div>
-                <div><small>Vid. atvykimas</small><strong>96%</strong></div>
-                <div className="urgent"><small>Skubus poreikis</small><b>Reikia 2 žmonių rytoj</b><span>Vilnius · nuo 08:00</span></div>
-              </div>
-              <div className="orders">
-                <div className="ordersHead"><h3>Artimiausi užsakymai</h3><button>Visi užsakymai</button></div>
-                <div className="orderRow head"><span>Data</span><span>Objektas</span><span>Žmonės</span><span>Darbo tipas</span><span>Būsena</span></div>
-                <div className="orderRow"><span>09-28</span><span>Vilnius, Naujamiestis</span><span>3</span><span>Betonavimo pagalba</span><span className="ok">Patvirtinta</span></div>
-                <div className="orderRow"><span>09-29</span><span>Vilnius, Žirmūnai</span><span>2</span><span>Medžiagų nešiojimas</span><span className="wait">Laukia</span></div>
-                <div className="orderRow"><span>10-01</span><span>Vilnius, Pilaitė</span><span>4</span><span>Tvarkymas</span><span className="ok">Patvirtinta</span></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section workersSection" id="darbuotojams">
-          <div className="container splitPanel">
-            <div>
-              <span className="sectionKicker">DARBUOTOJAMS</span>
-              <h2>Registracija paprasta. Darbus renkiesi pats.</h2>
-              <p>Pažymėk, kada gali dirbti, kokius darbus moki ir kokiu atstumu gali nuvykti. Registracija darbuotojams – nemokama.</p>
-            </div>
-            <div className="workerBenefits">
-              <div><Check/>Pasirenki, kada esi laisvas</div>
-              <div><Check/>Matai aiškią darbo vietą ir laiką</div>
-              <div><Check/>Gali priimti arba atmesti pasiūlymą</div>
-              <div><Check/>Patikimumas auga su kiekvienu sėkmingu darbu</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section pricing" id="kainodara">
-          <div className="container">
-            <div className="sectionHead"><div><span className="sectionKicker">KAINODARA</span><h2>Aiškūs planai darbdaviams</h2><p>Darbuotojams platforma lieka nemokama.</p></div></div>
-            <div className="pricingGrid">
-              <div className="priceCard"><span>STARTERIS</span><h3>49 €<small>/mėn.</small></h3><p>Pavieniams ir mažesniems projektams.</p><ul><li><Check/>Iki 5 užklausų per mėnesį</li><li><Check/>Darbuotojų paieška</li><li><Check/>Pagrindinė statistika</li></ul><button className="secondaryBtn full">Rinktis planą</button></div>
-              <div className="priceCard featured"><div className="popular">POPULIARIAUSIAS</div><span>PROFESIONALUS</span><h3>99 €<small>/mėn.</small></h3><p>Įmonėms, kurioms žmonių reikia nuolat.</p><ul><li><Check/>Iki 20 užklausų per mėnesį</li><li><Check/>Išplėstiniai filtrai</li><li><Check/>Prioritetinis palaikymas</li></ul><button className="primaryBtn full">Rinktis planą</button></div>
-              <div className="priceCard"><span>VERSLUI</span><h3>199 €<small>/mėn.</small></h3><p>Didesnėms komandoms ir keliems objektams.</p><ul><li><Check/>Neribotos užklausos</li><li><Check/>Keli įmonės vartotojai</li><li><Check/>Ataskaitos ir statistika</li></ul><button className="secondaryBtn full">Susisiekti</button></div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <div className="container footerGrid">
-          <div><Logo/><p>Statybų pagalbiniai tada, kai jų reikia.</p></div>
-          <div><b>Platforma</b><a>Kaip tai veikia</a><a>Darbdaviams</a><a>Darbuotojams</a></div>
-          <div><b>Informacija</b><a>Kainodara</a><a>DUK</a><a>Kontaktai</a></div>
-          <div><b>Teisinė informacija</b><a>Privatumo politika</a><a>Naudojimo sąlygos</a></div>
-        </div>
-        <div className="container footerBottom">© 2026 rankosstatybose.lt</div>
-      </footer>
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        initialMode={authMode}
+        initialRole={authRole}
+      />
     </>
-  )
+  );
 }
-
-export default App
