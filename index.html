@@ -28,6 +28,15 @@
       }
     </script>
 
+    <!-- Atnaujinimo režimas: jei administratorius įjungia MAINTENANCE_MODE, atidaryti langai persikrauna į atnaujinimo puslapį. -->
+    <script>
+      (function () {
+        function check() { fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) { if (j && j.maintenance === true) location.reload(); }).catch(function () {}); }
+        setInterval(check, 60000);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
+      })();
+    </script>
+
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="lt_LT" />
     <meta property="og:site_name" content="statybos24.lt" />
