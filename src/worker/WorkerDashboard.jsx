@@ -4046,13 +4046,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               pills={workerJobPageIsInvite
                 ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
                 : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
+              metaLead={workerJobPageItem.job?.company_id ? (
+                <button type="button" className={`favbtn${isFavorite(workerJobPageItem.job.company_id) ? " on" : ""}`} title={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-label={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-pressed={isFavorite(workerJobPageItem.job.company_id)} onClick={() => toggleFavorite(workerJobPageItem.job.company_id, { name: workerJobPageItem.companyName, avatar_path: workerJobPageItem.companyAvatarPath })}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorite(workerJobPageItem.job.company_id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
+                </button>
+              ) : null}
               metaExtra={<>
-                {workerJobPageItem.job?.company_id ? (
-                  <button type="button" className={`favbtn lab${isFavorite(workerJobPageItem.job.company_id) ? " on" : ""}`} aria-pressed={isFavorite(workerJobPageItem.job.company_id)} onClick={() => toggleFavorite(workerJobPageItem.job.company_id, { name: workerJobPageItem.companyName, avatar_path: workerJobPageItem.companyAvatarPath })}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorite(workerJobPageItem.job.company_id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
-                    {isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"}
-                  </button>
-                ) : null}
                 {workerJobPageIsInvite && workerJobPageItem.status === "pending" && invitationHasConflict(workerJobPageItem) ? <span className="jd-warn"><Svg name="clock" size={14} width={2.4} />Sutampa su jau priimtu darbu</span> : null}
               </>}
               alert={workerJobPageItem.job?.status === "cancelled" ? (

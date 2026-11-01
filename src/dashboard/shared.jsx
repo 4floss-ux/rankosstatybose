@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { P24Modal } from "../p24/ui.jsx";
 import { createPortal } from "react-dom";
 import { isHireProjectPath, supabase } from "../lib/config.js";
-import { CloseMark } from "../ui/brand.jsx";
 import { edgeFunctionErrorMessage } from "../employer/plans.js";
 
 export const DASHBOARD_PAGE_SIZE = 5;
@@ -536,33 +535,11 @@ export function BugResolutionNotice({ userId }) {
   const reward = Number(notice.reward_points || 0);
 
   return (
-    <div className="bug-resolution-banner" role="status">
-      <style>{`
-        .bug-resolution-banner{width:100%;min-width:0;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border:1px solid #b9decf;border-radius:13px;background:#eef8f3;color:#125f45;box-shadow:0 4px 14px rgba(34,38,49,.035);display:flex;align-items:center;justify-content:space-between;gap:14px;clear:both}
-        .bug-resolution-banner-copy{display:grid;gap:2px;min-width:0}
-        .bug-resolution-banner-copy b{color:#146f4d;font-size:13px;line-height:1.35}
-        .bug-resolution-banner-copy span{font-size:12px;line-height:1.45;color:#356f5b}
-        .bug-resolution-banner-close{flex:0 0 auto;border:1px solid #b9decf;background:#fff;color:#146f4d;border-radius:9px;width:38px;height:34px;display:grid;place-items:center;cursor:pointer}
-        .bug-resolution-banner-close:hover{background:#f7fcf9}
-        @media(max-width:700px){.bug-resolution-banner{align-items:flex-start}.bug-resolution-banner-close{width:34px}}
-      `}</style>
-      <div className="bug-resolution-banner-copy">
-        <b>Svetainės klaida sutvarkyta</b>
-        <span>
-          Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
-          {reward > 0
-            ? `Jums pridėtas +${reward} patikimumo taškas.`
-            : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}
-        </span>
-      </div>
-      <button
-        className="bug-resolution-banner-close"
-        type="button"
-        aria-label="Uždaryti pranešimą"
-        onClick={() => acknowledge(notice.report_id)}
-      >
-        <CloseMark />
-      </button>
+    <div className="alert green" role="status">
+      <div><b>Svetainės klaida sutvarkyta</b>
+        <p>Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
+          {reward > 0 ? `Jums pridėtas +${reward} patikimumo taškas.` : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}</p></div>
+      <button className="btn sm" type="button" onClick={() => acknowledge(notice.report_id)}>Supratau</button>
     </div>
   );
 }

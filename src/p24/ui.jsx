@@ -123,7 +123,7 @@ export function PageHead({ title, lead, children }) {
 }
 
 // Prototipo „jobDetail“: antraštė, aprašymas, laikas/vieta, atlygis, veiksmai, šoninė informacija.
-export function JobDetail({ job, company, companyAvatar, pills, metaExtra, alert, mainExtra, actions, side, payLabel, payUnit, hidePay }) {
+export function JobDetail({ job, company, companyAvatar, pills, metaLead, metaExtra, alert, mainExtra, actions, side, payLabel, payUnit, hidePay }) {
   const paras = String(job?.description || "Darbo aprašymas nepateiktas.").split(/(?<=\.)\s+/).filter(Boolean);
   const lunch = job?.break_start_time && job?.break_end_time ? `${job.break_start_time.slice(0, 5)}–${job.break_end_time.slice(0, 5)}` : "Pietų pertraukos nėra";
   const arrival = job?.transport_mode === "employer_pickup" ? "Darbdavys paima darbuotoją" : "Darbuotojas atvyksta pats";
@@ -132,6 +132,7 @@ export function JobDetail({ job, company, companyAvatar, pills, metaExtra, alert
       <header className="jd-hero">
         <div className="jd-titlerow"><h1>{up(job?.title)}</h1>{pills}</div>
         <div className="jd-meta">
+          {metaLead}
           {company ? (
             <span className="jd-co-chip">
               <span className="av co sm" style={{ overflow: "hidden" }}>{companyAvatar ? <img src={companyAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(company)}</span>
