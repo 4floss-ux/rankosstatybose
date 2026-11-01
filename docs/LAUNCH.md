@@ -56,6 +56,12 @@ Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (
 2. Palaukti ~2 min., kol Cloudflare įdiegs (GitHub prie commit'o – žalia varnelė).
 3. Atsidaryti statybos24.lt kaip administratorius (priežiūros režimas vis dar įjungtas) – greitai peržiūrėti.
 4. Cloudflare → `MAINTENANCE_MODE` = `off` → svetainė atvira visiems.
+5. Įjungti kvietimų atsakymo terminą (12 val., nuolatinei komandai 24 val.) – Supabase → SQL editor, paleisti:
+   ```sql
+   alter table public.job_invitations enable trigger job_invitations_enforce_deadline;
+   select cron.schedule('expire-overdue-invitations', '*/5 * * * *', 'select public.expire_overdue_job_invitations()');
+   ```
+   (Iki šio žingsnio sena svetainė veikia kaip anksčiau – terminas tik rodomas naujame dizaine.)
 
 ## Jei kas nors negerai
 

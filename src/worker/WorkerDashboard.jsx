@@ -24,6 +24,15 @@ import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
+// Kvietimo atsakymo terminas: 12 val. (nuolatinei komandai 24 val.), bet ne vėliau nei darbo pradžia.
+function deadlineText(iso) {
+  const d = new Date(iso); if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const days = Math.round((new Date(d.toDateString()) - new Date(now.toDateString())) / 864e5);
+  const day = days === 0 ? "šiandien" : days === 1 ? "rytoj" : d.toLocaleDateString("lt-LT", { month: "long", day: "numeric" });
+  return `${day} ${d.toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 function distanceKm(lat1, lng1, lat2, lng2) {
   const v = [lat1, lng1, lat2, lng2].map((x) => (x === null || x === undefined || x === "" ? NaN : Number(x)));
   if (v.some((x) => !Number.isFinite(x))) return null;
@@ -281,11 +290,13 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
   });
   const [searchLocationBusy, setSearchLocationBusy] = useState(false);
   const [mutualCompanies, setMutualCompanies] = useState(() => new Set());
+  const [inviteDeadlines, setInviteDeadlines] = useState(() => new Map());
   useEffect(() => {
     let off = false;
     supabase.rpc("get_worker_mutual_companies").then(({ data, error }) => { if (!off && !error) setMutualCompanies(new Set((data || []).map((r) => r.company_id))); });
+    supabase.rpc("get_my_invitation_deadlines").then(({ data, error }) => { if (!off && !error) setInviteDeadlines(new Map((data || []).map((r) => [r.invitation_id, r]))); });
     return () => { off = true; };
-  }, [user.id]);
+  }, [user.id, favoriteIds.length]);
   const [searchLocationError, setSearchLocationError] = useState("");
   const searchLocationFresh = Boolean(
     searchLocation.enabled && isSearchLocationFresh(searchLocation.updatedAt)
@@ -3824,6 +3835,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
               completed: metrics.completedJobs,
             }}
             isFavorite={isFavorite}
+            isMutual={(companyId) => mutualCompanies.has(companyId)}
             toggleFavorite={toggleFavorite}
             onCompany={(ad) => openWorkerCompanyProfile({ job: { company_id: ad.company_id }, companyName: ad.company_name, companyAvatarPath: ad.company_avatar_path })}
           />
@@ -3984,7 +3996,10 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
                   <JobCard key={item.id} title={item.job?.title} company={item.companyName} companyAvatar={companyAvatarUrl(item.companyAvatarPath)}
                     sub={`${dateText(item.job?.work_date)} · ${item.job?.start_time?.slice(0, 5) || ""}–${item.job?.end_time?.slice(0, 5) || ""} · ${item.job?.pay_amount ? formatNetPay(item.job.pay_amount, item.job.pay_unit) : "Atlygis nenurodytas"}`}
                     locked={conflict} lockTip="Šiuo laiku jau dirbate. Kvietimo priimti negalima."
-                    pills={<>{unread ? <Pill tone="blue">Nauja žinutė</Pill> : null}</>}
+                    pills={<>
+                      {!conflict && mutualCompanies.has(item.job?.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}
+                      {!conflict && inviteDeadlines.get(item.id)?.deadline ? <Pill tone={new Date(inviteDeadlines.get(item.id).deadline) - Date.now() < 3 * 3600e3 ? "orange" : "blue"}>Atsakyti iki {deadlineText(inviteDeadlines.get(item.id).deadline)}</Pill> : null}
+                      {unread ? <Pill tone="blue">Nauja žinutė</Pill> : null}</>}
                     onOpen={() => openWorkdayDetails(item)} />
                 );
               }} />
@@ -4047,7 +4062,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
                       </button>
                       <span className="av co sm" style={{ border: "1px solid var(--line)", overflow: "hidden" }}>{info.avatar_path ? <img src={companyAvatarUrl(info.avatar_path)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(info.name)}</span>
-                      <div className="settx"><b>{info.name || "Įmonė"}</b></div>
+                      <div className="settx"><b>{info.name || "Įmonė"}</b>{mutualCompanies.has(companyId) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
                       <button type="button" className="btn sm" onClick={() => openWorkerCompanyProfile({ job: { company_id: companyId } })}>Profilis</button>
                     </div>
                   );
@@ -4055,6 +4070,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
               </div>
             ) : <Empty title="Mėgstamų įmonių dar nėra" sub="Atidarę darbą paspauskite širdelę – tos įmonės kvietimai bus rodomi pirmiausia." icon="heart" />}
           </section>
+          <section className="card teambox"><div className="tb-h"><span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span><b>Kai įmonė jus taip pat pažymi širdele</b></div>
+            <ul className="tb-l"><li><Svg name="search" size={16} />Jos paieškoje esate rodomi aukščiau</li><li><Svg name="clock" size={16} />Atsakyti į kvietimą turite 24 val., o ne 12</li></ul></section>
         </div>
 
         <div data-wv="wjob" style={{ display: "contents" }}>
@@ -4067,7 +4084,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
                 {workerJobPageIsInvite
                   ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
                   : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
-                {mutualCompanies.has(workerJobPageItem.job?.company_id) ? <span className="pill green"><Svg name="people" size={13} />Nuolatinė komanda</span> : null}
+                {mutualCompanies.has(workerJobPageItem.job?.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}
               </>}
               metaLead={workerJobPageItem.job?.company_id ? (
                 <button type="button" className={`favbtn${isFavorite(workerJobPageItem.job.company_id) ? " on" : ""}`} title={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-label={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-pressed={isFavorite(workerJobPageItem.job.company_id)} onClick={() => toggleFavorite(workerJobPageItem.job.company_id, { name: workerJobPageItem.companyName, avatar_path: workerJobPageItem.companyAvatarPath })}>
@@ -4091,17 +4108,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
                 <div className="infobox"><span className="infoic"><Svg name="camera" size={22} /></span><div><b>Išsaugokite atvykimo ir darbo pabaigos įrodymus</b><p>Atvykę ir baigę darbą, jei objekte leidžiama fotografuoti, padarykite po nuotrauką ir išsaugokite originalą telefone. Tai gali padėti kilus ginčui dėl atvykimo ar darbo laiko.</p><small>Venkite fotografuoti žmones, dokumentus ar kitą jautrią informaciją.</small></div></div>
               ) : null}
               actions={<>
-                {workerJobPageIsInvite && workerJobPageItem.status === "pending" && !invitationHasConflict(workerJobPageItem) ? (() => {
-                  // Kvietimą galima priimti, kol darbas neprasidėjo (DB taisyklė) – tai ir yra atsakymo terminas.
-                  const j = workerJobPageItem.job || {};
-                  const start = j.work_date && j.start_time ? new Date(`${j.work_date}T${String(j.start_time).slice(0, 5)}:00`) : null;
-                  if (!start || Number.isNaN(start.getTime())) return null;
-                  const now = new Date();
-                  const dayDiff = Math.round((new Date(start.toDateString()) - new Date(now.toDateString())) / 864e5);
-                  const day = dayDiff === 0 ? "šiandien" : dayDiff === 1 ? "rytoj" : start.toLocaleDateString("lt-LT", { month: "long", day: "numeric" });
-                  const hot = start - now < 12 * 3600e3;
-                  return <div className={`jd-due${hot ? " hot" : ""}`}><Svg name="clock" size={16} width={2.2} /><span>Atsakykite iki <b>{day} {String(j.start_time).slice(0, 5)}</b></span></div>;
-                })() : null}
+                {workerJobPageIsInvite && workerJobPageItem.status === "pending" && !invitationHasConflict(workerJobPageItem) && inviteDeadlines.get(workerJobPageItem.id)?.deadline ? (
+                  <div className={`jd-due${new Date(inviteDeadlines.get(workerJobPageItem.id).deadline) - Date.now() < 3 * 3600e3 ? " hot" : ""}`}><Svg name="clock" size={16} width={2.2} /><span>Atsakykite iki <b>{deadlineText(inviteDeadlines.get(workerJobPageItem.id).deadline)}</b></span></div>
+                ) : null}
                 <ActionButtons items={workerJobActions(workerJobPageItem)} />
               </>}
               side={workerJobPageIsInvite && workerJobPageItem.status === "pending" ? (

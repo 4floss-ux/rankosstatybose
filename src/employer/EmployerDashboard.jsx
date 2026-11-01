@@ -3097,6 +3097,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         skills.map((skill) => [Number(skill.id), skill.name])
       );
 
+      const savedIdsForSort = new Set((savedWorkers || []).map((worker) => worker.id));
       const combined = workerIds
         .map((workerId) => {
           const profile = profileMap.get(workerId);
@@ -3152,6 +3153,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
           if (a.declinedInvitation !== b.declinedInvitation) {
             return a.declinedInvitation ? -1 : 1;
           }
+
+          // Įmonės įsiminti (mėgstami) darbuotojai paieškoje rodomi aukščiau.
+          const savedA = savedIdsForSort.has(a.id), savedB = savedIdsForSort.has(b.id);
+          if (savedA !== savedB) return savedA ? -1 : 1;
 
           const distanceA =
             a.distanceKm === null ? Number.POSITIVE_INFINITY : a.distanceKm;

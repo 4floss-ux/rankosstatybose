@@ -56,7 +56,7 @@ function SaveBtn({ ad, label, onToggle }) {
   );
 }
 
-function AdCard({ ad, fav, onOpen, onToggleSave }) {
+function AdCard({ ad, fav, mutual, onOpen, onToggleSave }) {
   const x = ad.application;
   const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
   return (
@@ -67,6 +67,7 @@ function AdCard({ ad, fav, onOpen, onToggleSave }) {
             {x && x.cv_requested_at && !x.cv_sent_at && x.status !== "rejected" ? <Pill tone="orange">Prašo CV</Pill> : null}
             {x ? <Pill tone={AD_ST[x.status]?.[1]}>{AD_ST[x.status]?.[0]}</Pill> : ad.nudged ? <Pill tone="orange">Kviečia kandidatuoti</Pill> : null}
             {!ad.live ? <Pill>Nebegalioja</Pill> : null}
+            {mutual ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}
           </div>
         </div>
         <div className="co-line">
@@ -129,7 +130,7 @@ function ApplyModal({ ad, me, onClose, onSent }) {
   );
 }
 
-function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onChanged, onCompany }) {
+function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggleSave, onChanged, onCompany }) {
   const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [chat, setChat] = useState(false);
   const x = ad.application;
@@ -209,7 +210,7 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
   return (
     <>
       <header className="jd-hero">
-        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={AD_ST[st]?.[1]}>{AD_ST[st]?.[0]}</Pill> : null}</div>
+        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={AD_ST[st]?.[1]}>{AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
         <div className="jd-meta">
           <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"} aria-label={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"}
             onClick={() => toggleFavorite(ad.company_id, { name: ad.company_name, avatar_path: ad.company_avatar_path })}><Heart size={17} on={fav} /></button>
@@ -250,7 +251,7 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
   );
 }
 
-export function WorkerAds({ data, me, isFavorite, toggleFavorite, onCompany }) {
+export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCompany }) {
   const { ads, setAds, loaded, error, reload } = data;
   const [tab, setTab] = useState("all");
   const [city, setCity] = useState("Visi");
@@ -274,7 +275,7 @@ export function WorkerAds({ data, me, isFavorite, toggleFavorite, onCompany }) {
     return { all, saved, mine, savedInCity: saved.filter(inCity), cities: ["Visi", ...new Set([...AD_CITIES, ...live.map((a) => a.city)])], live };
   }, [ads, city, isFavorite]);
 
-  if (open) return <AdPage ad={open} me={me} isFavorite={isFavorite} toggleFavorite={toggleFavorite} onBack={() => setOpenId(null)} onToggleSave={toggleSave} onChanged={reload} onCompany={onCompany} />;
+  if (open) return <AdPage ad={open} me={me} isFavorite={isFavorite} isMutual={isMutual} toggleFavorite={toggleFavorite} onBack={() => setOpenId(null)} onToggleSave={toggleSave} onChanged={reload} onCompany={onCompany} />;
 
   const list = tab === "mine" ? lists.mine : tab === "saved" ? lists.savedInCity : lists.all;
   return (
@@ -294,7 +295,7 @@ export function WorkerAds({ data, me, isFavorite, toggleFavorite, onCompany }) {
       <section className="card">
         {!loaded ? <p className="muted small" style={{ margin: 0 }}>Įkeliama...</p>
           : error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p>
-          : list.length ? <Paged items={list} render={(a) => <AdCard key={a.id} ad={a} fav={isFavorite(a.company_id)} onOpen={openAd} onToggleSave={toggleSave} />} />
+          : list.length ? <Paged items={list} render={(a) => <AdCard key={a.id} ad={a} fav={isFavorite(a.company_id)} mutual={isMutual?.(a.company_id)} onOpen={openAd} onToggleSave={toggleSave} />} />
           : tab === "mine" ? <Empty title="Kandidatūrų dar nėra" sub="Atidarykite skelbimą ir paspauskite „Kandidatuoti“." icon="briefcase" />
           : tab === "saved" ? <Empty title={lists.saved.length ? "Šiame mieste įsimintų skelbimų nėra" : "Įsimintų skelbimų dar nėra"} sub={lists.saved.length ? "Pasirinkite kitą miestą." : "Prie patikusio skelbimo paspauskite širdelę."} icon="briefcase" />
           : <Empty title={city === "Visi" ? "Skelbimų dar nėra" : "Šiame mieste skelbimų nėra"} sub={city === "Visi" ? "Kai įmonės įkels ilgalaikio darbo skelbimų, jie atsiras čia." : "Pasirinkite kitą miestą."} icon="briefcase" />}
