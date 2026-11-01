@@ -13,7 +13,6 @@ import { BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagi
 import { EMPLOYER_PLANS, companyTeamInviteLink, companyTeamRoleLabel, edgeFunctionErrorMessage, employerPlanAnnualMonthlyEquivalent, employerPlanAnnualPrice, employerPlanAnnualSavings, employerPlanName, employerReliabilityPenaltyMeta, employerSubscriptionStatusLabel, employerTomorrowISO, formatPlanPrice, formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, isComplimentaryBusinessTrial, reliabilityScoreColor, shortWorkerName, workerRecentActivityLabel } from "./plans.js";
 import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
-import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
@@ -23,6 +22,7 @@ import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/E
 import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
 import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
 import { EmployerTeam } from "../p24/employer/EmployerTeam.jsx";
+import { EmployerCalendar } from "../p24/employer/EmployerCalendar.jsx";
 import { EmployerCompany } from "../p24/employer/EmployerCompany.jsx";
 import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
@@ -102,7 +102,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   // Kalendorius rodomas visiems (kaip prototipe); naudotis gali Business Pro.
   const calendarPreviewEnabled = Boolean(calendarTesterEmail) || typeof onAdminReturn === "function";
   const calendarAllowed = calendarPreviewEnabled && planSummary?.plan_key === "business_pro";
-  const calendarVisible = calendarRequested && calendarAllowed;
+  const calendarVisible = calendarRequested && calendarPreviewEnabled;
   useEffect(() => {
     const sync = () => setCalendarRequested(new URLSearchParams(window.location.search).get("employerView") === "calendar");
     window.addEventListener("popstate", sync);
@@ -110,7 +110,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, []);
   function navigateEmployerCalendar(open) {
     if (open && !calendarPreviewEnabled) return;
-    if (open && !calendarAllowed) { setShowPlans(true); return; }
     const url = new URL(window.location.href);
     if (open) url.searchParams.set("employerView", "calendar");
     else url.searchParams.delete("employerView");
@@ -4529,7 +4528,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}.ed-shell[data-view="team"] [data-wv]:not([data-wv~="team"]){display:none!important}.ed-shell[data-view="plans"] [data-wv]:not([data-wv~="plans"]){display:none!important}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}.ed-shell[data-view="team"] [data-wv]:not([data-wv~="team"]){display:none!important}.ed-shell[data-view="plans"] [data-wv]:not([data-wv~="plans"]){display:none!important}.ed-shell[data-view="calendar"] [data-wv]:not([data-wv~="calendar"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
@@ -4831,36 +4830,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       {!onAdminReturn && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
 
-      <main className="ed-shell" data-view={employerView}>
-        {calendarVisible && <EmployerWorkCalendar
-          jobs={canSeeAllCompanyJobs ? jobs : myEmployerJobs}
-          currentUserId={user.id}
-          calendarMemory={employerCalendarMemory}
-          memoryKey={`${company?.id}:${user.id}`}
-          teamName={teamMemberName}
-          unreadCount={job => unreadEmployerNotifications(job.id).filter(item => item.event_type === "message").length}
-          currentJobId={currentJob?.id}
-          workers={jobWorkers}
-          workersLoading={jobWorkersLoading}
-          onSelectJob={job => openExistingJob(job)}
-          onWorkerProfile={(worker, job) => openWorkerProfile({...worker, profileJobId: job.id})}
-          onDemoProfile={(name, city) => setSelectedWorker({
-            id: null, isDemoProfile: true, name, city, initials: name.slice(0,1),
-            yearsExperience: 6, hasDrivingLicenseB: true,
-            skillNames: ["Betonavimas", "Pagalbiniai statybos darbai"],
-            shortBio: "Pavyzdinis aprašymas: turiu 6 metų patirtį statybose, dirbu su betonavimu ir pagalbiniais darbais. Visi šiame profilyje pateikti duomenys išgalvoti.",
-            publicStats: {monthWorkedDays:8, monthWorkedMinutes:3840, monthJobs:5, activeJobs:1, cancelledByEmployer:0,
-              ...(canViewWorkerMetrics ? {attendanceRate:98, ratingAverage:9.2, ratingCount:12, noShowCount:0, unexcusedEarlyLeaveCount:0} : {})}
-          })}
-          onWorkerMessage={(worker, job) => openEmployerPrivateConversation(worker.invitationId, `${worker.name} · ${formatJobTitle(job.title)}`)}
-          onGroupMessage={job => openEmployerGroupConversation(job)}
-          jobScope={jobScope}
-          canSeeAllCompanyJobs={canSeeAllCompanyJobs}
-          onScopeChange={scope => setJobScope(scope === "all" && canSeeAllCompanyJobs ? "all" : "mine")}
-          onBack={() => navigateEmployerCalendar(false)}
-          onCreateJob={options => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm(options)); }}
-          onOpenJob={(job, favorites) => { navigateEmployerCalendar(false); requestAnimationFrame(async () => { if (await openExistingJob(job)) { if (favorites && planSummary?.can_saved_workers) setWorkerSource("team"); } }); }}
-        />}
+      <main className="ed-shell" data-view={calendarVisible ? "calendar" : employerView}>
+        {calendarVisible && (
+          <div data-wv="calendar" style={{ display: "contents" }}>
+            <EmployerCalendar
+              locked={!calendarAllowed}
+              onPlans={() => { navigateEmployerCalendar(false); goEmployerView("plans"); }}
+              jobs={(canSeeAllCompanyJobs ? jobs : myEmployerJobs).filter((job) => job.status !== "cancelled" && !(["draft", "open"].includes(job.status) && Number(job.confirmedCount || 0) === 0 && jobHasStarted(job)))}
+              isEnded={(job) => job.status === "completed" || jobHasEnded(job)}
+              canCreate
+              renderCard={(job) => <EmployerJobCard key={job.id} job={job} state={employerJobDashboardState(job)} unread={unreadEmployerGroupChatNotifications(job.id).length} responsibleLabel={(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)} onOpen={() => { navigateEmployerCalendar(false); requestAnimationFrame(() => openExistingJob(job)); }} />}
+              onOpenEnded={(job) => { navigateEmployerCalendar(false); requestAnimationFrame(() => (job.status === "completed" ? openJobInformation(job) : openExistingJob(job))); }}
+              onNewOnDay={(date) => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm({ date })); }}
+            />
+          </div>
+        )}
         <div style={{display: calendarVisible ? "none" : "contents"}}>
 
         {!onAdminReturn && jobs.length === 0 && (
@@ -4932,7 +4916,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         )}
 
-        {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
         {employerView === "stats" && (
           <div data-wv="stats" style={{ display: "contents" }}>
             <EmployerStats
