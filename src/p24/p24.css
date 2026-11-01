@@ -3204,3 +3204,10 @@
 .p24 #employer-job-form .ed-actions{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:14px 18px;display:flex;justify-content:flex-end;gap:10px}
 .p24 #employer-job-form .ed-time-pair{gap:8px}
 .p24 .ed-input.wd-time-trigger,.p24 .ed-input.wd-date-trigger{display:flex;align-items:center;justify-content:space-between}
+/* Seni langai (modalai) prototipo „modal“ stiliumi */
+.p24 .rs-modal-overlay,.p24 .admin-modal-overlay,.p24 .reliability-modal-overlay,.p24 .wd-job-info-overlay,.p24 .ed-saved-overlay,.p24 .ed-urgent-overlay,.p24 .lt-end-notice-overlay,.p24 .edcal-chat-overlay{background:rgba(34,38,49,.55)!important;backdrop-filter:none!important}
+.p24 .rs-modal-card,.p24 .admin-modal,.p24 .reliability-modal,.p24 .wd-job-info-modal{background:var(--white)!important;border-radius:8px!important;border:0!important;box-shadow:0 30px 80px rgba(34,38,49,.35)!important}
+.p24 .rs-modal-head h2,.p24 .admin-modal-head h2,.p24 .reliability-modal-head h2,.p24 .wd-job-info-modal h2{font-family:var(--display);font-size:20px!important;letter-spacing:-.2px}
+.p24 .rs-modal-head .eyebrow,.p24 .reliability-modal-eyebrow{color:var(--orange-text)!important}
+.p24 .rs-modal-card button:not(.rs-close):not([class*="close"]):not(.wd-accept):not(.wd-decline):not(.wd-danger),.p24 .admin-modal button.btn{border-radius:5px}
+.p24 .rs-modal-card textarea,.p24 .rs-modal-card input[type="text"],.p24 .rs-modal-card input:not([type]),.p24 .admin-modal input,.p24 .admin-modal textarea,.p24 .admin-modal select{border:1px solid var(--line-2)!important;border-radius:5px!important}
