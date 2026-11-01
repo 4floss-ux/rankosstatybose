@@ -13,7 +13,7 @@ import { MonthlyAwardBadgeVisual, monthlyAwardMeta, monthlyAwardMetricText, mont
 import { workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminCompanyTeamChatModal, AdminJobChatModal, AdminPrivateMessageComposer } from "./adminParts.jsx";
 import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
-import { AppShell } from "../ui/appShell.jsx";
+import { P24Shell } from "../p24/Shell.jsx";
 
 export function AdminDashboard({
   user,
@@ -2380,7 +2380,7 @@ export function AdminDashboard({
     window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   };
   return (
-    <AppShell
+    <P24Shell
       current={activeTab}
       onGo={adminGoTab}
       groups={[
@@ -2413,12 +2413,11 @@ export function AdminDashboard({
         { key: "disputes", label: "Ginčai", icon: "bell", badge: activeDisputeCount },
         { key: "bugs", label: "Klaidos", icon: "bell", badge: activeSiteBugCount },
       ]}
-      who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD" }}
-      footer={[
+      who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD", onClick: () => adminGoTab("audit"), onLogout }}
+      extra={[
         { key: "worker", label: "Darbuotojo režimas", icon: "user", onClick: onOpenWorker },
         { key: "employer", label: "Darbdavio režimas", icon: "home", onClick: onOpenEmployer },
         { key: "delete", label: "Ištrinti paskyrą", icon: "x", onClick: () => setDeleteAccountOpen(true) },
-        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
       ]}
     >
     <div className="admin-page">
@@ -5092,6 +5091,6 @@ export function AdminDashboard({
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
-    </AppShell>
+    </P24Shell>
   );
 }

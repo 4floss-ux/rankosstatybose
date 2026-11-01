@@ -13,7 +13,7 @@ import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/mo
 import { CompanyBadge, workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { WorkAbroadPreference } from "./workAbroad.jsx";
-import { AppShell } from "../ui/appShell.jsx";
+import { P24Shell } from "../p24/Shell.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextFourteenDays();
@@ -2815,7 +2815,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     .join("") || "D";
 
   return (
-    <AppShell
+    <P24Shell
       current={workerView}
       onGo={goWorkerView}
       groups={[
@@ -2838,12 +2838,19 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         { key: "jobs", label: "Darbai", icon: "jobs", badge: activeWorkerWorkdays.length },
         { key: "schedule", label: "Grafikas", icon: "cal", badge: needsAvailabilityConfirm ? 1 : 0 },
       ]}
-      who={{ name: form.displayName || "Darbuotojas", sub: form.city || "Darbuotojas", initials: workerInitials, avatar: profileAvatarUrl }}
-      footer={[
-        ...(onAdminReturn ? [{ key: "admin", label: "Grįžti į administravimą", icon: "back", onClick: onAdminReturn }] : []),
-        { key: "profile", label: "Mano profilis", icon: "user", onClick: () => goWorkerView("profile") },
-        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
-      ]}
+      who={{ name: form.displayName || "Darbuotojas", sub: `Darbuotojas · ${form.city || "miestas nenurodytas"}`, initials: workerInitials, avatar: profileAvatarUrl, current: workerView === "profile", onClick: () => goWorkerView("profile"), onLogout }}
+      free={{
+        on: urgentAvailabilityIsActive(),
+        locked: hasCurrentScheduledWork(),
+        tip: hasCurrentScheduledWork() ? "Dabar dirbate. „Laisvas dabar“ galėsite įjungti pasibaigus darbui." : urgentAvailabilityIsActive() ? "Įjungta. Darbdaviai „Skubiai!“ paieškoje mato jūsų telefono numerį ir gali skambinti dėl darbo šiandien." : "Įjunkite, jei galite atvykti dirbti dabar. Darbdaviai „Skubiai!“ paieškoje matys jūsų telefono numerį.",
+        onToggle: () => {
+          setUrgentForm((current) => ({ ...current, city: urgentAvailability.city || current.city || form.city || "Vilnius" }));
+          setShowUrgentAvailability(true);
+        },
+      }}
+      roleBar={onAdminReturn ? (
+        <div className="rolebar adm"><span>Administratorius peržiūri darbuotojo paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
+      ) : null}
       utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
     >
     <div className="wd-page">
@@ -6965,6 +6972,6 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         accountKind="darbuotojo paskyra"
       />
     </div>
-    </AppShell>
+    </P24Shell>
   );
 }

@@ -15,7 +15,7 @@ import { MonthlyAwardMiniList, MonthlyAwardsPanel, monthlyAwardPreviousMonthISO 
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
-import { AppShell } from "../ui/appShell.jsx";
+import { P24Shell } from "../p24/Shell.jsx";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
@@ -4381,7 +4381,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   const employerPlanLocked = (flag, label) => (planSummary?.[flag] ? 0 : label);
   return (
-    <AppShell
+    <P24Shell
       current={employerShellView}
       onGo={goEmployerView}
       cta={{ label: "Naujas darbo pasiūlymas", onClick: () => goEmployerView("new") }}
@@ -4410,11 +4410,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         { key: "new", label: "Naujas darbo pasiūlymas", icon: "plus", plus: true },
         { key: "ended", label: "Istorija", icon: "history" },
       ]}
-      who={company ? { name: company.name || "Įmonė", sub: planSummary?.plan_name ? `Planas: ${planSummary.plan_name}` : "Darbdavys", initials: String(company.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl } : null}
-      footer={[
-        ...(onAdminReturn ? [{ key: "admin", label: "Grįžti į administravimą", icon: "back", onClick: onAdminReturn }] : []),
-        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
-      ]}
+      who={{ name: company?.name || "Įmonė", sub: planSummary?.plan_name || "Darbdavys", company: true, initials: String(company?.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl, current: employerView === "company", onClick: () => company && goEmployerView("company"), onLogout }}
+      roleBar={onAdminReturn ? (
+        <div className="rolebar adm"><span>Administratorius peržiūri darbdavio paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
+      ) : null}
       utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
     >
     <div className="ed-page">
@@ -9873,6 +9872,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
-    </AppShell>
+    </P24Shell>
   );
 }
