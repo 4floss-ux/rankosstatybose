@@ -4090,7 +4090,20 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
               mainExtra={!workerJobPageIsInvite ? (
                 <div className="infobox"><span className="infoic"><Svg name="camera" size={22} /></span><div><b>Išsaugokite atvykimo ir darbo pabaigos įrodymus</b><p>Atvykę ir baigę darbą, jei objekte leidžiama fotografuoti, padarykite po nuotrauką ir išsaugokite originalą telefone. Tai gali padėti kilus ginčui dėl atvykimo ar darbo laiko.</p><small>Venkite fotografuoti žmones, dokumentus ar kitą jautrią informaciją.</small></div></div>
               ) : null}
-              actions={<ActionButtons items={workerJobActions(workerJobPageItem)} />}
+              actions={<>
+                {workerJobPageIsInvite && workerJobPageItem.status === "pending" && !invitationHasConflict(workerJobPageItem) ? (() => {
+                  // Kvietimą galima priimti, kol darbas neprasidėjo (DB taisyklė) – tai ir yra atsakymo terminas.
+                  const j = workerJobPageItem.job || {};
+                  const start = j.work_date && j.start_time ? new Date(`${j.work_date}T${String(j.start_time).slice(0, 5)}:00`) : null;
+                  if (!start || Number.isNaN(start.getTime())) return null;
+                  const now = new Date();
+                  const dayDiff = Math.round((new Date(start.toDateString()) - new Date(now.toDateString())) / 864e5);
+                  const day = dayDiff === 0 ? "šiandien" : dayDiff === 1 ? "rytoj" : start.toLocaleDateString("lt-LT", { month: "long", day: "numeric" });
+                  const hot = start - now < 12 * 3600e3;
+                  return <div className={`jd-due${hot ? " hot" : ""}`}><Svg name="clock" size={16} width={2.2} /><span>Atsakykite iki <b>{day} {String(j.start_time).slice(0, 5)}</b></span></div>;
+                })() : null}
+                <ActionButtons items={workerJobActions(workerJobPageItem)} />
+              </>}
               side={workerJobPageIsInvite && workerJobPageItem.status === "pending" ? (
                 <section className="card jd-co jd-lock"><h2>Kontaktas objekte</h2><p className="small muted" style={{ margin: 0 }}><Svg name="shield" size={15} /> Darbdavio telefono numeris bus matomas, kai priimsite darbą.</p></section>
               ) : (
