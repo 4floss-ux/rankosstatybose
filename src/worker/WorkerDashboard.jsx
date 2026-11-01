@@ -12,7 +12,7 @@ import { formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilit
 import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { CompanyBadge, companyAvatarUrl, workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
-import { WorkAbroadPreference } from "./workAbroad.jsx";
+import { AbroadSetting } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
@@ -3100,7 +3100,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       {!onAdminReturn && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
 
       <main className="wd-shell" data-view={workerView}>
-        {showProfileEditor && <div data-wv="profile"><WorkAbroadPreference user={user}/></div>}
+        {showProfileEditor && <section className="card setsec" data-wv="profile" style={{ order: 1 }}><h2>Kita</h2><div className="setlist"><AbroadSetting user={user} /></div></section>}
 
         <div data-wv="overview" style={{ display: "contents" }}>
           <WorkerOverview
