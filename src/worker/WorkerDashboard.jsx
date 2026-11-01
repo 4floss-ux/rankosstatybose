@@ -3441,25 +3441,17 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             className="wd-profile-editor"
             style={{ scrollMarginTop: 88 }}
           >
-            <div className="wd-profile-editor-head">
+            <div className="head">
               <div>
-                <div className="eyebrow">MANO INFORMACIJA</div>
-                <h2>{workerView === "schedule" ? "Darbo grafikas" : "Tvarkyti mano informaciją"}</h2>
-                <p>
-                  Atnaujinkite savo profilį ir laiką, kada galite priimti darbo
-                  pasiūlymus.
-                </p>
+                <span className="eyebrow">Mano informacija</span>
+                <h1>Profilis</h1>
+                <p className="lead">Atnaujinkite savo profilį ir laiką, kada galite priimti darbo kvietimus.</p>
               </div>
-
-              <button
-                className="wd-profile-editor-close"
-                type="button"
-                disabled={saving}
-                onClick={() => setShowProfileEditor(false)}
-                aria-label="Uždaryti"
-              >
-                <CloseMark />
-              </button>
+              <div className="row">
+                <button className="btn primary savebtn" type="button" disabled={saving} onClick={saveEverything}>
+                  <Svg name="check" size={16} width={2.4} /><span>{saving ? "Saugoma..." : profileSaved ? "Išsaugota" : "Išsaugoti"}</span>
+                </button>
+              </div>
             </div>
 
             <div id="s24-worker-push-settings" data-wv="profile" />
