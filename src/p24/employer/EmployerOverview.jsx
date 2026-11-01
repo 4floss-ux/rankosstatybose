@@ -29,7 +29,7 @@ export function EmployerJobCard({ job, state, unread, responsibleLabel, onOpen }
   );
 }
 
-export function EmployerOverview({ jobs, stateOf, unreadOf, responsibleOf, onOpenJob, onChat, onGo, unreadMessages, actionCount, company, stats, canStats }) {
+export function EmployerOverview({ onOpenMessages, jobs, stateOf, unreadOf, responsibleOf, onOpenJob, onChat, onGo, unreadMessages, actionCount, company, stats, canStats }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayJobs = jobs.filter((job) => job.work_date === today && job.status !== "cancelled" && job.status !== "completed");
   const [heroIndex, setHeroIndex] = useState(0);
@@ -114,7 +114,7 @@ export function EmployerOverview({ jobs, stateOf, unreadOf, responsibleOf, onOpe
           {tile("jobs", "Aktyvūs darbai", jobs.length, `Šiandien ${jobs.filter((job) => job.work_date === today).length} · rytoj ${jobs.filter((job) => job.work_date === tomorrow).length}`, () => onGo("active"), false)}
           {tile("people", "Trūksta darbuotojų", short, short ? "Pakvieskite laisvus" : "Visi darbai užpildyti", () => onGo("active"), short)}
           {tile("check", "Reikia veiksmo", actionCount, actionCount ? "Atvykimai ir darbo dienos" : "Viskas sutvarkyta", () => onGo("active"), actionCount)}
-          {tile("chat", "Naujos žinutės", unreadMessages, unreadMessages ? "Atidarykite pokalbį" : "Visos perskaitytos", () => onGo("active"), unreadMessages)}
+          {tile("chat", "Naujos žinutės", unreadMessages, unreadMessages ? "Atidarykite pokalbį" : "Visos perskaitytos", onOpenMessages || (() => onGo("active")), unreadMessages)}
         </div>
       </section>
 

@@ -16,6 +16,7 @@ import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
+import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
 import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
 
@@ -33,6 +34,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerAwardsById, setWorkerAwardsById] = useState({});
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
+  const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const [employerView, setEmployerView] = useState(() => {
     try {
       const saved = window.sessionStorage.getItem("s24-employer-view");
@@ -4372,6 +4375,24 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentJob?.id]);
 
+  const employerLastAt = (list) => list.reduce((latest, item) => (!latest || item.created_at > latest ? item.created_at : latest), null);
+  const employerPrivateByInvitation = employerNotifications.filter((item) => item.event_type === "message" && item.invitation_id).reduce((map, item) => {
+    (map[item.invitation_id] = map[item.invitation_id] || []).push(item);
+    return map;
+  }, {});
+  const employerConversations = [
+    ...activeVisibleJobs.filter((job) => job.status !== "cancelled" && job.status !== "completed").map((job) => {
+      const msgs = unreadEmployerGroupChatNotifications(job.id);
+      return { key: `job:${job.id}`, kind: "group", name: job.title, job: job.work_date, unread: msgs.length, lastAt: employerLastAt(msgs), lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => { if (!requireEmployerChatPlan()) return; setGroupConversation({ jobId: job.id, title: job.title, hiddenBefore: since }); } };
+    }),
+    ...Object.entries(employerPrivateByInvitation).map(([invitationId, msgs]) => {
+      const job = jobs.find((item) => item.id === msgs[0]?.job_id);
+      return { key: `inv:${invitationId}`, kind: "private", name: "Darbuotojas", job: job?.title || "", unread: msgs.length, lastAt: employerLastAt(msgs), lastText: "Nauja žinutė", onOpen: (since) => setConversation({ invitationId, title: job ? formatJobTitle(job.title) : "Privati žinutė", hiddenBefore: since }) };
+    }),
+    ...(planSummary?.can_team_chat ? [{ key: "team", kind: "team", name: "Vadovų pokalbis", job: company?.name || "", unread: teamChatUnread, lastAt: null, lastText: teamChatUnread ? "Nauja žinutė" : "", onOpen: () => openCompanyTeamChat() }] : []),
+  ];
+  const employerMessengerUnread = visibleConversations(employerConversations, chatHidden).filter((conv) => conv.unread).length;
+
   const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
   const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? "active" : employerView;
 
@@ -4415,11 +4436,13 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         { key: "ended", label: "Istorija", icon: "history" },
       ]}
       who={{ name: company?.name || "Įmonė", sub: planSummary?.plan_name || "Darbdavys", company: true, initials: String(company?.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl, current: employerView === "company", onClick: () => company && goEmployerView("company"), onLogout }}
+      messenger={{ unread: employerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
       roleBar={onAdminReturn ? (
         <div className="rolebar adm"><span>Administratorius peržiūri darbdavio paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
       ) : null}
       utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
     >
+    {messengerOpen && <Messenger conversations={employerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
@@ -5108,7 +5131,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             onOpenJob={openExistingJob}
             onChat={openEmployerGroupConversation}
             onGo={goEmployerView}
-            unreadMessages={employerNotifications.filter((item) => item.event_type === "message" && !item.read_at).length}
+            unreadMessages={employerMessengerUnread}
+            onOpenMessages={() => setMessengerOpen(true)}
             actionCount={activeVisibleJobs.filter((job) => ["action", "disputed"].includes(employerJobDashboardState(job)?.key)).length}
             company={company}
             stats={employerStats}
@@ -9902,6 +9926,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={conversation?.title}
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
+        hiddenBefore={conversation?.hiddenBefore || null}
       />
       <GroupConversationModal
         open={Boolean(groupConversation)}
@@ -9911,6 +9936,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={groupConversation?.title}
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
+        hiddenBefore={groupConversation?.hiddenBefore || null}
       />
 
       <DisputeConversationModal
