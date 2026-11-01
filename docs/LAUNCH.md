@@ -38,9 +38,14 @@ Darbdavys (`tattoo.staponas@gmail.com`, Business Pro – skelbimai nemokami):
 
 Administratorius:
 - [ ] Suvestinė, Darbuotojai (Valdyti → langas), Darbdaviai, Visi darbai, Ginčai, Klaidos, Darbo skelbimai, Pokalbiai
+- [ ] Tarptautinė atranka → užklausa → būsena, poreikis, kandidatai, „Pridėti kandidatą“ (Statybos24 bazė / išorinis)
 
 /hire:
 - [ ] statybos24.lt/hire – forma (galima nesiųsti), „Sign in“ → /hire/login
+- [ ] /hire/portal (su testine įmonės prieiga) – sutartis, poreikiai, poreikio puslapis su kandidatais, naujo poreikio forma
+
+Visiems:
+- [ ] Prisijungimo / registracijos langas (Prisijungti, Registruotis, Ieškau darbo / darbuotojų, Pamiršau slaptažodį)
 
 Pastaba: 9,99 € apmokėjimas naudoja tikrą (live) Stripe raktą – testuojant bus tikras mokėjimas.
 Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (Refund).
@@ -59,6 +64,5 @@ Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (
 
 ## Kas sąmoningai atidėta (paleidimui netrukdo)
 
-- Admin „Tarptautinė atranka“ ir /hire/portal – esamas (veikiantis) vidus su nauju stiliumi, ne 1:1.
-- Verslo pristatymo puslapio ekrano nuotraukos rodo seną dizainą.
+- Komandos „Veiksmų istorija“ – migracija paruošta (`docs/redesign/pending-migrations/`), bet nepritaikyta.
 - Skelbimuose nėra „Rašyti įmonei / kandidatui“ pokalbio.

@@ -96,12 +96,25 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
 - /hire – vieno ekrano įmonės užklausos forma; /hire/login – prototipo kortelė (`src/p24/hire.css` – prototipo hire stiliai, apriboti `.p24`).
 - p24 modalai turi savo `position:fixed` stilių (nepriklauso nuo puslapio).
 
+### Padaryta 2026-11-01 (4 sesija)
+- Prisijungimo / registracijos langas (`src/auth/AuthModal.jsx`) – prototipo `auth` langas (P24Modal, `toggle2`, `.field`, `segs`), visa logika ta pati
+  (SMS patvirtinimas, komandos kvietimas, slaptažodžio atkūrimas). Seni globalūs uždarymo mygtuko stiliai (`unifiedCloseStyles`) nebeliečia `.p24`.
+- /hire/portal (`src/hire/HireEmployerPortalPage.jsx`) – prototipo hpHome / hpNeed / hpNeedForm: sutarties kortelė, poreikių sąrašas, sąskaitos,
+  poreikio puslapis su kandidatais ir sprendimo mygtukais, atmetimo ir pirmo prisijungimo slaptažodžio langai (P24Modal), profesijos ir šalies sąrašai.
+  Naujas poreikis pateikiamas tik įkėlus pasirašytą sutartį (kaip prototipe).
+- Admin „Tarptautinė atranka“ (`src/p24/admin/AdminForeignHire.jsx`) – prototipo sąrašas (paieška, filtrai), užklausos puslapis (būsenos žingsniai,
+  poreikis, kandidatai su eiga, sutartimis ir dokumentais, kontaktas, tarpininkavimo sutartis, sąskaita), kandidato pridėjimas iš Statybos24 bazės
+  (`admin_search_foreign_hire_workers` – anksčiau nebuvo rodoma) arba išorinis. Visos RPC ir failų funkcijos – esamos.
+- Verslo pristatymo ekranai – nauji `public/assets/screens/bp-screen-*.webp` iš naujo dizaino (senų `.svg` nebėra).
+- Smulkūs: darbo puslapio širdelė prieš įmonę, klaidos pataisymo pranešimas `.alert green`, pasibaigęs darbas paryškina „Pasibaigę darbai“.
+
 ## 5. Kas liko
 
-1. Admin „Tarptautinė atranka“ ir /hire/portal – palikti esami (labai daug realios logikos: kandidatai, sutartys, sąskaitos); išvaizda – sena su p24 skin.
-2. Verslo pristatymo puslapio ekrano nuotraukos (`public/assets/screens/bp-*.svg`) vis dar rodo seną UI.
-3. Skelbimų „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo nėra) – nedaryta, kad nebūtų netikros funkcijos.
-4. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis (žr. `docs/LAUNCH.md`).
+1. Komandos „Veiksmų istorija“ (prototipe yra). Paruošta papildoma migracija `docs/redesign/pending-migrations/20261101210000_redesign_company_team_activity.sql`
+   (nauja lentelė, AFTER trigeriai su `exception when others`, RPC `get_company_team_activity`). Nepritaikyta – DB patvirtinimas buvo atšauktas.
+   Pritaikius: perkelti į `supabase/migrations/` ir prijungti prie Komandos puslapio.
+2. Skelbimų „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo nėra) – reikia naujos DB lentelės; nedaryta, kad nebūtų netikros funkcijos.
+3. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis (žr. `docs/LAUNCH.md`).
 
 ## 6. Kaip tikrinti (prieš kiekvieną commit)
 
