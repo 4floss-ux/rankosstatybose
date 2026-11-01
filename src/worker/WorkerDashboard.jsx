@@ -14,6 +14,7 @@ import { CompanyBadge, companyAvatarUrl, workerAvatarUrl } from "../ui/avatars.j
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { AbroadSetting } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
+import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
@@ -54,6 +55,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [longTermSignedContractFile, setLongTermSignedContractFile] = useState(null);
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
+  const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const [workerView, setWorkerView] = useState(() => {
     try {
       const saved = window.sessionStorage.getItem("s24-worker-view");
@@ -2907,6 +2910,23 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const workerJobPageIsInvite = isInvitationItem(workerJobPageItem);
   const workerJobPageState = workerJobPageItem && !workerJobPageIsInvite ? workerWorkdayState(workerJobPageItem) : null;
 
+  const lastNotificationAt = (list) => list.reduce((latest, item) => (!latest || item.created_at > latest ? item.created_at : latest), null);
+  const workerConversations = [
+    ...invitations.filter((item) => item.status === "pending").map((item) => {
+      const msgs = unreadWorkerNotifications(item.id).filter((n) => n.event_type === "message");
+      return { key: `inv:${item.id}`, kind: "private", name: item.companyName || "Darbdavys", job: item.job?.title, unread: msgs.length, lastAt: lastNotificationAt(msgs) || item.invited_at, lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => setConversation({ invitationId: item.id, title: `${item.companyName} · ${formatJobTitle(item.job?.title)}`, hiddenBefore: since }) };
+    }),
+    ...activeWorkerWorkdays.filter((item) => item.job && !workerWorkdayChatIsClosed(item)).map((item) => {
+      const msgs = unreadWorkerJobNotifications(item.job.id).filter((n) => n.event_type === "message");
+      return { key: `job:${item.job.id}`, kind: "group", name: item.job.title, job: item.companyName, unread: msgs.length, lastAt: lastNotificationAt(msgs), lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => setGroupConversation({ jobId: item.job.id, title: item.job.title, hiddenBefore: since }) };
+    }),
+    ...activeWorkerWorkdays.filter((item) => item.invitation_id).map((item) => {
+      const msgs = unreadWorkerNotifications(item.invitation_id).filter((n) => n.event_type === "message");
+      return { key: `inv:${item.invitation_id}`, kind: "private", name: item.companyName || "Darbdavys", job: item.job?.title, unread: msgs.length, lastAt: lastNotificationAt(msgs), lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => setConversation({ invitationId: item.invitation_id, title: `${item.companyName} · ${formatJobTitle(item.job?.title)}`, hiddenBefore: since }) };
+    }),
+  ];
+  const workerMessengerUnread = visibleConversations(workerConversations, chatHidden).filter((conv) => conv.unread).length;
+
   const workerInitials = (form.displayName || "D")
     .split(/\s+/)
     .filter(Boolean)
@@ -2952,7 +2972,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         <div className="rolebar adm"><span>Administratorius peržiūri darbuotojo paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
       ) : null}
       utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
+      messenger={{ unread: workerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
     >
+    {messengerOpen && <Messenger conversations={workerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
     <div className="wd-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
@@ -3117,7 +3139,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             workdays={workdays}
             recentRatings={recentEmployerRatings}
             onGo={goWorkerView}
-            onOpenMessages={() => goWorkerView("jobs")}
+            onOpenMessages={() => setMessengerOpen(true)}
             onReliabilityRules={() => setShowWorkerReliabilityInfo(true)}
           />
         </div>
@@ -7144,6 +7166,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={conversation?.title}
         user={user}
         senderMode={onAdminReturn ? "worker" : null}
+        hiddenBefore={conversation?.hiddenBefore || null}
       />
 
       <GroupConversationModal
@@ -7154,6 +7177,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={groupConversation?.title}
         user={user}
         senderMode={onAdminReturn ? "worker" : null}
+        hiddenBefore={groupConversation?.hiddenBefore || null}
       />
 
       <DisputeConversationModal

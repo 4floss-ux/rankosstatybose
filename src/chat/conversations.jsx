@@ -11,8 +11,11 @@ export function ConversationModal({
   title,
   user,
   senderMode = null,
+  hiddenBefore = null,
 }) {
-  const [messages, setMessages] = useState([]);
+  const [allMessages, setMessages] = useState([]);
+  // „Ištrinti sau“: rodomos tik žinutės po paslėpimo momento
+  const messages = hiddenBefore ? allMessages.filter((message) => !message.created_at || new Date(message.created_at) > new Date(hiddenBefore)) : allMessages;
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -499,8 +502,10 @@ export function GroupConversationModal({
   title,
   user,
   senderMode = null,
+  hiddenBefore = null,
 }) {
-  const [messages, setMessages] = useState([]);
+  const [allMessages, setMessages] = useState([]);
+  const messages = hiddenBefore ? allMessages.filter((message) => !message.created_at || new Date(message.created_at) > new Date(hiddenBefore)) : allMessages;
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
