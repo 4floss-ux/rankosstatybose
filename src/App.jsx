@@ -3,6 +3,7 @@ import { lazyPage } from "./lib/lazyPage.js";
 import { initialPasswordRecovery, isHireProjectPath, statybos24IsStandalone, supabase } from "./lib/config.js";
 import { PasswordRecoveryPage, clearPasswordRecoveryUrl, rememberPasswordRecoveryUser, rememberedPasswordRecoveryUser } from "./auth/passwordRecovery.jsx";
 import { AuthModal } from "./auth/AuthModal.jsx";
+import { endImpersonation, getImpersonation } from "./admin/impersonation.js";
 import { TeamInvitePage } from "./team/TeamInvitePage.jsx";
 import { localDateISO } from "./lib/jobs.js";
 import { BUSINESS_PRESENTATION_TOKEN } from "./employer/plans.js";
@@ -376,15 +377,18 @@ export function App() {
     );
   }
 
+  const impersonated = user && accountRole !== "admin" ? getImpersonation(user.id) : null;
+  const impersonation = impersonated ? { name: impersonated.name, onEnd: endImpersonation } : null;
+
   if (user && accountRole === "worker") {
     return (
-      <WorkerDashboard user={user} onLogout={logout} />
+      <WorkerDashboard user={user} onLogout={impersonation ? endImpersonation : logout} impersonation={impersonation} />
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <EmployerDashboard user={user} onLogout={logout} />
+      <EmployerDashboard user={user} onLogout={impersonation ? endImpersonation : logout} impersonation={impersonation} />
     );
   }
 

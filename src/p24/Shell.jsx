@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./p24.css";
 import { I } from "./icons.js";
 
@@ -117,12 +117,41 @@ export function P24Shell({ groups, tabs, current, onGo, cta, free, who, extra, r
     query.addEventListener?.("change", sync);
     return () => query.removeEventListener?.("change", sync);
   }, []);
+  // Prototipo fitMenu: jei meniu netelpa į ekrano aukštį, žingsniais sutankinama (mfit1–mfit4), kad nereikėtų slinkti.
+  const rootRef = useRef(null);
+  const [fitTick, setFitTick] = useState(0);
+  const [fitLevel, setFitLevel] = useState("");
+  useEffect(() => {
+    const onResize = () => setFitTick((value) => value + 1);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const fitKey = JSON.stringify(groups.map(([label, items]) => [label, items.length])) + (cta ? "c" : "") + (rail ? "r" : "") + fitTick;
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const levels = ["mfit1", "mfit2", "mfit3", "mfit4"];
+    root.classList.remove(...levels);
+    let found = "";
+    const side = window.innerWidth >= 900 ? root.querySelector(".side:not(.drawer)") : null;
+    if (side) {
+      const nav = side.querySelector(".navwrap");
+      const over = () => (nav && nav.scrollHeight > nav.clientHeight + 1) || side.scrollHeight > side.clientHeight + 1;
+      for (const level of levels) {
+        if (!over()) break;
+        root.classList.add(level);
+        found = level;
+      }
+      // Prototipe klasės kaupiasi (mfit1 + mfit2 ...), todėl paliekamos visos iki rastos.
+    }
+    setFitLevel(found ? levels.slice(0, levels.indexOf(found) + 1).join(" ") : "");
+  }, [fitKey]);
   const close = () => setOpen(false);
   const go = (key) => { setOpen(false); onGo(key); };
   const menuProps = { groups, current, go, cta, close, rail, toggleRail: () => setRail((value) => !value), free, who, extra };
   const unread = Number(messenger?.unread || 0);
   return (
-    <div className={`p24 in-app${rail ? " rail" : ""}${open ? " open" : ""}`}>
+    <div ref={rootRef} className={`p24 in-app${rail ? " rail" : ""}${open ? " open" : ""}${fitLevel ? ` ${fitLevel}` : ""}`}>
       <header className="topbar">
         <a href="#" aria-label="statybos24.lt" onClick={(event) => { event.preventDefault(); go(tabs[0]?.key || "overview"); }}>
           <img src="/brand-logo-tight.png" alt="statybos24.lt" />

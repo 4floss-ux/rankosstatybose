@@ -45,7 +45,7 @@ function Modal({ eyebrow, title, sub, onClose, children }) {
 }
 
 /* ---------- Darbuotojai ---------- */
-export function AdminWorkersList({ workers, selfId, isSuspended, isRestricted, onMessage, onEdit, onSuspend, onDelete }) {
+export function AdminWorkersList({ workers, selfId, isSuspended, isRestricted, onMessage, onEdit, onSuspend, onDelete, onLoginAs }) {
   const [q, setQ] = useState(""); const [f, setF] = useState("all"); const [open, setOpen] = useState(null);
   const susp = (w) => isSuspended(w) || isRestricted(w);
   const nSusp = workers.filter(susp).length;
@@ -83,6 +83,7 @@ export function AdminWorkersList({ workers, selfId, isSuspended, isRestricted, o
           {isSuspended(w) ? <div className="alert"><div><b>Paskyra suspenduota</b><p>{w.suspension_reason || "Priežastis nenurodyta"} · iki {dt(w.suspended_until)}</p></div></div>
             : isRestricted(w) ? <div className="alert"><div><b>Darbuotojo režimas suspenduotas</b><p>iki {dt(w.restricted_until)}</p></div></div> : null}
           <div className="mgrid">
+            {!self && onLoginAs ? <button className="btn" type="button" onClick={() => { close(); onLoginAs({ userId: w.user_id, name: w.display_name || w.email }); }}><Svg name="eye" size={15} />Prisijungti kaip</button> : null}
             {!self && <button className="btn" type="button" onClick={() => { close(); onMessage(w); }}><Svg name="chat" size={15} />Rašyti žinutę</button>}
             <button className="btn" type="button" onClick={() => { close(); onEdit(w); }}><Svg name="user" size={15} />Redaguoti profilį</button>
             <button className={`btn ${actSusp ? "primary" : "danger"}`} type="button" onClick={() => { close(); onSuspend(w); }}>{actSusp ? "Nuimti suspendavimą" : self ? "Suspenduoti darbuotojo režimą" : "Suspenduoti"}</button>
@@ -95,7 +96,7 @@ export function AdminWorkersList({ workers, selfId, isSuspended, isRestricted, o
 }
 
 /* ---------- Darbdaviai ---------- */
-export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onVerify, onMessage, onEdit, onSuspend, onDelete }) {
+export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onVerify, onMessage, onEdit, onSuspend, onDelete, onLoginAs }) {
   const [q, setQ] = useState(""); const [f, setF] = useState("all"); const [open, setOpen] = useState(null);
   const key = (c) => c.company_id || c.owner_id;
   const rows = employers.filter((c) => (f === "all" || (f === "unver" && !c.is_verified) || (f === "susp" && isSuspended(c))) && (!q.trim() || lc(`${c.company_name} ${c.company_code} ${c.city} ${c.display_name} ${c.email}`).includes(lc(q.trim()))));
@@ -132,6 +133,7 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
           {isSuspended(c) ? <div className="alert"><div><b>Paskyra suspenduota</b><p>{c.suspension_reason || "Priežastis nenurodyta"} · iki {dt(c.suspended_until)}</p></div></div> : null}
           <div className="mgrid">
             {!c.is_verified && c.company_id ? <button className="btn primary" type="button" disabled={busyId === c.company_id} onClick={() => { close(); onVerify(c); }}><Svg name="check" size={15} width={2.6} />Patvirtinti įmonę</button> : null}
+            {!self && onLoginAs && c.owner_id ? <button className="btn" type="button" onClick={() => { close(); onLoginAs({ userId: c.owner_id, name: c.company_name || c.email }); }}><Svg name="eye" size={15} />Prisijungti kaip</button> : null}
             {!self && <button className="btn" type="button" onClick={() => { close(); onMessage(c); }}><Svg name="chat" size={15} />Rašyti žinutę</button>}
             <button className="btn" type="button" onClick={() => { close(); onEdit(c); }}><Svg name="home" size={15} />Redaguoti įmonę</button>
             {canAct && <button className={`btn ${isSuspended(c) ? "primary" : "danger"}`} type="button" onClick={() => { close(); onSuspend(c); }}>{isSuspended(c) ? "Nuimti suspendavimą" : "Suspenduoti"}</button>}

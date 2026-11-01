@@ -28,7 +28,7 @@ import { EmployerCompany } from "../p24/employer/EmployerCompany.jsx";
 import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
 
-export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
   const preferredPlanKey = EMPLOYER_PLANS.some(
@@ -4523,14 +4523,16 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       ]}
       who={{ name: company?.name || "Įmonė", sub: planSummary?.plan_name || "Darbdavys", company: true, initials: String(company?.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl, current: employerView === "company", onClick: () => company && goEmployerView("company"), onLogout }}
       messenger={{ unread: employerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
-      roleBar={onAdminReturn ? (
+      roleBar={impersonation ? (
+        <div className="rolebar adm"><Svg name="eye" size={15} /><span>Administratorius prisijungęs kaip <b>{impersonation.name}</b></span><button type="button" onClick={impersonation.onEnd}>Grįžti į administratorių</button></div>
+      ) : onAdminReturn ? (
         <div className="rolebar adm"><span>Administratorius peržiūri darbdavio paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
       ) : null}
-      utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
+      utility={!onAdminReturn && !impersonation ? <AdminPrivateInboxButton user={user} /> : null}
     >
     {messengerOpen && <Messenger conversations={employerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
     <div className="ed-page">
-      {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
+      {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
         .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}.ed-shell[data-view="team"] [data-wv]:not([data-wv~="team"]){display:none!important}.ed-shell[data-view="plans"] [data-wv]:not([data-wv~="plans"]){display:none!important}.ed-shell[data-view="calendar"] [data-wv]:not([data-wv~="calendar"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
@@ -4832,7 +4834,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       `}</style>
 
 
-      {!onAdminReturn && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
+      {!onAdminReturn && !impersonation && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
 
       <main className="ed-shell" data-view={calendarVisible ? "calendar" : employerView}>
         {calendarVisible && (

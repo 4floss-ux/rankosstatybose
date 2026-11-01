@@ -24,7 +24,7 @@ import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
-export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
+export function WorkerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null }) {
   const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3011,15 +3011,17 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           enableUrgentAvailability(city);
         },
       }}
-      roleBar={onAdminReturn ? (
+      roleBar={impersonation ? (
+        <div className="rolebar adm"><Svg name="eye" size={15} /><span>Administratorius prisijungęs kaip <b>{impersonation.name}</b></span><button type="button" onClick={impersonation.onEnd}>Grįžti į administratorių</button></div>
+      ) : onAdminReturn ? (
         <div className="rolebar adm"><span>Administratorius peržiūri darbuotojo paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
       ) : null}
-      utility={!onAdminReturn ? <AdminPrivateInboxButton user={user} /> : null}
+      utility={!onAdminReturn && !impersonation ? <AdminPrivateInboxButton user={user} /> : null}
       messenger={{ unread: workerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
     >
     {messengerOpen && <Messenger conversations={workerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
     <div className="wd-page">
-      {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
+      {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
         .wd-page{min-height:0;background:transparent;color:#222631;padding-bottom:24px}
         .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}.wd-shell[data-view="wjob"] [data-wv]:not([data-wv~="wjob"]){display:none!important}.wd-shell[data-view="favco"] [data-wv]:not([data-wv~="favco"]){display:none!important}
@@ -3162,7 +3164,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       `}</style>
 
 
-      {!onAdminReturn && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
+      {!onAdminReturn && !impersonation && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
 
       <main className="wd-shell" data-view={workerView}>
 

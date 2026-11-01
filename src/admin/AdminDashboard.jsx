@@ -20,6 +20,7 @@ import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
 import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
 import { AdminAuditList, AdminAwardsList, AdminBugsList, AdminDisputesList, AdminEmployersList, AdminEmploymentList, AdminFilesList, AdminJobsList, AdminRatingsList, AdminTeamChatsList, AdminWorkersList } from "../p24/admin/AdminLists.jsx";
 import { AdminForeignHire } from "../p24/admin/AdminForeignHire.jsx";
+import { startImpersonation } from "./impersonation.js";
 
 export function AdminDashboard({
   user,
@@ -412,6 +413,23 @@ export function AdminDashboard({
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function loginAsUser(target) {
+    if (!target?.userId) return;
+    const ok = await askConfirm({
+      eyebrow: "PRISIJUNGTI KAIP",
+      title: `Prisijungti kaip ${target.name || "naudotojas"}?`,
+      message: "Atsidarys šio naudotojo paskyra – visi veiksmai bus atliekami jo vardu. Prisijungimas įrašomas į veiksmų istoriją. Grįžti galėsite viršuje paspaudę „Grįžti į administratorių“.",
+      confirmLabel: "Prisijungti",
+    });
+    if (!ok) return;
+    setError(""); setNotice("");
+    try {
+      await startImpersonation(target);
+    } catch (err) {
+      setError(err?.message || "Nepavyko prisijungti kaip naudotojas.");
     }
   }
 
@@ -1825,6 +1843,7 @@ export function AdminDashboard({
       unsuspend_worker_mode: "Darbuotojo režimo suspendavimas panaikintas",
       delete_user_account: "Paskyra ištrinta",
       delete_job: "Darbas ištrintas",
+      impersonate_start: "Prisijungta kaip naudotojas",
     }[action] || action;
   }
 
@@ -2210,11 +2229,6 @@ export function AdminDashboard({
         { key: "bugs", label: "Klaidos", icon: "bell", badge: activeSiteBugCount },
       ]}
       who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD", onClick: () => adminGoTab("audit"), onLogout }}
-      extra={[
-        { key: "worker", label: "Darbuotojo režimas", icon: "user", onClick: onOpenWorker },
-        { key: "employer", label: "Darbdavio režimas", icon: "home", onClick: onOpenEmployer },
-        { key: "delete", label: "Ištrinti paskyrą", icon: "x", onClick: () => setDeleteAccountOpen(true) },
-      ]}
     >
     <div className="admin-page">
       <style>{`
@@ -2612,6 +2626,7 @@ export function AdminDashboard({
               openAccountAction(isSelf ? (suspended ? "unsuspendWorkerMode" : "suspendWorkerMode") : suspended ? "unsuspend" : "suspend", worker, "worker");
             }}
             onDelete={(worker) => openAccountAction("deleteAccount", worker, "worker")}
+            onLoginAs={loginAsUser}
           />
         )}
 
@@ -2626,6 +2641,7 @@ export function AdminDashboard({
             onEdit={openEmployerEditor}
             onSuspend={(employer) => openAccountAction(isCurrentlySuspended(employer) ? "unsuspend" : "suspend", employer, "employer")}
             onDelete={(employer) => openAccountAction("deleteAccount", employer, "employer")}
+            onLoginAs={loginAsUser}
           />
         )}
 
