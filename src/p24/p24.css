@@ -3190,3 +3190,4 @@
 .p24 #employer-open-job .ed-current-job-head-actions button{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.2)!important;color:var(--white)!important;border-radius:5px!important}
 .p24 #employer-open-job .ed-current-job-grid{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:16px!important}
 .p24 #employer-open-job .ed-attendance-panel,.p24 #employer-open-job .ed-results-head{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:20px 22px}
+.p24 .admin-shell{display:flex;flex-direction:column;gap:18px}

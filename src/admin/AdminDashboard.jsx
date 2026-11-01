@@ -14,6 +14,8 @@ import { workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminCompanyTeamChatModal, AdminJobChatModal, AdminPrivateMessageComposer } from "./adminParts.jsx";
 import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
+import { Svg } from "../p24/Shell.jsx";
+import { Empty, PageHead } from "../p24/ui.jsx";
 
 export function AdminDashboard({
   user,
@@ -2578,57 +2580,62 @@ export function AdminDashboard({
               .admin-daily-rows small{font-size:16px;color:#8a98a6;font-weight:600}
               @media(max-width:620px){.admin-kpis .admin-daily-logins{grid-column:1/-1}}
             `}</style>
-            <div className="admin-kpis">
-              <div className="admin-kpi admin-daily-logins">
-                <span className="admin-daily-title">Šiandien prisijungė</span>
-                <div className="admin-daily-rows">
-                  <div><span>Darbuotojai</span><b>{accountDayStats ? Number(accountDayStats.workersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.workersTotal || 0) : "—"}</small></b></div>
-                  <div><span>Darbdaviai</span><b>{accountDayStats ? Number(accountDayStats.employersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.employersTotal || 0) : "—"}</small></b></div>
-                </div>
-              </div>
-
-              <div className="admin-kpi admin-daily-logins">
-                <span className="admin-daily-title">Šiandien užsiregistravo</span>
-                <div className="admin-daily-rows">
-                  <div><span>Darbuotojai</span><b>{accountDayStats && accountDayStats.workersRegisteredToday != null ? Number(accountDayStats.workersRegisteredToday) : "—"}</b></div>
-                  <div><span>Darbdaviai</span><b>{accountDayStats && accountDayStats.employersRegisteredToday != null ? Number(accountDayStats.employersRegisteredToday) : "—"}</b></div>
-                </div>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Panaudoti darbuotojai</span>
-                <b>{Number(stats.workersUsedThisMonth || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Aktyvūs darbai</span>
-                <b>{Number(stats.openJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Įvykdyti darbai</span>
-                <b>{Number(stats.completedJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Atšaukti darbai</span>
-                <b>{Number(stats.cancelledJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Įdarbinti darbuotojai</span>
-                <b>{activeLongTermPlacements.length}</b>
-              </div>
-
-              <div
-                className={`admin-kpi ${
-                  Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
-                }`}
-              >
-                <span>Neišspręsti ginčai</span>
-                <b>{Number(stats.unresolvedDisputes || 0)}</b>
-              </div>
-            </div>
+            {(() => {
+              const regW = accountDayStats?.workersRegisteredToday;
+              const regE = accountDayStats?.employersRegisteredToday;
+              const regTotal = regW == null && regE == null ? "—" : Number(regW || 0) + Number(regE || 0);
+              const loginTotal = accountDayStats ? Number(accountDayStats.workersToday || 0) + Number(accountDayStats.employersToday || 0) : "—";
+              const openDisputes = disputes.filter((dispute) => !dispute?.dispute_status || dispute.dispute_status === "disputed");
+              const activeBugs = siteBugReports.filter((report) => report.status === "active");
+              const queue = [
+                ...openDisputes.map((dispute) => ({ key: `d${dispute.attendance_id}`, icon: "shield", title: `Ginčas: ${dispute.worker_name || "Darbuotojas"} ↔ ${dispute.company_name || "Įmonė"}`, sub: String(dispute.job_title || "").toLocaleUpperCase("lt-LT"), label: "Spręsti", primary: true, go: "disputes" })),
+                ...activeBugs.map((report) => ({ key: `b${report.id}`, icon: "bell", title: `Klaida: ${report.reporter_name || report.reporter_email || "naudotojas"}`, sub: report.created_at ? new Date(report.created_at).toLocaleString("lt-LT", { dateStyle: "short", timeStyle: "short" }) : "", label: "Peržiūrėti", go: "bugs" })),
+                ...(foreignHireAlertCount ? [{ key: "fh", icon: "people", title: `Tarptautinė atranka: ${foreignHireAlertCount} reikia peržiūrėti`, sub: "Užklausos ir kandidatai", label: "Atidaryti", go: "foreignHire" }] : []),
+              ];
+              const tile = (icon, label, value, sub, go, hot) => (
+                <button type="button" className={`ovcard ntile${hot ? " hot" : ""}`} onClick={() => adminGoTab(go)}>
+                  <span className="ovtop"><small>{label}</small><span className="ntic"><Svg name={icon} size={18} /></span></span>
+                  <b className="ovval">{value}</b>
+                  <span className="ovsub">{hot ? <i className="ovdot" /> : null}{sub}</span>
+                </button>
+              );
+              return (
+                <>
+                  <PageHead title="Suvestinė" lead={`Šiandien, ${new Date().toLocaleDateString("lt-LT")}`} />
+                  <section className="ovsec">
+                    <div className="ntiles">
+                      {tile("user", "Šiandien užsiregistravo", regTotal, `${regW == null ? "—" : regW} darb. · ${regE == null ? "—" : regE} darbd.`, "workers")}
+                      {tile("out", "Šiandien prisijungė", loginTotal, accountDayStats ? `${Number(accountDayStats.workersToday || 0)} darb. · ${Number(accountDayStats.employersToday || 0)} darbd.` : "Duomenys kraunami", "workers")}
+                      {tile("jobs", "Aktyvūs darbai", Number(stats.openJobs || 0), "Visi atviri darbai", "jobs")}
+                      {tile("shield", "Neišspręsti ginčai", Number(stats.unresolvedDisputes || 0), Number(stats.unresolvedDisputes || 0) ? "Reikia sprendimo" : "Nėra", "disputes", Number(stats.unresolvedDisputes || 0))}
+                    </div>
+                  </section>
+                  <section className="card queue">
+                    <header><div><h2>Reikia veiksmo{queue.length ? ` · ${queue.length}` : ""}</h2></div></header>
+                    {queue.length ? (
+                      <div className="qlist">
+                        {queue.map((item) => (
+                          <div className="qrow" key={item.key}>
+                            <span className="qic o"><Svg name={item.icon} size={16} width={2.2} /></span>
+                            <div className="qtx"><b>{item.title}</b><small>{item.sub}</small></div>
+                            <div className="qbt"><button className={`btn sm${item.primary ? " primary" : ""}`} type="button" onClick={() => adminGoTab(item.go)}>{item.label}</button></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <Empty title="Viskas sutvarkyta" sub="Šiuo metu jokių veiksmų nereikia." />}
+                  </section>
+                  <section className="ovsec">
+                    <h2 className="sect">Šis mėnuo</h2>
+                    <div className="stats">
+                      <div className="stat"><small>Įvykdyti darbai</small><b>{Number(stats.completedJobs || 0)}</b><span className="muted small">Užbaigti darbai</span></div>
+                      <div className="stat"><small>Atšaukti darbai</small><b>{Number(stats.cancelledJobs || 0)}</b><span className="muted small">Atšaukti darbai</span></div>
+                      <div className="stat"><small>Panaudoti darbuotojai</small><b>{Number(stats.workersUsedThisMonth || 0)}</b><span className="muted small">Dirbo bent vieną dieną</span></div>
+                      <div className="stat"><small>Įdarbinti darbuotojai</small><b>{activeLongTermPlacements.length}</b><span className="muted small">Ilgalaikis darbas</span></div>
+                    </div>
+                  </section>
+                </>
+              );
+            })()}
 
             <section className="admin-section admin-traffic">
               <div className="admin-section-head">
