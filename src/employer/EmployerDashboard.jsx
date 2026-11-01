@@ -16,7 +16,8 @@ import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
-import { EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
+import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
+import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
@@ -789,6 +790,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
     setShowCompanyEditor(false);
     if (showJobForm) setShowJobForm(false);
+    if (currentJob) setCurrentJob(null);
     setEmployerView(view);
     window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   }
@@ -4365,12 +4367,13 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     else setEmployerView((current) => (current === "company" ? "overview" : current));
   }, [showCompanyEditor]);
   useEffect(() => {
-    if (currentJob?.id && !showJobForm) setEmployerView("active");
+    if (currentJob?.id && !showJobForm) setEmployerView("job");
+    else setEmployerView((current) => (current === "job" ? "active" : current));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentJob?.id]);
 
   const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
-  const employerShellView = calendarVisible ? "calendar" : employerView;
+  const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? "active" : employerView;
 
   const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
     ? ""
@@ -4420,7 +4423,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
@@ -5755,7 +5758,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           <section
             className="ed-card"
             id="employer-open-job"
-            data-wv="active"
+            data-wv="job"
             style={{ scrollMarginTop: 96 }}
           >
             <div className="ed-current-job-overview">
@@ -6638,7 +6641,50 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        <section className="ed-card ed-active-jobs-section" data-wv="active">
+        <div data-wv="active" style={{ display: "contents" }}>
+          <PageHead title="Aktyvūs darbai" lead={jobScope === "mine" ? "Darbai, už kuriuos esate atsakingas" : "Visi įmonės darbai"}>
+            <div className="toggle2" role="group" aria-label="Darbų apimtis" style={{ minWidth: 280 }}>
+              <button type="button" aria-pressed={jobScope === "mine"} onClick={() => setJobScope("mine")}>Mano darbai</button>
+              <button type="button" aria-pressed={jobScope === "all"} onClick={() => setJobScope("all")}>Visi įmonės darbai</button>
+            </div>
+          </PageHead>
+          {activeVisibleJobs.length ? (() => {
+            const sorted = activeVisibleJobs.slice().sort((a, b) => `${a.work_date}${a.start_time}`.localeCompare(`${b.work_date}${b.start_time}`));
+            const need = sorted.filter((job) => ["danger", "action"].includes(employerJobDashboardState(job)?.tone));
+            const rest = sorted.filter((job) => !["danger", "action"].includes(employerJobDashboardState(job)?.tone));
+            const card = (job) => <EmployerJobCard key={job.id} job={job} state={employerJobDashboardState(job)} unread={unreadEmployerGroupChatNotifications(job.id).length} responsibleLabel={(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)} onOpen={() => openExistingJob(job)} />;
+            return (
+              <>
+                {need.length ? <ListGroup title="Reikia jūsų veiksmo" count={need.length} hot><Paged items={need} render={card} /></ListGroup> : null}
+                {rest.length ? <ListGroup title="Vyksta ir suplanuoti" count={rest.length}><Paged items={rest} render={card} /></ListGroup> : null}
+              </>
+            );
+          })() : (
+            <section className="card"><Empty title="Aktyvių darbų nėra" sub="Sukurkite darbo pasiūlymą – jis atsiras čia." icon="jobs" /></section>
+          )}
+        </div>
+
+        <div data-wv="ended" style={{ display: "contents" }}>
+          <PageHead title="Pasibaigę darbai" lead="Užbaigti ir atšaukti darbai bus saugomi čia. Galite vėl atidaryti ankstesnį poreikį." />
+          <section className="card">
+            {employerJobHistory.length ? (
+              <Paged items={employerJobHistory} render={(job) => {
+                const state = employerJobDashboardState(job);
+                return (
+                  <article key={job.id} className="job" tabIndex={0} role="link" onClick={() => (job.status === "completed" ? openJobInformation(job) : openExistingJob(job))}>
+                    <div className="jm">
+                      <div className="jtop"><h3>{String(job.title || "").toLocaleUpperCase("lt-LT")}</h3><div className="row jpills"><Pill tone={job.status === "cancelled" ? "red" : state?.missing ? "orange" : "green"}>{job.status === "cancelled" ? "Atšaukta" : state?.missing ? "Trūko darbuotojų" : "Įvykdyta"}</Pill></div></div>
+                      <div className="metrics"><span>{job.work_date} · {job.start_time?.slice(0, 5)}</span><span>{(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)}</span></div>
+                    </div>
+                    <span className="jgo" aria-hidden="true">›</span>
+                  </article>
+                );
+              }} />
+            ) : <Empty title="Darbų istorija tuščia" sub="Užbaigti ir atšaukti darbai bus saugomi čia." />}
+          </section>
+        </div>
+
+        <section className="ed-card ed-active-jobs-section" data-wv="legacy">
           <div
             style={{
               display: "flex",
@@ -6949,7 +6995,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
         </section>
 
-        <section className="ed-card" data-wv="ended">
+        <section className="ed-card" data-wv="legacy">
           <div>
             <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
           </div>
