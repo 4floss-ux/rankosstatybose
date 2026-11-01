@@ -1,0 +1,2 @@
+-- Taikyta per Supabase MCP 2026-11-01. Tik pridedama: v2 funkcija su šalių sąrašu (metaduomenys work_abroad_countries).
+-- Žr. abroad_private.list_interested_workers_v2 ir public.admin_list_work_abroad_interested_v2.

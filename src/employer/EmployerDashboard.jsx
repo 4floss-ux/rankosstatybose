@@ -9,14 +9,27 @@ import { ConversationModal, DisputeConversationModal, GroupConversationModal } f
 import { LongTermConversationModal, defaultLongTermSchedule, longTermContractLabel, longTermEmployerUpdateLabel, longTermEmployerUpdateTone, longTermWeekdayLabel, openEmploymentContract, safeStorageFileName } from "../longterm/longTerm.jsx";
 import { CompanyTeamChatModal } from "../chat/CompanyTeamChatModal.jsx";
 import { WorkerProfileModal } from "../worker/WorkerProfileModal.jsx";
-import { AccountBugReportZone, AccountDeleteZone, BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings, loadAllCompanyJobs } from "../dashboard/shared.jsx";
+import { BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings, loadAllCompanyJobs } from "../dashboard/shared.jsx";
 import { EMPLOYER_PLANS, companyTeamInviteLink, companyTeamRoleLabel, edgeFunctionErrorMessage, employerPlanAnnualMonthlyEquivalent, employerPlanAnnualPrice, employerPlanAnnualSavings, employerPlanName, employerReliabilityPenaltyMeta, employerSubscriptionStatusLabel, employerTomorrowISO, formatPlanPrice, formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, isComplimentaryBusinessTrial, reliabilityScoreColor, shortWorkerName, workerRecentActivityLabel } from "./plans.js";
-import { MonthlyAwardMiniList, MonthlyAwardsPanel, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
+import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
-import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
-import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
+import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
+import { P24Shell, Svg } from "../p24/Shell.jsx";
+import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
+import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
+import { Empty, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill } from "../p24/ui.jsx";
+import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
+import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
+import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
+import { EmployerTeam } from "../p24/employer/EmployerTeam.jsx";
+import { EmployerJob } from "../p24/employer/EmployerJob.jsx";
+import { EmployerCalendar } from "../p24/employer/EmployerCalendar.jsx";
+import { TemplateBar, TemplatesModal, useCompanySites, useCompanyTemplates } from "../p24/employer/sitesTemplates.jsx";
+import { EmployerCompany } from "../p24/employer/EmployerCompany.jsx";
+import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
+import { shrinkImage } from "../lib/imageUpload.js";
 
-export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
+export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
   // User metadata stores only the visitor's plan preference; DB entitlements remain authoritative.
   const preferredPlanKey = EMPLOYER_PLANS.some(
@@ -30,6 +43,16 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerAwardsById, setWorkerAwardsById] = useState({});
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
+  const [messengerOpen, setMessengerOpen] = useState(false);
+  const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
+  const [employerView, setEmployerView] = useState(() => {
+    try {
+      const saved = window.sessionStorage.getItem("s24-employer-view");
+      return ["overview", "active", "ended"].includes(saved) ? saved : "overview";
+    } catch {
+      return "overview";
+    }
+  });
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [bugReportNotice, setBugReportNotice] = useState("");
@@ -58,14 +81,30 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [companyAvatarPreview, setCompanyAvatarPreview] = useState("");
   const [companyAvatarMarkedForRemoval, setCompanyAvatarMarkedForRemoval] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
+  const [employerAdsStartNew, setEmployerAdsStartNew] = useState(false);
+  const employerAds = useEmployerAds(company?.id, Boolean(company?.id) && ["owner", "manager"].includes(companyMemberRole) && !onAdminReturn);
+  // Grįžus iš Stripe po skelbimo apmokėjimo – patvirtiname serveryje ir atidarome skelbimus.
+  useEffect(() => {
+    if (!company?.id || typeof window === "undefined") return;
+    const query = new URLSearchParams(window.location.search);
+    const kind = query.get("adpay");
+    if (!kind) return;
+    const adId = query.get("ad");
+    const sessionId = query.get("session_id");
+    ["adpay", "ad", "session_id"].forEach((key) => query.delete(key));
+    window.history.replaceState(null, "", `${window.location.pathname}${query.toString() ? `?${query}` : ""}${window.location.hash}`);
+    setEmployerView("eads");
+    if (kind === "success" && adId) confirmAdPayment(adId, sessionId).then(() => employerAds.reload());
+  }, [company?.id]);
   const employerCalendarMemory = useRef(null);
   const [calendarRequested, setCalendarRequested] = useState(() => new URLSearchParams(window.location.search).get("employerView") === "calendar");
   // Temporary calendar rollout: existing admin preview plus the explicitly authorized tester.
   // This controls feature visibility only; existing plan, company and database permissions still apply.
   const calendarTesterEmail = String(user?.email || "").trim().toLowerCase();
-  const calendarPreviewEnabled = typeof onAdminReturn === "function" || calendarTesterEmail === "tattoo.staponas@gmail.com";
+  // Kalendorius rodomas visiems (kaip prototipe); naudotis gali Business Pro.
+  const calendarPreviewEnabled = Boolean(calendarTesterEmail) || typeof onAdminReturn === "function";
   const calendarAllowed = calendarPreviewEnabled && planSummary?.plan_key === "business_pro";
-  const calendarVisible = calendarRequested && calendarAllowed;
+  const calendarVisible = calendarRequested && calendarPreviewEnabled;
   useEffect(() => {
     const sync = () => setCalendarRequested(new URLSearchParams(window.location.search).get("employerView") === "calendar");
     window.addEventListener("popstate", sync);
@@ -73,7 +112,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, []);
   function navigateEmployerCalendar(open) {
     if (open && !calendarPreviewEnabled) return;
-    if (open && !calendarAllowed) { setShowPlans(true); return; }
     const url = new URL(window.location.href);
     if (open) url.searchParams.set("employerView", "calendar");
     else url.searchParams.delete("employerView");
@@ -178,6 +216,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     description: "",
     avatarPath: "",
   });
+  // Prisijungusio nario duomenys (prototipo „Mano duomenys“).
+  const [companyMe, setCompanyMe] = useState({ firstName: "", lastName: "" });
+  const [companySavedMe, setCompanySavedMe] = useState({ firstName: "", lastName: "" });
+  const [companySavedPhone, setCompanySavedPhone] = useState("");
   const companyPhoneVerification = usePhoneVerification({
     active: true, purpose: "change", phone: companyForm.phone, email: user.email, userId: user.id,
   });
@@ -750,13 +792,52 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  async function openCompanyTeam() {
-    if (!planSummary?.can_team_management) {
-      setNotice("Įmonės komandos valdymas prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“.");
+  // Planai – atskiras ekranas (kaip prototipe); senas iššokantis langas nebenaudojamas.
+  useEffect(() => {
+    if (!showPlans) return;
+    setShowPlans(false);
+    goEmployerView("plans");
+  }, [showPlans]);
+
+  // Paspaudus „Darbo skelbimai“ meniu – grįžtama į skelbimų sąrašą.
+  const [employerAdsNavKey, setEmployerAdsNavKey] = useState(0);
+  function goEmployerView(view) {
+    if (view === "eads") setEmployerAdsNavKey((value) => value + 1);
+    const actions = {
+      longterm: () => openLongTermEmployment("hire"),
+      teamchat: openCompanyTeamChat,
+    };
+    if (actions[view]) {
+      actions[view]();
       return;
     }
+    if (view === "new") {
+      openNewJobForm();
+      return;
+    }
+    if (view === "calendar") {
+      navigateEmployerCalendar(true);
+      return;
+    }
+    if (calendarVisible) navigateEmployerCalendar(false);
+    if (view === "company") {
+      setShowCompanyEditor(true);
+      setEmployerView("company");
+      return;
+    }
+    setShowCompanyEditor(false);
+    if (showJobForm) setShowJobForm(false);
+    if (currentJob) setCurrentJob(null);
+    setEmployerView(view);
+    if (view === "favorites") openSavedWorkerTeam();
+    if (view === "urgent") openUrgentSearch();
+    if (view === "team") openCompanyTeam();
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+  }
 
-    setShowTeam(true);
+  async function openCompanyTeam() {
+    if (!planSummary?.can_team_management) return;
+
     setLastTeamInviteLink("");
     await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
   }
@@ -1741,6 +1822,22 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               ...current,
               phone: data?.phone || "",
             }));
+            setCompanySavedPhone(data?.phone || "");
+          }),
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, display_name")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) throw error;
+            const parts = String(data?.display_name || "").trim().split(/\s+/).filter(Boolean);
+            const me = {
+              firstName: data?.first_name || parts[0] || "",
+              lastName: data?.last_name || (data?.first_name ? "" : parts.slice(1).join(" ")),
+            };
+            setCompanyMe(me);
+            setCompanySavedMe(me);
           }),
         supabase
           .from("skills")
@@ -1818,18 +1915,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setCompanyForm((current) => ({ ...current, [key]: value }));
   }
 
-  function chooseCompanyAvatarFile(file) {
+  async function chooseCompanyAvatarFile(original) {
     if (companyMemberRole !== "owner") {
       setError("Įmonės logotipą gali keisti tik įmonės savininkas.");
       return;
     }
-    if (!file) return;
+    if (!original) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
+    if (!allowed.includes(original.type)) {
       setError("Įmonės logotipas turi būti JPG, PNG arba WEBP formato.");
       return;
     }
+
+    // Logotipui pakanka 800 px; permatomas PNG lieka permatomas (WEBP).
+    const file = await shrinkImage(original, { maxSide: 800 });
 
     if (file.size > 5 * 1024 * 1024) {
       setError("Įmonės logotipas negali būti didesnis nei 5 MB.");
@@ -1860,7 +1960,39 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
   }
 
+  const companyIsOwner = companyMemberRole === "owner";
+  const companyDirty = Boolean(company) && (
+    companyMe.firstName !== companySavedMe.firstName ||
+    companyMe.lastName !== companySavedMe.lastName ||
+    (companyForm.phone || "") !== (companySavedPhone || "") ||
+    (companyIsOwner && (
+      companyForm.name !== (company?.name || "") ||
+      companyForm.city !== (company?.city || "") ||
+      companyForm.description !== (company?.description || "") ||
+      Boolean(companyAvatarFile) || companyAvatarMarkedForRemoval
+    ))
+  );
+
+  function undoCompanyChanges() {
+    setCompanyMe(companySavedMe);
+    if (companyAvatarPreview?.startsWith("blob:")) URL.revokeObjectURL(companyAvatarPreview);
+    setCompanyAvatarFile(null);
+    setCompanyAvatarPreview("");
+    setCompanyAvatarMarkedForRemoval(false);
+    setCompanyForm({
+      name: company?.name || "",
+      companyCode: company?.company_code || "",
+      city: company?.city || "",
+      phone: companySavedPhone,
+      description: company?.description || "",
+      avatarPath: company?.avatar_path || "",
+    });
+    setError("");
+  }
+
   async function saveCompanyInformation() {
+    const firstName = companyMe.firstName.trim();
+    const lastName = companyMe.lastName.trim();
     const name = companyForm.name.trim();
     const cityInput = companyForm.city.trim();
     const phone = companyForm.phone.trim();
@@ -1869,17 +2001,17 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (!company?.id) return;
 
-    if (companyMemberRole !== "owner") {
-      setError("Įmonės informaciją gali redaguoti tik įmonės savininkas.");
+    if (firstName.length < 2 || lastName.length < 2) {
+      setError("Įveskite savo vardą ir pavardę.");
       return;
     }
 
-    if (name.length < 2) {
+    if (companyIsOwner && name.length < 2) {
       setError("Įveskite įmonės pavadinimą.");
       return;
     }
 
-    if (cityInput.length < 2) {
+    if (companyIsOwner && cityInput.length < 2) {
       setError("Pasirinkite įmonės miestą.");
       return;
     }
@@ -1893,97 +2025,113 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
     setNotice("");
 
+    let uploadedPath = "";
     try {
-      const city = await canonicalCityName(cityInput);
-      if (!city) {
+      const city = companyIsOwner ? await canonicalCityName(cityInput) : "";
+      if (companyIsOwner && !city) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
-      await companyPhoneVerification.saveChange();
-
-      let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
-        ? ""
-        : companyForm.avatarPath || "";
-
-      if (companyAvatarFile) {
-        const extension =
-          companyAvatarFile.type === "image/png"
-            ? "png"
-            : companyAvatarFile.type === "image/webp"
-            ? "webp"
-            : "jpg";
-        const uploadPath = `${user.id}/company-${company.id}-${Date.now()}.${extension}`;
-
-        const uploadResult = await supabase.storage
-          .from("worker-avatars")
-          .upload(uploadPath, companyAvatarFile, {
-            cacheControl: "3600",
-            contentType: companyAvatarFile.type,
-            upsert: false,
-          });
-
-        if (uploadResult.error) throw uploadResult.error;
-        nextCompanyAvatarPath = uploadPath;
+      if ((normalizedPhone || "") !== (companySavedPhone || "")) {
+        await companyPhoneVerification.saveChange();
       }
 
-      const companyResult = await supabase
-        .from("companies")
-        .update({
-          name,
-          city,
-          description: description || null,
-          avatar_path: nextCompanyAvatarPath || null,
-        })
-        .eq("id", company.id)
-        .select(
-          "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
-        )
-        .single();
-
-      if (companyResult.error) throw companyResult.error;
-
-      if (
-        companyForm.avatarPath &&
-        companyForm.avatarPath !== nextCompanyAvatarPath &&
-        (companyAvatarFile || companyAvatarMarkedForRemoval)
-      ) {
-        await supabase.storage
-          .from("worker-avatars")
-          .remove([companyForm.avatarPath]);
+      if (firstName !== companySavedMe.firstName || lastName !== companySavedMe.lastName) {
+        const profileResult = await supabase
+          .from("profiles")
+          .update({ first_name: firstName, last_name: lastName, display_name: `${firstName} ${lastName}` })
+          .eq("id", user.id);
+        if (profileResult.error) throw profileResult.error;
+        setCompanySavedMe({ firstName, lastName });
+        setCompanyMe({ firstName, lastName });
       }
 
-      const privateResult = await supabase
-        .from("user_private")
-        .upsert(
-          {
-            user_id: user.id,
-            phone: normalizedPhone || null,
-          },
-          { onConflict: "user_id" }
-        );
+      if ((normalizedPhone || "") !== (companySavedPhone || "")) {
+        const privateResult = await supabase
+          .from("user_private")
+          .upsert({ user_id: user.id, phone: normalizedPhone || null }, { onConflict: "user_id" });
+        if (privateResult.error) throw privateResult.error;
+        setCompanySavedPhone(normalizedPhone);
+      }
 
-      if (privateResult.error) throw privateResult.error;
+      let savedCompany = company;
+      if (companyIsOwner) {
+        let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
+          ? ""
+          : companyForm.avatarPath || "";
 
-      setCompany(companyResult.data);
+        if (companyAvatarFile) {
+          const extension =
+            companyAvatarFile.type === "image/png"
+              ? "png"
+              : companyAvatarFile.type === "image/webp"
+              ? "webp"
+              : "jpg";
+          const uploadPath = `${user.id}/company-${company.id}-${Date.now()}.${extension}`;
+
+          const uploadResult = await supabase.storage
+            .from("worker-avatars")
+            .upload(uploadPath, companyAvatarFile, {
+              cacheControl: "3600",
+              contentType: companyAvatarFile.type,
+              upsert: false,
+            });
+
+          if (uploadResult.error) throw uploadResult.error;
+          uploadedPath = uploadPath;
+          nextCompanyAvatarPath = uploadPath;
+        }
+
+        const companyResult = await supabase
+          .from("companies")
+          .update({
+            name,
+            city,
+            description: description || null,
+            avatar_path: nextCompanyAvatarPath || null,
+          })
+          .eq("id", company.id)
+          .select(
+            "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+          )
+          .single();
+
+        if (companyResult.error) throw companyResult.error;
+        uploadedPath = "";
+
+        if (
+          companyForm.avatarPath &&
+          companyForm.avatarPath !== nextCompanyAvatarPath &&
+          (companyAvatarFile || companyAvatarMarkedForRemoval)
+        ) {
+          await supabase.storage
+            .from("worker-avatars")
+            .remove([companyForm.avatarPath]);
+        }
+
+        savedCompany = { ...company, ...companyResult.data };
+        setCompany(savedCompany);
+        if (companyAvatarPreview?.startsWith("blob:")) {
+          URL.revokeObjectURL(companyAvatarPreview);
+        }
+        setCompanyAvatarFile(null);
+        setCompanyAvatarPreview("");
+        setCompanyAvatarMarkedForRemoval(false);
+      }
+
       setCompanyForm({
-        name: companyResult.data?.name || "",
-        companyCode: companyResult.data?.company_code || "",
-        city: companyResult.data?.city || "",
+        name: savedCompany?.name || "",
+        companyCode: savedCompany?.company_code || "",
+        city: savedCompany?.city || "",
         phone: normalizedPhone,
-        description: companyResult.data?.description || "",
-        avatarPath: companyResult.data?.avatar_path || "",
+        description: savedCompany?.description || "",
+        avatarPath: savedCompany?.avatar_path || "",
       });
-      if (companyAvatarPreview?.startsWith("blob:")) {
-        URL.revokeObjectURL(companyAvatarPreview);
-      }
-      setCompanyAvatarFile(null);
-      setCompanyAvatarPreview("");
-      setCompanyAvatarMarkedForRemoval(false);
-
-      setShowCompanyEditor(false);
-      setNotice("Įmonės informacija atnaujinta.");
+      setNotice("Profilis išsaugotas.");
     } catch (err) {
-      setError(err?.message || "Nepavyko atnaujinti įmonės informacijos.");
+      // Įkeltas, bet neprisegtas logotipas nepaliekamas saugykloje.
+      if (uploadedPath) await supabase.storage.from("worker-avatars").remove([uploadedPath]);
+      setError(err?.message || "Nepavyko išsaugoti profilio.");
     } finally {
       setCompanySaving(false);
     }
@@ -2950,6 +3098,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         skills.map((skill) => [Number(skill.id), skill.name])
       );
 
+      const savedIdsForSort = new Set((savedWorkers || []).map((worker) => worker.id));
       const combined = workerIds
         .map((workerId) => {
           const profile = profileMap.get(workerId);
@@ -3005,6 +3154,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           if (a.declinedInvitation !== b.declinedInvitation) {
             return a.declinedInvitation ? -1 : 1;
           }
+
+          // Įmonės įsiminti (mėgstami) darbuotojai paieškoje rodomi aukščiau.
+          const savedA = savedIdsForSort.has(a.id), savedB = savedIdsForSort.has(b.id);
+          if (savedA !== savedB) return savedA ? -1 : 1;
 
           const distanceA =
             a.distanceKm === null ? Number.POSITIVE_INFINITY : a.distanceKm;
@@ -3362,14 +3515,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openSavedWorkerTeam() {
-    if (!planSummary?.can_saved_workers) {
-      setNotice(
-        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
-      );
-      return;
-    }
+    if (!planSummary?.can_saved_workers) return;
 
-    setShowSavedWorkers(true);
     setSavedWorkersLoading(true);
     setError("");
 
@@ -3490,31 +3637,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function openUrgentSearch() {
-    const canUseUrgent = Boolean(planSummary?.can_team_management);
-
-    if (!canUseUrgent) {
-      setNotice(
-        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
-      );
-      return;
-    }
-
-    setUrgentSearchCompleted(false);
+    if (!planSummary?.can_team_management) return;
+    const startCity = ["Vilnius", "Kaunas", "Klaipėda"].includes(company?.city) ? company.city : "Vilnius";
     setUrgentSearchError("");
-    setUrgentSearchCity(company?.city || "");
-    setUrgentSearchResults([]);
-    setUrgentSearchPage(1);
-    setShowUrgentSearch(true);
     setError("");
+    searchUrgentWorkers(startCity);
   }
 
-  async function searchUrgentWorkers() {
+  async function searchUrgentWorkers(cityOverride) {
     if (!company?.id) return;
 
     setUrgentSearchError("");
     setUrgentSearchCompleted(false);
     setUrgentSearchResults([]);
-    const city = urgentSearchCity.trim();
+    const city = String(typeof cityOverride === "string" ? cityOverride : urgentSearchCity).trim();
+    setUrgentSearchCity(city);
     if (!city) {
       setUrgentSearchError("Nurodykite miestą.");
       return;
@@ -3563,6 +3700,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openNewJobForm(options = {}) {
+    setJobSiteId("");
+    setTemplateNotice("");
     if (
       planSummary &&
       !planSummary.unlimited_jobs &&
@@ -4309,6 +4448,101 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     (member) => member.user_id === user.id
   );
 
+  useEffect(() => {
+    try { window.sessionStorage.setItem("s24-employer-view", employerView); } catch {}
+  }, [employerView]);
+  useEffect(() => {
+    if (showJobForm) setEmployerView("new");
+    else setEmployerView((current) => (current === "new" ? (currentJob ? "active" : "overview") : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showJobForm]);
+  useEffect(() => {
+    if (showCompanyEditor) setEmployerView("company");
+    else setEmployerView((current) => (current === "company" ? "overview" : current));
+  }, [showCompanyEditor]);
+  useEffect(() => {
+    if (currentJob?.id && !showJobForm) setEmployerView("job");
+    else setEmployerView((current) => (current === "job" ? "active" : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentJob?.id]);
+
+  const employerLastAt = (list) => list.reduce((latest, item) => (!latest || item.created_at > latest ? item.created_at : latest), null);
+  const employerPrivateByInvitation = employerNotifications.filter((item) => item.event_type === "message" && item.invitation_id).reduce((map, item) => {
+    (map[item.invitation_id] = map[item.invitation_id] || []).push(item);
+    return map;
+  }, {});
+  const employerConversations = [
+    ...activeVisibleJobs.filter((job) => job.status !== "cancelled" && job.status !== "completed").map((job) => {
+      const msgs = unreadEmployerGroupChatNotifications(job.id);
+      return { key: `job:${job.id}`, kind: "group", name: job.title, job: job.work_date, unread: msgs.length, lastAt: employerLastAt(msgs), lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => { if (!requireEmployerChatPlan()) return; setGroupConversation({ jobId: job.id, title: job.title, hiddenBefore: since }); } };
+    }),
+    ...Object.entries(employerPrivateByInvitation).map(([invitationId, msgs]) => {
+      const job = jobs.find((item) => item.id === msgs[0]?.job_id);
+      return { key: `inv:${invitationId}`, kind: "private", name: "Darbuotojas", job: job?.title || "", unread: msgs.length, lastAt: employerLastAt(msgs), lastText: "Nauja žinutė", onOpen: (since) => setConversation({ invitationId, title: job ? formatJobTitle(job.title) : "Privati žinutė", hiddenBefore: since }) };
+    }),
+    ...(planSummary?.can_team_chat ? [{ key: "team", kind: "team", name: "Vadovų pokalbis", job: company?.name || "", unread: teamChatUnread, lastAt: null, lastText: teamChatUnread ? "Nauja žinutė" : "", onOpen: () => openCompanyTeamChat() }] : []),
+  ];
+  const employerMessengerUnread = visibleConversations(employerConversations, chatHidden).filter((conv) => conv.unread).length;
+
+  const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
+  // Objektai ir šablonai (Business / Business Pro) naujo darbo formoje.
+  const bizPlan = ["business", "business_pro"].includes(planSummary?.plan_key);
+  const companySites = useCompanySites(company?.id, bizPlan && showJobForm);
+  const companyTemplates = useCompanyTemplates(company?.id, bizPlan && showJobForm);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [jobSiteId, setJobSiteId] = useState("");
+  const [templateNotice, setTemplateNotice] = useState("");
+  function applyJobSite(siteId) {
+    setJobSiteId(siteId);
+    const site = companySites.rows.find((row) => row.id === siteId);
+    if (!site) return;
+    const hasCoords = Number.isFinite(Number(site.latitude)) && Number.isFinite(Number(site.longitude));
+    setForm((current) => ({ ...current, city: site.city || current.city, address: site.address, transportMode: site.transport_mode === "employer_pickup" ? "employer_pickup" : "self_arrival" }));
+    setSelectedJobAddress(hasCoords ? { label: site.address, latitude: Number(site.latitude), longitude: Number(site.longitude) } : null);
+    setJobFormErrors((current) => ({ ...current, address: "", city: "" }));
+  }
+  function applyJobTemplate(template) {
+    const d = template?.data || {};
+    setForm((current) => ({
+      ...current,
+      title: d.title ?? current.title,
+      workersNeeded: d.workersNeeded ?? current.workersNeeded,
+      startTime: d.startTime ?? current.startTime,
+      endTime: d.endTime ?? current.endTime,
+      breakStartTime: d.breakStartTime ?? "",
+      breakEndTime: d.breakEndTime ?? "",
+      payUnit: d.payUnit ?? current.payUnit,
+      payAmount: d.payAmount ?? current.payAmount,
+      description: d.description ?? current.description,
+      ...(d.address ? { city: d.city || current.city, address: d.address } : {}),
+      transportMode: d.transportMode ?? current.transportMode,
+    }));
+    if (d.address && Number.isFinite(Number(d.latitude)) && Number.isFinite(Number(d.longitude))) {
+      setSelectedJobAddress({ label: d.address, latitude: Number(d.latitude), longitude: Number(d.longitude) });
+    }
+    setJobSiteId(d.siteId || "");
+    setJobFormErrors({});
+  }
+  async function saveJobTemplate() {
+    setTemplateNotice("");
+    const title = String(form.title || "").trim();
+    if (!title) { setTemplateNotice("Pirma įrašykite darbo pavadinimą."); return; }
+    const addressOk = selectedJobAddress?.label === String(form.address || "").trim();
+    const data = {
+      title, workersNeeded: form.workersNeeded, startTime: form.startTime, endTime: form.endTime,
+      breakStartTime: form.breakStartTime || "", breakEndTime: form.breakEndTime || "",
+      payUnit: form.payUnit, payAmount: form.payAmount, description: form.description, transportMode: form.transportMode,
+      city: form.city, address: form.address, siteId: jobSiteId || "",
+      latitude: addressOk ? selectedJobAddress.latitude : null, longitude: addressOk ? selectedJobAddress.longitude : null,
+    };
+    const { error: templateError } = await supabase.rpc("save_company_job_template", { p_company_id: company?.id, p_name: title, p_data: data });
+    if (templateError) { setTemplateNotice(templateError.message || "Nepavyko išsaugoti šablono."); return; }
+    setTemplateNotice(`Šablonas „${title}“ išsaugotas.`);
+    companyTemplates.reload();
+  }
+
+  const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? (["completed", "cancelled"].includes(currentJob?.status) ? "ended" : "active") : employerView;
+
   const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
     ? ""
     : companyAvatarPreview || companyAvatarUrl(companyForm.avatarPath);
@@ -4317,16 +4551,60 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const employerPlanLocked = (flag, label) => (planSummary?.[flag] ? 0 : label);
+  const employerCanAds = Boolean(company?.id) && ["owner", "manager"].includes(companyMemberRole) && !onAdminReturn;
+  const employerAdsIsPro = planSummary?.plan_key === "business_pro";
+
   return (
+    <P24Shell
+      current={employerShellView}
+      onGo={goEmployerView}
+      cta={{ label: "Naujas darbo pasiūlymas", onClick: () => goEmployerView("new") }}
+      groups={[
+        ["Darbai", [
+          { key: "overview", label: "Apžvalga", icon: "overview" },
+          { key: "active", label: "Aktyvūs darbai", icon: "jobs", badge: activeVisibleJobs.length },
+          { key: "ended", label: "Pasibaigę darbai", icon: "history" },
+          { key: "calendar", label: "Darbų kalendorius", icon: "cal", badge: "Pro" },
+        ]],
+        ["Darbuotojai", [
+          { key: "favorites", label: "Mėgstami darbuotojai", icon: "heart" },
+          { key: "urgent", label: "Skubiai!", icon: "bolt", badge: "Pro" },
+        ]],
+        ...(employerCanAds ? [["Įdarbinimas", [{ key: "eads", label: "Darbo skelbimai", icon: "briefcase", badge: employerAds.newCount }]]] : []),
+        ["Įmonė", [
+          ...(["owner", "manager"].includes(companyMemberRole) ? [{ key: "team", label: "Komanda", icon: "team", badge: "Pro" }] : []),
+          { key: "stats", label: "Statistika", icon: "pie" },
+          ...(companyMemberRole === "owner" && planSummary ? [{ key: "plans", label: "Planai", icon: "card" }] : []),
+        ]],
+      ]}
+      tabs={[
+        { key: "overview", label: "Apžvalga", icon: "overview" },
+        { key: "active", label: "Darbai", icon: "jobs", badge: activeVisibleJobs.length },
+        { key: "new", label: "Naujas darbo pasiūlymas", icon: "plus", plus: true },
+        { key: "calendar", label: "Kalendorius", icon: "cal" },
+        employerCanAds ? { key: "eads", label: "Skelbimai", icon: "briefcase", badge: employerAds.newCount } : { key: "favorites", label: "Mėgstami", icon: "heart" },
+      ]}
+      who={{ name: company?.name || "Įmonė", sub: planSummary?.plan_name || "Darbdavys", company: true, initials: String(company?.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl, current: employerView === "company", onClick: () => company && goEmployerView("company"), onLogout }}
+      messenger={{ unread: employerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
+      roleBar={impersonation ? (
+        <div className="rolebar adm"><Svg name="eye" size={15} /><span>Administratorius prisijungęs kaip <b>{impersonation.name}</b></span><button type="button" onClick={impersonation.onEnd}>Grįžti į administratorių</button></div>
+      ) : onAdminReturn ? (
+        <div className="rolebar adm"><span>Administratorius peržiūri darbdavio paskyrą</span><button type="button" onClick={onAdminReturn}>Grįžti į administravimą</button></div>
+      ) : null}
+      utility={!onAdminReturn && !impersonation ? <AdminPrivateInboxButton user={user} /> : null}
+    >
+    {messengerOpen && <Messenger conversations={employerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
     <div className="ed-page">
-      {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
+      {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:100vh;background:#f6f8fa;color:#222631}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}.ed-shell[data-view="team"] [data-wv]:not([data-wv~="team"]){display:none!important}.ed-shell[data-view="plans"] [data-wv]:not([data-wv~="plans"]){display:none!important}.ed-shell[data-view="calendar"] [data-wv]:not([data-wv~="calendar"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
         .ed-company b{display:block}.ed-company span{font-size:13px;color:#6c7a88}
-        .ed-shell{width:min(1180px,calc(100% - 40px));margin:32px auto 0;display:grid;gap:20px;padding-bottom:70px}
+        .ed-shell{width:min(1240px,100%);margin:8px auto 0;display:grid;gap:20px;padding-bottom:40px}
+        @media(max-width:899px){.ed-shell{width:calc(100% - 32px)!important;margin-top:16px}}
         .ed-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.ed-heading h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}.ed-heading p{margin:8px 0 0;color:#6c7a88;max-width:720px}
         .ed-heading-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;min-width:300px}
         .ed-heading-actions>button{width:100%}
@@ -4619,427 +4897,186 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         @media(max-width:620px){.ed-current-job-overview-head{padding:16px;flex-direction:column;align-items:flex-start}.ed-current-job-grid{grid-template-columns:1fr;padding:12px}.ed-current-job-field.wide{grid-column:auto}.ed-current-job-head-meta{gap:5px}.ed-current-job-head-meta i{display:none}.ed-current-job-description{margin:0 12px 12px}.ed-attendance-overlay{padding:12px}.ed-attendance-modal{padding:18px;border-radius:16px;max-height:calc(100dvh - 24px)}.ed-attendance-head h2{font-size:21px}.ed-onboarding-steps{grid-template-columns:1fr}.ed-team-role-grid{grid-template-columns:1fr}.ed-team-invite-row{grid-template-columns:1fr}.ed-team-member{grid-template-columns:1fr}.ed-team-member-actions{justify-content:flex-start}.ed-team-modal{padding:18px}.ed-topbar-inner,.ed-shell{width:min(100% - 24px,1180px)}.ed-heading{flex-direction:column;align-items:flex-start}.ed-heading-actions{justify-content:flex-start;width:100%;min-width:0}.ed-heading-primary-row{grid-template-columns:1fr}.ed-urgent-filter{grid-template-columns:1fr}.ed-urgent-row{grid-template-columns:1fr}.ed-urgent-contact{text-align:left}.ed-saved-row{grid-template-columns:1fr}.ed-saved-actions{justify-content:flex-start}.ed-job-overview{grid-template-columns:1fr 1fr}.ed-worker-source{width:100%;overflow:auto}.ed-profile-summary{grid-template-columns:1fr}.ed-company-editor-grid{grid-template-columns:1fr}.ed-company-editor-wide{grid-column:auto}.ed-form-grid{grid-template-columns:1fr}.ed-span-2,.ed-span-4{grid-column:auto}.ed-worker{grid-template-columns:1fr}.ed-jobs .ed-job{grid-template-columns:1fr}.ed-job>:nth-child(3){display:block}.ed-job-actions{grid-template-columns:1fr 1fr}.ed-attendance-row{grid-template-columns:1fr}.ed-plan-usage{align-items:stretch;flex-direction:column}.ed-plan-usage-meter{min-width:0;width:100%}.ed-plan-modal{padding:18px}.ed-plan-head h2{font-size:23px}}
       `}</style>
 
-      <header className="ed-topbar">
-        <div className="ed-topbar-inner">
-          <BrandLogo className="brand" href="#" height={46} />
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {company && planSummary && (
-              <button
-                className="ed-plan-badge"
-                type="button"
-                onClick={() => setShowPlans(true)}
-                title="Peržiūrėti planą"
-              >
-                Planas: <strong>{planSummary.plan_name}</strong>
-              </button>
-            )}
+      {!onAdminReturn && !impersonation && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
 
-            {company && (
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={() =>
-                  setShowCompanyEditor((current) => !current)
-                }
-              >
-                {showCompanyEditor ? "Uždaryti profilį" : "Profilis"}
-              </button>
-            )}
-
-            {onAdminReturn && (
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={onAdminReturn}
-              >
-                ← Administravimas
-              </button>
-            )}
-
-            {!onAdminReturn && <AdminPrivateInboxButton user={user} />}
-
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
+      <main className="ed-shell" data-view={calendarVisible ? "calendar" : employerView}>
+        {calendarVisible && (
+          <div data-wv="calendar" style={{ display: "contents" }}>
+            <EmployerCalendar
+              locked={!calendarAllowed}
+              onPlans={() => { navigateEmployerCalendar(false); goEmployerView("plans"); }}
+              jobs={(canSeeAllCompanyJobs ? jobs : myEmployerJobs).filter((job) => job.status !== "cancelled" && !(["draft", "open"].includes(job.status) && Number(job.confirmedCount || 0) === 0 && jobHasStarted(job)))}
+              isEnded={(job) => job.status === "completed" || jobHasEnded(job)}
+              canCreate
+              renderCard={(job) => <EmployerJobCard key={job.id} job={job} state={employerJobDashboardState(job)} unread={unreadEmployerGroupChatNotifications(job.id).length} responsibleLabel={(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)} onOpen={() => { navigateEmployerCalendar(false); requestAnimationFrame(() => openExistingJob(job)); }} />}
+              onOpenEnded={(job) => { navigateEmployerCalendar(false); requestAnimationFrame(() => openExistingJob(job)); }}
+              onNewOnDay={(date) => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm({ date })); }}
+            />
           </div>
-        </div>
-      </header>
-      {!onAdminReturn && <WebPushSettings user={user} kind="employer" profileOpen={showCompanyEditor} />}
-
-      <main className="ed-shell">
-        {calendarVisible && <EmployerWorkCalendar
-          jobs={canSeeAllCompanyJobs ? jobs : myEmployerJobs}
-          currentUserId={user.id}
-          calendarMemory={employerCalendarMemory}
-          memoryKey={`${company?.id}:${user.id}`}
-          teamName={teamMemberName}
-          unreadCount={job => unreadEmployerNotifications(job.id).filter(item => item.event_type === "message").length}
-          currentJobId={currentJob?.id}
-          workers={jobWorkers}
-          workersLoading={jobWorkersLoading}
-          onSelectJob={job => openExistingJob(job)}
-          onWorkerProfile={(worker, job) => openWorkerProfile({...worker, profileJobId: job.id})}
-          onDemoProfile={(name, city) => setSelectedWorker({
-            id: null, isDemoProfile: true, name, city, initials: name.slice(0,1),
-            yearsExperience: 6, hasDrivingLicenseB: true,
-            skillNames: ["Betonavimas", "Pagalbiniai statybos darbai"],
-            shortBio: "Pavyzdinis aprašymas: turiu 6 metų patirtį statybose, dirbu su betonavimu ir pagalbiniais darbais. Visi šiame profilyje pateikti duomenys išgalvoti.",
-            publicStats: {monthWorkedDays:8, monthWorkedMinutes:3840, monthJobs:5, activeJobs:1, cancelledByEmployer:0,
-              ...(canViewWorkerMetrics ? {attendanceRate:98, ratingAverage:9.2, ratingCount:12, noShowCount:0, unexcusedEarlyLeaveCount:0} : {})}
-          })}
-          onWorkerMessage={(worker, job) => openEmployerPrivateConversation(worker.invitationId, `${worker.name} · ${formatJobTitle(job.title)}`)}
-          onGroupMessage={job => openEmployerGroupConversation(job)}
-          jobScope={jobScope}
-          canSeeAllCompanyJobs={canSeeAllCompanyJobs}
-          onScopeChange={scope => setJobScope(scope === "all" && canSeeAllCompanyJobs ? "all" : "mine")}
-          onBack={() => navigateEmployerCalendar(false)}
-          onCreateJob={options => { navigateEmployerCalendar(false); requestAnimationFrame(() => openNewJobForm(options)); }}
-          onOpenJob={(job, favorites) => { navigateEmployerCalendar(false); requestAnimationFrame(async () => { if (await openExistingJob(job)) { if (favorites && planSummary?.can_saved_workers) setWorkerSource("team"); } }); }}
-        />}
+        )}
         <div style={{display: calendarVisible ? "none" : "contents"}}>
 
-        {!onAdminReturn && jobs.length === 0 && (
-          <section
-            style={{
-              marginBottom: 18,
-              padding: 16,
-              border: "1px solid #dfe7ed",
-              borderRadius: 16,
-              background: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                <h3 style={{ margin: "5px 0 4px", color: "#222631" }}>Sukurkite pirmą darbo poreikį</h3>
-                <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
-                <button className="ed-primary" type="button" onClick={openNewJobForm}>Sukurti pirmą darbą</button>
-              </div>
-            </div>
-            <div className="ed-onboarding-steps">
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f6f4fa", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
-            </div>
-          </section>
-        )}
         {showCompanyEditor && (
-          <section
-            ref={companyEditorRef}
-            id="employer-profile-editor"
-            className="ed-company-editor"
-            style={{ scrollMarginTop: 88 }}
-          >
-            <div className="ed-company-editor-head">
-              <div>
-                <div className="eyebrow">ĮMONĖS PROFILIS</div>
-                <h2>{company?.name || "Įmonės profilis"}</h2>
-                <p>
-                  Čia matote įmonės paskyros informaciją, savo rolę, planą ir
-                  pagrindinius komandos nustatymus.
-                  {companyMemberRole === "owner"
-                    ? " Įmonės savininkas taip pat gali redaguoti informaciją."
-                    : " Įmonės informaciją gali redaguoti tik savininkas."}
-                </p>
-              </div>
-
-            </div>
-
-            <div id="s24-employer-push-settings" />
-            <div className="ed-company-avatar-editor">
-              <div className="ed-company-avatar-preview">
-                {currentCompanyAvatarUrl ? (
-                  <img
-                    src={currentCompanyAvatarUrl}
-                    alt={companyForm.name || "Įmonės logotipas"}
-                  />
-                ) : (
-                  String(companyForm.name || "Į")
-                    .trim()
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0]?.toUpperCase())
-                    .join("") || "Į"
-                )}
-              </div>
-              <div className="ed-company-avatar-copy">
-                <b>Įmonės logotipas</b>
-                <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
-                {companyMemberRole === "owner" && (
-                  <div className="ed-company-avatar-actions">
-                    <label className="ed-company-avatar-upload">
-                      {currentCompanyAvatarUrl ? "Keisti logotipą" : "Įkelti logotipą"}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) =>
-                          chooseCompanyAvatarFile(e.target.files?.[0] || null)
-                        }
-                      />
-                    </label>
-                    <button
-                      className="ed-company-avatar-remove"
-                      type="button"
-                      disabled={!currentCompanyAvatarUrl}
-                      onClick={markCompanyAvatarForRemoval}
-                      title={
-                        currentCompanyAvatarUrl
-                          ? "Pašalinti dabartinį įmonės logotipą"
-                          : "Įmonės logotipas neįkeltas"
-                      }
-                    >
-                      Ištrinti logotipą
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <MonthlyAwardsPanel
-              awards={companyMonthlyAwards}
-              recipientType="company"
-              showEmpty={true}
-            />
-
-            <div className="ed-profile-summary">
-              <div className="ed-profile-summary-card">
-                <span>Jūs prisijungę kaip</span>
-                <b>
-                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
-                </b>
-                <small>{companyTeamRoleLabel(companyMemberRole)}</small>
-              </div>
-
-              <div className="ed-profile-summary-card">
-                <span>Dabartinis planas</span>
-                <b>{planSummary?.plan_name || "Basic"}</b>
-                <button
-                  className="ed-link-btn"
-                  type="button"
-                  onClick={() => setShowPlans(true)}
-                >
-                  Peržiūrėti planus
-                </button>
-              </div>
-
-              <div className="ed-profile-summary-card">
-                <span>Komandos vietos</span>
-                <b>
-                  {planSummary?.can_team_management
-                    ? `${Math.max(1, activeTeamMembers.length)}/5`
-                    : "1/1"}
-                </b>
-                <button
-                  className="ed-link-btn"
-                  type="button"
-                  onClick={openCompanyTeam}
-                >
-                  {planSummary?.can_team_management
-                    ? "Valdyti komandą"
-                    : "Komanda · Business Pro"}
-                </button>
-              </div>
-
-              {companyMemberRole === "owner" && (
-                <div className="ed-profile-summary-card">
-                  <span>Įdarbinti darbuotojai</span>
-                  <b>{employerStats.activeLongTermEmployees}</b>
-                  <button
-                    className="ed-link-btn"
-                    type="button"
-                    onClick={() => openLongTermEmployment("employees")}
-                  >
-                    Valdyti darbuotojus
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="ed-company-editor-grid">
-              <label className="ed-label">
-                Darbdavio pavadinimas / vardas *
-                <input
-                  className="ed-input"
-                  value={companyForm.name}
-                  maxLength={160}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("name", e.target.value)
-                  }
-                />
-              </label>
-
-              <label className="ed-label">
-                Įmonės kodas (jei taikoma)
-                <input
-                  className="ed-input ed-company-readonly"
-                  value={companyForm.companyCode || "Nenurodytas"}
-                  readOnly
-                />
-              </label>
-
-              <label className="ed-label">
-                Miestas *
-                <CityAutocomplete
-                  className="ed-input"
-                  value={companyForm.city}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(value) =>
-                    updateCompanyField("city", value)
-                  }
-                  placeholder="Pradėkite rašyti miestą"
-                />
-              </label>
-
-              <label className="ed-label">
-                Kontaktinis telefono numeris
-                <input
-                  className="ed-input"
-                  type="tel"
-                  value={companyForm.phone}
-                  maxLength={40}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("phone", e.target.value)
-                  }
-                  placeholder="+370..."
-                />
-                  <PhoneAvailabilityHint verification={companyPhoneVerification} />
-              </label>
-
-              {companyMemberRole === "owner" && <PhoneVerificationFields verification={companyPhoneVerification} />}
-
-              <label className="ed-label ed-company-editor-wide">
-                Trumpai apie įmonę
-                <textarea
-                  className="ed-textarea"
-                  value={companyForm.description}
-                  maxLength={1200}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("description", e.target.value)
-                  }
-                  placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..."
-                />
-              </label>
-            </div>
-
-            <div className="ed-company-reviews">
-              <div className="ed-company-reviews-head">
-                <div>
-                  <h3>Atsiliepimai apie įmonę</h3>
-                  <span>
-                    Atsiliepimus gali palikti tik darbuotojai, kurių ginčas
-                    oficialiai išspręstas jų naudai.
-                  </span>
-                </div>
-                <b>{companyWorkerReviews.length}</b>
-              </div>
-
-              {companyWorkerReviews.length ? (
-                <div className="ed-company-review-list">
-                  {companyWorkerReviews.map((review) => (
-                    <div className="ed-company-review" key={review.id}>
-                      <div className="ed-company-review-top">
-                        <div className="ed-review-worker">
-                          <div className="ed-review-worker-avatar">
-                            {review.avatar_path ? (
-                              <img
-                                src={workerAvatarUrl(review.avatar_path)}
-                                alt={review.worker_name || "Darbuotojas"}
-                              />
-                            ) : (
-                              workerInitials(review.worker_name || "Darbuotojas")
-                            )}
-                          </div>
-                          <div>
-                            <b>
-                              {review.worker_name || "Darbuotojas"} · {review.score} / 10
-                            </b>
-                            <div className="ed-company-review-meta">
-                              {formatJobTitle(review.job_title)}
-                              {review.work_date ? ` · ${review.work_date}` : ""}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="ed-review-actions">
-                          <span>
-                            {new Date(review.created_at).toLocaleDateString("lt-LT")}
-                          </span>
-                          {review.worker_id && (
-                            <button
-                              type="button"
-                              className="ed-secondary"
-                              onClick={() => openReviewWorkerProfile(review)}
-                            >
-                              Profilis
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <p>{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="ed-profile-readonly-note">
-                  Darbuotojų atsiliepimų apie įmonę dar nėra.
-                </div>
-              )}
-            </div>
-
-            {companyMemberRole === "owner" ? (
-              <div className="ed-company-editor-actions">
-                <button
-                  className="ed-secondary"
-                  type="button"
-                  disabled={companySaving}
-                  onClick={() => setShowCompanyEditor(false)}
-                >
-                  Uždaryti
-                </button>
-
-                <button
-                  className="ed-primary"
-                  type="button"
-                  disabled={companySaving}
-                  onClick={saveCompanyInformation}
-                >
-                  {companySaving ? "Saugoma..." : "Išsaugoti pakeitimus"}
-                </button>
-              </div>
-            ) : (
-              <div className="ed-profile-readonly-note">
-                Įmonės duomenis gali keisti tik paskyros Savininkas.
-              </div>
-            )}
-
-            <AccountDeleteZone
+          <div ref={companyEditorRef} id="employer-profile-editor" data-wv="company" style={{ display: "contents" }}>
+            <EmployerCompany
+              canEdit={companyIsOwner}
+              email={user.email}
+              roleLabel={companyTeamRoleLabel(companyMemberRole)}
+              planName={planSummary?.plan_name || "Basic"}
+              companyId={company?.id}
+              sitesLocked={!["business", "business_pro"].includes(planSummary?.plan_key)}
+              seats={planSummary?.can_team_management ? `${Math.max(1, activeTeamMembers.length)}/5` : "1/1"}
+              onPlans={companyIsOwner ? () => goEmployerView("plans") : null}
+              onTeam={["owner", "manager"].includes(companyMemberRole) ? () => goEmployerView("team") : null}
+              me={companyMe}
+              setMe={setCompanyMe}
+              phone={companyForm.phone}
+              savedPhone={companySavedPhone}
+              setPhone={(v) => updateCompanyField("phone", v)}
+              normalizePhone={normalizeLithuanianMobilePhone}
+              PhoneHint={<PhoneAvailabilityHint verification={companyPhoneVerification} />}
+              PhoneFields={<PhoneVerificationFields verification={companyPhoneVerification} />}
+              form={companyForm}
+              updateField={updateCompanyField}
+              cityInput={<CityAutocomplete value={companyForm.city} disabled={!companyIsOwner} onChange={(value) => updateCompanyField("city", value)} placeholder="Pradėkite rašyti miestą" />}
+              avatarUrl={currentCompanyAvatarUrl}
+              initials={String(companyForm.name || "Į").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "Į"}
+              onAvatarFile={chooseCompanyAvatarFile}
+              onAvatarRemove={markCompanyAvatarForRemoval}
+              reviews={companyWorkerReviews}
+              dirty={companyDirty}
+              saving={companySaving}
+              onSave={saveCompanyInformation}
+              onUndo={undoCompanyChanges}
+              bugNotice={bugReportNotice}
+              onBugReport={() => { setBugReportNotice(""); setBugReportOpen(true); }}
               onDelete={() => setDeleteAccountOpen(true)}
-              description={
-                companyMemberRole === "owner"
-                  ? "Ištrynus savininko paskyrą bus pašalinta ir jos valdoma įmonės paskyra, jūsų sukurti darbai bei failai. Aktyvi prenumerata bus nutraukta prieš trynimą."
-                  : "Ištrynus paskyrą bus pašalinta jūsų asmeninė prieiga, jūsų sukurti darbai ir įkelti failai. Įmonės savininko paskyra išliks."
-              }
+              deleteText={companyIsOwner
+                ? "Bus pašalinta įmonės paskyra, darbai ir failai. Aktyvi prenumerata bus nutraukta. Atkurti negalima."
+                : "Bus pašalinta jūsų prieiga, jūsų sukurti darbai ir failai. Įmonės paskyra išliks. Atkurti negalima."}
             />
-            <AccountBugReportZone
-              successMessage={bugReportNotice}
-              onOpen={() => {
-                setBugReportNotice("");
-                setBugReportOpen(true);
-              }}
-            />
-          </section>
+          </div>
         )}
 
-        {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
-        <div className="ed-heading">
+        {employerView === "stats" && (
+          <div data-wv="stats" style={{ display: "contents" }}>
+            <EmployerStats
+              company={company}
+              planKey={planSummary?.plan_key}
+              onPlans={() => setShowPlans(true)}
+              onGo={goEmployerView}
+              onWorkerProfile={(w) => openWorkerProfile({ id: w.id, name: w.name || "Darbuotojas", initials: workerInitials(w.name || "D") })}
+              onReliabilityRules={() => setShowReliabilityInfo(true)}
+            />
+          </div>
+        )}
+        <div data-wv="plans" style={{ display: "contents" }}>
+          <EmployerPlans
+            planKey={planSummary?.plan_key}
+            billing={billingStatus}
+            cycle={planBillingCycle}
+            setCycle={setPlanBillingCycle}
+            busy={planActionBusy}
+            isOwner={companyMemberRole === "owner"}
+            adminMode={Boolean(onAdminReturn)}
+            onRequest={requestPaidPlan}
+            onPortal={openBillingPortal}
+            onAdminActivate={activatePlanForAdminTest}
+            notes={<>
+              {error && employerView === "plans" ? <p className="ferr" role="alert">{error}</p> : null}
+              {isComplimentaryBusinessTrial(planSummary, billingStatus) && planSummary?.current_period_end ? (
+                <div className="notebox"><b>Business išbandymas aktyvus</b> iki {new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(planSummary.current_period_end))}. Kortelės nereikia. Jei nepasirinksite mokamos prenumeratos, planas grįš į Basic.</div>
+              ) : null}
+              {billingStatus?.in_payment_grace ? (
+                <div className="notebox warn"><b>Nepavyko automatiškai apmokėti prenumeratos.</b> Plano teisės paliktos iki {new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(billingStatus.payment_grace_until))}. Atnaujinkite mokėjimo būdą („Valdyti prenumeratą“).</div>
+              ) : null}
+              {planSummary?.cancel_at_period_end ? (
+                <div className="notebox"><b>Prenumeratos atšaukimas suplanuotas.</b>{planSummary?.current_period_end ? ` Teisės galioja iki ${new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(planSummary.current_period_end))}.` : ""} Po to planas taps Basic.</div>
+              ) : null}
+              {pendingPlanChange?.pending_plan_key ? (
+                <div className="notebox"><b>Suplanuotas plano pakeitimas:</b> {pendingPlanChange.pending_plan_name || employerPlanName(pendingPlanChange.pending_plan_key)}{pendingPlanChange.pending_effective_at ? ` nuo ${new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(pendingPlanChange.pending_effective_at))}` : ""}.</div>
+              ) : null}
+            </>}
+          />
+        </div>
+        <div data-wv="team" style={{ display: "contents" }}>
+          <EmployerTeam
+            locked={!planSummary?.can_team_management}
+            onPlans={() => setShowPlans(true)}
+            myRole={companyMemberRole}
+            myUserId={user.id}
+            myEmail={user.email}
+            members={teamMembers}
+            invites={teamInvites}
+            loading={teamLoading}
+            busy={teamActionBusy}
+            form={teamInviteForm}
+            setForm={setTeamInviteForm}
+            onInvite={createTeamInvite}
+            onCopy={copyTeamInvite}
+            onRole={changeTeamMemberRole}
+            onRemove={removeTeamMember}
+            companyId={company?.id}
+          />
+        </div>
+        <div data-wv="favorites" style={{ display: "contents" }}>
+          <EmployerFavorites
+            locked={!planSummary?.can_saved_workers}
+            onPlans={() => setShowPlans(true)}
+            loading={savedWorkersLoading}
+            workers={savedWorkers}
+            busyId={savedWorkerBusy}
+            onRemove={removeWorkerFromTeam}
+            onProfile={(w) => openWorkerProfile(w)}
+          />
+        </div>
+        <div data-wv="urgent" style={{ display: "contents" }}>
+          <EmployerUrgent
+            locked={!planSummary?.can_team_management}
+            onPlans={() => setShowPlans(true)}
+            city={urgentSearchCity}
+            onCity={(c) => searchUrgentWorkers(c)}
+            loading={urgentSearchLoading}
+            error={urgentSearchError}
+            completed={urgentSearchCompleted}
+            results={urgentSearchResults}
+            copied={urgentPhoneCopied}
+            onCopy={copyUrgentPhone}
+            onProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.display_name, city: w.city, avatarUrl: w.avatarUrl, initials: workerInitials(w.display_name), hasDrivingLicenseB: w.has_driving_license_b, yearsExperience: w.years_experience, phone: w.phone, shortBio: w.short_bio, lastActiveAt: w.urgent_updated_at })}
+          />
+        </div>
+        {employerCanAds && (
+          <div data-wv="eads" style={{ display: "contents" }}>
+            <EmployerAds
+              key={employerAdsNavKey}
+              data={employerAds}
+              company={company}
+              isPro={employerAdsIsPro}
+              startNew={employerAdsStartNew}
+              onStartNewHandled={() => setEmployerAdsStartNew(false)}
+              onWorkerProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.name || "Darbuotojas", city: w.city || "", avatarUrl: workerAvatarUrl(w.avatar_path), initials: workerInitials(w.name || "D") })}
+            />
+          </div>
+        )}
+        <div data-wv="overview" style={{ display: "contents" }}>
+          <EmployerOverview
+            jobs={activeVisibleJobs}
+            stateOf={employerJobDashboardState}
+            unreadOf={(job) => unreadEmployerGroupChatNotifications(job.id).length}
+            responsibleOf={(job) => (job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)}
+            onOpenJob={openExistingJob}
+            onChat={openEmployerGroupConversation}
+            onGo={goEmployerView}
+            unreadMessages={employerMessengerUnread}
+            onOpenMessages={() => setMessengerOpen(true)}
+            actionCount={activeVisibleJobs.filter((job) => ["action", "disputed"].includes(employerJobDashboardState(job)?.key)).length}
+            company={company}
+            stats={employerStats}
+            canStats={Boolean(planSummary?.can_advanced_analytics)}
+          />
+        </div>
+        <div className="ed-heading" data-wv="legacy">
           <div>
             <div className="eyebrow">DARBDAVIO PASKYRA</div>
             <h1>Sukurkite darbuotojų kvietimą</h1>
@@ -5143,425 +5180,118 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
-        {notice && <div className="ed-note ok">{notice}</div>}
-        {error && <div className="ed-note err">{error}</div>}
+        <NoticeToast notice={notice} error={error} onClear={() => setNotice("")} />
 
-        {showJobForm && (
-        <section
-          className="ed-card"
-          id="employer-job-form"
-        >
-          <h2>
-            {editingJobId ? "Redaguoti darbo pasiūlymą" : "Naujas darbo pasiūlymas"}
-          </h2>
-          <p className="ed-sub">
-            {editingJobId
-              ? editingCoreTermsLocked
-                ? "Darbuotojai jau buvo pakviesti, todėl data, darbo laikas, miestas ir atlygis nebekeičiami. Kitą informaciją galite atnaujinti pagal darbo būseną."
-                : "Darbuotojai dar nepakviesti, todėl galite pakeisti visas darbo sąlygas."
-              : "Užpildykite svarbiausią informaciją ir iškart ieškosime tinkamų žmonių."}
-          </p>
+        {showJobForm && (() => {
+          const errText = (key) => (jobFormErrors[key] ? <span className="ferr">{jobFormErrors[key]}</span> : null);
+          const hasBreak = Boolean(form.breakStartTime || form.breakEndTime);
+          const limit = Number(planSummary?.jobs_limit || 0);
+          const used = Number(planSummary?.jobs_used_this_month || 0);
+          const limited = !editingJobId && planSummary && !planSummary.unlimited_jobs && limit > 0;
+          const closeForm = () => { setShowJobForm(false); setEditingJobId(null); setEditingConfirmedCount(0); setEditingInvitationCount(0); };
+          return (
+          <div id="employer-job-form" data-wv="new" style={{ display: "contents" }}>
+            <div className="head"><div><h1>{editingJobId ? "Redaguoti darbo sąlygas" : "Naujas darbo pasiūlymas"}</h1>
+              <p className="lead">{editingJobId
+                ? (editingCoreTermsLocked ? "Darbuotojai jau pakviesti – data, laikas, miestas ir atlygis nebekeičiami" : "Keisti galima, kol niekas nepriėmė ir nepakviestas")
+                : `${planSummary?.plan_name || "Basic"} · ${planSummary?.unlimited_jobs ? "pasiūlymų skaičius neribojamas" : limit ? `iki ${limit} per mėnesį` : ""}`}</p></div></div>
+            {limited ? (
+              <div className={`limbox${used / limit >= 0.8 ? " warn" : ""}`}><div className="limtx"><span>Šį mėnesį panaudota <b>{used} iš {limit}</b> darbo pasiūlymų</span><div className="limbar"><i style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} /></div></div>
+                {used / limit >= 0.8 ? <><span className="limup">{used >= limit ? "Limitas pasiektas." : `Liko ${limit - used}.`} Su Business Pro – neribotai.</span><button className="btn sm primary" type="button" onClick={() => goEmployerView("plans")}>Pereiti į Pro</button></> : null}</div>
+            ) : null}
+            {!editingJobId && !companyTemplates.missing ? <TemplateBar templates={companyTemplates.rows} locked={!bizPlan} onUse={applyJobTemplate} onManage={() => setTemplatesOpen(true)} onPlans={() => goEmployerView("plans")} /> : null}
+            {templatesOpen ? <TemplatesModal templates={companyTemplates.rows} onUse={applyJobTemplate} onClose={() => setTemplatesOpen(false)} onChanged={companyTemplates.reload} /> : null}
+            <form className="jd-grid adnew newjob" noValidate onSubmit={(e) => { e.preventDefault(); if (!saving) saveJobAndFind(); }}>
+              <div className="jd-main">
+                <section className="card afsec"><header className="afh"><span className="afn">1</span><h2>Darbas</h2></header><div className="form">
+                  <label className="field wide">Pavadinimas *<input value={form.title} onChange={(e) => updateField("title", e.target.value)} placeholder="Pvz. Pagalbiniai mūro darbai" />{errText("title")}</label>
+                  <label className="field">Kiek žmonių reikia<select value={String(form.workersNeeded || 1)} onChange={(e) => updateField("workersNeeded", e.target.value)}>
+                    {Array.from(new Set([1, 2, 3, 4, 5, 6, 8, 10, 15, 20, Number(form.workersNeeded || 1)])).sort((x, y) => x - y).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+                  {planSummary?.can_team_management ? (
+                    <label className="field">Atsakingas<select value={form.responsibleUserId || ""} disabled={!["owner", "manager"].includes(companyMemberRole)} onChange={(e) => updateField("responsibleUserId", e.target.value)}>
+                      {activeTeamMembers.map((member) => <option key={member.user_id} value={member.user_id}>{member.user_id === user.id ? "Jūs" : member.display_name} · {companyTeamRoleLabel(member.member_role)}</option>)}</select></label>
+                  ) : <div className="field"><span>Atsakingas</span><div className="ro">Jūs</div></div>}
+                </div></section>
 
-          <div className="ed-form-grid">
-            <label className="ed-label ed-span-2">
-              Darbo pasiūlymo pavadinimas
-              <input
-                className="ed-input"
-                value={form.title}
-                onChange={(e) => updateField("title", e.target.value)}
-                placeholder="Pvz. Reikia 2 statybų pagalbinių rytoj"
-              />
-            </label>
-
-            {planSummary?.can_team_management && (
-              <div className="ed-label ed-span-2">
-                Atsakingas žmogus
-                <RoundedSelect
-                  value={form.responsibleUserId}
-                  ariaLabel="Atsakingas žmogus"
-                  disabled={
-                    !["owner", "manager"].includes(companyMemberRole)
-                  }
-                  onChange={(userId) =>
-                    updateField("responsibleUserId", userId)
-                  }
-                  options={activeTeamMembers.map((member) => ({
-                    value: member.user_id,
-                    label: `${member.display_name} · ${companyTeamRoleLabel(member.member_role)}`,
-                  }))}
-                />
-                <span
-                  style={{
-                    color: "#7a8996",
-                    fontSize: 11,
-                    fontWeight: 500,
-                  }}
-                >
-                  Vadybininkui naujas darbas automatiškai priskiriamas jam
-                  pačiam. Savininkas ir vadovas gali pakeisti atsakingą žmogų.
-                </span>
-              </div>
-            )}
-
-            <label className="ed-label">
-              Miestas *
-              <CityAutocomplete
-                className="ed-input"
-                value={form.city}
-                disabled={editingCoreTermsLocked}
-                onChange={(value) => updateField("city", value)}
-                placeholder="Pradėkite rašyti miestą"
-              />
-            </label>
-
-            <label className="ed-label">
-              Žmonių skaičius
-              <input
-                className="ed-input"
-                type="number"
-                min="1"
-                max="100"
-                value={form.workersNeeded}
-                onChange={(e) => updateField("workersNeeded", e.target.value)}
-              />
-            </label>
-
-            <label className="ed-label ed-span-2">
-              Atvykti adresu *
-              <AddressAutocomplete
-                inputRef={addressInputRef}
-                value={form.address}
-                city={form.city}
-                disabled={editingConfirmedCount > 0}
-                invalid={Boolean(jobFormErrors.address)}
-                selectedAddress={selectedJobAddress}
-                onChange={(value) => updateField("address", value)}
-                onSelect={(address) => {
-                  setSelectedJobAddress(address);
-                  setForm((current) => ({ ...current, address: address.label }));
-                  setJobFormErrors((current) => ({ ...current, address: "" }));
-                }}
-                placeholder="Pvz. Gedimino pr. 1"
-              />
-              {jobFormErrors.address && (
-                <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
-                  {jobFormErrors.address}
-                </span>
-              )}
-            </label>
-
-<div className="ed-label ed-span-2">
-  Data
-  <RoundedDateSelect
-    className="ed-input wd-date-trigger"
-    ariaLabel="Darbo data"
-    value={form.workDate}
-    disabled={editingCoreTermsLocked}
-    allowClear={false}
-    onChange={(value) => updateField("workDate", value)}
-  />
-</div>
-
-
-<div className="ed-label ed-span-2">
-  Darbo laikas
-  <div className="ed-time-pair">
-    <label className="ed-label">Nuo
-      <RoundedTimeSelect
-        ariaLabel="Darbo pradžios laikas"
-        className="ed-input wd-time-trigger"
-        value={form.startTime}
-        disabled={editingCoreTermsLocked}
-        onChange={(value) => updateField("startTime", value)}
-      />
-    </label>
-    <label className="ed-label">Iki
-      <RoundedTimeSelect
-        ariaLabel="Darbo pabaigos laikas"
-        className="ed-input wd-time-trigger"
-        value={form.endTime}
-        disabled={editingCoreTermsLocked}
-        onChange={(value) => updateField("endTime", value)}
-        align="right"
-      />
-    </label>
-  </div>
-</div>
-
-<div className="ed-label ed-span-2">
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-    <span>Pietų pertrauka</span>
-    <label className="ed-check" style={{ minHeight: 0, fontSize: 12, fontWeight: 800 }}>
-      <input
-        type="checkbox"
-        checked={!form.breakStartTime && !form.breakEndTime}
-        disabled={editingConfirmedCount > 0}
-        onChange={(e) => {
-          if (e.target.checked) {
-            setForm((current) => ({ ...current, breakStartTime: "", breakEndTime: "" }));
-          } else {
-            setForm((current) => ({
-              ...current,
-              breakStartTime: current.breakStartTime || "12:00",
-              breakEndTime: current.breakEndTime || "12:30",
-            }));
-          }
-        }}
-      />
-      Pietų pertraukos nėra
-    </label>
-  </div>
-  <div className="ed-time-pair">
-    <label className="ed-label">Nuo
-      <RoundedTimeSelect
-        ariaLabel="Pietų pertraukos pradžia"
-        buttonRef={breakStartInputRef}
-        className="ed-input wd-time-trigger"
-        value={form.breakStartTime}
-        disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
-        onChange={(value) => updateField("breakStartTime", value)}
-      />
-    </label>
-    <label className="ed-label">Iki
-      <RoundedTimeSelect
-        ariaLabel="Pietų pertraukos pabaiga"
-        buttonRef={breakEndInputRef}
-        className="ed-input wd-time-trigger"
-        value={form.breakEndTime}
-        disabled={editingConfirmedCount > 0 || (!form.breakStartTime && !form.breakEndTime)}
-        onChange={(value) => updateField("breakEndTime", value)}
-        align="right"
-      />
-    </label>
-  </div>
-</div>
-
-<label className="ed-label">
-  Atlygis į rankas (€) *
-  <input
-    ref={payAmountInputRef}
-    className="ed-input"
-    type="number"
-    min="1"
-    step="0.01"
-    required
-    aria-invalid={Boolean(jobFormErrors.payAmount)}
-    value={form.payAmount}
-    disabled={editingCoreTermsLocked}
-    onChange={(e) => updateField("payAmount", e.target.value)}
-    placeholder="Pvz. 12"
-    style={jobFormErrors.payAmount ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
-  />
-  {jobFormErrors.payAmount && (
-    <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
-      {jobFormErrors.payAmount}
-    </span>
-  )}
-</label>
-
-<div className="ed-label">
-  Mokėjimo tipas *
-  <RoundedSelect
-    ariaLabel="Mokėjimo tipas"
-    value={form.payUnit}
-    disabled={editingCoreTermsLocked}
-    onChange={(value) => updateField("payUnit", value)}
-    options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
-  />
-</div>
-
-<div className="ed-label ed-span-2">
-  Atvykimas į darbo vietą *
-  <RoundedSelect
-    ariaLabel="Atvykimas į darbo vietą"
-    value={form.transportMode}
-    disabled={editingConfirmedCount > 0}
-    onChange={(value) => updateField("transportMode", value)}
-    options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
-  />
-</div>
-
-            <label className="ed-label ed-span-4">
-              Darbo aprašymas *
-              <textarea
-                ref={descriptionInputRef}
-                className="ed-textarea"
-                required
-                aria-invalid={Boolean(jobFormErrors.description)}
-                value={form.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Pvz. Pagalbiniai mūro darbai. Įrankiai suteikiami, reikalinga darbo avalynė."
-                style={jobFormErrors.description ? { borderColor: "#d94a3a", boxShadow: "0 0 0 2px rgba(217,74,58,.10)" } : undefined}
-              />
-              {jobFormErrors.description && (
-                <span style={{ color: "#c9362b", fontSize: 11, fontWeight: 800, marginTop: 5 }}>
-                  {jobFormErrors.description}
-                </span>
-              )}
-            </label>
-
-            {!editingJobId && (
-              <div
-                ref={jobScopeAckRef}
-                tabIndex={-1}
-                className="ed-span-4"
-                style={{
-                  border: jobFormErrors.scopeAcknowledgement ? "1px solid #d94a3a" : "1px solid #b0a5cf",
-                  borderRadius: 13,
-                  padding: "14px 15px",
-                  background: "#fff8f1",
-                  outline: "none",
-                }}
-              >
-                <b style={{ display: "block", color: "#433960", fontSize: 13, marginBottom: 6 }}>
-                  Prieš paskelbiant darbą
-                </b>
-                <div style={{ color: "#5c6874", fontSize: 12, lineHeight: 1.55 }}>
-                  Padedame suvesti darbdavį ir darbuotoją bei valdyti darbo eigą, tačiau atlygio už šį darbą nemokame. Darbdavys atsako už sutartą apmokėjimą, teisėtą ir saugų darbo organizavimą, instruktavimą bei konkrečiam darbui taikomus reikalavimus. Jei reikalingi dokumentai, pažymėjimai, leidimai, kvalifikacija, speciali apranga, apsaugos priemonės ar kitos sąlygos, jos turi būti aiškiai nurodytos darbo aprašyme prieš siunčiant kvietimus.
-                </div>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 9, marginTop: 11, color: "#222631", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={jobScopeAcknowledged}
-                    onChange={(e) => {
-                      setJobScopeAcknowledged(e.target.checked);
-                      if (e.target.checked) {
-                        setJobFormErrors((current) => ({ ...current, scopeAcknowledgement: "" }));
-                      }
-                    }}
-                    style={{ marginTop: 3 }}
-                  />
-                  <span>Patvirtinu, kad suprantu savo atsakomybę dėl apmokėjimo, saugos ir teisėto darbo organizavimo, o darbo aprašyme nurodžiau visus darbuotojui būtinus reikalavimus.</span>
-                </label>
-                {jobFormErrors.scopeAcknowledgement && (
-                  <div style={{ marginTop: 7, color: "#c9362b", fontSize: 11, fontWeight: 800 }}>
-                    {jobFormErrors.scopeAcknowledgement}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!editingJobId && (
-              <div
-                className="ed-span-4"
-                style={{
-                  border: "1px solid #dfe7ed",
-                  borderRadius: 13,
-                  padding: "9px 14px",
-                  background: "#f7f9fb",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div style={{ minWidth: 240, flex: "1 1 520px" }}>
-                    <b style={{ color: "#222631", fontSize: 13 }}>
-                      Darbuotojų pasiūla · {form.city || "pasirinktas miestas"}
-                    </b>
-                    <span style={{ marginLeft: 8, color: "#6c7a87", fontSize: 11 }}>
-                      Aktyvūs per paskutines 24 val. ir patvirtinę prieinamumą pasirinktai dienai.
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-                    <span
-                      style={{
-                        borderRadius: 999,
-                        padding: "5px 9px",
-                        background: "#fff",
-                        border: "1px solid #dfe7ed",
-                        color: "#222631",
-                        fontSize: 11,
-                        fontWeight: 900,
-                      }}
-                    >
-                      {cityWorkerSignalLoading || (selectedJobAddress && !cityWorkerSignal) ? (
-                        <SilentLoader size={13} minHeight={15} />
-                      ) : cityWorkerSignal ? (
-                        `${cityWorkerSignal.availableWorkers} tinkamų pagal vietą ir laiką`
-                      ) : (
-                        "Pasirinkite adresą"
-                      )}
-                    </span>
-
-                    {planSummary?.plan_key === "business_pro" &&
-                      cityWorkerSignal &&
-                      cityWorkerSignal.urgentWorkersNow !== null &&
-                      cityWorkerSignal.urgentWorkersNow !== undefined && (
-                        <span
-                          style={{
-                            borderRadius: 999,
-                            padding: "5px 9px",
-                            background: "#f0edf7",
-                            border: "1px solid #c6bedc",
-                            color: "#433960",
-                            fontSize: 11,
-                            fontWeight: 900,
-                          }}
-                        >
-                          {cityWorkerSignal.urgentWorkersNow} „Laisvas dabar“
-                        </span>
-                      )}
-                  </div>
-                </div>
-
-                {!cityWorkerSignalLoading &&
-                  cityWorkerSignal &&
-                  cityWorkerSignal.availableWorkers === 0 && (
-                    <div
-                      style={{
-                        marginTop: 5,
-                        color: "#433960",
-                        fontSize: 10.5,
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      Šiuo metu šiai dienai tinkamų aktyvių darbuotojų nematome. Darbą vis tiek galite paskelbti – pasiūla gali pasikeisti darbuotojams atnaujinus grafiką.
-                    </div>
+                <section className="card afsec"><header className="afh"><span className="afn">2</span><h2>Vieta ir laikas</h2></header><div className="form">
+                  {companySites.missing ? null : bizPlan ? (
+                    <label className="field wide">Objektas<select value={jobSiteId} disabled={editingConfirmedCount > 0} onChange={(e) => (e.target.value ? applyJobSite(e.target.value) : setJobSiteId(""))}>
+                      <option value="">Naujas adresas</option>{companySites.rows.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+                  ) : (
+                    <div className="field wide"><span>Objektas <span className="protag">Business</span></span><button className="btn lockd" type="button" onClick={() => goEmployerView("plans")}><Svg name="lock" size={13} width={2.2} />Išsaugoti objektai – Business plane</button></div>
                   )}
+                  <label className="field">Miestas *<CityAutocomplete className="ed-input" value={form.city} disabled={editingCoreTermsLocked} onChange={(value) => updateField("city", value)} placeholder="Pradėkite rašyti miestą" />{errText("city")}</label>
+                  <label className="field">Atvykti adresu *
+                    <AddressAutocomplete inputRef={addressInputRef} value={form.address} city={form.city} disabled={editingConfirmedCount > 0} invalid={Boolean(jobFormErrors.address)} selectedAddress={selectedJobAddress}
+                      onChange={(value) => updateField("address", value)}
+                      onSelect={(address) => { setSelectedJobAddress(address); setForm((current) => ({ ...current, address: address.label })); setJobFormErrors((current) => ({ ...current, address: "" })); }}
+                      placeholder="Gatvė, namo nr." />{errText("address")}</label>
+                  <label className="field">Data *<input type="date" min={localDateISO(new Date())} value={form.workDate || ""} disabled={editingCoreTermsLocked} onChange={(e) => e.target.value && updateField("workDate", e.target.value)} />{errText("workDate")}</label>
+                  <div className="field"><span>Darbo laikas *</span><div className="pair">
+                    <RoundedTimeSelect ariaLabel="Darbo pradžios laikas" className="ed-input wd-time-trigger" value={form.startTime} disabled={editingCoreTermsLocked} onChange={(value) => updateField("startTime", value)} />
+                    <RoundedTimeSelect ariaLabel="Darbo pabaigos laikas" className="ed-input wd-time-trigger" value={form.endTime} disabled={editingCoreTermsLocked} onChange={(value) => updateField("endTime", value)} align="right" />
+                  </div>{errText("time")}</div>
+                  <div className="field"><span className="lblrow">Pietų pertrauka<span className="segs" role="radiogroup" aria-label="Pietų pertrauka">
+                      <label><input type="radio" name="f-lunchk" checked={hasBreak} disabled={editingConfirmedCount > 0} onChange={() => setForm((current) => ({ ...current, breakStartTime: current.breakStartTime || "12:00", breakEndTime: current.breakEndTime || "12:30" }))} /><span>Yra</span></label>
+                      <label><input type="radio" name="f-lunchk" checked={!hasBreak} disabled={editingConfirmedCount > 0} onChange={() => setForm((current) => ({ ...current, breakStartTime: "", breakEndTime: "" }))} /><span>Nėra</span></label>
+                    </span></span>
+                    {hasBreak ? <div className="pair">
+                      <RoundedTimeSelect ariaLabel="Pietų pertraukos pradžia" buttonRef={breakStartInputRef} className="ed-input wd-time-trigger" value={form.breakStartTime} disabled={editingConfirmedCount > 0} onChange={(value) => updateField("breakStartTime", value)} />
+                      <RoundedTimeSelect ariaLabel="Pietų pertraukos pabaiga" buttonRef={breakEndInputRef} className="ed-input wd-time-trigger" value={form.breakEndTime} disabled={editingConfirmedCount > 0} onChange={(value) => updateField("breakEndTime", value)} align="right" />
+                    </div> : <div className="ro">Pietų pertraukos nėra</div>}{errText("break")}</div>
+                  <label className="field">Atvykimas *<select value={form.transportMode} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("transportMode", e.target.value)}>
+                    <option value="self_arrival">Darbuotojas atvyksta pats</option><option value="employer_pickup">Darbdavys paima darbuotoją</option></select></label>
+                </div></section>
+
+                <section className="card afsec"><header className="afh"><span className="afn">3</span><h2>Atlygis</h2></header><div className="form">
+                  <div className="field"><span>Mokama *</span><div className="segs wide2" role="radiogroup" aria-label="Mokėjimo tipas">
+                    <label><input type="radio" name="f-unit" checked={form.payUnit !== "day"} disabled={editingCoreTermsLocked} onChange={() => updateField("payUnit", "hour")} /><span>Už valandą</span></label>
+                    <label><input type="radio" name="f-unit" checked={form.payUnit === "day"} disabled={editingCoreTermsLocked} onChange={() => updateField("payUnit", "day")} /><span>Už dieną</span></label></div></div>
+                  <label className="field">Suma į rankas *<span className="inpx"><input ref={payAmountInputRef} inputMode="decimal" value={form.payAmount} disabled={editingCoreTermsLocked} aria-invalid={Boolean(jobFormErrors.payAmount)} onChange={(e) => updateField("payAmount", e.target.value.replace(",", "."))} placeholder={form.payUnit === "day" ? "120" : "14"} /><em>€ / {form.payUnit === "day" ? "d." : "val."}</em></span>{errText("payAmount")}</label>
+                </div></section>
+
+                <section className="card afsec"><header className="afh"><span className="afn">4</span><h2>Aprašymas</h2></header><div className="form">
+                  <label className="field wide">Ką reikės dirbti *<textarea ref={descriptionInputRef} value={form.description} aria-invalid={Boolean(jobFormErrors.description)} onChange={(e) => updateField("description", e.target.value)} placeholder="Pvz. Blokelių padavimas mūrininkams, skiedinio maišymas. Įrankiai suteikiami, reikalinga darbo avalynė." />{errText("description")}</label>
+                </div></section>
               </div>
-            )}
-          </div>
 
-          <div className="ed-actions">
-            <button
-              className="ed-secondary"
-              type="button"
-              disabled={saving}
-              onClick={() => {
-                setShowJobForm(false);
-                setEditingJobId(null);
-                setEditingConfirmedCount(0);
-                setEditingInvitationCount(0);
-              }}
-            >
-              Uždaryti
-            </button>
-
-            <button
-              className="ed-primary"
-              disabled={saving}
-              onClick={saveJobAndFind}
-            >
-              {saving
-                ? "Saugoma..."
-                : editingJobId
-                ? "Išsaugoti pakeitimus"
-                : "Sukurti darbo pasiūlymą"}
-            </button>
+              <aside className="jd-side">
+                {!editingJobId ? (
+                  <section className="card mtc"><header><h2>Kas gaus pasiūlymą</h2></header>
+                    <div className="mtc-big"><b>{cityWorkerSignalLoading ? "…" : cityWorkerSignal ? cityWorkerSignal.availableWorkers : "–"}</b><span>{cityWorkerSignal ? "darbuotojai atitinka ir gali atvykti" : "Pasirinkite adresą – parodysime tinkamus darbuotojus"}</span></div>
+                    <div className="mtc-steps">
+                      <div><span>Pažymėjo, kad laisvi <b>{form.workDate || ""}</b></span><em className="hl">{cityWorkerSignal ? cityWorkerSignal.availableWorkers : "–"}</em></div>
+                      <div><span>Laisvi visą laiką <b>{form.startTime || ""}–{form.endTime || ""}</b></span><em>✓</em></div>
+                      <div><span>Aktyvūs per paskutines 24 val.</span><em>✓</em></div>
+                      {planSummary?.plan_key === "business_pro" && cityWorkerSignal?.urgentWorkersNow != null ? <div><span>„Laisvas dabar“ mieste</span><em>{cityWorkerSignal.urgentWorkersNow}</em></div> : null}
+                    </div>
+                    <div className="mtc-note gbox"><Svg name="people" size={15} width={2.2} /><span>Kviesti galėsite kiek norite žmonių – vietas užims pirmieji priėmę. Kai visos vietos užpildytos, kiti kvietimai nebegalioja automatiškai.</span></div>
+                    {planSummary?.plan_key === "business_pro"
+                      ? <div className="prio"><Svg name="bolt" size={15} width={2.2} /><span>Business Pro – jūsų pasiūlymas darbuotojams rodomas pirmiau.</span></div>
+                      : <button type="button" className="prio lk" onClick={() => goEmployerView("plans")}><Svg name="lock" size={14} width={2.2} /><span>Su Business Pro pasiūlymas rodomas pirmiau</span></button>}
+                  </section>
+                ) : null}
+                <section className="card jd-act" ref={jobScopeAckRef} tabIndex={-1}>
+                  {!editingJobId ? (
+                    <label className="check small" title="Padedame suvesti darbdavį ir darbuotoją, tačiau atlygio už darbą nemokame. Darbdavys atsako už apmokėjimą, teisėtą ir saugų darbo organizavimą.">
+                      <input type="checkbox" checked={jobScopeAcknowledged} onChange={(e) => { setJobScopeAcknowledged(e.target.checked); if (e.target.checked) setJobFormErrors((current) => ({ ...current, scopeAcknowledgement: "" })); }} /> Patvirtinu atsakomybę už apmokėjimą ir saugų darbą
+                    </label>
+                  ) : null}
+                  {jobFormErrors.scopeAcknowledgement ? <p className="small" style={{ color: "var(--red)", fontWeight: 600, margin: 0 }} role="alert">{jobFormErrors.scopeAcknowledgement}</p> : null}
+                  <button className="btn primary jd-wide" type="submit" disabled={saving || (limited && used >= limit)}>{saving ? "Saugoma..." : editingJobId ? "Išsaugoti pakeitimus" : "Sukurti darbo pasiūlymą"}</button>
+                  {bizPlan && !editingJobId && !companyTemplates.missing ? <button className="btn jd-wide" type="button" disabled={saving} onClick={saveJobTemplate}><Svg name="file" size={15} />Išsaugoti kaip šabloną</button> : null}
+                  {templateNotice ? <p className="small muted" role="status" style={{ margin: 0 }}>{templateNotice}</p> : null}
+                  <button className="btn jd-wide" type="button" disabled={saving} onClick={() => { closeForm(); if (!editingJobId) goEmployerView("overview"); }}>Atšaukti</button>
+                </section>
+              </aside>
+            </form>
           </div>
-        </section>
-        )}
+          );
+        })()}
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="ed-stats-section">
+        <section className="ed-stats-section" data-wv="legacy">
           <div className="ed-stats-head">
             <button
               className={`ed-stats-toggle ${showEmployerStats ? "open" : ""}`}
@@ -5678,892 +5408,112 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
 
         {currentJob && (
-          <section
-            className="ed-card"
-            id="employer-open-job"
-            style={{ scrollMarginTop: 96 }}
-          >
-            <div className="ed-current-job-overview">
-              <div className="ed-current-job-overview-head">
-                <div className="ed-current-job-heading-copy">
-                  <div className="eyebrow">ATIDARYTAS DARBAS</div>
-                  <h2>{formatJobTitle(currentJob.title)}</h2>
-                  <div className="ed-current-job-head-meta">
-                    <span>{currentJob.city || "Miestas nenurodytas"}</span>
-                    <i>•</i>
-                    <span>{currentJob.work_date || "Data nenurodyta"}</span>
-                    <i>•</i>
-                    <span>
-                      {currentJob.start_time?.slice(0, 5) || "—"}
-                      {currentJob.end_time
-                        ? `–${currentJob.end_time.slice(0, 5)}`
-                        : ""}
-                    </span>
-                    {planSummary?.can_team_management && (
-                      <>
-                        <i>•</i>
-                        <span className="ed-current-job-responsible">
-                          Atsakingas: <b>{teamMemberName(currentJobResponsibleUserId)}</b>
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="ed-current-job-head-actions" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span
-                  className={`ed-current-job-status ${
-                    currentJob.status === "cancelled"
-                      ? "cancelled"
-                      : currentJob.status === "open"
-                      ? "open"
-                      : ""
-                  }`}
-                >
-                  {currentJob.status === "cancelled"
-                    ? "Atšauktas"
-                    : currentJob.status === "completed"
-                    ? "Užbaigtas"
-                    : currentJob.status === "filled"
-                    ? "Komanda suformuota"
-                    : "Aktyvus"}
-                </span>
-                <button
-                  className="ed-secondary"
-                  type="button"
-                  disabled={attendanceSaving || ratingSaving}
-                  onClick={closeCurrentJob}
-                  aria-label="Uždaryti darbo kortelę"
-                >
-                  Uždaryti kortelę
-                </button>
-                </div>
-              </div>
-
-              <div className="ed-current-job-grid">
-                {[
-                  ["Atvykti adresu", currentJob.address_text || "—", "wide"],
-                  [
-                    "Pietų pertrauka",
-                    currentJob.break_start_time && currentJob.break_end_time
-                      ? `${currentJob.break_start_time.slice(0, 5)}–${currentJob.break_end_time.slice(0, 5)}`
-                      : "Nėra",
-                    "",
-                  ],
-                  [
-                    "Atlygis",
-                    currentJob.pay_amount
-                      ? formatNetPay(currentJob.pay_amount, currentJob.pay_unit)
-                      : "—",
-                    "",
-                  ],
-                  [
-                    "Darbuotojai",
-                    currentJob.status === "completed"
-                      ? `${jobWorkers.length} darbuotojų`
-                      : `${Number(currentJob.confirmedCount || 0)}/${Number(
-                          currentJob.workers_needed || 0
-                        )} patvirtinti`,
-                    "",
-                  ],
-                  [
-                    "Atvykimas",
-                    currentJob.transport_mode === "employer_pickup"
-                      ? "Darbdavys paima darbuotoją"
-                      : "Darbuotojas atvyksta pats",
-                    "wide",
-                  ],
-                ].map(([label, value, fieldClass]) => (
-                  <div
-                    className={`ed-current-job-field ${fieldClass || ""}`}
-                    key={label}
-                  >
-                    <span>{label}</span>
-                    <b>{value}</b>
-                  </div>
-                ))}
-              </div>
-
-              <div className="ed-current-job-description">
-                <span>Darbo aprašymas</span>
-                {(() => {
-                  const descriptionText =
-                    currentJob.description?.trim() ||
-                    "Darbo aprašymas nepateiktas.";
-                  const canToggleDescription = descriptionText.length > 180;
-                  return (
-                    <>
-                      <div
-                        className={`ed-current-job-description-copy ${
-                          currentJobDescriptionExpanded ? "expanded" : "collapsed"
-                        }`}
-                      >
-                        {descriptionText}
-                      </div>
-                      {canToggleDescription && (
-                        <button
-                          className="ed-description-toggle"
-                          type="button"
-                          style={{
-                            marginTop: 10,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            minHeight: 36,
-                            padding: "8px 12px",
-                            borderRadius: 999,
-                            border: "1px solid #d9e3ea",
-                            background: "#fff",
-                            color: "#222631",
-                            fontSize: 12,
-                            fontWeight: 800,
-                            cursor: "pointer",
-                          }}
-                          onClick={() =>
-                            setCurrentJobDescriptionExpanded((value) => !value)
-                          }
-                          aria-expanded={currentJobDescriptionExpanded}
-                        >
-                          {currentJobDescriptionExpanded
-                            ? "Rodyti mažiau"
-                            : "Rodyti daugiau"}
-                        </button>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {unreadEmployerNotifications(currentJob.id).some((item) => item.event_type !== "message") && (() => {
-              const currentNews = unreadEmployerNotifications(currentJob.id)
-                .filter((item) => item.event_type !== "message");
-              const currentPresentation = notificationPresentation(currentNews);
-              return (
-                <div className={`ed-note ${currentPresentation.tone === "red" ? "err" : "ok"}`} style={{ marginBottom: 16 }}>
-                  {currentPresentation.label}
-                  {currentNews.length > 1 ? ` · ${currentNews.length} naujienos` : ""}
-                </div>
-              );
-            })()}
-
-            {currentJob.status === "cancelled" && (
-              <div className="ed-note err" style={{ marginBottom: 16 }}>
-                <b>Poreikis atšauktas.</b>
-                <div style={{ marginTop: 4 }}>
-                  Priežastis:{" "}
-                  {currentJob.cancellation_reason || "Priežastis nenurodyta."}
-                </div>
-              </div>
-            )}
-
-            {currentJob.status === "filled" && (
-              <div className="ed-note ok" style={{ marginBottom: 16 }}>
-                Poreikis užpildytas: {currentJob.confirmedCount}/{currentJob.workers_needed}.
-                Darbuotojų paieška automatiškai uždaryta.
-              </div>
-            )}
-
-            {currentJobWorkerSearchOpen && (
-              <>
-            <div className="ed-results-head">
-              <div>
-                <h2>
-                  {workerSource === "team"
-                    ? "Kviesti darbuotojus iš favoritų"
-                    : "Kviesti laisvus darbuotojus pagal jūsų parinktis"}
-                </h2>
-
-                <div className="ed-worker-source">
-                  <button
-                    type="button"
-                    className={workerSource === "available" ? "active" : ""}
-                    onClick={() => setWorkerSource("available")}
-                  >
-                    Laisvi darbuotojai
-                  </button>
-                  <button
-                    type="button"
-                    className={`${
-                      workerSource === "team" ? "active" : ""
-                    } ${planSummary?.can_saved_workers ? "" : "locked"}`}
-                    onClick={() => {
-                      if (!planSummary?.can_saved_workers) {
-                        setNotice(
-                          "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
-                        );
-                        return;
-                      }
-                      setWorkerSource("team");
-                    }}
-                  >
-                    {planSummary?.can_saved_workers
-                      ? `Darbuotojai favoritai · ${matchingSavedWorkersCount}`
-                      : "Darbuotojai favoritai · Business"}
-                  </button>
-                </div>
-
-                {workerSource === "team" &&
-                  planSummary?.can_saved_workers &&
-                  currentJob.status === "open" && (
-                    <button
-                      className="ed-primary ed-invite-all-mobile"
-                      type="button"
-                      disabled={
-                        invitingSavedTeam ||
-                        matchingSavedWorkersCount === 0
-                      }
-                      onClick={inviteSavedWorkerTeam}
-                    >
-                      {invitingSavedTeam
-                        ? "Siunčiami kvietimai..."
-                        : `Pakviesti visus tinkamus · ${matchingSavedWorkersCount}/${savedWorkers.length}`}
-                    </button>
-                  )}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <b>{visibleCandidateWorkers.length} rasti</b>
-                <div className="ed-progress">
-                  {currentJob.status === "completed"
-                    ? "Darbo diena užbaigta"
-                    : `${Number(currentJob.confirmedCount || 0)}/${currentJob.workers_needed} patvirtinti`}
-                </div>
-
-                {workerSource === "team" &&
-                  planSummary?.can_saved_workers &&
-                  currentJob.status === "open" && (
-                    <button
-                      className="ed-primary ed-invite-all-desktop"
-                      type="button"
-                      style={{ marginTop: 10, padding: "9px 14px", fontSize: 13, borderRadius: 9, minHeight: 0 }}
-                      disabled={
-                        invitingSavedTeam ||
-                        matchingSavedWorkersCount === 0
-                      }
-                      onClick={inviteSavedWorkerTeam}
-                    >
-                      {invitingSavedTeam
-                        ? "Siunčiami kvietimai..."
-                        : `Pakviesti visus tinkamus · ${matchingSavedWorkersCount}/${savedWorkers.length}`}
-                    </button>
-                  )}
-              </div>
-            </div>
-
-            {searching ? (
-              <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
-            ) : visibleCandidateWorkers.length ? (
-              <div className="ed-results">
-                {visibleCandidateWorkers.map((worker) => {
-                  const invited = invitedIds.includes(worker.id);
-                  return (
-                    <div
-                      className={
-                        canViewWorkerMetrics
-                          ? "ed-worker"
-                          : "ed-worker ed-worker-basic"
-                      }
-                      key={worker.id}
-                    >
-                      <div className="ed-worker-id">
-                        <div className="ed-avatar">
-                          {worker.avatarUrl ? (
-                            <img src={worker.avatarUrl} alt={worker.name} />
-                          ) : (
-                            worker.initials
-                          )}
-                        </div>
-                        <MonthlyAwardMiniList
-                          awards={workerAwardsById[worker.id] || []}
-                          size={42}
-                        />
-                        <div>
-                          <b>{worker.name}</b>
-                          <span>
-                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            {workerDistanceLabel(worker)
-                              ? ` · ${workerDistanceLabel(worker)}`
-                              : ""}
-                          </span>
-                          {!canViewWorkerMetrics && worker.activityLabel && !worker.declinedInvitation && (
-                            <div className="ed-worker-status">
-                              <span className="ed-attendance-badge green">
-                                {worker.activityLabel}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {canViewWorkerMetrics && (
-                        <>
-                          <div className="ed-worker-activity">
-                            {worker.activityLabel ? (
-                              <span className="ed-attendance-badge green">
-                                {worker.activityLabel}
-                              </span>
-                            ) : (
-                              <span className="ed-attendance-badge">Neaktyvus</span>
-                            )}
-                          </div>
-                          <div className="ed-metric">
-                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
-                            <span>atvykimas</span>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="ed-worker-actions">
-                        <button
-                          className="ed-secondary"
-                          onClick={() => openWorkerProfile(worker)}
-                        >
-                          Profilis
-                        </button>
-
-                        <button
-                          className={invited ? "ed-invite sent" : "ed-invite"}
-                          disabled={invited || currentJob.status !== "open"}
-                          onClick={() => inviteWorker(worker.id)}
-                        >
-                          {!invited
-                            ? "Kviesti"
-                            : invitationStatuses[worker.id] === "accepted"
-                            ? "Priėmė"
-                            : invitationStatuses[worker.id] === "declined"
-                            ? "Atmetė"
-                            : invitationStatuses[worker.id] === "expired"
-                            ? "Užpildyta"
-                            : "Pakviestas"}
-                        </button>
-
-                        {invitationByWorker[worker.id] && !worker.declinedInvitation && (
-                          <button
-                            className="ed-secondary ed-chat-alert-btn"
-                            onClick={() =>
-                              openEmployerPrivateConversation(
-                                invitationByWorker[worker.id].id,
-                                `${worker.name} · ${formatJobTitle(currentJob.title)}`
-                              )
-                            }
-                          >
-                            {planSummary?.can_job_chat
-                              ? "Žinutė"
-                              : "Žinutė · Business"}
-                            {unreadEmployerPrivateChatNotifications(
-                              invitationByWorker[worker.id].id
-                            ).length > 0 && (
-                              <span
-                                className="ed-chat-alert"
-                                title="Nauja privati žinutė"
-                              >
-                                {Math.min(
-                                  9,
-                                  unreadEmployerPrivateChatNotifications(
-                                    invitationByWorker[worker.id].id
-                                  ).length
-                                )}
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="ed-empty">
-                {workerSource === "team"
-                  ? "Šiuo metu nė vienas darbuotojas iš favoritų neatitinka šio darbo vietos, laiko, prieinamumo ir kitų kriterijų."
-                  : "Šiuo metu papildomų laisvų darbuotojų pagal šiuos kriterijus nerasta."}
-              </div>
-            )}
-              </>
-            )}
-
-            <div className="ed-attendance-panel">
-                <h2>Pasiūlymą priėmę darbuotojai</h2>
-                <p className="ed-attendance-help">
-                  Čia matote pasiūlymą priėmusius darbuotojus ir jų darbo dienos veiksmus.
-                </p>
-
-                <div className="ed-attendance-list">
-                  {jobWorkersLoading && (
-                    <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
-                  )}
-                  {!jobWorkersLoading && pagedAcceptedWorkers.map((worker) => {
-                    const attendance = worker.attendance || {};
-                    const ended = jobHasEnded(currentJob);
-                    const checkInOpen = jobCheckInWindowOpen(currentJob);
-                    const isConfirmed = worker.bookingStatus === "confirmed";
-                    const pendingNegative =
-                      !attendance.finalized_at &&
-                      ["no_show", "left_early_agreed", "left_early_unexcused"].includes(
-                        attendance.employer_outcome
-                      );
-                    const disputed =
-                      attendance.dispute_status === "disputed";
-                    const canClose =
-                      isConfirmed &&
-                      ended &&
-                      !attendance.finalized_at &&
-                      !attendance.employer_outcome;
-
-                    const employerNextStep =
-                      currentJob.status === "cancelled"
-                        ? {
-                            tone: "",
-                            title: "Darbas atšauktas",
-                            text: "Papildomų veiksmų šiai darbo dienai nereikia.",
-                          }
-                        : attendance.finalized_at
-                        ? attendance.dispute_status === "resolved_employer"
-                          ? {
-                              tone: "ok",
-                              title: "Ginčas išspręstas jūsų naudai",
-                              text:
-                                attendance.resolution_note ||
-                                "Administratorius patvirtino darbdavio pateiktą darbo dienos rezultatą.",
-                            }
-                          : attendance.dispute_status === "resolved_worker"
-                          ? {
-                              tone: "danger",
-                              title: "Ginčas išspręstas ne jūsų naudai",
-                              text:
-                                attendance.resolution_note ||
-                                "Administratorius ginčą išsprendė darbuotojo naudai.",
-                            }
-                          : attendance.final_outcome === "no_show"
-                          ? {
-                              tone: "ok",
-                              title: "Darbo diena uždaryta",
-                              text: "Užfiksuotas neatvykimas. Atskiro darbuotojo vertinimo šiuo atveju nėra.",
-                            }
-                          : !worker.rating && canRateCurrentJob
-                          ? {
-                              tone: "action",
-                              title: "Kitas žingsnis – įvertinkite darbuotoją",
-                              text: "Darbo diena užbaigta. Palikite 1–10 įvertinimą; vertinti gali tik už darbą atsakingas žmogus.",
-                            }
-                          : worker.rating &&
-                            !savedWorkerIdSet.has(worker.id) &&
-                            planSummary?.can_saved_workers
-                          ? {
-                              tone: "action",
-                              title: "Darbo ciklas užbaigtas",
-                              text: "Jei norite šį žmogų greitai kviesti ateityje, galite pridėti jį į favoritus.",
-                            }
-                          : {
-                              tone: "ok",
-                              title: "Darbo ciklas užbaigtas",
-                              text: worker.rating
-                                ? `Darbuotojas įvertintas ${worker.rating.score}/10.`
-                                : "Galutinis darbo dienos rezultatas užfiksuotas.",
-                            }
-                        : disputed
-                        ? {
-                            tone: "danger",
-                            title: "Laukiama administratoriaus sprendimo",
-                            text: "Kol ginčas neišspręstas, darbuotojo reitingas ir galutinis rezultatas nekeičiami.",
-                          }
-                        : pendingNegative
-                        ? {
-                            tone: "action",
-                            title: "Laukiama darbuotojo atsakymo",
-                            text: "Jūs pateikėte darbo dienos rezultatą. Darbuotojas turi jį patvirtinti arba ginčyti.",
-                          }
-                        : canClose
-                        ? {
-                            tone: "action",
-                            title: "Reikia uždaryti darbo dieną",
-                            text: "Darbo laikas pasibaigė. Pasirinkite „Uždaryti dieną“ ir užfiksuokite rezultatą.",
-                          }
-                        : checkInOpen &&
-                          isConfirmed &&
-                          !attendance.employer_check_in_at
-                        ? {
-                            tone: "action",
-                            title: "Patvirtinkite atvykimą",
-                            text: attendance.worker_check_in_at
-                              ? "Darbuotojas jau pažymėjo „Atvykau“. Jei jis objekte, patvirtinkite jo atvykimą."
-                              : "Jei darbuotojas jau objekte, galite patvirtinti jo atvykimą.",
-                          }
-                        : attendance.employer_check_in_at
-                        ? {
-                            tone: "ok",
-                            title: "Atvykimas patvirtintas",
-                            text: "Po numatyto darbo laiko pabaigos čia atsiras darbo dienos uždarymo veiksmas.",
-                          }
-                        : {
-                            tone: "",
-                            title: "Darbas dar neprasidėjo",
-                            text: "Atvykimą galėsite patvirtinti nuo 2 valandų prieš darbo pradžią.",
-                          };
-
-                    return (
-                      <div
-                        className="ed-attendance-row"
-                        key={worker.bookingId}
-                      >
-                        <div className="ed-worker-id">
-                          <div className="ed-worker-main">
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <b>{worker.name}</b>
-                              <MonthlyAwardMiniList
-                                awards={workerAwardsById[worker.id] || []}
-                                size={32}
-                              />
-                            </div>
-                            <span>
-                              {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            </span>
-
-                            <div className="ed-worker-status">
-                              {attendance.worker_check_in_at && (
-                                <span className="ed-attendance-badge green">
-                                  ✓ Darbuotojas pažymėjo „Atvykau“
-                                </span>
-                              )}
-
-                              {attendance.employer_check_in_at && (
-                                <span className="ed-attendance-badge green">
-                                  ✓ Atvykimą patvirtinote
-                                </span>
-                              )}
-
-                              {attendance.finalized_at && (
-                                <span
-                                  className={`ed-attendance-badge ${
-                                    attendance.final_outcome === "no_show" ||
-                                    attendance.final_outcome ===
-                                      "left_early_unexcused"
-                                      ? "red"
-                                      : "green"
-                                  }`}
-                                >
-                                  {attendanceOutcomeLabel(attendance)}
-                                  {attendance.worked_minutes > 0
-                                    ? ` · ${formatWorkedMinutes(
-                                        attendance.worked_minutes
-                                      )}`
-                                    : ""}
-                                </span>
-                              )}
-
-                              {pendingNegative && !disputed && (
-                                <span className="ed-attendance-badge orange">
-                                  Laukiama darbuotojo patvirtinimo
-                                </span>
-                              )}
-
-                              {disputed && (
-                                <span className="ed-attendance-badge red">
-                                  Ginčas · reitingas nekeičiamas
-                                </span>
-                              )}
-
-                              {attendance.dispute_status === "resolved_employer" && (
-                                <span className="ed-attendance-badge green">
-                                  ✓ Ginčas išspręstas jūsų naudai
-                                </span>
-                              )}
-
-                              {attendance.dispute_status === "resolved_worker" && (
-                                <span className="ed-attendance-badge red">
-                                  Ginčas išspręstas ne jūsų naudai
-                                </span>
-                              )}
-
-                              {canClose && (
-                                <span className="ed-attendance-badge orange">
-                                  Neuždaryta darbo diena
-                                </span>
-                              )}
-
-                              {!ended &&
-                                isConfirmed &&
-                                checkInOpen &&
-                                !attendance.finalized_at &&
-                                !attendance.employer_check_in_at && (
-                                  <span className="ed-attendance-badge muted">
-                                    Darbo diena vyksta
-                                  </span>
-                                )}
-                            </div>
-
-                            <div
-                              className={`ed-next-step ${
-                                employerNextStep.tone || ""
-                              }`}
-                            >
-                              <b>{employerNextStep.title}</b>
-                              {employerNextStep.text}
-                            </div>
-                          </div>
-                        </div>
-
-                        {canViewWorkerMetrics && (
-                          <div className="ed-member-metrics">
-                            <div className="ed-member-metric">
-                              <span>Atvykimo patikimumas</span>
-                              <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
-                            </div>
-
-                            <div className="ed-member-metric">
-                              <span>Darbdavių įvertinimas</span>
-                              <b>
-                                {worker.ratingAverage === null
-                                  ? "—"
-                                  : `${worker.ratingAverage.toFixed(1)} / 10`}
-                              </b>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="ed-attendance-actions">
-                          <button
-                            className="ed-secondary"
-                            onClick={() => openWorkerProfile(worker)}
-                          >
-                            Profilis
-                          </button>
-
-                          {disputed &&
-                            attendance.id &&
-                            attendance.employer_note?.trim() &&
-                            attendance.worker_response_note?.trim() && (
-                              <button
-                                className="ed-secondary"
-                                type="button"
-                                onClick={() =>
-                                  setDisputeConversation({
-                                    attendanceId: attendance.id,
-                                    title: `${formatJobTitle(currentJob.title)} · Ginčo aptarimas`,
-                                    workerName: worker.name || "Darbuotojas",
-                                    companyName: company?.name || "Darbdavys",
-                                  })
-                                }
-                              >
-                                Ginčo pokalbis
-                              </button>
-                            )}
-
-                          {worker.invitationId && (
-                            <button
-                              className="ed-secondary ed-chat-alert-btn"
-                              onClick={() =>
-                                openEmployerPrivateConversation(
-                                  worker.invitationId,
-                                  `${worker.name} · ${formatJobTitle(currentJob.title)}`
-                                )
-                              }
-                            >
-                              {planSummary?.can_job_chat
-                                ? "Privati žinutė"
-                                : "Privati žinutė · Business"}
-                              {unreadEmployerPrivateChatNotifications(
-                                worker.invitationId
-                              ).length > 0 && (
-                                <span
-                                  className="ed-chat-alert"
-                                  title="Nauja privati žinutė"
-                                >
-                                  {Math.min(
-                                    9,
-                                    unreadEmployerPrivateChatNotifications(
-                                      worker.invitationId
-                                    ).length
-                                  )}
-                                </span>
-                              )}
-                            </button>
-                          )}
-
-                          {checkInOpen &&
-                            isConfirmed &&
-                            !attendance.finalized_at &&
-                            !attendance.employer_check_in_at && (
-                              <button
-                                className="ed-secondary"
-                                disabled={attendanceSaving}
-                                onClick={() => openEmployerCheckIn(worker)}
-                              >
-                                Patvirtinti atvykimą
-                              </button>
-                            )}
-
-                          {canClose && (
-                            <button
-                              className="ed-primary"
-                              disabled={attendanceSaving}
-                              title="Uždaryti šio darbuotojo darbo dieną"
-                              onClick={() => {
-                                setAttendanceTarget(worker);
-                                setAttendanceMode("choose");
-                                setAttendanceEndTime("");
-                                setAttendanceNote("");
-                              }}
-                            >
-                              Uždaryti dieną
-                            </button>
-                          )}
-
-                          {attendance.finalized_at &&
-                            attendance.final_outcome !== "no_show" &&
-                            !worker.rating &&
-                            canRateCurrentJob && (
-                              <button
-                                className="ed-primary lt-existing-primary-wide"
-                                onClick={() => openWorkerRating(worker)}
-                              >
-                                Įvertinti
-                              </button>
-                            )}
-
-                          {attendance.finalized_at &&
-                            attendance.final_outcome !== "no_show" &&
-                            (savedWorkerIdSet.has(worker.id) ? (
-                              <button
-                                className="ed-team-add saved"
-                                type="button"
-                                aria-disabled="true"
-                              >
-                                Favorituose
-                              </button>
-                            ) : (
-                              <button
-                                className="ed-team-add"
-                                type="button"
-                                disabled={savedWorkerBusy === worker.id}
-                                onClick={() => saveWorkerToTeam(worker)}
-                              >
-                                {savedWorkerBusy === worker.id
-                                  ? "Pridedama..."
-                                  : planSummary?.can_saved_workers
-                                  ? "Pridėti į favoritus"
-                                  : "Pridėti į favoritus · Business"}
-                              </button>
-                            ))}
-
-                          {canViewWorkerMetrics &&
-                            attendance.finalized_at &&
-                            attendance.final_outcome !== "no_show" &&
-                            !worker.rating &&
-                            !canRateCurrentJob && (
-                              <span className="ed-attendance-badge muted">
-                                Vertina atsakingas:{" "}
-                                {teamMemberName(currentJobResponsibleUserId)}
-                              </span>
-                            )}
-
-                          {worker.rating && (
-                            <span className="ed-attendance-badge green">
-                              Įvertinta {worker.rating.score}/10
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {!jobWorkersLoading && jobWorkers.length === 0 && (
-                  <div className="ed-empty">
-                    Šiuo metu pasiūlymo dar nepriėmė nė vienas darbuotojas.
-                  </div>
-                )}
-                <DashboardPagination
-                  page={acceptedWorkersPage}
-                  totalItems={jobWorkersLoading ? 0 : jobWorkers.length}
-                  pageSize={DASHBOARD_PAGE_SIZE}
-                  onPageChange={setAcceptedWorkersPage}
-                />
-              </div>
-
-            {declinedCandidateWorkers.length > 0 &&
-              !["completed", "cancelled"].includes(currentJob?.status) && (
-              <div className="ed-attendance-panel ed-declined-workers-panel">
-                <h2>Pasiūlymo atsisakę darbuotojai</h2>
-                <p className="ed-attendance-help">
-                  Šie darbuotojai atsisakė šio darbo pasiūlymo ir negali būti pakviesti pakartotinai tik į šį konkretų pasiūlymą. Į kitus darbo pasiūlymus juos galima kviesti įprastai, jei jie atitinka kriterijus.
-                </p>
-                <div className="ed-results">
-                  {pagedDeclinedWorkers.map((worker) => (
-                    <div
-                      className={
-                        canViewWorkerMetrics
-                          ? "ed-worker declined-worker"
-                          : "ed-worker ed-worker-basic declined-worker"
-                      }
-                      key={worker.id}
-                    >
-                      <div className="ed-worker-id">
-                        <div className="ed-avatar">
-                          {worker.avatarUrl ? (
-                            <img src={worker.avatarUrl} alt={worker.name} />
-                          ) : (
-                            worker.initials
-                          )}
-                        </div>
-                        <MonthlyAwardMiniList
-                          awards={workerAwardsById[worker.id] || []}
-                          size={42}
-                        />
-                        <div>
-                          <b>{worker.name}</b>
-                          <span>
-                            {worker.city} · Atlikta darbų: {Number(worker.completedJobs || 0)}
-                            {workerDistanceLabel(worker)
-                              ? ` · ${workerDistanceLabel(worker)}`
-                              : ""}
-                          </span>
-                        </div>
-                      </div>
-
-                      {canViewWorkerMetrics && (
-                        <>
-                          <div className="ed-worker-activity">
-                            <span className="ed-attendance-badge red">
-                              Atsisakė pasiūlymo
-                            </span>
-                          </div>
-                          <div className="ed-metric">
-                            <b>{Math.round(worker.attendanceRate ?? 0)}%</b>
-                            <span>atvykimas</span>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="ed-worker-actions">
-                        <button
-                          className="ed-secondary"
-                          onClick={() => openWorkerProfile(worker)}
-                        >
-                          Profilis
-                        </button>
-                        <button
-                          className="ed-invite sent declined"
-                          type="button"
-                          disabled
-                        >
-                          Atmetė
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <DashboardPagination
-                  page={declinedWorkersPage}
-                  totalItems={declinedCandidateWorkers.length}
-                  pageSize={DASHBOARD_PAGE_SIZE}
-                  onPageChange={setDeclinedWorkersPage}
-                />
-              </div>
-            )}
-
-          </section>
+          <div id="employer-open-job" data-wv="job" style={{ display: "contents" }}>
+            <EmployerJob
+              job={currentJob}
+              state={employerJobDashboardState(currentJob)}
+              jobEnded={jobHasEnded(currentJob)}
+              jobStarted={jobHasStarted(currentJob)}
+              checkInOpen={jobCheckInWindowOpen(currentJob)}
+              news={(() => {
+                const items = unreadEmployerNotifications(currentJob.id).filter((item) => item.event_type !== "message");
+                return items.length ? notificationPresentation(items) : null;
+              })()}
+              workers={jobWorkers}
+              workersLoading={jobWorkersLoading}
+              candidates={visibleCandidateWorkers}
+              declined={declinedCandidateWorkers}
+              searching={searching}
+              searchOpen={currentJobWorkerSearchOpen}
+              source={workerSource}
+              setSource={setWorkerSource}
+              canFavorites={Boolean(planSummary?.can_saved_workers)}
+              favMatches={workerSource === "team" && currentJob.status === "open" ? matchingSavedWorkersCount : 0}
+              invitingAll={invitingSavedTeam}
+              invitedIds={invitedIds}
+              invitationStatuses={invitationStatuses}
+              invitationByWorker={invitationByWorker}
+              savedIds={savedWorkerIdSet}
+              savedBusy={savedWorkerBusy}
+              canMetrics={canViewWorkerMetrics}
+              canRate={canRateCurrentJob}
+              attendanceSaving={attendanceSaving}
+              responsibleName={teamMemberName(currentJobResponsibleUserId)}
+              responsibleRole={companyTeamRoleLabel(activeTeamMembers.find((member) => member.user_id === currentJobResponsibleUserId)?.member_role || "owner")}
+              isMine={currentJobResponsibleUserId === user.id}
+              canHandover={Boolean(planSummary?.can_team_management) && activeTeamMembers.length > 1}
+              isPro={planSummary?.plan_key === "business_pro"}
+              canChat={Boolean(planSummary?.can_job_chat)}
+              canEdit={invitedIds.length === 0 && Number(currentJob.confirmedCount || 0) === 0}
+              unreadPrivate={(invitationId) => unreadEmployerPrivateChatNotifications(invitationId).length}
+              unreadGroup={unreadEmployerGroupChatNotifications(currentJob.id).length}
+              outcomeLabel={attendanceOutcomeLabel}
+              distance={workerDistanceLabel}
+              actions={{
+                profile: (worker) => openWorkerProfile(worker),
+                invite: (worker) => inviteWorker(worker.id),
+                inviteFavs: inviteSavedWorkerTeam,
+                inviteChat: (worker) => openEmployerPrivateConversation(invitationByWorker[worker.id].id, `${worker.name} · ${formatJobTitle(currentJob.title)}`),
+                privateChat: (worker) => openEmployerPrivateConversation(worker.invitationId, `${worker.name} · ${formatJobTitle(currentJob.title)}`),
+                groupChat: () => openEmployerGroupConversation(currentJob),
+                disputeChat: (worker) => setDisputeConversation({ attendanceId: worker.attendance.id, title: `${formatJobTitle(currentJob.title)} · Ginčo aptarimas`, workerName: worker.name || "Darbuotojas", companyName: company?.name || "Darbdavys" }),
+                checkIn: (worker) => openEmployerCheckIn(worker),
+                closeDay: (worker) => { setAttendanceTarget(worker); setAttendanceMode(canRateCurrentJob ? "full_day" : "no_show"); setAttendanceEndTime(""); setAttendanceNote(""); },
+                rate: (worker) => openWorkerRating(worker),
+                favorite: (worker) => saveWorkerToTeam(worker),
+                edit: () => startEditJob(currentJob),
+                cancel: () => requestRemoveOrCancelJob(currentJob),
+                copy: () => openNewJobForm({ sourceJob: currentJob }),
+                plans: () => goEmployerView("plans"),
+              }}
+            />
+          </div>
         )}
 
-        <section className="ed-card ed-active-jobs-section">
+        <div data-wv="active" style={{ display: "contents" }}>
+          <PageHead title="Aktyvūs darbai" lead={jobScope === "mine" ? "Darbai, už kuriuos esate atsakingas" : "Visi įmonės darbai"}>
+            <div className="toggle2" role="group" aria-label="Darbų apimtis" style={{ minWidth: 280 }}>
+              <button type="button" aria-pressed={jobScope === "mine"} onClick={() => setJobScope("mine")}>Mano darbai</button>
+              <button type="button" aria-pressed={jobScope === "all"} onClick={() => setJobScope("all")}>Visi įmonės darbai</button>
+            </div>
+          </PageHead>
+          {activeVisibleJobs.length ? (() => {
+            const sorted = activeVisibleJobs.slice().sort((a, b) => `${a.work_date}${a.start_time}`.localeCompare(`${b.work_date}${b.start_time}`));
+            const need = sorted.filter((job) => ["danger", "action"].includes(employerJobDashboardState(job)?.tone));
+            const rest = sorted.filter((job) => !["danger", "action"].includes(employerJobDashboardState(job)?.tone));
+            const card = (job) => <EmployerJobCard key={job.id} job={job} state={employerJobDashboardState(job)} unread={unreadEmployerGroupChatNotifications(job.id).length} responsibleLabel={(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)} onOpen={() => openExistingJob(job)} />;
+            return (
+              <>
+                {need.length ? <ListGroup title="Reikia jūsų veiksmo" count={need.length} hot><Paged items={need} render={card} /></ListGroup> : null}
+                {rest.length ? <ListGroup title="Vyksta ir suplanuoti" count={rest.length}><Paged items={rest} render={card} /></ListGroup> : null}
+              </>
+            );
+          })() : (
+            <section className="card"><Empty title="Aktyvių darbų nėra" sub="Sukurkite darbo pasiūlymą – jis atsiras čia." icon="jobs" /></section>
+          )}
+        </div>
+
+        <div data-wv="ended" style={{ display: "contents" }}>
+          <PageHead title="Pasibaigę darbai" lead="Užbaigti ir atšaukti darbai bus saugomi čia. Galite vėl atidaryti ankstesnį poreikį." />
+          <section className="card">
+            {employerJobHistory.length ? (
+              <Paged items={employerJobHistory} render={(job) => {
+                const state = employerJobDashboardState(job);
+                return (
+                  <article key={job.id} className="job" tabIndex={0} role="link" onClick={() => openExistingJob(job)}>
+                    <div className="jm">
+                      <div className="jtop"><h3>{String(job.title || "").toLocaleUpperCase("lt-LT")}</h3><div className="row jpills"><Pill tone={job.status === "cancelled" ? "red" : state?.missing ? "orange" : "green"}>{job.status === "cancelled" ? "Atšaukta" : state?.missing ? "Trūko darbuotojų" : "Įvykdyta"}</Pill></div></div>
+                      <div className="metrics"><span>{job.work_date} · {job.start_time?.slice(0, 5)}</span><span>{(job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)}</span></div>
+                    </div>
+                    <span className="jgo" aria-hidden="true">›</span>
+                  </article>
+                );
+              }} />
+            ) : <Empty title="Darbų istorija tuščia" sub="Užbaigti ir atšaukti darbai bus saugomi čia." />}
+          </section>
+        </div>
+
+        <section className="ed-card ed-active-jobs-section" data-wv="legacy">
           <div
             style={{
               display: "flex",
@@ -6874,7 +5824,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
         </section>
 
-        <section className="ed-card">
+        <section className="ed-card" data-wv="legacy">
           <div>
             <h2 style={{ marginBottom: 6 }}>Pasibaigę darbai</h2>
           </div>
@@ -7041,388 +5991,71 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         onConfirm={() => employerCheckInWorker(employerCheckInTarget, employerCheckInTime)}
       />
 
-      {attendanceTarget && attendanceMode && (
-        <div
-          className="ed-attendance-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9600,
-            background: "rgba(34,38,49,.64)",
-            display: "grid",
-            placeItems: "center",
-            padding: 20,
-          }}
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !attendanceSaving) {
-              setAttendanceTarget(null);
-              setAttendanceMode(null);
-              setAttendanceEndTime("");
-              setAttendanceNote("");
-            }
-          }}
-        >
-          <div
-            className="ed-attendance-modal"
-            style={{
-              width: "min(560px, 100%)",
-              maxHeight: "calc(100dvh - 40px)",
-              overflow: "auto",
-              background: "#fff",
-              borderRadius: 20,
-              padding: 22,
-              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
-              color: "#222631",
-            }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Darbo dienos uždarymas"
-          >
-            <div className="ed-attendance-head">
-              <div>
-                <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
-                <h2>
-                  {attendanceMode === "choose"
-                    ? "Kaip baigėsi darbuotojo darbo diena?"
-                    : attendanceMode === "full_day"
-                    ? "Įvertinkite darbuotoją ir uždarykite dieną"
-                    : attendanceMode === "no_show"
-                    ? "Pažymėti, kad darbuotojas neatvyko?"
-                    : "Darbuotojas išėjo anksčiau"}
-                </h2>
-              </div>
-
-              <button
-                className="ed-attendance-close"
-                aria-label="Uždaryti darbo dienos formą"
-                disabled={attendanceSaving}
-                onClick={() => {
-                  setAttendanceTarget(null);
-                  setAttendanceMode(null);
-                  setAttendanceEndTime("");
-                  setAttendanceNote("");
-                }}
-              >
-                <CloseMark />
-              </button>
+      {attendanceTarget && attendanceMode && (() => {
+        const closeAttendance = () => { setAttendanceTarget(null); setAttendanceMode(null); setAttendanceEndTime(""); setAttendanceNote(""); };
+        const early = ["left_early_agreed", "left_early_unexcused"].includes(attendanceMode);
+        const pick = (mode) => { setAttendanceMode(mode); setAttendanceEndTime(""); setAttendanceNote(""); };
+        const chosen = attendanceMode !== "choose";
+        const disabledSave = attendanceSaving || !chosen
+          || (attendanceMode !== "no_show" && !attendanceScore)
+          || (early && !attendanceEndTime)
+          || (["no_show", "left_early_unexcused"].includes(attendanceMode) && attendanceNote.trim().length < 5);
+        return (
+          <P24Modal eyebrow="Darbo dienos uždarymas" title={`Kaip baigėsi ${shortWorkerName(attendanceTarget.name || "darbuotojo")} darbo diena?`} sub={`${formatJobTitle(currentJob?.title)} · ${currentJob?.work_date || ""}`} onClose={closeAttendance} busy={attendanceSaving}>
+            {attendanceError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{attendanceError}</p> : null}
+            <div className="toggle2" role="group" aria-label="Rezultatas">
+              <button type="button" aria-pressed={attendanceMode === "full_day"} disabled={attendanceSaving || !canRateCurrentJob} onClick={() => pick("full_day")}>Išdirbo visą dieną</button>
+              <button type="button" aria-pressed={early} disabled={attendanceSaving || !canRateCurrentJob} onClick={() => pick("left_early_agreed")}>Išėjo anksčiau</button>
+              {!attendanceTarget?.attendance?.employer_check_in_at ? <button type="button" aria-pressed={attendanceMode === "no_show"} disabled={attendanceSaving} onClick={() => pick("no_show")}>Neatvyko</button> : null}
             </div>
-
-            {attendanceError && (
-              <div className="ed-error" role="alert">{attendanceError}</div>
-            )}
-
-            <div className="ed-attendance-person">
-              <b>{attendanceTarget.name}</b>
-              <span>
-                {currentJob?.title} · {currentJob?.work_date}
-              </span>
-            </div>
-
-            {attendanceMode === "choose" && (
-              <div className="ed-attendance-choice">
-                <button
-                  className="ed-primary"
-                  disabled={attendanceSaving || !canRateCurrentJob}
-                  onClick={() => setAttendanceMode("full_day")}
-                >
-                  Išdirbo visą dieną
-                </button>
-
-                <button
-                  className="ed-secondary"
-                  disabled={attendanceSaving || !canRateCurrentJob}
-                  onClick={() => {
-                    setAttendanceMode("left_early_agreed");
-                    setAttendanceEndTime("");
-                    setAttendanceNote("");
-                  }}
-                >
-                  Išėjo anksčiau
-                </button>
-
-                {!attendanceTarget?.attendance?.employer_check_in_at && (
-                  <button
-                    className="ed-secondary ed-danger"
-                    disabled={attendanceSaving}
-                    onClick={() => {
-                      setAttendanceMode("no_show");
-                      setAttendanceEndTime("");
-                      setAttendanceNote("");
-                    }}
-                  >
-                    Neatvyko
-                  </button>
-                )}
+            {!canRateCurrentJob ? <p className="small muted" style={{ margin: 0 }}>Darbo dieną su įvertinimu uždaro už darbą atsakingas: {teamMemberName(currentJobResponsibleUserId)}.</p> : null}
+            {early ? (
+              <div className="form">
+                <label className="field">Ankstyvo išėjimo tipas *<select value={attendanceMode} onChange={(e) => setAttendanceMode(e.target.value)}>
+                  <option value="left_early_agreed">Išėjo anksčiau – suderinta</option><option value="left_early_unexcused">Išėjo anksčiau be pateisinamos priežasties</option></select></label>
+                <label className="field">Faktinis išėjimo laikas *<RoundedTimeSelect ariaLabel="Faktinis išėjimo laikas" className="ed-input wd-time-trigger" value={attendanceEndTime} onChange={setAttendanceEndTime} /></label>
               </div>
-            )}
-
-            {["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && (
-                <>
-                  <div className="ed-label" style={{ marginBottom: 14 }}>
-                    Ankstyvo išėjimo tipas *
-                    <RoundedSelect
-                      ariaLabel="Ankstyvo išėjimo tipas"
-                      value={attendanceMode}
-                      onChange={setAttendanceMode}
-                      options={[{ value: "left_early_agreed", label: "Išėjo anksčiau – suderinta" }, { value: "left_early_unexcused", label: "Išėjo anksčiau be pateisinamos priežasties" }]}
-                    />
-                  </div>
-
-                  <label className="ed-label" style={{ marginBottom: 14 }}>
-                    Faktinis išėjimo laikas *
-                    <RoundedTimeSelect
-                      ariaLabel="Faktinis išėjimo laikas"
-                      className="ed-input wd-time-trigger"
-                      value={attendanceEndTime}
-                      onChange={setAttendanceEndTime}
-                    />
-                  </label>
-                </>
-              )}
-
-            {attendanceMode !== "choose" && (
+            ) : null}
+            {chosen && attendanceMode !== "no_show" ? (
               <>
-                {attendanceMode !== "no_show" && (
-                  <>
-                    <div className="ed-label">Darbuotojo įvertinimas *</div>
-                    <div className="ed-rating-scores" style={{ marginBottom: 16 }}>
-                      {[1,2,3,4,5,6,7,8,9,10].map((score) => (
-                        <button
-                          key={score}
-                          type="button"
-                          className={Number(attendanceScore) === score ? "ed-primary" : "ed-secondary"}
-                          disabled={attendanceSaving}
-                          aria-pressed={Number(attendanceScore) === score}
-                          onClick={() => setAttendanceScore(score)}
-                        >{score}</button>
-                      ))}
-                    </div>
-                    <label className="ed-label" style={{ marginBottom: 14 }}>
-                      Komentaras apie darbuotoją
-                      <textarea className="ed-textarea" maxLength={1000}
-                        value={attendanceRatingComment}
-                        disabled={attendanceSaving}
-                        onChange={(e) => setAttendanceRatingComment(e.target.value)}
-                        placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." />
-                    </label>
-                    <ReviewConductNotice />
-                  </>
-                )}
-                {attendanceMode !== "full_day" && (
-                <label className="ed-label">
-                  {attendanceMode === "left_early_agreed"
-                    ? "Pastaba"
-                    : "Paaiškinimas *"}
-                  <textarea
-                    className="ed-textarea"
-                    maxLength={1000}
-                    value={attendanceNote}
-                    onChange={(e) => setAttendanceNote(e.target.value)}
-                    placeholder={
-                      attendanceMode === "no_show"
-                        ? "Trumpai parašykite, kodėl pažymite neatvykimą."
-                        : attendanceMode === "left_early_unexcused"
-                        ? "Trumpai aprašykite, kas įvyko."
-                        : "Pvz. Išėjimas buvo suderintas iš anksto."
-                    }
-                  />
-                </label>
-                )}
-
-                {["no_show", "left_early_unexcused"].includes(
-                  attendanceMode
-                ) && (
-                  <div className="ed-note err" style={{ marginTop: 14 }}>
-                    Šis neigiamas pažymėjimas{" "}
-                    <b>darbuotojo reitingo iškart nemažina</b>. Darbuotojas
-                    galės jį patvirtinti arba ginčyti.
-                  </div>
-                )}
-
-                {attendanceMode === "left_early_agreed" && (
-                  <div className="ed-note ok" style={{ marginTop: 14 }}>
-                    Suderintas ankstyvas išėjimas darbuotojo patikimumo
-                    nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas
-                    laikas.
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 9,
-                    marginTop: 18,
-                  }}
-                >
-                  <button
-                    className="ed-secondary"
-                    disabled={attendanceSaving}
-                    onClick={() => {
-                      setAttendanceMode("choose");
-                      setAttendanceEndTime("");
-                      setAttendanceNote("");
-                    }}
-                  >
-                    Grįžti
-                  </button>
-
-                  <button
-                    className={
-                      ["no_show", "left_early_unexcused"].includes(
-                        attendanceMode
-                      )
-                        ? "ed-secondary ed-danger"
-                        : "ed-primary"
-                    }
-                    disabled={
-                      attendanceSaving ||
-                      (attendanceMode !== "no_show" && !attendanceScore) ||
-                      (["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && !attendanceEndTime) ||
-                      (["no_show", "left_early_unexcused"].includes(
-                        attendanceMode
-                      ) &&
-                        attendanceNote.trim().length < 5)
-                    }
-                    onClick={() =>
-                      recordEmployerAttendance(
-                        attendanceTarget,
-                        attendanceMode,
-                        attendanceEndTime || null,
-                        attendanceNote
-                      )
-                    }
-                  >
-                    {attendanceSaving
-                      ? "Saugoma..."
-                      : attendanceMode === "full_day"
-                      ? "Išsaugoti įvertinimą ir uždaryti dieną"
-                      : "Patvirtinti rezultatą"}
-                  </button>
-                </div>
+                <div className="field"><span>Darbuotojo įvertinimas *</span><div className="rating" role="group" aria-label="Įvertinimas nuo 1 iki 10">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => <button key={score} type="button" aria-pressed={Number(attendanceScore) === score} disabled={attendanceSaving} onClick={() => setAttendanceScore(score)}>{score}</button>)}
+                </div></div>
+                <label className="field">Komentaras apie darbuotoją<textarea maxLength={1000} value={attendanceRatingComment} disabled={attendanceSaving} onChange={(e) => setAttendanceRatingComment(e.target.value)} placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." /></label>
               </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {ratingTarget && (
-        <div
-          className="ed-rating-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9700,
-            background: "rgba(34,38,49,.64)",
-            display: "grid",
-            placeItems: "center",
-            padding: 20,
-          }}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !ratingSaving) {
-              setRatingTarget(null);
-              setRatingScore(null);
-              setRatingComment("");
-            }
-          }}
-        >
-          <div
-            className="ed-rating-modal"
-            style={{
-              width: "min(620px, 100%)",
-              maxHeight: "calc(100dvh - 40px)",
-              overflow: "auto",
-              background: "#fff",
-              borderRadius: 20,
-              padding: 22,
-              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
-              color: "#222631",
-            }}
-          >
-            <div className="ed-rating-head">
-              <div>
-                <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
-                <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
-                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
-                  {ratingTarget.jobTitle} · {ratingTarget.workDate}
-                </div>
-                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
-                  Pasirinkite bendrą įvertinimą nuo 1 iki 10. Vertinimą ir
-                  komentarą paliekate kaip už šį darbą atsakingas žmogus.
-                </div>
-              </div>
-              <button
-                className="ed-rating-close"
-                disabled={ratingSaving}
-                onClick={() => {
-                  setRatingTarget(null);
-                  setRatingScore(null);
-                  setRatingComment("");
-                }}
-              >
-                <CloseMark />
-              </button>
+            ) : null}
+            {chosen && attendanceMode !== "full_day" ? (
+              <label className="field">{attendanceMode === "left_early_agreed" ? "Pastaba" : "Paaiškinimas *"}<textarea maxLength={1000} value={attendanceNote} onChange={(e) => setAttendanceNote(e.target.value)}
+                placeholder={attendanceMode === "no_show" ? "Trumpai parašykite, kodėl pažymite neatvykimą." : attendanceMode === "left_early_unexcused" ? "Trumpai aprašykite, kas įvyko." : "Pvz. Išėjimas buvo suderintas iš anksto."} /></label>
+            ) : null}
+            {["no_show", "left_early_unexcused"].includes(attendanceMode) ? <div className="notebox">Pažymėjus „{attendanceMode === "no_show" ? "Neatvyko" : "Išėjo be priežasties"}“, darbuotojo reitingas iškart nemažinamas – darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.</div> : null}
+            {attendanceMode === "left_early_agreed" ? <div className="notebox">Suderintas ankstyvas išėjimas darbuotojo patikimumo nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas laikas.</div> : null}
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={attendanceSaving} onClick={closeAttendance}>Atšaukti</button>
+              <button className={`btn ${["no_show", "left_early_unexcused"].includes(attendanceMode) ? "danger" : "primary"}`} type="button" disabled={disabledSave}
+                onClick={() => recordEmployerAttendance(attendanceTarget, attendanceMode, attendanceEndTime || null, attendanceNote)}>
+                {attendanceSaving ? "Saugoma..." : attendanceMode === "no_show" || early ? "Patvirtinti rezultatą" : "Išsaugoti įvertinimą ir uždaryti dieną"}</button>
             </div>
+          </P24Modal>
+        );
+      })()}
 
-            {ratingError && <div className="ed-error" role="alert">{ratingError}</div>}
-
-            <ReviewConductNotice />
-
-            <div style={{ marginBottom: 16 }}>
-              <div className="ed-rating-scores">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
-                  <button
-                    key={score}
-                    type="button"
-                    className={
-                      Number(ratingScore) === score
-                        ? "ed-primary"
-                        : "ed-secondary"
-                    }
-                    style={{ minWidth: 46 }}
-                    onClick={() => setRatingScore(score)}
-                  >
-                    {score}
-                  </button>
-                ))}
-              </div>
+      {ratingTarget && (() => {
+        const closeRating = () => { setRatingTarget(null); setRatingScore(null); setRatingComment(""); };
+        return (
+          <P24Modal eyebrow="Darbuotojo įvertinimas" title={`Kaip įvertintumėte ${shortWorkerName(ratingTarget.name || "darbuotoją")}?`} sub={`${formatJobTitle(ratingTarget.jobTitle)} · ${ratingTarget.workDate || ""}`} onClose={closeRating} busy={ratingSaving}>
+            {ratingError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{ratingError}</p> : null}
+            <div className="field"><span>Darbuotojo įvertinimas *</span><div className="rating" role="group" aria-label="Įvertinimas nuo 1 iki 10">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => <button key={score} type="button" aria-pressed={Number(ratingScore) === score} disabled={ratingSaving} onClick={() => setRatingScore(score)}>{score}</button>)}
+            </div></div>
+            <label className="field">Komentaras apie darbuotoją<textarea maxLength={1000} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." /></label>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={ratingSaving} onClick={closeRating}>Atšaukti</button>
+              <button className="btn primary" type="button" disabled={ratingSaving || !ratingScore} onClick={submitWorkerRating}>{ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}</button>
             </div>
-
-            <label className="ed-label">
-              Komentaras apie darbuotoją
-              <textarea
-                className="ed-textarea"
-                maxLength={1000}
-                value={ratingComment}
-                onChange={(e) => setRatingComment(e.target.value)}
-                placeholder="Pvz. punktualus, gerai atliko užduotis, lengva susitarti..."
-              />
-            </label>
-
-            <div className="ed-rating-actions">
-              <button
-                className="ed-secondary"
-                disabled={ratingSaving}
-                onClick={() => {
-                  setRatingTarget(null);
-                  setRatingScore(null);
-                  setRatingComment("");
-                }}
-              >
-                Grįžti
-              </button>
-              <button
-                className="ed-primary"
-                disabled={ratingSaving || !ratingScore}
-                onClick={submitWorkerRating}
-              >
-                {ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
       {showTeam && (
         <div
@@ -8770,285 +7403,43 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       )}
 
       {showReliabilityInfo && (
-        <div
-          className="reliability-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowReliabilityInfo(false);
-          }}
-        >
-          <style>{RELIABILITY_MODAL_STYLES}</style>
-
-          <div
-            className="reliability-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reliability-modal-title"
-          >
-            <div className="reliability-modal-scroll">
-            <div className="reliability-modal-head">
-              <div>
-                <div className="reliability-modal-eyebrow">
-                  PATIKIMUMO REITINGAS
-                </div>
-                <h2 id="reliability-modal-title">
-                  Kaip veikia įmonės patikimumas?
-                </h2>
-              </div>
-
-              <button
-                className="reliability-modal-close"
-                type="button"
-                aria-label="Uždaryti"
-                onClick={() => setShowReliabilityInfo(false)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            <div className="reliability-score-box">
-              <div className="reliability-score-copy">
-                <strong>
-                  Dabartinis patikimumas:{" "}
-                  <span
-                    style={{
-                      color: reliabilityScoreColor(employerStats.reliabilityRate),
-                    }}
-                  >
-                    {formatReliabilityScore(employerStats.reliabilityRate)} / 100
-                  </span>
-                </strong>
-                <span>
-                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
-                </span>
-              </div>
-            </div>
-
-            <div className="reliability-rules">
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">100</div>
-                <p>
-                  Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−7</div>
-                <p>
-                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys visą
-                  darbą atšaukia, patikimumas sumažėja <b>7 taškais</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">0</div>
-                <p>
-                  Pažymėjus „Neatvyko“ ar „Išėjo anksčiau be pateisinamos
-                  priežasties“, darbuotojo reitingas <b>nesumažėja iškart</b>.
-                  Darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−15</div>
-                <p>
-                  Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
-                  darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
-                  patikimumas sumažėja <b>15 taškų</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">+</div>
-                <p>
-                  Patikimumas atsistato per <b>tvarkingai užbaigtus darbus</b>.
-                  Kai rezultatas yra 0–49, už darbą pridedami 3 taškai; 50–69 –
-                  2; 70–89 – 1; 90–99 – 0,5 taško. Daugiau kaip 100 taškų
-                  sukaupti negalima.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">30</div>
-                <p>
-                  Jei 30 dienų nėra naujo pažeidimo, žemas patikimumas gali
-                  natūraliai paaugti po <b>1 tašką kas 30 dienų</b>, tačiau vien
-                  laiku galima atsistatyti tik iki <b>80 / 100</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">✓</div>
-                <p>
-                  Po paskutinio pažeidimo tvarkingai užbaigta darbų: {" "}
-                  <b>{employerStats.reliabilityGoodJobsSincePenalty}</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">#</div>
-                <p>
-                  Jei darbuotojas užginčija jūsų pažymėtą neigiamą darbo dienos
-                  rezultatą ir administratorius nusprendžia darbuotojo naudai,
-                  tai skaičiuojama kaip <b>nepagrįstas pažymėjimas</b>. Tokių
-                  atvejų šiuo metu: <b>{employerStats.falseAttendanceClaimCount}</b>.
-                </p>
-              </div>
-            </div>
-
-            <div className="reliability-history">
-              <div className="reliability-history-head">
-                <h3>Patikimumo sumažėjimų istorija</h3>
-                {employerPenaltyHistory.length > 5 && (
-                  <span>Rodomi 5 naujausi iš {employerPenaltyHistory.length}</span>
-                )}
-              </div>
-
-              {employerPenaltyHistory.length ? (
-                <div className="reliability-history-list">
-                  {employerPenaltyHistory.slice(0, 5).map((penalty) => {
-                    const meta = employerReliabilityPenaltyMeta(penalty);
-                    return (
-                      <div className="reliability-history-item" key={penalty.id}>
-                        <div className="reliability-history-change">
-                          {meta.change < 0 ? formatReliabilityChange(meta.change) : "—"}
-                        </div>
-                        <div className="reliability-history-copy">
-                          <b>{meta.label}</b>
-                          {penalty.reason && penalty.reason !== meta.label && (
-                            <small>{penalty.reason}</small>
-                          )}
-                        </div>
-                        <div className="reliability-history-date">
-                          {formatReliabilityPenaltyDate(penalty.created_at)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="reliability-history-empty">
-                  Patikimumas dar nebuvo sumažintas.
-                </div>
-              )}
-            </div>
-
-            <div className="reliability-note">
-              <b>Svarbu:</b> nei darbdavys, nei darbuotojas negali vienašališkai
-              sugadinti kitos pusės reitingo ginčytinoje situacijoje. Ginčo metu
-              sankcijos sustabdomos iki sprendimo.
-            </div>
-
-            <div className="reliability-modal-actions">
-              <button
-                type="button"
-                onClick={() => setShowReliabilityInfo(false)}
-              >
-                Supratau
-              </button>
-            </div>
-            </div>
+        <P24Modal eyebrow="Patikimumo reitingas" title="Kaip veikia įmonės patikimumas?" onClose={() => setShowReliabilityInfo(false)}>
+          <p className="muted" style={{ margin: 0 }}>Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą. Dabartinis patikimumas: <b style={{ color: "var(--navy)" }}>{formatReliabilityScore(employerStats.reliabilityRate)} / 100</b>.</p>
+          <div className="list">
+            {[
+              ["Pradžia", "Nauja įmonė pradeda nuo 100 patikimumo taškų."],
+              ["Atšaukimas", "Atšaukus darbą, kurį jau patvirtino darbuotojas, patikimumas sumažėja 7 taškais."],
+              ["Neigiamas pažymėjimas", "Pažymėjus „Neatvyko“ ar „Išėjo be priežasties“, darbuotojo reitingas nesumažėja iškart – jis gali patvirtinti arba ginčyti."],
+              ["Nepagrįstas pažymėjimas", `Jei ginčas išsprendžiamas darbuotojo naudai, patikimumas sumažėja 15 taškų. Tokių atvejų: ${employerStats.falseAttendanceClaimCount}.`],
+              ["Atsikūrimas", "Už tvarkingai užbaigtus darbus pridedama: 0–49 – 3 taškai, 50–69 – 2, 70–89 – 1, 90–99 – 0,5. Jei 30 dienų nėra pažeidimų – +1 taškas kas 30 dienų (iki 80)."],
+              ["Po paskutinio pažeidimo", `Tvarkingai užbaigta darbų: ${employerStats.reliabilityGoodJobsSincePenalty}.`],
+            ].map(([title, text]) => <div className="step info" key={title}><span className="dot" /><div><b>{title}</b><p>{text}</p></div></div>)}
           </div>
-        </div>
+          {employerPenaltyHistory.length ? (
+            <div className="list">
+              {employerPenaltyHistory.slice(0, 5).map((penalty) => {
+                const meta = employerReliabilityPenaltyMeta(penalty);
+                return <div className="step" key={penalty.id}><span className="dot" /><div><b>{meta.change < 0 ? `${formatReliabilityChange(meta.change)} · ` : ""}{meta.label}</b><p>{penalty.reason && penalty.reason !== meta.label ? `${penalty.reason} · ` : ""}{formatReliabilityPenaltyDate(penalty.created_at)}</p></div></div>;
+              })}
+            </div>
+          ) : <p className="small muted" style={{ margin: 0 }}>Patikimumo sumažėjimų istorija: patikimumas dar nebuvo sumažintas.</p>}
+          <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" type="button" onClick={() => setShowReliabilityInfo(false)}>Supratau</button></div>
+        </P24Modal>
       )}
 
-      {cancelJobTarget && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !cancellingJob) {
-              setCancelJobTarget(null);
-              setCancelReason("");
-            }
-          }}
-        >
-          <div className="rs-modal-card">
-            <style>{`
-              .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:12000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(34,38,49,.25);padding:22px;color:#222631}
-              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-              .rs-modal-head h2{margin:0;font-size:22px}
-              .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-              .rs-cancel-warning{background:#fff0ec;color:#9f4529;border-radius:12px;padding:14px;line-height:1.5;margin-bottom:16px}
-              .rs-cancel-reason{width:100%;min-height:105px;border:1px solid #dbe4ea;border-radius:10px;padding:12px;font:inherit;resize:vertical}
-              .rs-cancel-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
-            `}</style>
-
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">DARBO ATŠAUKIMAS</div>
-                <h2>Ar tikrai norite atšaukti šį darbą?</h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={cancellingJob}
-                onClick={() => {
-                  setCancelJobTarget(null);
-                  setCancelReason("");
-                }}
-              >
-                <CloseMark />
-              </button>
+      {cancelJobTarget && (() => {
+        const closeCancel = () => { setCancelJobTarget(null); setCancelReason(""); };
+        return (
+          <P24Modal eyebrow="Darbo atšaukimas" title="Ar tikrai norite atšaukti šį darbą?" onClose={closeCancel} busy={cancellingJob}>
+            <div className="notebox">Šį darbą jau patvirtino {cancelJobTarget.confirmedCount} {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}. Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus uždarytas. Kadangi darbą jau patvirtino darbuotojai, atšaukimas sumažins įmonės patikimumą 7 punktais.</div>
+            <label className="field">Atšaukimo priežastis *<textarea value={cancelReason} maxLength={500} onChange={(e) => setCancelReason(e.target.value)} placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę." /><span className="hint">Šią priežastį matys darbą patvirtinę darbuotojai.</span></label>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={cancellingJob} onClick={closeCancel}>Ne, grįžti</button>
+              <button className="btn danger" type="button" disabled={cancellingJob || cancelReason.trim().length < 5} onClick={confirmEmployerCancellation}>{cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}</button>
             </div>
-
-            <div className="rs-cancel-warning">
-              <b>
-                Šį darbą jau patvirtino {cancelJobTarget.confirmedCount}{" "}
-                {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}.
-              </b>
-              <div style={{ marginTop: 5 }}>
-                Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus
-                uždarytas, o darbuotojai matys jūsų nurodytą atšaukimo priežastį.
-              </div>
-              <div style={{ marginTop: 5 }}>
-                Kadangi darbą jau patvirtino darbuotojas, atšaukimas sumažins
-                jūsų darbdavio patikimumo reitingą 7 punktais.
-              </div>
-            </div>
-
-            <label className="ed-label">
-              Atšaukimo priežastis *
-              <textarea
-                className="rs-cancel-reason"
-                value={cancelReason}
-                maxLength={500}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę."
-              />
-            </label>
-
-            <div
-              style={{
-                marginTop: 6,
-                color: "#6c7a88",
-                fontSize: 12,
-              }}
-            >
-              Šią priežastį matys darbą patvirtinę darbuotojai.
-            </div>
-
-            <div className="rs-cancel-actions">
-              <button
-                className="ed-secondary"
-                disabled={cancellingJob}
-                onClick={() => {
-                  setCancelJobTarget(null);
-                  setCancelReason("");
-                }}
-              >
-                Ne, grįžti
-              </button>
-              <button
-                className="ed-primary"
-                style={{ background: "#b64d2a" }}
-                disabled={cancellingJob || cancelReason.trim().length < 5}
-                onClick={confirmEmployerCancellation}
-              >
-                {cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
       {showLongTermEmployment && (
         <div
@@ -9771,6 +8162,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobId={selectedWorker?.profileJobId || currentJob?.id || null}
         canViewWorkerMetrics={canViewWorkerMetrics}
         onClose={() => setSelectedWorker(null)}
+        isFavorite={Boolean(selectedWorker && savedWorkers.some((item) => item.id === selectedWorker.id))}
+        onToggleFavorite={selectedWorker?.isDemoProfile ? null : (worker) => (savedWorkers.some((item) => item.id === worker.id) ? removeWorkerFromTeam(worker) : saveWorkerToTeam(worker))}
+        contactsLocked={planSummary?.plan_key !== "business_pro"}
+        onPlans={() => goEmployerView("plans")}
       />
 
       <ConversationModal
@@ -9781,6 +8176,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={conversation?.title}
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
+        hiddenBefore={conversation?.hiddenBefore || null}
       />
       <GroupConversationModal
         open={Boolean(groupConversation)}
@@ -9790,6 +8186,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         title={groupConversation?.title}
         user={user}
         senderMode={onAdminReturn ? "employer" : null}
+        hiddenBefore={groupConversation?.hiddenBefore || null}
       />
 
       <DisputeConversationModal
@@ -9814,5 +8211,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
+    </P24Shell>
   );
 }

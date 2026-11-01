@@ -1,7 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
-import { CloseMark, SilentLoader } from "../ui/brand.jsx";
-import { ChatConductNotice } from "../ui/common.jsx";
+import { Svg } from "../p24/Shell.jsx";
+
+/* Prototipo pokalbio langas („chatpop“ su atidarytu pokalbiu). Logika – kiekviename modale. */
+const dayLabel = (iso) => {
+  const d = new Date(iso); const t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return "Šiandien";
+  if (d.toDateString() === y.toDateString()) return "Vakar";
+  return d.toLocaleDateString("lt-LT");
+};
+const ini2 = (n) => String(n || "?").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").trim().split(/\s+/).map((p) => p[0] || "").join("").slice(0, 2).toLocaleUpperCase("lt-LT");
+export function ChatThreadView({ kind = "private", title, sub, privacy, messages, isMine, senderOf, isAdmin, loading, error, locked, lockText, value, setValue, onSend, sending, onClose, placeholder, messagesRef }) {
+  const grp = kind !== "private";
+  let lastDay = null;
+  const rows = [];
+  messages.forEach((m, i) => {
+    const prev = messages[i - 1]; const next = messages[i + 1];
+    const day = m.created_at ? dayLabel(m.created_at) : "";
+    if (day !== lastDay) { rows.push(<div className="dsep" key={`d${i}`}>{day}</div>); lastDay = day; }
+    const same = (a, b) => a && b && senderOf(a) === senderOf(b) && dayLabel(a.created_at) === dayLabel(b.created_at);
+    const first = !same(prev, m); const last = !same(m, next); const me = isMine(m); const who = senderOf(m);
+    if ((grp || isAdmin?.(m)) && first) rows.push(<div className={`who-n${me ? " me" : ""}${isAdmin?.(m) ? " adm" : ""}`} key={`w${i}`}>{me ? "Jūs" : who}</div>);
+    rows.push(
+      <div className={`mrow${me ? " me" : ""}${first ? " first newgrp" : ""}${last ? " last" : ""}`} key={m.id || m.message_id || i}>
+        {me ? null : <span className="cav sm">{ini2(who)}</span>}
+        <div className="bub" style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>
+        {last && m.created_at ? <span className="mtime">{new Date(m.created_at).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}</span> : null}
+      </div>
+    );
+  });
+  return (
+    <div className="p24 p24-portal">
+      <div className="chatpop" role="dialog" aria-label={title} style={{ zIndex: 9000 }}>
+        <div className="chat narrow has-thread">
+          <div className={`thread${grp ? " grp" : ""}`} role="region" aria-label="Pokalbis">
+            <div className="thead">
+              <button type="button" className="tbtn back" aria-label="Atgal" onClick={onClose}><Svg name="back" size={22} width={2.4} /></button>
+              <div className="tperson"><span className={`cav${grp ? " grp" : ""}`}>{grp ? <Svg name="people" size={22} /> : ini2(title)}</span><div className="tn"><b>{title}</b>{sub ? <small>{sub}</small> : null}</div></div>
+              <button type="button" className="tbtn" aria-label="Uždaryti" onClick={onClose}><Svg name="x" size={20} width={2.2} /></button>
+            </div>
+            <div className={`msgs ${grp ? "is-grp" : "is-prv"}`} ref={messagesRef}>
+              {privacy ? <div className={`privacy ${grp ? "grp" : "prv"}`}><Svg name={grp ? "people" : "shield"} size={16} /><div><b>{privacy[0]}</b><span>{privacy[1]}</span></div></div> : null}
+              {loading && !messages.length ? <p className="muted small" style={{ textAlign: "center" }}>Įkeliama...</p> : messages.length ? rows : <p className="muted small" style={{ textAlign: "center" }}>Žinučių dar nėra. Galite parašyti pirmą.</p>}
+            </div>
+            {error ? <p className="ferr" role="alert" style={{ margin: "0 12px" }}>{error}</p> : null}
+            {locked ? <div className="notebox" style={{ margin: "0 12px 12px" }}>{lockText}</div> : (
+              <form className="compose" onSubmit={onSend}>
+                <div className={`pillin${grp ? " grp" : ""}`}><span className="to"><Svg name={grp ? "people" : "shield"} size={15} /></span>
+                  <input value={value} maxLength={2000} placeholder={placeholder} autoComplete="off" aria-label={placeholder} onChange={(e) => setValue(e.target.value)} /></div>
+                <button className="send" type="submit" aria-label="Siųsti" disabled={sending || !value.trim()}><Svg name="send" size={18} width={2.2} /></button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ConversationModal({
   open,
@@ -11,8 +66,11 @@ export function ConversationModal({
   title,
   user,
   senderMode = null,
+  hiddenBefore = null,
 }) {
-  const [messages, setMessages] = useState([]);
+  const [allMessages, setMessages] = useState([]);
+  // „Ištrinti sau“: rodomos tik žinutės po paslėpimo momento
+  const messages = hiddenBefore ? allMessages.filter((message) => !message.created_at || new Date(message.created_at) > new Date(hiddenBefore)) : allMessages;
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -153,132 +211,14 @@ export function ConversationModal({
   if (!open) return null;
 
   return (
-    <div className="rs-modal-overlay" onMouseDown={(e) => {
-      if (e.target === e.currentTarget) onClose();
-    }}>
-      <div className="rs-modal-card">
-        <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(760px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(34,38,49,.28);padding:22px;color:#222631}
-          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
-          .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
-          .rs-messages{display:grid;align-content:start;justify-items:start;gap:10px;overflow:auto;padding:16px;background:#f8fafb;border:1px solid #e8eef2;border-radius:18px;min-height:260px;max-height:420px}
-          .rs-message{width:fit-content;max-width:min(84%,560px);border:1px solid #dfe7ec;border-radius:16px 16px 16px 6px;padding:12px 14px;background:#fff;box-shadow:0 2px 8px rgba(34,38,49,.04)}
-          .rs-message.mine{justify-self:end;background:#f5f3fa;border-color:#c9c2de;border-radius:16px 16px 6px 16px}
-          .rs-message.admin{background:#f3f8fb;border-color:#cfe0ec}.rs-message b{display:block;font-size:12px;margin-bottom:5px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere}
-          .rs-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
-          .rs-msg-form{display:grid;grid-template-columns:minmax(0,1fr) 116px;align-items:end;gap:12px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-          .rs-msg-form textarea{width:100%;min-height:74px;max-height:140px;resize:vertical;border:1px solid #d7e0e7;border-radius:16px;padding:14px 15px;font:inherit;color:#222631;outline:none;line-height:1.45;background:#fff}
-          .rs-msg-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-          .rs-msg-form button{height:54px;align-self:end;min-width:0;border:0;background:#6b5b95;color:#fff;border-radius:16px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
-          .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
-          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px;justify-self:stretch}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
-          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
-          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
-        `}</style>
-
-        <div className="rs-modal-head">
-          <div>
-            <div className="eyebrow">ŽINUTĖS</div>
-            <h2>{title || "Pokalbis apie darbą"}</h2>
-          </div>
-          <button className="rs-close" onClick={onClose}><CloseMark /></button>
-        </div>
-
-        {error && <div className="rs-error">{error}</div>}
-
-        <ChatConductNotice />
-
-        <div className="rs-messages" ref={messagesRef}>
-          {loading ? (
-            <div className="lt-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
-          ) : messages.length ? (
-            messages.map((message) => (
-              <div
-                className={message.sender_id === user.id ? "rs-message mine" : "rs-message"}
-                key={message.id}
-              >
-                <b>
-                  {message.sender_label ||
-                    names[message.sender_id] ||
-                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
-                </b>
-                <p>{message.body}</p>
-                <time>
-                  {new Date(message.created_at).toLocaleString("lt-LT", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </time>
-              </div>
-            ))
-          ) : (
-            <div className="rs-empty">Žinučių dar nėra. Galite parašyti pirmą.</div>
-          )}
-        </div>
-
-        {conversationLocked && (
-          <div className="rs-locked">
-            {planLocked ? (
-              <>
-                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
-                <div style={{ marginTop: 4 }}>
-                  Darbdavys naudoja Basic planą. Žinučių funkcija įtraukta į
-                  Business ir Business Pro planus.
-                </div>
-              </>
-            ) : (
-              <>
-                <b>Šis darbas atšauktas — pokalbis uždarytas.</b>
-                {cancellationReason && (
-                  <div style={{ marginTop: 4 }}>
-                    Atšaukimo priežastis: {cancellationReason}
-                  </div>
-                )}
-                <div style={{ marginTop: 4 }}>
-                  Ankstesnes žinutes galite perskaityti, tačiau naujų siųsti
-                  nebegalima.
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        <form className="rs-msg-form" onSubmit={sendMessage}>
-          <textarea
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                !e.nativeEvent?.isComposing
-              ) {
-                e.preventDefault();
-                if (
-                  !conversationLocked &&
-                  !sending &&
-                  textValue.trim()
-                ) {
-                  sendMessage(e);
-                }
-              }
-            }}
-            maxLength={2000}
-            disabled={conversationLocked}
-            placeholder={
-              conversationLocked
-                ? "Pokalbis uždarytas"
-                : "Parašykite žinutę..."
-            }
-          />
-          <button disabled={conversationLocked || sending || !textValue.trim()}>
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <ChatThreadView kind="private" title={title || "Pokalbis apie darbą"} sub="Privatus pokalbis"
+      privacy={["Privatus pokalbis", "Mato tik jūs, pašnekovas ir statybos24 administratorius"]}
+      messages={messages} isMine={(m) => m.sender_id === user.id}
+      senderOf={(m) => m.sender_label || names[m.sender_id] || (m.sender_id === user.id ? "Jūs" : "Vartotojas")}
+      loading={loading} error={error} messagesRef={messagesRef}
+      locked={conversationLocked}
+      lockText={planLocked ? "Darbo pokalbiai šiame darbe neaktyvūs: darbdavys naudoja Basic planą. Žinutės – Business ir Business Pro planuose." : `Šis darbas atšauktas – pokalbis uždarytas.${cancellationReason ? ` Priežastis: ${cancellationReason}.` : ""} Ankstesnes žinutes galite perskaityti.`}
+      value={textValue} setValue={setTextValue} onSend={sendMessage} sending={sending} onClose={onClose} placeholder="Rašyti privačiai" />
   );
 }
 
@@ -387,106 +327,11 @@ export function DisputeConversationModal({
   if (!open) return null;
 
   return (
-    <div
-      className="rs-modal-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="rs-modal-card">
-        <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(720px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(180px,1fr) auto;overflow:hidden;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(34,38,49,.28);padding:22px;color:#222631}
-          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
-          .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
-          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
-          .rs-messages{display:grid;align-content:start;gap:10px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px;min-height:220px;max-height:420px}
-          .rs-message{max-width:min(84%,560px);border:1px solid #dfe7ec;border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;box-shadow:0 2px 8px rgba(34,38,49,.04)}
-          .rs-message.mine{margin-left:auto;background:#f5f3fa;border-color:#c9c2de;border-radius:14px 14px 5px 14px}.rs-message.admin{background:#f3f8fb;border-color:#cfe0ec}
-          .rs-message b{display:block;font-size:12px;margin-bottom:5px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.45;overflow-wrap:anywhere}.rs-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
-          .rs-msg-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-          .rs-msg-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#222631;outline:none}
-          .rs-msg-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-          .rs-msg-form button{align-self:stretch;min-width:92px;border:0;background:#6b5b95;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
-          .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
-          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{min-height:44px}.rs-message{max-width:92%}}
-        `}</style>
-
-        <div className="rs-modal-head">
-          <div>
-            <div className="eyebrow">GINČO POKALBIS</div>
-            <h2>{title || "Ginčo aptarimas"}</h2>
-            <div className="dispute-parties">
-              {workerName && <span className="dispute-party">Darbuotojas: {workerName}</span>}
-              {companyName && <span className="dispute-party">Darbdavys: {companyName}</span>}
-              <span className="dispute-party">Administratorius</span>
-            </div>
-          </div>
-          <button className="rs-close" onClick={onClose}>
-            <CloseMark />
-          </button>
-        </div>
-
-        {error && <div className="rs-error">{error}</div>}
-
-        <ChatConductNotice />
-
-        <div className="rs-messages" ref={messagesRef}>
-          {loading && !messages.length ? (
-            <div className="rs-empty"><SilentLoader size={18} minHeight={42} /></div>
-          ) : messages.length ? (
-            messages.map((message) => {
-              const mine = message.sender_id === user?.id;
-              const className = [
-                "rs-message",
-                mine ? "mine" : "",
-                message.sender_role === "admin" ? "admin" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-
-              return (
-                <div className={className} key={message.message_id}>
-                  <b>{senderLabel(message)}</b>
-                  <p>{message.body}</p>
-                  <time>
-                    {new Date(message.created_at).toLocaleString("lt-LT", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </time>
-                </div>
-              );
-            })
-          ) : (
-            <div className="lt-chat-empty">Žinučių dar nėra. Galite pradėti aptarimą.</div>
-          )}
-        </div>
-
-        <form className="rs-msg-form" onSubmit={sendMessage}>
-          <textarea
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                !e.nativeEvent?.isComposing
-              ) {
-                e.preventDefault();
-                if (!sending && textValue.trim()) sendMessage(e);
-              }
-            }}
-            maxLength={2000}
-            placeholder="Parašykite žinutę abiem ginčo pusėms..."
-          />
-          <button disabled={sending || !textValue.trim()}>
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <ChatThreadView kind="group" title={title || "Ginčo aptarimas"} sub={[workerName, companyName, "Administratorius"].filter(Boolean).join(" · ")}
+      privacy={["Ginčo pokalbis", "Mato abi ginčo pusės ir statybos24 administratorius"]}
+      messages={messages} isMine={(m) => m.sender_id === user?.id} senderOf={(m) => senderLabel(m)} isAdmin={(m) => m.sender_role === "admin"}
+      loading={loading} error={error} messagesRef={messagesRef} locked={false}
+      value={textValue} setValue={setTextValue} onSend={sendMessage} sending={sending} onClose={onClose} placeholder="Rašyti abiem pusėms" />
   );
 }
 
@@ -499,8 +344,10 @@ export function GroupConversationModal({
   title,
   user,
   senderMode = null,
+  hiddenBefore = null,
 }) {
-  const [messages, setMessages] = useState([]);
+  const [allMessages, setMessages] = useState([]);
+  const messages = hiddenBefore ? allMessages.filter((message) => !message.created_at || new Date(message.created_at) > new Date(hiddenBefore)) : allMessages;
   const [names, setNames] = useState({});
   const [textValue, setTextValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -635,144 +482,13 @@ export function GroupConversationModal({
   if (!open) return null;
 
   return (
-    <div
-      className="rs-modal-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="rs-modal-card rs-job-chat-modal">
-        <style>{`
-          .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:2000;display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-          .rs-modal-card{width:min(760px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(34,38,49,.28);padding:22px;color:#222631}
-          .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
-          .rs-modal-head h2{margin:6px 0 0;font-size:24px;line-height:1.2;font-family:Manrope,Inter,sans-serif}.rs-close{border:0;background:#f2f5f7;border-radius:12px;width:42px;height:42px;font-size:20px;cursor:pointer;display:grid;place-items:center;flex:0 0 42px}
-          .rs-messages{display:grid;align-content:start;justify-items:start;gap:10px;overflow:auto;padding:16px;background:#f8fafb;border:1px solid #e8eef2;border-radius:18px;min-height:260px;max-height:420px}
-          .rs-message{width:fit-content;max-width:min(84%,560px);border:1px solid #dfe7ec;border-radius:16px 16px 16px 6px;padding:12px 14px;background:#fff;box-shadow:0 2px 8px rgba(34,38,49,.04)}
-          .rs-message.mine{justify-self:end;background:#f5f3fa;border-color:#c9c2de;border-radius:16px 16px 6px 16px}
-          .rs-message.admin{background:#f3f8fb;border-color:#cfe0ec}.rs-message b{display:block;font-size:12px;margin-bottom:5px}.rs-message p{margin:0;white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere}
-          .rs-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
-          .rs-msg-form{display:grid;grid-template-columns:minmax(0,1fr) 116px;align-items:end;gap:12px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-          .rs-msg-form textarea{width:100%;min-height:74px;max-height:140px;resize:vertical;border:1px solid #d7e0e7;border-radius:16px;padding:14px 15px;font:inherit;color:#222631;outline:none;line-height:1.45;background:#fff}
-          .rs-msg-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-          .rs-msg-form button{height:54px;align-self:end;min-width:0;border:0;background:#6b5b95;color:#fff;border-radius:16px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer}
-          .rs-msg-form button:disabled{opacity:.55;cursor:not-allowed}.rs-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
-          .rs-empty{color:#6c7a88;text-align:center;padding:28px 10px;justify-self:stretch}.rs-locked{background:#fff0ec;color:#9f4529;border-radius:10px;padding:11px 12px;margin:4px 0 12px;font-size:13px;line-height:1.45}
-          .rs-group-note{background:#edf8f3;color:#167a54;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}.rs-job-chat-modal .rs-modal-head .eyebrow{color:#222631!important}.rs-job-chat-modal [role="note"]{align-items:flex-start!important;padding:8px 10px!important;margin-bottom:10px!important;border-color:#cdc6e0!important;background:#fffaf5!important;color:#6b4a2d!important;font-size:11.5px!important;line-height:1.4!important}
-          .dispute-parties{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#6c7a88;font-size:12px}.dispute-party{background:#f2f5f7;border-radius:999px;padding:5px 9px}
-          @media(max-width:620px){.rs-modal-overlay{padding:10px}.rs-modal-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px;padding:17px}.rs-msg-form{grid-template-columns:1fr}.rs-msg-form button{width:100%;height:46px}.rs-message{max-width:92%}}
-        `}</style>
-
-        <div className="rs-modal-head">
-          <div>
-            <div className="eyebrow">DARBO POKALBIS</div>
-            <h2>{title || "Bendras darbo pokalbis"}</h2>
-          </div>
-          <button className="rs-close" onClick={onClose}><CloseMark /></button>
-        </div>
-
-        <div className="rs-group-note">
-          {senderMode === "worker"
-            ? "Rašote darbuotojo režimu. Žinutė bus rodoma jūsų darbuotojo vardu."
-            : senderMode === "employer"
-            ? "Rašote darbdavio režimu. Žinutė bus rodoma jūsų įmonės vardu."
-            : "Šį pokalbį mato darbdavys ir visi šį darbą patvirtinę darbuotojai."}
-        </div>
-
-        {error && <div className="rs-error">{error}</div>}
-
-        <ChatConductNotice />
-
-        <div className="rs-messages" ref={messagesRef}>
-          {loading && !messages.length ? (
-            <div className="rs-empty"><SilentLoader size={18} minHeight={42} /></div>
-          ) : messages.length ? (
-            messages.map((message) => (
-              <div
-                className={
-                  message.sender_id === user.id
-                    ? "rs-message mine"
-                    : "rs-message"
-                }
-                key={message.id}
-              >
-                <b>
-                  {message.sender_label ||
-                    names[message.sender_id] ||
-                    (message.sender_id === user.id ? "Jūs" : "Vartotojas")}
-                </b>
-                <p>{message.body}</p>
-                <time>
-                  {new Date(message.created_at).toLocaleString("lt-LT", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </time>
-              </div>
-            ))
-          ) : (
-            <div className="rs-empty">
-              Darbo pokalbis dar tuščias. Galite parašyti pirmą žinutę.
-            </div>
-          )}
-        </div>
-
-        {conversationLocked && (
-          <div className="rs-locked">
-            {planLocked ? (
-              <>
-                <b>Darbo pokalbiai šiame darbe neaktyvūs.</b>
-                <div style={{ marginTop: 4 }}>
-                  Darbdavys naudoja Basic planą. Bendri ir privatūs darbo
-                  pokalbiai įtraukti į Business ir Business Pro.
-                </div>
-              </>
-            ) : (
-              <>
-                <b>Šis darbas atšauktas — darbo pokalbis uždarytas.</b>
-                {cancellationReason && (
-                  <div style={{ marginTop: 4 }}>
-                    Atšaukimo priežastis: {cancellationReason}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        <form className="rs-msg-form" onSubmit={sendMessage}>
-          <textarea
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                !e.nativeEvent?.isComposing
-              ) {
-                e.preventDefault();
-                if (
-                  !conversationLocked &&
-                  !sending &&
-                  textValue.trim()
-                ) {
-                  sendMessage(e);
-                }
-              }
-            }}
-            maxLength={2000}
-            disabled={conversationLocked}
-            placeholder={
-              conversationLocked
-                ? "Pokalbis uždarytas"
-                : "Žinutė visai darbo komandai..."
-            }
-          />
-          <button disabled={conversationLocked || sending || !textValue.trim()}>
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <ChatThreadView kind="group" title={String(title || "Bendras darbo pokalbis").toLocaleUpperCase("lt-LT")} sub="Darbo pokalbis"
+      privacy={["Bendras darbo pokalbis", "Mato visi šio darbo dalyviai ir statybos24 administratorius"]}
+      messages={messages} isMine={(m) => m.sender_id === user.id}
+      senderOf={(m) => m.sender_label || names[m.sender_id] || (m.sender_id === user.id ? "Jūs" : "Vartotojas")}
+      loading={loading} error={error} messagesRef={messagesRef}
+      locked={conversationLocked}
+      lockText={planLocked ? "Darbo pokalbiai šiame darbe neaktyvūs: darbdavys naudoja Basic planą. Žinutės – Business ir Business Pro planuose." : `Šis darbas atšauktas – pokalbis uždarytas.${cancellationReason ? ` Priežastis: ${cancellationReason}.` : ""} Ankstesnes žinutes galite perskaityti.`}
+      value={textValue} setValue={setTextValue} onSend={sendMessage} sending={sending} onClose={onClose} placeholder="Rašyti visiems" />
   );
 }

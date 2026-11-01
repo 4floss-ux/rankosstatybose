@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
-import { BrandLogo, CloseMark, SilentLoader } from "../ui/brand.jsx";
+import { CloseMark, SilentLoader } from "../ui/brand.jsx";
 import { RoundedDateSelect, RoundedSelect, RoundedTimeSelect, StyledConfirmDialog, useStyledConfirm } from "../ui/common.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { addPlatformDays, attendanceOutcomeLabel, formatJobTitle, formatNetPay, localDateISO, platformDateTime } from "../lib/jobs.js";
@@ -13,6 +13,14 @@ import { MonthlyAwardBadgeVisual, monthlyAwardMeta, monthlyAwardMetricText, mont
 import { workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminCompanyTeamChatModal, AdminJobChatModal, AdminPrivateMessageComposer } from "./adminParts.jsx";
 import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
+import { P24Shell } from "../p24/Shell.jsx";
+import { Svg } from "../p24/Shell.jsx";
+import { Empty, NoticeToast, P24Modal, PageHead } from "../p24/ui.jsx";
+import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
+import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
+import { AdminAuditList, AdminAwardsList, AdminBugsList, AdminDisputesList, AdminEmployersList, AdminEmploymentList, AdminFilesList, AdminJobsList, AdminRatingsList, AdminTeamChatsList, AdminWorkersList } from "../p24/admin/AdminLists.jsx";
+import { AdminForeignHire } from "../p24/admin/AdminForeignHire.jsx";
+import { startImpersonation } from "./impersonation.js";
 
 export function AdminDashboard({
   user,
@@ -203,6 +211,7 @@ export function AdminDashboard({
     ["workAbroadInterest", "Domisi darbu užsienyje"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
+    ["jobAds", "Darbo skelbimai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Vadovų pokalbiai"],
     ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
@@ -404,6 +413,23 @@ export function AdminDashboard({
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function loginAsUser(target) {
+    if (!target?.userId) return;
+    const ok = await askConfirm({
+      eyebrow: "PRISIJUNGTI KAIP",
+      title: `Prisijungti kaip ${target.name || "naudotojas"}?`,
+      message: "Atsidarys šio naudotojo paskyra – visi veiksmai bus atliekami jo vardu. Prisijungimas įrašomas į veiksmų istoriją. Grįžti galėsite viršuje paspaudę „Grįžti į administratorių“.",
+      confirmLabel: "Prisijungti",
+    });
+    if (!ok) return;
+    setError(""); setNotice("");
+    try {
+      await startImpersonation(target);
+    } catch (err) {
+      setError(err?.message || "Nepavyko prisijungti kaip naudotojas.");
     }
   }
 
@@ -1049,257 +1075,6 @@ export function AdminDashboard({
     } finally {
       setForeignHireCandidateBusyId(null);
     }
-  }
-
-  function renderForeignHireCandidatePanel(request, candidates) {
-    const loadingCandidates = foreignHireCandidateLoadingId === request.request_id;
-    const externalOpen = foreignHireExternalRequestId === request.request_id;
-    const roles = request.brief_workforce_details?.roles || [];
-    const required = Array.isArray(roles) ? roles.reduce((total, role) => total + Math.max(1, Number(role?.count) || 1), 0) : 0;
-    const hired = candidates.filter((candidate) => ["hired", "started"].includes(candidate.status)).length;
-    const hiringComplete = request.status === "closed" || (required > 0 && hired >= required);
-
-    return (
-      <div className="admin-candidate-zone" id={`foreign-hire-candidates-${request.request_id}`} style={{ scrollMarginTop: 100 }}>
-        <div className="admin-candidate-zone-head">
-          <div>
-            <strong>Kandidatai</strong>
-            <span>Čia kandidatą tiesiog pridedame rankiniu būdu ir toliau valdome jo eigą.</span>
-          </div>
-          <button className="admin-small-btn" type="button" disabled={hiringComplete} title={hiringComplete ? "Visi reikalingi darbuotojai įdarbinti. Paieška uždaryta." : undefined} onClick={() => { if (!hiringComplete) openExternalForeignHireCandidate(request); }} style={{ background: hiringComplete ? "#e8eef0" : "#222631", color: hiringComplete ? "#647583" : "#fff", borderColor: hiringComplete ? "#d5dfe4" : "#222631", cursor: hiringComplete ? "not-allowed" : "pointer" }}>
-            {hiringComplete ? "Darbuotojai surinkti" : "+ Pridėti kandidatą"}
-          </button>
-        </div>
-
-        <div className="admin-candidate-tools">
-            {externalOpen && !hiringComplete ? (
-              <div className="admin-external-form">
-                <div className="admin-candidate-zone-head">
-                  <div>
-                    <strong>Pridėti kandidatą</strong>
-                    <span>Įveskite kandidato informaciją. Šaltinį galite nurodyti, jei norite.</span>
-                  </div>
-                </div>
-                <div className="admin-external-grid" style={{ marginTop: 10 }}>
-                  <div className="admin-external-field"><label>Vardas, pavardė *</label><input value={foreignHireExternalForm.fullName} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, fullName: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Profesija *</label><input value={foreignHireExternalForm.profession} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, profession: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Amžius</label><input inputMode="numeric" value={foreignHireExternalForm.ageYears} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, ageYears: event.target.value.replace(/[^0-9]/g, "").slice(0, 2) }))} placeholder="Pvz. 34" /></div>
-                  <div className="admin-external-field"><label>Patirtis, metai</label><input inputMode="decimal" value={foreignHireExternalForm.yearsExperience} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, yearsExperience: event.target.value.replace(/[^0-9.,]/g, "").replace(",", ".") }))} /></div>
-                  <div className="admin-external-field"><label>El. paštas</label><input value={foreignHireExternalForm.email} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, email: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Telefonas</label><input value={foreignHireExternalForm.phone} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, phone: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Galimas nuo</label><input value={foreignHireExternalForm.availableFrom} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, availableFrom: event.target.value }))} placeholder="YYYY-MM-DD" /></div>
-                  <div className="admin-external-field wide"><label>Kandidato patirtis / kompetencijos</label><input value={foreignHireExternalForm.skills} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, skills: event.target.value }))} placeholder="Pvz. 6 m. gipso montavimas, metalinis karkasas, lubos, Q2/Q3" /></div>
-                  <div className="admin-external-field wide">
-                    <label>Kalbos ir lygiai</label>
-                    {(foreignHireExternalForm.languageDetails.split("\n").length ? foreignHireExternalForm.languageDetails.split("\n") : [""]).map((language, index, all) => (
-                      <div key={index} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                        <input
-                          style={{ flex: 1, minWidth: 0 }}
-                          value={language}
-                          placeholder={index === 0 ? "Pvz. English B1" : "Kita kalba ir jos lygis"}
-                          onChange={(event) => setForeignHireExternalForm((current) => {
-                            const languages = current.languageDetails.split("\n");
-                            languages[index] = event.target.value.replace(/[\r\n]/g, " ");
-                            return { ...current, languageDetails: languages.join("\n") };
-                          })}
-                        />
-                        {all.length > 1 ? <button type="button" className="admin-small-btn" aria-label="Pašalinti kalbą" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: current.languageDetails.split("\n").filter((_, i) => i !== index).join("\n") }))}>×</button> : null}
-                      </div>
-                    ))}
-                    <button type="button" className="admin-small-btn" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: `${current.languageDetails}\n` }))}>+ Pridėti kalbą</button>
-                  </div>
-                  <div className="admin-external-field"><label>Šaltinis (nebūtina)</label><input value={foreignHireExternalForm.sourceDetail} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, sourceDetail: event.target.value }))} placeholder="Facebook grupė / referral..." /></div>
-                  <div className="admin-external-field">
-                    <label>Vairuotojo pažymėjimas</label>
-                    <RoundedSelect
-                      className="admin-external-dropdown"
-                      ariaLabel="Vairuotojo pažymėjimas"
-                      value={foreignHireExternalForm.hasDrivingLicenseB ? "yes" : "no"}
-                      options={[{ value: "yes", label: "Taip (B kategorija)" }, { value: "no", label: "Ne" }]}
-                      onChange={(value) => setForeignHireExternalForm((current) => ({ ...current, hasDrivingLicenseB: value === "yes" }))}
-                    />
-                  </div>
-                  <div className="admin-external-field">
-                    <label>Ar reikalingas būstas?</label>
-                    <RoundedSelect
-                      className="admin-external-dropdown"
-                      ariaLabel="Ar reikalingas būstas?"
-                      value={foreignHireExternalForm.needsAccommodation === null ? "unset" : foreignHireExternalForm.needsAccommodation ? "yes" : "no"}
-                      options={[{ value: "unset", label: "Pasirinkite" }, { value: "yes", label: "Taip" }, { value: "no", label: "Ne" }]}
-                      onChange={(value) => setForeignHireExternalForm((current) => ({ ...current, needsAccommodation: value === "unset" ? null : value === "yes" }))}
-                    />
-                  </div>
-                  <div className="admin-external-field full"><label>Mano komentaras</label><textarea value={foreignHireExternalForm.recruiterNote} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, recruiterNote: event.target.value }))} placeholder="Trumpas mano komentaras apie kandidatą, pokalbį ar tinkamumą šiai užklausai..." /></div>
-                  <label className="admin-foreign-file">
-                    <span className="admin-foreign-file-copy">
-                      <b>{foreignHireExternalCvFile?.name || "Pilnas kandidato CV nepasirinktas"}</b>
-                      <span>PDF arba DOCX · iki 15 MB · darbdavys galės atidaryti kandidato peržiūroje</span>
-                    </span>
-                    <span className="admin-small-btn">{foreignHireExternalCvFile ? "Pakeisti CV" : "Pasirinkti CV"}</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={(event) => setForeignHireExternalCvFile(event.target.files?.[0] || null)}
-                    />
-                  </label>
-                  <label className="admin-foreign-file">
-                    <span className="admin-foreign-file-copy">
-                      <b>{foreignHireExternalSignedAgreementFile?.name || "Pasirašyta kandidato ir Statybos24 tarpininkavimo sutartis"}</b>
-                      <span>Privatus admin dokumentas · PDF arba DOCX · iki 15 MB · darbdaviui nerodomas</span>
-                    </span>
-                    <span className="admin-small-btn">{foreignHireExternalSignedAgreementFile ? "Pakeisti sutartį" : "Pasirinkti sutartį"}</span>
-                    <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setForeignHireExternalSignedAgreementFile(event.target.files?.[0] || null)} />
-                  </label>
-                </div>
-                <div className="admin-candidate-actions">
-                  <button className="admin-small-btn" type="button" onClick={() => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); setForeignHireExternalSignedAgreementFile(null); }}>Atšaukti</button>
-                  <button className="admin-small-btn" type="button" disabled={foreignHireCandidateBusyId === "external"} onClick={saveExternalForeignHireCandidate} style={{ background: "#222631", color: "#fff", borderColor: "#222631" }}>
-                    {foreignHireCandidateBusyId === "external" ? "Saugoma..." : "Pridėti kandidatą"}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {loadingCandidates ? (
-              <div className="admin-empty" style={{ marginTop: 12 }}>Kraunami kandidatai...</div>
-            ) : candidates.length ? (
-              <div className="admin-candidates-list">
-                {candidates.map((candidate) => {
-                  const next = foreignHireCandidateNext(candidate.status);
-                  const candidateBusy = foreignHireCandidateBusyId === candidate.candidate_id;
-                  const candidateExpanded = !!foreignHireExpandedCandidateIds[candidate.candidate_id];
-                  const needsSignedAgreement = ["presented", "interview", "offer", "hired", "started"].includes(next?.[0]) && !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
-                  const needsEmployerAcceptance = ["hired", "started"].includes(next?.[0]) && candidate.employer_response !== "accepted";
-                  const needsEmploymentAgreement = ["hired", "started"].includes(next?.[0]) && !candidate.job_confirmation?.signedEmploymentAgreementPath;
-                  const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
-                  const canHireCandidate = candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status);
-                  const hireBlocked = !candidate.job_confirmation?.signedEmploymentAgreementPath || !candidate.candidate_job_confirmed_at || !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
-                  return (
-                    <div className="admin-candidate-card" key={candidate.candidate_id}>
-                      <button
-                        type="button"
-                        className={`admin-candidate-card-head ${candidate.employer_response === "accepted" && !["hired", "started"].includes(candidate.status) ? "is-employer-accepted" : candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at ? "is-interview-requested" : ""}`}
-                        aria-expanded={candidateExpanded}
-                        onClick={() => setForeignHireExpandedCandidateIds((current) => ({ ...current, [candidate.candidate_id]: !current[candidate.candidate_id] }))}
-                        style={{ width: "100%", border: 0, background: "transparent", padding: 0, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
-                      >
-                        <h4 style={{ margin: 0, minWidth: 0, overflowWrap: "anywhere" }}>{candidate.full_name || "Kandidatas"}</h4>
-                        <span aria-hidden="true" style={{ fontSize: 22, color: "#607180", lineHeight: 1, flexShrink: 0 }}>{candidateExpanded ? "−" : "+"}</span>
-                      </button>
-                      {candidateExpanded ? <>
-                        <div className="admin-candidate-card-head" style={{ marginTop: 10 }}>
-                          <p>{candidate.source_type === "platform" ? "Statybos24 bazė" : candidate.source_detail || "Išorinis kandidatas"} · {candidate.profession}</p>
-                          <span className="admin-candidate-chip">{foreignHireCandidateStatusLabel(candidate.status)}</span>
-                        </div>
-                      <div className="admin-candidate-meta">
-                        <div><span>Amžius</span><b>{candidate.age_years ?? "—"}</b></div>
-                        <div><span>Patirtis</span><b>{candidate.years_experience === null ? "—" : `${Number(candidate.years_experience)} m.`}</b></div>
-                        <div><span>Kalba</span><b>{candidate.language_details || "—"}</b></div>
-                        <div><span>Galimas nuo</span><b>{candidate.available_from || "—"}</b></div>
-                        <div><span>B kategorija</span><b>{candidate.has_driving_license_b === true ? "Taip" : candidate.has_driving_license_b === false ? "Ne" : "—"}</b></div>
-                        <div><span>Reikalingas būstas</span><b>{candidate.needs_accommodation === true ? "Taip" : candidate.needs_accommodation === false ? "Ne" : "—"}</b></div>
-                        <div><span>Telefonas</span><b>{candidate.phone || "—"}</b></div>
-                        <div><span>El. paštas</span><b>{candidate.email || "—"}</b></div>
-                        <div><span>Darbdavio atsakymas</span><b>{foreignHireEmployerResponseLabel(candidate.employer_response)}</b></div>
-                        <div><span>Galutinės sąlygos</span><b>{candidate.candidate_job_confirmed_at ? "Kandidatas sutiko" : candidate.job_confirmation?.signedEmploymentAgreementPath ? "Darbo sutartis įkelta" : "Sutartis neįkelta"}</b></div>
-                        {candidate.employer_rejection_reason ? <div className="wide"><span>Atmetimo priežastis (darbdavio)</span><b>{candidate.employer_rejection_reason}</b></div> : null}
-                        <div className="wide"><span>Kandidato patirtis / kompetencijos</span><b>{candidate.skills || "—"}</b></div>
-                        <div className="wide"><span>Mano komentaras</span><b>{candidate.recruiter_note || "—"}</b></div>
-                      </div>
-
-                      <div className="admin-candidate-docs">
-                        {candidate.cvUrl ? <a className="admin-candidate-doc" href={candidate.cvUrl} target="_blank" rel="noreferrer">CV · {candidate.cv_name || "Atidaryti"}</a> : null}
-                        <label className="admin-candidate-doc">{candidate.cv_path ? "Pakeisti CV" : "+ Įkelti CV"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "cv", file); event.target.value = ""; }} /></label>
-                        {candidate.candidate_signed_agreement_path ? (candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Statybos24 ir darbuotojo tarpininkavimo sutartis · {candidate.candidate_signed_agreement_name || "Peržiūrėti"}</a> : <span className="admin-candidate-doc">✓ Tarpininkavimo sutartis įkelta · {candidate.candidate_signed_agreement_name || "Dokumentas"}</span>) : null}
-                        <label className="admin-candidate-doc">{candidate.candidate_signed_agreement_path ? "Pakeisti tarpininkavimo sutartį" : "+ Įkelti tarpininkavimo sutartį"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label>
-                      </div>
-
-                      {candidate.employer_contact_shared_at ? (
-                        <div className="admin-candidate-contact-share ok">✓ Kandidato el. paštas perduotas darbdaviui {formatAdminDate(candidate.employer_contact_shared_at)}. Telefono numeris neperduodamas.</div>
-                      ) : candidate.employer_response === "interview_requested" || candidate.employer_response === "accepted" ? (
-                        <div className="admin-candidate-contact-share interview-ready">
-                          <span>Darbdavys paprašė tęsti procesą. Jei reikia, galite perduoti tik kandidato el. paštą; telefono numeris lieka privatus.</span>
-                          <button className="admin-small-btn" type="button" disabled={candidateBusy || !candidate.email} onClick={() => shareForeignHireCandidateEmail(candidate)}>{candidate.email ? "Perduoti el. paštą" : "El. paštas nenurodytas"}</button>
-                        </div>
-                      ) : null}
-
-                      <div className="admin-candidate-job-confirmation">
-                        <div className="admin-candidate-zone-head">
-                          <div>
-                            <strong>Darbdavio ir darbuotojo pasirašyta darbo sutartis</strong>
-                            <span>Įkelkite abiejų šalių pasirašytą darbo sutartį (PDF arba DOCX, iki 15 MB). Tai ne Statybos24 tarpininkavimo sutartis.</span>
-                          </div>
-                        </div>
-                        {candidate.signedEmploymentAgreementUrl ? (
-                          <div className="admin-candidate-consent ok" style={{ marginTop: 12 }}>
-                            <strong>✓ Pasirašyta darbo sutartis įkelta</strong>
-                            <div style={{ marginTop: 8 }}>
-                              <a className="admin-candidate-doc" href={candidate.signedEmploymentAgreementUrl} target="_blank" rel="noreferrer">
-                                Peržiūrėti · {candidate.job_confirmation?.signedEmploymentAgreementName || "Darbo sutartis"}
-                              </a>
-                            </div>
-                          </div>
-                        ) : <div className="admin-candidate-job-note">Pasirašyta darbo sutartis dar neįkelta.</div>}
-                        <label className="admin-foreign-file" style={{ marginTop: 12, cursor: candidate.employer_response === "accepted" && !candidateBusy ? "pointer" : "not-allowed" }}>
-                          <span className="admin-foreign-file-copy">
-                            <b>{candidate.signedEmploymentAgreementUrl ? "Pakeisti pasirašytą darbo sutartį" : "Pasirinkti pasirašytą darbo sutartį"}</b>
-                            <span>Privatus dokumentas · PDF arba DOCX · iki 15 MB</span>
-                          </span>
-                          <span className="admin-small-btn">{candidateBusy ? "Įkeliama..." : "Įkelti sutartį"}</span>
-                          <input
-                            type="file"
-                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            disabled={candidateBusy || candidate.employer_response !== "accepted"}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) uploadForeignHireEmploymentAgreement(request, candidate, file);
-                              event.target.value = "";
-                            }}
-                          />
-                        </label>
-                        {candidate.employer_response !== "accepted" ? <div className="admin-candidate-job-note" style={{ marginTop: 9 }}>Įkelti galima, kai darbdavys patvirtina kandidatą.</div> : null}
-                      </div>
-
-                      <div className="admin-candidate-actions">
-                        {canHireCandidate ? (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={candidateBusy || hireBlocked}
-                            title={!candidate.job_confirmation?.signedEmploymentAgreementPath ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) ? "Pirmiausia įkelkite pasirašytą kandidato tarpininkavimo sutartį." : !candidate.candidate_job_confirmed_at ? "Palaukite, kol bus užfiksuotas darbo sutarties patvirtinimas." : ""}
-                            onClick={() => updateForeignHireCandidateStatus(candidate, "hired")}
-                            style={{ background: hireBlocked ? "#eef2f5" : "#222631", color: hireBlocked ? "#83909d" : "#fff", borderColor: hireBlocked ? "#dce5eb" : "#222631" }}
-                          >{candidateBusy ? "Saugoma..." : "Įdarbinti"}</button>
-                        ) : ["hired", "started"].includes(candidate.status) ? (
-                          next ? <button className="admin-small-btn" type="button" disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation} onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}>{candidateBusy ? "Saugoma..." : next[1]}</button> : <span className="admin-foreign-status sourcing">Įdarbintas</span>
-                        ) : next ? (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation}
-                            onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}
-                            style={next[0] === "presented" || next[0] === "started" ? { background: "#222631", color: "#fff", borderColor: "#222631" } : undefined}
-                            title={needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutartį." : needsEmploymentAgreement ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : needsJobConfirmation ? "Palaukite, kol sistema užfiksuos pasirašytos darbo sutarties patvirtinimą." : ""}
-                          >
-                            {candidateBusy ? "Saugoma..." : next[1]}
-                          </button>
-                        ) : null}
-                        {!['rejected','withdrawn','started'].includes(candidate.status) ? (
-                          <button className="admin-small-btn danger" type="button" disabled={candidateBusy} onClick={() => updateForeignHireCandidateStatus(candidate, "rejected")}>Atmesti</button>
-                        ) : null}
-                        <button className="admin-small-btn danger" type="button" disabled={candidateBusy} onClick={() => deleteForeignHireCandidate(candidate)}>Ištrinti kandidatą</button>
-                      </div>
-                      </> : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="admin-empty" style={{ marginTop: 12 }}>Prie šios užklausos kandidatų dar nepridėta.</div>
-            )}
-          </div>
-      </div>
-    );
   }
 
   function generateForeignHireLogin() {
@@ -2002,6 +1777,34 @@ export function AdminDashboard({
     }
   }
 
+  const [verifyingCompanyId, setVerifyingCompanyId] = useState(null);
+  // Greitas įmonės patvirtinimas iš sąrašo – kiti duomenys siunčiami nepakeisti.
+  async function verifyEmployer(employer) {
+    if (!employer?.company_id || employer.is_verified) return;
+    setVerifyingCompanyId(employer.company_id);
+    setError("");
+    setNotice("");
+    try {
+      const result = await supabase.rpc("admin_update_company", {
+        p_company_id: employer.company_id,
+        p_name: employer.company_name || "",
+        p_company_code: employer.company_code || null,
+        p_vat_code: employer.vat_code || null,
+        p_city: employer.city || "",
+        p_description: employer.description || null,
+        p_is_verified: true,
+        p_owner_active: Boolean(employer.is_active),
+      });
+      if (result.error) throw result.error;
+      setNotice(`${employer.company_name || "Įmonė"} patvirtinta.`);
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti įmonės.");
+    } finally {
+      setVerifyingCompanyId(null);
+    }
+  }
+
   async function deleteRating(rating) {
     const confirmed = await askConfirm({
       eyebrow: "ATSILIEPIMO ŠALINIMAS",
@@ -2030,6 +1833,18 @@ export function AdminDashboard({
     } finally {
       setDeletingRatingId(null);
     }
+  }
+
+  function adminAuditActionLabel(action) {
+    return {
+      suspend_user: "Paskyra suspenduota",
+      unsuspend_user: "Suspendavimas panaikintas",
+      suspend_worker_mode: "Darbuotojo režimas suspenduotas",
+      unsuspend_worker_mode: "Darbuotojo režimo suspendavimas panaikintas",
+      delete_user_account: "Paskyra ištrinta",
+      delete_job: "Darbas ištrintas",
+      impersonate_start: "Prisijungta kaip naudotojas",
+    }[action] || action;
   }
 
   function isCurrentlySuspended(record) {
@@ -2372,17 +2187,60 @@ export function AdminDashboard({
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const adminEmploymentActive = longTermPlacements.filter((item) => item.status === "active").length;
+  const adminGoTab = (key) => {
+    if (key === "__delete") { setDeleteAccountOpen(true); return; }
+    setActiveTab(key);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+  };
   return (
+    <P24Shell
+      current={activeTab}
+      onGo={adminGoTab}
+      groups={[
+        ["Apžvalga", [{ key: "overview", label: "Suvestinė", icon: "overview" }]],
+        ["Naudotojai", [
+          { key: "workers", label: "Darbuotojai", icon: "people" },
+          { key: "employers", label: "Darbdaviai", icon: "home" },
+          { key: "workAbroadInterest", label: "Domisi darbu užsienyje", icon: "nav" },
+        ]],
+        ["Darbai", [
+          { key: "jobs", label: "Visi darbai", icon: "jobs" },
+          { key: "jobAds", label: "Darbo skelbimai", icon: "briefcase" },
+          { key: "employment", label: "Įdarbinti darbuotojai", icon: "briefcase", badge: adminEmploymentActive },
+          { key: "foreignHire", label: "Tarptautinė atranka", icon: "user", badge: foreignHireAlertCount },
+        ]],
+        ["Priežiūra", [
+          { key: "disputes", label: "Ginčai", icon: "shield", badge: activeDisputeCount },
+          { key: "bugs", label: "Svetainės klaidos", icon: "bell", badge: activeSiteBugCount },
+          { key: "ratings", label: "Atsiliepimai", icon: "star" },
+          { key: "teamChats", label: "Pokalbiai", icon: "chat" },
+          { key: "files", label: "Failai", icon: "file" },
+        ]],
+        ["Sistema", [
+          { key: "monthlyAwards", label: "Mėnesio geriausi", icon: "star" },
+          { key: "audit", label: "Veiksmų istorija", icon: "history" },
+        ]],
+      ]}
+      tabs={[
+        { key: "overview", label: "Suvestinė", icon: "overview" },
+        { key: "workers", label: "Žmonės", icon: "people" },
+        { key: "disputes", label: "Ginčai", icon: "shield", badge: activeDisputeCount },
+        { key: "bugs", label: "Klaidos", icon: "bell", badge: activeSiteBugCount },
+      ]}
+      who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD", onClick: () => adminGoTab("audit"), onLogout }}
+    >
     <div className="admin-page">
       <style>{`
-        .admin-page{min-height:100vh;background:#f6f8fa;color:#222631}
+        .admin-page{min-height:0;background:transparent;color:#222631}
         .admin-topbar{min-height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:100}
         .admin-topbar-inner{width:min(1280px,calc(100% - 40px));margin:auto;display:flex;justify-content:space-between;align-items:center;gap:18px}
         .admin-top-actions{display:grid;grid-template-columns:repeat(4,160px);align-items:stretch;gap:8px;justify-content:flex-end}
         .admin-top-actions>*{width:160px;min-height:46px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center}
         .admin-mode{border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .admin-mode.primary{border-color:#6b5b95;background:#6b5b95;color:#fff}
-        .admin-shell{width:min(1280px,calc(100% - 40px));margin:28px auto 70px}
+        .admin-shell{width:min(1280px,100%);margin:8px auto 40px}
+        @media(max-width:899px){.admin-shell{width:calc(100% - 32px)!important;margin-top:16px}}
         .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
         .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
@@ -2478,125 +2336,16 @@ export function AdminDashboard({
         @media(max-width:620px){.admin-modal-overlay{padding:10px}.admin-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row,.admin-traffic-top{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}.admin-traffic-chart{gap:3px;padding-left:3px;padding-right:3px}.admin-traffic-day-label{font-size:8px}.admin-traffic-value{font-size:8px}}
       `}</style>
 
-      <header className="admin-topbar">
-        <div className="admin-topbar-inner">
-          <BrandLogo className="brand" href="#" height={46} />
 
-          <div className="admin-top-actions">
-            <button
-              className="admin-mode"
-              type="button"
-              onClick={onOpenWorker}
-            >
-              Darbuotojo režimas
-            </button>
-            <button
-              className="admin-mode"
-              type="button"
-              onClick={onOpenEmployer}
-            >
-              Darbdavio režimas
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
-              onClick={() => setDeleteAccountOpen(true)}
-            >
-              Ištrinti paskyrą
-            </button>
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
 
       <main className="admin-shell">
-        {(notice || error) && (
-          <div className="admin-toast-stack">
-            {notice && (
-              <div className="admin-toast ok">
-                <span>{notice}</span>
-                <button
-                  type="button"
-                  aria-label="Uždaryti pranešimą"
-                  onClick={() => setNotice("")}
-                >
-                  <CloseMark />
-                </button>
-              </div>
-            )}
+        <NoticeToast notice={notice} error={error} onClear={() => setNotice("")} />
 
-            {error && (
-              <div className="admin-toast err">
-                <span>{error}</span>
-                <button
-                  type="button"
-                  aria-label="Uždaryti klaidos pranešimą"
-                  onClick={() => setError("")}
-                >
-                  <CloseMark />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
-        <nav className="admin-tabs" aria-label="Administravimo skyriai">
-          {tabs.filter(([key]) => mainAdminTabs.includes(key)).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`admin-tab ${activeTab === key ? "active" : ""}`}
-              aria-current={activeTab === key ? "page" : undefined}
-              onClick={() => setActiveTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-          <div className="admin-extra-wrap" ref={extraMenuRef} onKeyDown={handleExtraMenuKeyDown}>
-            <button
-              type="button"
-              ref={extraMenuTriggerRef}
-              className={`admin-tab admin-extra-trigger ${extraSectionActive ? "active" : ""}`}
-              aria-label="Kiti administravimo skyriai"
-              aria-expanded={extraMenuOpen}
-              aria-haspopup="menu"
-              aria-controls="admin-extra-sections"
-              onClick={() => setExtraMenuOpen((value) => !value)}
-            >
-              <span>Kiti skyriai</span>
-              <svg className="admin-extra-chevron" viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            {extraMenuOpen && (
-              <div id="admin-extra-sections" className="admin-extra-panel" role="menu" aria-label="Pasirinkti administravimo skyrių">
-                <div className="admin-extra-heading">PASIRINKITE SKYRIŲ</div>
-                {extraAdminTabs.map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="menuitem"
-                    className={`admin-extra-item ${activeTab === key ? "selected" : ""}`}
-                    aria-current={activeTab === key ? "page" : undefined}
-                    onClick={() => {
-                      setActiveTab(key);
-                      setExtraMenuOpen(false);
-                    }}
-                  >
-                    <span>{label}</span>
-                    {activeTab === key && <span className="admin-extra-check" aria-hidden="true">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
 
 
         {activeTab === "workAbroadInterest" && <AdminWorkAbroadInterests onOpenProfile={openAbroadWorkerProfile}/>}
+        {activeTab === "jobAds" && <AdminJobAds />}
         <WorkerProfileModal worker={abroadProfile} jobId={null} canViewWorkerMetrics={true} onClose={()=>setAbroadProfile(null)}/>
 
         {activeTab === "overview" && (
@@ -2612,1630 +2361,239 @@ export function AdminDashboard({
               .admin-daily-rows small{font-size:16px;color:#8a98a6;font-weight:600}
               @media(max-width:620px){.admin-kpis .admin-daily-logins{grid-column:1/-1}}
             `}</style>
-            <div className="admin-kpis">
-              <div className="admin-kpi admin-daily-logins">
-                <span className="admin-daily-title">Šiandien prisijungė</span>
-                <div className="admin-daily-rows">
-                  <div><span>Darbuotojai</span><b>{accountDayStats ? Number(accountDayStats.workersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.workersTotal || 0) : "—"}</small></b></div>
-                  <div><span>Darbdaviai</span><b>{accountDayStats ? Number(accountDayStats.employersToday || 0) : "—"}<small>/{accountDayStats ? Number(accountDayStats.employersTotal || 0) : "—"}</small></b></div>
-                </div>
-              </div>
-
-              <div className="admin-kpi admin-daily-logins">
-                <span className="admin-daily-title">Šiandien užsiregistravo</span>
-                <div className="admin-daily-rows">
-                  <div><span>Darbuotojai</span><b>{accountDayStats && accountDayStats.workersRegisteredToday != null ? Number(accountDayStats.workersRegisteredToday) : "—"}</b></div>
-                  <div><span>Darbdaviai</span><b>{accountDayStats && accountDayStats.employersRegisteredToday != null ? Number(accountDayStats.employersRegisteredToday) : "—"}</b></div>
-                </div>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Panaudoti darbuotojai</span>
-                <b>{Number(stats.workersUsedThisMonth || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Aktyvūs darbai</span>
-                <b>{Number(stats.openJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Įvykdyti darbai</span>
-                <b>{Number(stats.completedJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Atšaukti darbai</span>
-                <b>{Number(stats.cancelledJobs || 0)}</b>
-              </div>
-
-              <div className="admin-kpi">
-                <span>Įdarbinti darbuotojai</span>
-                <b>{activeLongTermPlacements.length}</b>
-              </div>
-
-              <div
-                className={`admin-kpi ${
-                  Number(stats.unresolvedDisputes || 0) > 0 ? "attention" : ""
-                }`}
-              >
-                <span>Neišspręsti ginčai</span>
-                <b>{Number(stats.unresolvedDisputes || 0)}</b>
-              </div>
-            </div>
-
-            <section className="admin-section admin-traffic">
-              <div className="admin-section-head">
-                <div>
-                  <div className="eyebrow">SVETAINĖS LANKOMUMAS</div>
-                </div>
-              </div>
-
-              <div className="admin-traffic-top">
-                <div className="admin-traffic-stat">
-                  <span>Šiandien</span>
-                  <b>{trafficToday}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Vakar</span>
-                  <b>{trafficYesterday}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Telefonu šiandien</span>
-                  <b>{Number(trafficDevices.mobile || 0)}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Kompiuteriu šiandien</span>
-                  <b>{Number(trafficDevices.desktop || 0)}</b>
-                </div>
-              </div>
-
-              <div className="admin-traffic-grid">
-                <div>
-                  <div className="admin-traffic-subtitle">
-                    Paskutinės {trafficDaily.length || 14} dienų
-                  </div>
-                  <div className="admin-traffic-chart">
-                    {trafficDaily.map((item) => {
-                      const count = Number(item?.count || 0);
-                      const height = Math.max(
-                        count > 0 ? 5 : 2,
-                        Math.round((count / trafficMaxDaily) * 100)
-                      );
-
-                      return (
-                        <div className="admin-traffic-day" key={item.date}>
-                          <div className="admin-traffic-value">{count}</div>
-                          <div className="admin-traffic-bar-wrap">
-                            <div
-                              className="admin-traffic-bar"
-                              style={{ height: `${height}%` }}
-                              title={`${item.date}: ${count}`}
-                            />
+            {(() => {
+              const regW = accountDayStats?.workersRegisteredToday;
+              const regE = accountDayStats?.employersRegisteredToday;
+              const regTotal = regW == null && regE == null ? "—" : Number(regW || 0) + Number(regE || 0);
+              const loginTotal = accountDayStats ? Number(accountDayStats.workersToday || 0) + Number(accountDayStats.employersToday || 0) : "—";
+              const openDisputes = disputes.filter((dispute) => !dispute?.dispute_status || dispute.dispute_status === "disputed");
+              const activeBugs = siteBugReports.filter((report) => report.status === "active");
+              const queue = [
+                ...openDisputes.map((dispute) => ({ key: `d${dispute.attendance_id}`, icon: "shield", title: `Ginčas: ${dispute.worker_name || "Darbuotojas"} ↔ ${dispute.company_name || "Įmonė"}`, sub: String(dispute.job_title || "").toLocaleUpperCase("lt-LT"), label: "Spręsti", primary: true, go: "disputes" })),
+                ...activeBugs.map((report) => ({ key: `b${report.id}`, icon: "bell", title: `Klaida: ${report.reporter_name || report.reporter_email || "naudotojas"}`, sub: report.created_at ? new Date(report.created_at).toLocaleString("lt-LT", { dateStyle: "short", timeStyle: "short" }) : "", label: "Peržiūrėti", go: "bugs" })),
+                ...(foreignHireAlertCount ? [{ key: "fh", icon: "people", title: `Tarptautinė atranka: ${foreignHireAlertCount} reikia peržiūrėti`, sub: "Užklausos ir kandidatai", label: "Atidaryti", go: "foreignHire" }] : []),
+              ];
+              const tile = (icon, label, value, sub, go, hot) => (
+                <button type="button" className={`ovcard ntile${hot ? " hot" : ""}`} onClick={() => adminGoTab(go)}>
+                  <span className="ovtop"><small>{label}</small><span className="ntic"><Svg name={icon} size={18} /></span></span>
+                  <b className="ovval">{value}</b>
+                  <span className="ovsub">{hot ? <i className="ovdot" /> : null}{sub}</span>
+                </button>
+              );
+              return (
+                <>
+                  <PageHead title="Suvestinė" lead={`Šiandien, ${new Date().toLocaleDateString("lt-LT")}`} />
+                  <section className="ovsec">
+                    <div className="ntiles">
+                      {tile("user", "Šiandien užsiregistravo", regTotal, `${regW == null ? "—" : regW} darb. · ${regE == null ? "—" : regE} darbd.`, "workers")}
+                      {tile("out", "Šiandien prisijungė", loginTotal, accountDayStats ? `${Number(accountDayStats.workersToday || 0)} darb. · ${Number(accountDayStats.employersToday || 0)} darbd.` : "Duomenys kraunami", "workers")}
+                      {tile("jobs", "Aktyvūs darbai", Number(stats.openJobs || 0), "Visi atviri darbai", "jobs")}
+                      {tile("shield", "Neišspręsti ginčai", Number(stats.unresolvedDisputes || 0), Number(stats.unresolvedDisputes || 0) ? "Reikia sprendimo" : "Nėra", "disputes", Number(stats.unresolvedDisputes || 0))}
+                    </div>
+                  </section>
+                  <section className="card queue">
+                    <header><div><h2>Reikia veiksmo{queue.length ? ` · ${queue.length}` : ""}</h2></div></header>
+                    {queue.length ? (
+                      <div className="qlist">
+                        {queue.map((item) => (
+                          <div className="qrow" key={item.key}>
+                            <span className="qic o"><Svg name={item.icon} size={16} width={2.2} /></span>
+                            <div className="qtx"><b>{item.title}</b><small>{item.sub}</small></div>
+                            <div className="qbt"><button className={`btn sm${item.primary ? " primary" : ""}`} type="button" onClick={() => adminGoTab(item.go)}>{item.label}</button></div>
                           </div>
-                          <div className="admin-traffic-day-label">
-                            {adminTrafficDateLabel(item.date)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="admin-traffic-subtitle">Lietuvos miestai šiandien</div>
-                  <div className="admin-traffic-cities">
-                    {trafficCities.length ? (
-                      trafficCities.map((item) => (
-                        <div
-                          className="admin-traffic-city"
-                          key={`${item.city}-${item.count}`}
-                        >
-                          <span>{item.city || "Nežinoma"}</span>
-                          <b>{Number(item.count || 0)}</b>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="admin-muted">
-                        Šiandien lankytojų iš Lietuvos dar neužfiksuota.
+                        ))}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
+                    ) : <Empty title="Viskas sutvarkyta" sub="Šiuo metu jokių veiksmų nereikia." />}
+                  </section>
+                  <section className="ovsec">
+                    <h2 className="sect">Šis mėnuo</h2>
+                    <div className="stats">
+                      <div className="stat"><small>Įvykdyti darbai</small><b>{Number(stats.completedJobs || 0)}</b><span className="muted small">Užbaigti darbai</span></div>
+                      <div className="stat"><small>Atšaukti darbai</small><b>{Number(stats.cancelledJobs || 0)}</b><span className="muted small">Atšaukti darbai</span></div>
+                      <div className="stat"><small>Panaudoti darbuotojai</small><b>{Number(stats.workersUsedThisMonth || 0)}</b><span className="muted small">Dirbo bent vieną dieną</span></div>
+                      <div className="stat"><small>Įdarbinti darbuotojai</small><b>{activeLongTermPlacements.length}</b><span className="muted small">Ilgalaikis darbas</span></div>
+                    </div>
+                  </section>
+                </>
+              );
+            })()}
 
-            <section className="admin-section" style={{ marginTop: 18, border: "1px solid #c6bfdc", background: "linear-gradient(135deg,#fff8f1,#fff)" }}>
-              <div className="admin-section-head">
-                <div>
-                  <div className="eyebrow">PRISTATYMAS ĮMONĖMS</div>
-                  <h2>Privati dalinimosi nuoroda</h2>
-                </div>
-                <span className="admin-pill green">Paruošta dalintis</span>
-              </div>
-
-              <div
-                className="admin-presentation-share"
-                style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 14 }}
-              >
-                <div
-                  className="admin-presentation-link"
-                  style={{ minWidth: 0, padding: "11px 13px", border: "1px solid #dfe7ed", borderRadius: 10, background: "#fff", color: "#526374", fontSize: 12, overflowWrap: "anywhere" }}
-                >
-                  {presentationLink}
-                </div>
-                <div className="admin-presentation-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="admin-small-btn" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button>
-                  <button className="admin-small-btn" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button>
-                </div>
-              </div>
-            </section>
+            <div className="agrid2">
+              <section className="card"><header><div><h2>Svetainės lankomumas šiandien</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Iš viso {trafficToday} · vakar {trafficYesterday}</p></div></header>
+                {(() => {
+                  const devices = [["Telefonu", Number(trafficDevices.mobile || 0)], ["Kompiuteriu", Number(trafficDevices.desktop || 0)]];
+                  const total = Math.max(1, devices.reduce((sum, item) => sum + item[1], 0));
+                  const cityMax = Math.max(1, ...trafficCities.map((item) => Number(item.count || 0)));
+                  return <>
+                    <div className="abars">{devices.map(([label, value]) => <div className="abar" key={label}><span>{label}</span><div className="abar-t"><i style={{ width: `${(value / total) * 100}%` }} /></div><b>{value}</b></div>)}</div>
+                    <h3 className="tch" style={{ margin: "14px 0 8px", fontSize: 11.5, letterSpacing: ".06em", fontWeight: 700 }}>Lietuvos miestai šiandien</h3>
+                    {trafficCities.length ? <div className="abars">{trafficCities.map((item) => <div className="abar" key={`${item.city}-${item.count}`}><span>{item.city || "Nežinoma"}</span><div className="abar-t"><i style={{ width: `${(Number(item.count || 0) / cityMax) * 100}%` }} /></div><b>{Number(item.count || 0)}</b></div>)}</div>
+                      : <p className="small muted" style={{ margin: 0 }}>Šiandien lankytojų iš Lietuvos dar neužfiksuota.</p>}
+                  </>;
+                })()}
+              </section>
+              <section className="card"><header><div><h2>Pristatymas įmonėms</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Privati nuoroda, kurią galite siųsti potencialiems klientams.</p></div></header>
+                <div className="phrow"><b style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(presentationLink).replace(/pristatymas=.*/, "pristatymas=•••••")}</b><span className="phok" style={{ marginRight: "auto" }}><Svg name="check" size={12} width={3} />Paruošta dalintis</span></div>
+                <div className="row" style={{ gap: 8 }}><button className="btn sm" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button><button className="btn sm" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button></div>
+              </section>
+            </div>
           </>
         )}
 
         {activeTab === "disputes" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbo dienos ginčai</h2>
-                <div className="admin-muted">
-                  Įvertinkite abiejų pusių informaciją ir įrodymus. Kol ginčas
-                  neišspręstas, darbuotojo reitingas nekeičiamas.
-                </div>
-              </div>
-              <span className={`admin-pill ${disputes.length ? "red" : "green"}`}>
-                {disputes.length} neišspręsta
-              </span>
-            </div>
-
-            {disputes.length ? (
-              <>
-                {adminPageSlice(disputes).map((dispute) => {
-                const busy = resolvingId === dispute.attendance_id;
-                return (
-                  <div className="admin-dispute" key={dispute.attendance_id}>
-                    <div className="admin-dispute-head">
-                      <div>
-                        <div className="eyebrow">GINČAS</div>
-                        <h2>{formatJobTitle(dispute.job_title)}</h2>
-                        <div className="admin-muted">
-                          {dispute.work_date} · {dispute.start_time?.slice(0, 5)}
-                          {dispute.end_time
-                            ? `–${dispute.end_time.slice(0, 5)}`
-                            : ""}
-                        </div>
-                      </div>
-                      <span className="admin-pill red">
-                        {attendanceOutcomeLabel({
-                          employer_outcome: dispute.employer_outcome,
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="admin-facts">
-                      <div className="admin-fact">
-                        <span>Darbuotojas</span>
-                        <b>{dispute.worker_name}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbdavys</span>
-                        <b>{dispute.company_name}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbuotojo „Atvykau“</span>
-                        <b>{formatAdminDate(dispute.worker_check_in_at)}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbdavio atvykimo patvirtinimas</span>
-                        <b>{formatAdminDate(dispute.employer_check_in_at)}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Faktinis išėjimo laikas</span>
-                        <b>{dispute.actual_end_time?.slice(0, 5) || "—"}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbuotojo dienos pareiškimas</span>
-                        <b>{dispute.worker_workday_claim === "worked"
-                          ? "Dirbau šiame darbe"
-                          : dispute.worker_workday_claim === "no_show"
-                          ? "Neatvykau"
-                          : "—"}</b>
-                      </div>
-                    </div>
-
-                    {dispute.employer_note && (
-                      <div className="admin-note">
-                        <b>Darbdavio paaiškinimas:</b> {dispute.employer_note}
-                      </div>
-                    )}
-
-                    {dispute.worker_response_note && (
-                      <div className="admin-note">
-                        <b>Darbuotojo paaiškinimas:</b>{" "}
-                        {dispute.worker_response_note}
-                      </div>
-                    )}
-
-                    {dispute.worker_evidence_path && (
-                      <div className="admin-note">
-                        <b>Darbuotojo įrodymas:</b>{" "}
-                        {dispute.evidenceUrl ? (
-                          <a
-                            className="admin-file-link"
-                            href={dispute.evidenceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {dispute.worker_evidence_name || "Atidaryti failą"}
-                          </a>
-                        ) : (
-                          <span>
-                            {dispute.worker_evidence_name || "Failas įkeltas"} ·
-                            saugios peržiūros nuorodos sukurti nepavyko
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="admin-resolution-field">
-                      <label htmlFor={`admin-resolution-note-${dispute.attendance_id}`}>
-                        Administratoriaus komentaras *
-                      </label>
-                      <textarea
-                        id={`admin-resolution-note-${dispute.attendance_id}`}
-                        value={disputeResolutionNotes[dispute.attendance_id] || ""}
-                        onChange={(event) =>
-                          setDisputeResolutionNotes((current) => ({
-                            ...current,
-                            [dispute.attendance_id]: event.target.value,
-                          }))
-                        }
-                        maxLength={2000}
-                        placeholder="Trumpai paaiškinkite, kodėl ginčas išspręstas pasirinktos pusės naudai..."
-                        disabled={busy}
-                      />
-                      <div className="admin-resolution-help">
-                        Šis komentaras po sprendimo bus rodomas ir darbuotojui, ir darbdaviui darbo informacijoje.
-                      </div>
-                    </div>
-
-                    <div className="admin-actions">
-                      {dispute.employer_note?.trim() &&
-                        dispute.worker_response_note?.trim() && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              setAdminDisputeConversation({
-                                attendanceId: dispute.attendance_id,
-                                title: `${formatJobTitle(dispute.job_title)} · Ginčo aptarimas`,
-                                workerName: dispute.worker_name,
-                                companyName: dispute.company_name,
-                              })
-                            }
-                          >
-                            Žinutės
-                          </button>
-                        )}
-
-                      <button
-                        className="admin-small-btn danger"
-                        disabled={busy}
-                        onClick={() => resolveDispute(dispute, "employer")}
-                      >
-                        Darbdavio naudai
-                      </button>
-                      <button
-                        className="admin-small-btn"
-                        style={{
-                          background: "#1c9b67",
-                          color: "#fff",
-                          borderColor: "#1c9b67",
-                        }}
-                        disabled={busy}
-                        onClick={() => resolveDispute(dispute, "worker")}
-                      >
-                        {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-                {renderAdminPagination(disputes.length)}
-              </>
-            ) : (
-              <div className="admin-empty">
-                Šiuo metu neišspręstų ginčų nėra.
-              </div>
-            )}
-          </section>
+          <AdminDisputesList
+            disputes={disputes}
+            notes={disputeResolutionNotes}
+            setNote={(id, value) => setDisputeResolutionNotes((current) => ({ ...current, [id]: value }))}
+            resolvingId={resolvingId}
+            onResolve={resolveDispute}
+            onMessage={(target) => setAdminMessageTarget({ ...target, role: "worker" })}
+            onDiscuss={(dispute) => setAdminDisputeConversation({ attendanceId: dispute.attendance_id, title: `${formatJobTitle(dispute.job_title)} · Ginčo aptarimas`, workerName: dispute.worker_name, companyName: dispute.company_name })}
+          />
         )}
 
         {activeTab === "foreignHire" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Tarptautinė atranka</h2>
-                <div className="admin-muted">
-                  Užklausos rodomos kompaktiškai. Išskleiskite ID, kad matytumėte visą informaciją ir veiksmus.
-                </div>
-              </div>
-              <b>{foreignHireRequests.length}</b>
-            </div>
-
-            <style>{`
-              .admin-hire-overview { gap: 9px !important; }
-              .admin-hire-overview-stat { border: 1px solid #e3eaf0 !important; border-radius: 12px !important; background: #fff !important; box-shadow: none !important; padding: 12px 14px !important; position: relative; }
-              /* Visi poreikio santraukos duomenys turi vienodą švelnų mėlyną foną. */
-              .admin-hire-overview-stat,
-              .admin-hire-overview-stat:first-child,
-              .admin-hire-overview-stat:nth-child(4) { background: #eef6ff !important; border-color: #d4e5f6 !important; }
-              .admin-hire-overview-stat > div:first-child { color: #56718a !important; }
-              .admin-hire-details-toggle { border-color: #dce6ed !important; border-radius: 12px !important; background: #f6f9fb !important; padding: 12px 14px !important; }
-              .admin-hire-details-toggle .admin-small-btn { border-radius: 9px; font-weight: 750; white-space: nowrap; }
-              .admin-hire-details-body { padding-top: 12px; }
-              .admin-hire-detail-section { border: 1px solid #e2eaf0 !important; border-radius: 14px !important; background: #fff !important; box-shadow: none !important; padding: 16px !important; margin-bottom: 10px !important; }
-              .admin-hire-detail-section h4 { font-size: 15px !important; letter-spacing: -.015em; }
-              .admin-hire-detail-section .admin-foreign-grid { gap: 8px !important; }
-              .admin-hire-detail-section .admin-foreign-fact { background: #f8fafc !important; border: 1px solid #edf1f5 !important; border-radius: 10px !important; padding: 11px 12px !important; min-width: 0; overflow-wrap: anywhere; }
-              .admin-hire-detail-section .admin-foreign-fact span { color: #718497 !important; }
-              .admin-hire-detail-section .admin-foreign-fact b { color: #242833 !important; line-height: 1.45; }
-
-              @media (max-width: 640px) {
-                .admin-hire-overview { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-                .admin-hire-overview-stat { padding: 10px 11px !important; }
-                .admin-hire-details-toggle { align-items: stretch !important; }
-                .admin-hire-details-toggle .admin-small-btn { width: 100%; }
-                .admin-hire-detail-section { padding: 12px !important; }
-              }
-              @media (max-width: 370px) { .admin-hire-overview { grid-template-columns: 1fr !important; } }
-            `}</style>
-
-            {foreignHireRequests.length ? (
-              <div className="admin-foreign-list">
-                {adminPageSlice(foreignHireRequests).map((request) => {
-                  const busy = foreignHireSavingId === request.request_id;
-                  const setupOpen = foreignHireSetupRequest?.request_id === request.request_id;
-                  const credentials =
-                    foreignHireCredentials?.requestId === request.request_id
-                      ? foreignHireCredentials
-                      : null;
-                  const credentialsText = credentials
-                    ? foreignHireCredentialsText(request, credentials)
-                    : "";
-                  const mailSubject = `Statybos24 employer portal · ${request.company_name}`;
-                  const mailBody = credentialsText ||
-                    `Hello ${request.contact_name || ""},\n\nRegarding your Statybos24 workforce request.\n\nIf anything is unclear, please reply to this email.`;
-                  const mailHref = `mailto:${request.business_email}?subject=${encodeURIComponent(
-                    mailSubject
-                  )}&body=${encodeURIComponent(mailBody)}`;
-                  const candidatePanelOpen = foreignHireCandidateOpenId === request.request_id;
-                  const requestCandidates = foreignHireCandidatesByRequest[request.request_id] || [];
-                  const hasLoadedRequestCandidates = Object.prototype.hasOwnProperty.call(foreignHireCandidatesByRequest, request.request_id);
-                  const pendingInterviewCount = hasLoadedRequestCandidates
-                    ? requestCandidates.filter((candidate) => candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at).length
-                    : Number(request.employer_interview_requested_count || 0);
-                  const pendingAcceptedCount = hasLoadedRequestCandidates
-                    ? requestCandidates.filter((candidate) => candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status)).length
-                    : Number(request.employer_accepted_count || 0);
-                  const expanded = foreignHireExpandedId === request.request_id;
-                  const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
-                  const hasFullBrief = ["submitted", "approved"].includes(request.brief_status) && !!request.brief_workforce_details;
-                  const fullNeed = request.brief_workforce_details || {};
-                  const fullNeedTitle = fullNeed.needTitle || fullNeed.roles?.[0]?.profession || request.company_name;
-                  const roleList = Array.isArray(fullNeed.roles) ? fullNeed.roles : [];
-                  const detailsMinimized = foreignHireMinimized[request.request_id] !== false;
-                  const totalRequestedWorkers = roleList.reduce((sum, role) => sum + Math.max(1, Number(role?.count || 0) || 0), 0);
-                  const hiredWorkers = requestCandidates.filter((candidate) => ["hired", "started"].includes(candidate.status)).length;
-                  const searchCompleted = request.status === "closed" || (totalRequestedWorkers > 0 && hiredWorkers >= totalRequestedWorkers);
-                  const projectSummary = [fullNeed.projectCountry, fullNeed.projectLocation].filter(Boolean).join(" · ") || "—";
-                  const salaryValue = `${fullNeed.salaryAmount || fullNeed.salaryMin || "—"}${fullNeed.salaryCurrency ? ` ${fullNeed.salaryCurrency}` : ""}`.trim();
-                  const salarySummary = [salaryValue, fullNeed.salaryBasis].filter(Boolean).join(" · ") || "—";
-                  const accommodationSummary = fullNeed.accommodation === "provided"
-                    ? "Suteikia darbdavys"
-                    : fullNeed.accommodation === "not_provided"
-                      ? "Nesuteikiama"
-                      : fullNeed.accommodation === "employee_contributes"
-                        ? "Moka / prisideda darbuotojas"
-                        : (fullNeed.accommodation || "—");
-                  const homeTravelSummary = fullNeed.homeTravelPaid === "yes"
-                    ? "Apmoka darbdavys"
-                    : fullNeed.homeTravelPaid === "no"
-                      ? "Darbdavys neapmoka"
-                      : (fullNeed.homeTravel || "—");
-
-                  return (
-                    <article className={`admin-foreign-card ${searchCompleted ? "search-completed" : ["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${!searchCompleted && (pendingInterviewCount+pendingAcceptedCount)>0 ? "has-employer-action" : ""}`} key={request.request_id}>
-                      <button type="button" className="admin-foreign-summary" onClick={() => {
-                        setForeignHireExpandedId(expanded ? null : request.request_id);
-                        if (!expanded && (["sourcing", "closed"].includes(request.status) || Number(request.candidate_count || 0) > 0)) {
-                          // Show candidates with their current data when opening the workforce request.
-                          if (foreignHireCandidateOpenId !== request.request_id) {
-                            setForeignHireCandidateOpenId(request.request_id);
-                            setForeignHireExternalRequestId(null);
-                            setForeignHireWorkerResults([]);
-                          }
-                          loadForeignHireCandidates(request.request_id).catch(() => {});
-                        }
-                      }} aria-expanded={expanded}>
-                        <span className="admin-foreign-summary-info">
-                          <span className="admin-foreign-summary-id">#{shortRequestId}</span>
-                          <span className="admin-foreign-summary-company" title={request.brief_company_details?.legalName || request.company_name || ""}>{request.brief_company_details?.legalName || request.company_name || "Įmonė nenurodyta"}</span>
-                        </span>
-                        <span className="admin-foreign-summary-toggle" aria-hidden="true">{expanded ? "−" : "+"}</span>
-                      </button>
-
-                      {expanded ? <div className="admin-foreign-expanded">
-                      {!hasFullBrief ? <div className="admin-foreign-head">
-                        <div>
-                          <h3>{request.company_name}</h3>
-                          <p>{request.company_country || "—"} · pateikta {formatAdminDate(request.created_at)}</p>
-                        </div>
-                      </div> : null}
-
-                      {!searchCompleted && pendingInterviewCount > 0 ? (
-                        <div className="admin-foreign-employer-alert interview">
-                          <div>
-                            <strong>Darbdavys paprašė interviu</strong>
-                            <span>{pendingInterviewCount} {pendingInterviewCount === 1 ? "kandidatui reikia suderinti interviu" : "kandidatams reikia suderinti interviu"}.</span>
-                          </div>
-                          <button className="admin-small-btn" type="button" onClick={() => openForeignHireInterviewCandidates(request)}>Peržiūrėti kandidatus</button>
-                        </div>
-                      ) : !searchCompleted && pendingAcceptedCount > 0 ? (
-                        <div className="admin-foreign-employer-alert">
-                          <div>
-                            <strong>Darbdavys patvirtino kandidatą</strong>
-                            <span>Galima ruošti galutinį darbo sąlygų patvirtinimą su kandidatu.</span>
-                          </div>
-                          <button className="admin-small-btn" type="button" onClick={() => openForeignHireAcceptedCandidates(request)}>Peržiūrėti kandidatus</button>
-                        </div>
-                      ) : null}
-
-                      {hasFullBrief ? <>
-                        <div className="admin-hire-details-toggle" style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          flexWrap: "wrap",
-                          padding: "14px 16px",
-                          border: "1px solid #d8e1e8",
-                          borderRadius: 16,
-                          background: searchCompleted ? "#eaf8f0" : "#f7f9fb",
-                          borderColor: searchCompleted ? "#a8ddbf" : "#d8e1e8",
-                          marginBottom: detailsMinimized ? 0 : 12,
-                        }}>
-                          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7 }}>
-                            <strong style={{ color: "#222631", fontSize: 17, lineHeight: 1.35 }}>
-                              {fullNeedTitle} – poreikio duomenys
-                            </strong>
-                            <span className={`admin-foreign-status ${request.status || "new"}`}>{searchCompleted ? "Paieška uždaryta – susisiekite su darbdaviu" : foreignHireStatusLabel(request.status)}</span>
-                          </div>
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() => setForeignHireMinimized((current) => ({ ...current, [request.request_id]: !(current[request.request_id] !== false) }))}
-                            style={{ background: "#fff", color: "#222631", borderColor: "#d8e1e8" }}
-                          >
-                            {detailsMinimized ? "Išskleisti informaciją" : "Suskleisti informaciją"}
-                          </button>
-                        </div>
-
-                        {!detailsMinimized ? <div className="admin-hire-details-body">
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Kontaktinė informacija</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Įmonė ir atsakingas kontaktas</span>
-                            </div>
-                            <div className="admin-foreign-grid">
-                              <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.brief_company_details?.legalName || request.company_name || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Įmonės šalis</span><b>{request.company_country || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Pildė</span><b>{request.brief_company_details?.contactName || request.contact_name || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Pareigos</span><b>{request.brief_company_details?.jobTitle || request.contact_job_title || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.brief_company_details?.businessEmail || request.business_email}`}>{request.brief_company_details?.businessEmail || request.business_email || "—"}</a></div>
-                              <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
-                            </div>
-                          </div>
-
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Poreikio ir darbo sąlygos</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Pagrindinė suvestinė apie projektą ir sąlygas</span>
-                            </div>
-                            <div className="admin-foreign-grid">
-                              <div className="admin-foreign-fact"><span>Darbo / poreikio pavadinimas</span><b>{fullNeedTitle || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Projektas</span><b>{[fullNeed.projectLocation, fullNeed.projectCountry].filter(Boolean).join(", ") || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Darbo pradžia</span><b>{fullNeed.startDate || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Surinkti iki</span><b>{fullNeed.neededBy || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Įdarbinimo tipas</span><b>{fullNeed.employmentType || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Sutarties trukmė</span><b>{fullNeed.duration || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Darbo valandų per savaitę</span><b>{fullNeed.weeklyHours ? `${fullNeed.weeklyHours} val.` : "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Viršvalandžiai</span><b>{fullNeed.overtimeAllowed === "yes" ? "Taip" : fullNeed.overtimeAllowed === "no" ? "Ne" : (fullNeed.overtime || "—")}</b></div>
-                              <div className="admin-foreign-fact"><span>Viršvalandžių apmokėjimas</span><b>{fullNeed.overtimePay || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Atlygis</span><b>{salarySummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Mokėjimo dažnumas</span><b>{fullNeed.salaryPayFrequency || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Apgyvendinimas</span><b>{accommodationSummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Kambarys</span><b>{fullNeed.roomType || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Būsto kaina</span><b>{fullNeed.accommodationCost || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Kelionės namo</span><b>{homeTravelSummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Atostogos</span><b>{fullNeed.vacationTerms || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Atostogų apmokėjimas</span><b>{fullNeed.vacationPay || "—"}</b></div>
-                            </div>
-                          </div>
-
-                          {roleList.length ? roleList.map((role, index) => (
-                            <div
-                              className="admin-hire-detail-section"
-                              key={`${request.request_id}-full-role-${index}`}
-                              style={{
-                                border: "1px solid #e2e8ee",
-                                borderRadius: 18,
-                                background: "#fff",
-                                padding: 14,
-                                boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                                marginBottom: 12,
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>{roleList.length > 1 ? `Profesija ${index + 1}` : "Reikalinga profesija"}</h4>
-                                <span style={{ fontSize: 12, color: "#607180" }}>{role.profession || "Profesija nenurodyta"}</span>
-                              </div>
-                              <div className="admin-foreign-grid">
-                                <div className="admin-foreign-fact"><span>Profesija / specialybė</span><b>{role.profession || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Darbuotojų skaičius</span><b>{Number(role.count || 1)} žm.</b></div>
-                                <div className="admin-foreign-fact"><span>Minimali patirtis</span><b>{role.experience || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Kalba / lygis</span><b>{role.language || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Vairuotojo pažymėjimas</span><b>{({required:"Privalomas", advantage:"Privalumas", not_required:"Nereikalingas"})[role.drivingLicense] || role.drivingLicense || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Reikalingi įgūdžiai / darbai</span><b style={{ whiteSpace: "pre-wrap" }}>{role.skills || "—"}</b></div>
-                              </div>
-                            </div>
-                          )) : null}
-
-                          {fullNeed.additionalInfo ? (
-                            <div className="admin-hire-additional-section" style={{
-                              border: "1px solid #e2e8ee",
-                              borderRadius: 18,
-                              background: "#fff",
-                              padding: 14,
-                              boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                              marginBottom: 12,
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Papildoma informacija</h4>
-                                <span style={{ fontSize: 12, color: "#607180" }}>Papildomi reikalavimai ir pastabos</span>
-                              </div>
-                              <div className="admin-foreign-grid">
-                                <div className="admin-foreign-fact" style={{ gridColumn: "1 / -1" }}><span>Papildomi reikalavimai / informacija</span><b style={{ whiteSpace: "pre-wrap" }}>{fullNeed.additionalInfo}</b></div>
-                              </div>
-                            </div>
-                          ) : null}
-
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Portalas ir dokumentai</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Prisijungimas, sutartys ir prisegti failai</span>
-                            </div>
-                            <div className="admin-foreign-access-summary" style={{ marginTop: 0 }}>
-                              <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
-                              <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">Atidaryti sutartį</a> : <b>Neįkelta</b>}</div>
-                              <div><span>Pasirašyta tarpininkavimo sutartis</span>{request.signedAgreementUrl ? <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a> : <b>Dar negauta</b>}</div>
-                              <div><span>Darbo sutartis susipažinimui</span>{request.employmentContractUrl ? <a href={request.employmentContractUrl} target="_blank" rel="noreferrer">{request.employment_contract_name || "Atidaryti darbo sutartį"}</a> : <b>Neįkelta</b>}</div>
-                            </div>
-                          </div>
-                        </div> : null}
-                      </> : <>
-                        <div className="admin-foreign-grid">
-                          <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.company_name || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Pildė</span><b>{request.contact_name || "—"}</b></div><div className="admin-foreign-fact"><span>Pareigos</span><b>{request.contact_job_title || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.business_email}`}>{request.business_email || "—"}</a></div>
-                          <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
-                        </div>
-                        {request.employer_account_id ? <div className="admin-foreign-access-summary" style={{marginTop:12}}>
-                          <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
-                          <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">{request.agreement_name || "Atidaryti sutartį"}</a> : <b>Dar neįkelta</b>}</div>
-                          <div><span>Būsena</span><b>{request.agreement_path ? (request.signed_agreement_path ? "Pasirašyta kopija gauta" : "Laukiama darbdavio parašo") : "Laukiama sutarties"}</b></div>
-                        </div> : null}
-                      </>}
-
-                      {credentials ? (
-                        <div className="admin-foreign-credentials">
-                          <strong>Nauji laikini prisijungimo duomenys — nukopijuokite prieš perkraunant puslapį.</strong>
-                          <code>{credentialsText}</code>
-                          <div className="admin-foreign-actions">
-                            <button
-                              className="admin-small-btn"
-                              type="button"
-                              onClick={() => copyForeignHireText(credentialsText, "Prisijungimo duomenys nukopijuoti.")}
-                            >
-                              Kopijuoti prisijungimus
-                            </button>
-                            <a className="admin-small-btn" href={mailHref} style={{ textDecoration: "none" }}>
-                              Atidaryti el. laišką
-                            </a>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {setupOpen ? (
-                        <div className="admin-foreign-setup">
-                          <h4>{request.employer_account_id ? "Įkelti tarpininkavimo sutartį" : "Sukurti darbdavio prieigą"}</h4>
-                          <p>{request.employer_account_id ? "Įkelta sutartis iš karto atsiras darbdavio portale. Darbdavys galės ją perskaityti, pasirašyti ir įkelti pasirašytą kopiją." : "Sukurkite privatų Company ID ir laikiną slaptažodį. Prisijungimo duomenis nukopijuokite prieš perkraudami puslapį."}</p>
-                          <div className="admin-foreign-setup-grid">
-                            {!request.employer_account_id ? <>
-                              <label className="admin-foreign-field"><span>Company ID</span><input value={foreignHireSetupLogin} onChange={(event) => { const digits = event.target.value.replace(/\D/g, "").slice(0, 6); setForeignHireSetupLogin(`ID-${digits}`); }} inputMode="numeric" autoComplete="off" /></label>
-                              <label className="admin-foreign-field"><span>Laikinas slaptažodis</span><input value={foreignHireSetupPassword} onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))} autoComplete="off" /></label>
-                            </> : <label className="admin-foreign-file">
-                              <span className="admin-foreign-file-copy"><b>{foreignHireAgreementFile?.name || "Tarpininkavimo sutartis nepasirinkta"}</b><span>PDF arba DOCX · iki 15 MB</span></span>
-                              <span className="admin-small-btn">Pasirinkti sutartį</span>
-                              <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setForeignHireAgreementFile(event.target.files?.[0] || null)} />
-                            </label>}
-                          </div>
-                          <div className="admin-foreign-setup-actions">
-                            {!request.employer_account_id ? <>
-                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}>Sugeneruoti naują ID</button>
-                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}>Naujas slaptažodis</button>
-                            </> : null}
-                            <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); }}>Atšaukti</button>
-                            <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy || (request.employer_account_id && !foreignHireAgreementFile)} onClick={request.employer_account_id ? replaceForeignEmployerAgreement : createForeignEmployerAccess} style={{ background: "#222631", color: "#fff", borderColor: "#222631" }}>
-                              {foreignHireSetupBusy ? "Saugoma..." : request.employer_account_id ? "Įkelti tarpininkavimo sutartį" : "Sukurti darbdavio prieigą"}
-                            </button>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="admin-foreign-actions">
-                        {!hasFullBrief && !request.employer_account_id ? <button className="admin-small-btn" type="button" disabled={busy} onClick={() => openForeignHireAccessSetup(request)}>Sukurti darbdavio prieigą</button> : null}
-                        {!hasFullBrief && request.employer_account_id && !request.agreement_path ? <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => openForeignHireAccessSetup(request)}>Įkelti tarpininkavimo sutartį</button> : null}
-                        {hasFullBrief && request.brief_status !== "approved" ? <button className="admin-small-btn" type="button" disabled={busy || !request.signed_agreement_path} title={!request.signed_agreement_path ? "Pirmiausia turi būti įkelta pasirašyta tarpininkavimo sutartis" : undefined} onClick={() => lockForeignHireSubmission(request)} style={{background:request.signed_agreement_path ? "#222631" : "#e8edf1",color:request.signed_agreement_path ? "#fff" : "#81909c",borderColor:request.signed_agreement_path ? "#222631" : "#d8e1e8",cursor:request.signed_agreement_path ? "pointer" : "not-allowed"}}>{busy ? "Pradedama..." : "Pradėti paiešką"}</button> : null}
-                        {hasFullBrief && !request.signed_agreement_path && request.brief_status !== "approved" ? <span className="admin-candidate-job-note" style={{margin:0}}>Paieškai pradėti būtina pasirašyta tarpininkavimo sutartis.</span> : null}
-                        <a className="admin-small-btn" href={mailHref} style={{textDecoration:"none", ...(searchCompleted ? {background:"#b62e28",color:"#fff",borderColor:"#b62e28",fontWeight:800} : {})}}>Rašyti el. paštu</a>
-                        {searchCompleted ? <>
-                          <label className="admin-small-btn" style={{cursor:foreignHireInvoiceBusyId ? "wait" : "pointer",display:"inline-flex",alignItems:"center",gap:6}}>
-                            {foreignHireInvoiceBusyId === request.request_id ? "Įkeliama..." : foreignHireInvoices[request.request_id] ? "Pakeisti sąskaitą faktūrą" : "+ Įkelti sąskaitą faktūrą"}
-                            <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={!!foreignHireInvoiceBusyId} style={{display:"none"}} onChange={(event) => { const file=event.target.files?.[0]; if (file) uploadForeignHireInvoice(request,file); event.target.value=""; }} />
-                          </label>
-                          {foreignHireInvoices[request.request_id] ? <button className="admin-small-btn" type="button" onClick={() => viewForeignHireInvoice(foreignHireInvoices[request.request_id])}>Sąskaita: {foreignHireInvoices[request.request_id].file_name}</button> : null}
-                          {foreignHireInvoiceFeedback[request.request_id] ? <span role="status" style={{width:"100%",fontSize:12,fontWeight:700,color:foreignHireInvoiceFeedback[request.request_id].kind === "success" ? "#16734a" : foreignHireInvoiceFeedback[request.request_id].kind === "progress" ? "#526779" : "#b52b28"}}>{foreignHireInvoiceFeedback[request.request_id].message}</span> : null}
-                        </> : null}
-                        <button className="admin-small-btn danger" type="button" disabled={busy} onClick={() => deleteForeignHireRequest(request)}>Ištrinti visam laikui</button>
-                      </div>
-
-                      {(["sourcing", "closed"].includes(request.status) || Number(request.candidate_count || 0) > 0) ? renderForeignHireCandidatePanel(request, requestCandidates) : null}
-                      </div> : null}
-                    </article>
-                  );
-                })}
-                {renderAdminPagination(foreignHireRequests.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Tarptautinių užklausų dar nėra.</div>
-            )}
-          </section>
+          <AdminForeignHire requests={foreignHireRequests} h={{
+            expandedId: foreignHireExpandedId,
+            open: (request) => {
+              setForeignHireExpandedId(request.request_id);
+              setForeignHireCandidateOpenId(request.request_id);
+              setForeignHireExternalRequestId(null);
+              setForeignHireWorkerResults([]);
+              setForeignHireCandidateProfession(request.brief_workforce_details?.roles?.[0]?.profession || "");
+              loadForeignHireCandidates(request.request_id).catch(() => {});
+              window.scrollTo(0, 0);
+            },
+            back: () => { setForeignHireExpandedId(null); setForeignHireExternalRequestId(null); setForeignHireSetupRequest(null); window.scrollTo(0, 0); },
+            savingId: foreignHireSavingId,
+            setStatus: updateForeignHireRequestStatus,
+            lock: lockForeignHireSubmission,
+            remove: deleteForeignHireRequest,
+            candidatesByRequest: foreignHireCandidatesByRequest,
+            loadingId: foreignHireCandidateLoadingId,
+            credentials: foreignHireCredentials,
+            credentialsText: foreignHireCredentialsText,
+            copy: copyForeignHireText,
+            invoices: foreignHireInvoices,
+            invoiceFeedback: foreignHireInvoiceFeedback,
+            invoiceBusyId: foreignHireInvoiceBusyId,
+            uploadInvoice: uploadForeignHireInvoice,
+            viewInvoice: viewForeignHireInvoice,
+            setupRequest: foreignHireSetupRequest,
+            setupBusy: foreignHireSetupBusy,
+            openSetup: openForeignHireAccessSetup,
+            closeSetup: () => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); },
+            setupLogin: foreignHireSetupLogin,
+            setSetupLogin: setForeignHireSetupLogin,
+            setupPassword: foreignHireSetupPassword,
+            setSetupPassword: setForeignHireSetupPassword,
+            newLogin: () => setForeignHireSetupLogin(generateForeignHireLogin(foreignHireSetupRequest)),
+            newPassword: () => setForeignHireSetupPassword(generateForeignHirePassword()),
+            agreementFile: foreignHireAgreementFile,
+            setAgreementFile: setForeignHireAgreementFile,
+            createAccess: createForeignEmployerAccess,
+            replaceAgreement: replaceForeignEmployerAgreement,
+            candidateNext: foreignHireCandidateNext,
+            candidateStatusLabel: foreignHireCandidateStatusLabel,
+            responseLabel: foreignHireEmployerResponseLabel,
+            candidateBusyId: foreignHireCandidateBusyId,
+            expandedCandidates: foreignHireExpandedCandidateIds,
+            toggleCandidate: (id) => setForeignHireExpandedCandidateIds((current) => ({ ...current, [id]: !current[id] })),
+            setCandidateStatus: updateForeignHireCandidateStatus,
+            shareEmail: shareForeignHireCandidateEmail,
+            deleteCandidate: deleteForeignHireCandidate,
+            uploadCandidateDoc: uploadForeignCandidateDocument,
+            uploadEmployment: uploadForeignHireEmploymentAgreement,
+            externalRequestId: foreignHireExternalRequestId,
+            openAdd: (request) => { setForeignHireCandidateOpenId(request.request_id); openExternalForeignHireCandidate(request); setForeignHireWorkerResults([]); setForeignHireWorkerQuery(""); },
+            closeAdd: () => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); setForeignHireExternalSignedAgreementFile(null); setForeignHireWorkerResults([]); },
+            externalForm: foreignHireExternalForm,
+            setExternalForm: setForeignHireExternalForm,
+            externalCv: foreignHireExternalCvFile,
+            setExternalCv: setForeignHireExternalCvFile,
+            externalAgreement: foreignHireExternalSignedAgreementFile,
+            setExternalAgreement: setForeignHireExternalSignedAgreementFile,
+            saveExternal: saveExternalForeignHireCandidate,
+            candidateProfession: foreignHireCandidateProfession,
+            setCandidateProfession: setForeignHireCandidateProfession,
+            workerQuery: foreignHireWorkerQuery,
+            setWorkerQuery: setForeignHireWorkerQuery,
+            workerSearchBusy: foreignHireWorkerSearchBusy,
+            searchWorkers: searchForeignHireWorkers,
+            workerResults: foreignHireWorkerResults,
+            addPlatform: addPlatformForeignHireCandidate,
+          }} />
         )}
 
         {activeTab === "workers" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbuotojai</h2>
-                <div className="admin-muted">
-                  Profiliai, aktyvumas, suspendavimai, patikimumas ir pagrindinių
-                  duomenų redagavimas.
-                </div>
-              </div>
-              <b>{workers.length}</b>
-            </div>
-
-            {workers.length ? (
-              <div className="admin-list">
-                {adminPageSlice(workers).map((worker) => {
-                  const suspended = isCurrentlySuspended(worker);
-                  const workerModeRestricted = isWorkerModeRestricted(worker);
-                  const isSelf = worker.user_id === user?.id;
-                  const actionSuspended = isSelf ? workerModeRestricted : suspended;
-
-                  return (
-                    <div className="admin-row" key={worker.user_id}>
-                      <div className="admin-row-title">
-                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
-                        <span>
-                          {worker.email || "—"} ·{" "}
-                          {worker.city || "Miestas nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 750, color: "#405264" }}>
-                          Tel.: {worker.phone || "Nenurodytas"}
-                        </span>
-                        {suspended && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Paskyra suspenduota iki {formatAdminDate(worker.suspended_until)}
-                            {worker.suspension_reason
-                              ? ` · ${worker.suspension_reason}`
-                              : ""}
-                          </span>
-                        )}
-                        {workerModeRestricted && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Darbuotojo režimas apribotas iki {formatAdminDate(worker.restricted_until)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Patikimumas</span>
-                        <b
-                          style={{
-                            color: reliabilityScoreColor(
-                              worker.attendance_rate ?? 100
-                            ),
-                          }}
-                        >
-                          {Math.round(Number(worker.attendance_rate ?? 100))}%
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Įvertinimas</span>
-                        <b>
-                          {worker.rating_average === null
-                            ? "—"
-                            : `${Number(worker.rating_average).toFixed(1)} / 10`}
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Suspendavimų istorija</span>
-                        <b>{Number(worker.suspension_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-row-actions">
-                        <span
-                          className={`admin-pill ${
-                            suspended || workerModeRestricted
-                              ? "red"
-                              : worker.is_active
-                              ? "green"
-                              : "gray"
-                          }`}
-                        >
-                          {suspended
-                            ? "Suspenduotas"
-                            : workerModeRestricted
-                            ? "Darbuotojo režimas suspenduotas"
-                            : worker.is_active
-                            ? "Aktyvus"
-                            : "Išjungtas"}
-                        </span>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() =>
-                              setAdminMessageTarget({
-                                userId: worker.user_id,
-                                name:
-                                  worker.display_name ||
-                                  worker.email ||
-                                  "Darbuotojas",
-                                role: "worker",
-                              })
-                            }
-                          >
-                            Žinutė
-                          </button>
-                        )}
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() => openWorkerEditor(worker)}
-                        >
-                          Redaguoti
-                        </button>
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() =>
-                            openAccountAction(
-                              isSelf
-                                ? actionSuspended
-                                  ? "unsuspendWorkerMode"
-                                  : "suspendWorkerMode"
-                                : actionSuspended
-                                ? "unsuspend"
-                                : "suspend",
-                              worker,
-                              "worker"
-                            )
-                          }
-                        >
-                          {actionSuspended
-                            ? isSelf
-                              ? "Nuimti darbuotojo režimo suspendavimą"
-                              : "Nuimti suspendavimą"
-                            : isSelf
-                            ? "Suspenduoti darbuotojo režimą"
-                            : "Suspenduoti"}
-                        </button>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn danger"
-                            onClick={() =>
-                              openAccountAction(
-                                "deleteAccount",
-                                worker,
-                                "worker"
-                              )
-                            }
-                          >
-                            Ištrinti paskyrą
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {renderAdminPagination(workers.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbuotojų dar nėra.</div>
-            )}
-          </section>
+          <AdminWorkersList
+            workers={workers}
+            selfId={user?.id}
+            isSuspended={isCurrentlySuspended}
+            isRestricted={isWorkerModeRestricted}
+            onMessage={(worker) => setAdminMessageTarget({ userId: worker.user_id, name: worker.display_name || worker.email || "Darbuotojas", role: "worker" })}
+            onEdit={openWorkerEditor}
+            onSuspend={(worker) => {
+              const isSelf = worker.user_id === user?.id;
+              const suspended = isSelf ? isWorkerModeRestricted(worker) : isCurrentlySuspended(worker);
+              openAccountAction(isSelf ? (suspended ? "unsuspendWorkerMode" : "suspendWorkerMode") : suspended ? "unsuspend" : "suspend", worker, "worker");
+            }}
+            onDelete={(worker) => openAccountAction("deleteAccount", worker, "worker")}
+            onLoginAs={loginAsUser}
+          />
         )}
 
         {activeTab === "employers" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbdaviai ir įmonės</h2>
-                <div className="admin-muted">
-                  Įmonės informacija, suspendavimai, patikimumas, atšaukimai ir
-                  patvirtinimo būsena.
-                </div>
-              </div>
-              <b>{employers.length}</b>
-            </div>
-
-            {employers.length ? (
-              <div className="admin-list">
-                {adminPageSlice(employers).map((employer) => {
-                  const suspended = isCurrentlySuspended(employer);
-                  const isSelf = employer.owner_id === user?.id;
-
-                  return (
-                    <div
-                      className="admin-row"
-                      key={employer.company_id || employer.owner_id}
-                    >
-                      <div className="admin-row-title">
-                        <b>{employer.company_name || "Įmonė"}</b>
-                        <span>
-                          {employer.email || "—"} ·{" "}
-                          {employer.city || "Miestas nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 750, color: "#405264" }}>
-                          Tel.: {employer.phone || "Nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 800, color: "#405264" }}>
-                          Planas: {employerPlanName(employer.plan_key)} ·{" "}
-                          {employer.subscription_status || "active"} ·{" "}
-                          {Number(employer.jobs_used_this_month || 0)} darbai šį mėn.
-                        </span>
-                        {suspended && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Suspenduota iki{" "}
-                            {formatAdminDate(employer.suspended_until)}
-                            {employer.suspension_reason
-                              ? ` · ${employer.suspension_reason}`
-                              : ""}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Patikimumas</span>
-                        <b
-                          style={{
-                            color: reliabilityScoreColor(
-                              employer.reliability_rate ?? 100
-                            ),
-                          }}
-                        >
-                          {Number(employer.reliability_rate ?? 100).toFixed(0)} / 100
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Darbų</span>
-                        <b>{Number(employer.jobs_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Suspendavimų istorija</span>
-                        <b>{Number(employer.suspension_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-row-actions">
-                        <span
-                          className={`admin-pill ${
-                            suspended
-                              ? "red"
-                              : employer.is_verified
-                              ? "green"
-                              : "gray"
-                          }`}
-                        >
-                          {suspended
-                            ? "Suspenduotas"
-                            : employer.is_verified
-                            ? "Patvirtinta"
-                            : "Nepatvirtinta"}
-                        </span>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() =>
-                              setAdminMessageTarget({
-                                userId: employer.owner_id,
-                                name:
-                                  employer.company_name ||
-                                  employer.email ||
-                                  "Darbdavys",
-                                role: "employer",
-                              })
-                            }
-                          >
-                            Žinutė
-                          </button>
-                        )}
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() => openEmployerEditor(employer)}
-                        >
-                          Redaguoti
-                        </button>
-
-                        {!isSelf && employer.account_role !== "admin" && (
-                          <>
-                            <button
-                              className="admin-small-btn"
-                              onClick={() =>
-                                openAccountAction(
-                                  suspended ? "unsuspend" : "suspend",
-                                  employer,
-                                  "employer"
-                                )
-                              }
-                            >
-                              {suspended
-                                ? "Nuimti suspendavimą"
-                                : "Suspenduoti"}
-                            </button>
-
-                            <button
-                              className="admin-small-btn danger"
-                              onClick={() =>
-                                openAccountAction(
-                                  "deleteAccount",
-                                  employer,
-                                  "employer"
-                                )
-                              }
-                            >
-                              Ištrinti paskyrą
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {renderAdminPagination(employers.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbdavių dar nėra.</div>
-            )}
-          </section>
+          <AdminEmployersList
+            employers={employers}
+            selfId={user?.id}
+            isSuspended={isCurrentlySuspended}
+            busyId={verifyingCompanyId}
+            onVerify={verifyEmployer}
+            onMessage={(employer) => setAdminMessageTarget({ userId: employer.owner_id, name: employer.company_name || employer.email || "Darbdavys", role: "employer" })}
+            onEdit={openEmployerEditor}
+            onSuspend={(employer) => openAccountAction(isCurrentlySuspended(employer) ? "unsuspend" : "suspend", employer, "employer")}
+            onDelete={(employer) => openAccountAction("deleteAccount", employer, "employer")}
+            onLoginAs={loginAsUser}
+          />
         )}
 
-        {activeTab === "monthlyAwards" && (() => {
-          const awardMonth =
-            monthlyAwardLeaders[0]?.award_month || monthlyAwardPreviousMonthISO();
-          const awardGroups = [
-            {
-              type: "worker",
-              title: "Darbuotojai",
-              categories: ["activity", "best", "reliability"],
-            },
-            {
-              type: "company",
-              title: "Įmonės",
-              categories: ["activity", "best", "reliability"],
-            },
-          ];
-
-          return (
-            <section className="admin-section">
-              <div className="admin-section-head">
-                <div>
-                  <h2>Mėnesio geriausi</h2>
-                  <div className="admin-muted">
-                    Čia rodoma, kas pagal užbaigto mėnesio statistiką gavo kiekvieną mėnesio apdovanojimą.
-                  </div>
-                  <div className="admin-awards-month">
-                    Vertinamas laikotarpis: {monthlyAwardMonthLabel(awardMonth)}
-                  </div>
-                </div>
-                <b>{monthlyAwardLeaders.length}/6 skirti</b>
-              </div>
-
-              {awardGroups.map((group) => (
-                <div className="admin-awards-group" key={group.type}>
-                  <h3>{group.title}</h3>
-                  <div className="admin-awards-grid">
-                    {group.categories.map((awardType) => {
-                      const award = monthlyAwardLeaders.find(
-                        (row) =>
-                          row.recipient_type === group.type &&
-                          row.award_type === awardType
-                      );
-                      const meta = monthlyAwardMeta({
-                        recipient_type: group.type,
-                        award_type: awardType,
-                      });
-
-                      if (!award) {
-                        return (
-                          <div
-                            className="admin-award-card empty"
-                            key={`${group.type}-${awardType}`}
-                          >
-                            <div className="admin-award-copy">
-                              <span>{meta.title}</span>
-                              <b>Apdovanojimas neskirtas</b>
-                              <small>
-                                Šio mėnesio statistika neatitiko minimalios kategorijos sąlygos.
-                              </small>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          className="admin-award-card"
-                          key={award.id || `${group.type}-${awardType}`}
-                        >
-                          <MonthlyAwardBadgeVisual award={award} size={78} />
-                          <div className="admin-award-copy">
-                            <span>{meta.title}</span>
-                            <b>{award.recipient_name || "—"}</b>
-                            <strong>{monthlyAwardMetricText(award)}</strong>
-                            <small>
-                              {award.metric_detail?.rule ||
-                                "Apdovanojimas skirtas pagal mėnesio statistiką."}
-                            </small>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </section>
-          );
-        })()}
+        {activeTab === "monthlyAwards" && (
+          <AdminAwardsList awards={monthlyAwardLeaders} metricText={monthlyAwardMetricText} />
+        )}
 
         {activeTab === "jobs" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Visi darbai</h2>
-                <div className="admin-muted">
-                  Administratorius gali redaguoti darbo duomenis, atidaryti
-                  visą darbo pokalbį, rašyti darbo komandai arba pašalinti darbą.
-                </div>
-              </div>
-              <b>{jobs.length}</b>
-            </div>
-
-            {jobs.length ? (
-              <div className="admin-list">
-                {adminPageSlice(jobs).map((job) => (
-                  <div className="admin-row" key={job.job_id}>
-                    <div className="admin-row-title">
-                      <b>{formatJobTitle(job.title)}</b>
-                      <span>
-                        {job.company_name} · {job.city} · {job.work_date}
-                      </span>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Būsena</span>
-                      <b>{job.status}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Žmonių</span>
-                      <b>
-                        {Number(job.confirmed_workers || 0)} /{" "}
-                        {Number(job.workers_needed || 0)}
-                      </b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Atlygis</span>
-                      <b>{formatNetPay(job.pay_amount, job.pay_unit)}</b>
-                    </div>
-
-                    <div className="admin-row-actions">
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => setAdminConversation(job)}
-                      >
-                        Darbo pokalbis
-                      </button>
-
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => openJobEditor(job)}
-                      >
-                        Redaguoti
-                      </button>
-
-                      <button
-                        className="admin-small-btn danger"
-                        onClick={() => openJobDelete(job)}
-                      >
-                        Ištrinti darbą
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(jobs.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
-            )}
-          </section>
+          <AdminJobsList jobs={jobs} formatPay={formatNetPay} onChat={setAdminConversation} onEdit={openJobEditor} onDelete={openJobDelete} />
         )}
 
         {activeTab === "employment" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įdarbinti darbuotojai</h2>
-                <div className="admin-muted">
-                  Ilgalaikio įdarbinimo pasiūlymai ir aktyvūs įdarbinimai. Matote, kuri įmonė ir savininkas pateikė pasiūlymą, kam jis pateiktas ir kokia dabartinė būsena.
-                </div>
-              </div>
-              <span className="admin-pill green">
-                {activeLongTermPlacements.length} aktyvūs
-              </span>
-            </div>
-
-            <div className="admin-employment-stats">
-              <div className="admin-employment-stat">
-                <span>Aktyviai įdarbinti</span>
-                <b>{activeLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Laukiantys pasiūlymai</span>
-                <b>{pendingLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Pasibaigę įdarbinimai</span>
-                <b>{endedLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Pasiūlymai šį mėnesį</span>
-                <b>{longTermPlacementsThisMonth}</b>
-              </div>
-            </div>
-
-            {longTermPlacements.length ? (
-              <div className="admin-employment-list">
-                {adminPageSlice(longTermPlacements).map((placement) => (
-                  <div className="admin-employment-row" key={placement.placement_id}>
-                    <div className="admin-employment-person">
-                      <b>{placement.position_title || "Darbo pozicija"}</b>
-                      <span>
-                        Įdarbino: {placement.company_name || "Įmonė"} · {placement.hired_by_name || "Savininkas"}
-                      </span>
-                    </div>
-
-                    <div className="admin-employment-person">
-                      <b>{placement.worker_name || "Darbuotojas"}</b>
-                      <span>Įdarbintas darbuotojas</span>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Sutartis</span>
-                      <b>{longTermContractLabel(placement.contract_type)}</b>
-                      <div className="admin-employment-contract">
-                        nuo {placement.proposed_start_date || "—"}
-                        {placement.proposed_end_date ? ` iki ${placement.proposed_end_date}` : ""}
-                      </div>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Būsena</span>
-                      <span className={`admin-pill ${adminEmploymentStatusTone(placement.status)}`}>
-                        {adminEmploymentStatusLabel(placement.status)}
-                      </span>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Patvirtinta / sukurta</span>
-                      <b>
-                        {placement.employer_confirmed_at
-                          ? formatAdminDate(placement.employer_confirmed_at)
-                          : formatAdminDate(placement.created_at)}
-                      </b>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(longTermPlacements.length)}
-              </div>
-            ) : (
-              <div className="admin-employment-empty">
-                Ilgalaikių įdarbinimo pasiūlymų dar nėra.
-              </div>
-            )}
-          </section>
+          <AdminEmploymentList placements={longTermPlacements} />
         )}
 
+        {activeTab === "teamChats" && <AdminPrivateChats />}
         {activeTab === "teamChats" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įmonių vadovų pokalbiai</h2>
-                <div className="admin-muted">
-                  Vidinis Business Pro įmonių susirašinėjimas. Administratorius
-                  gali peržiūrėti pokalbių istoriją ir parašyti administratoriaus
-                  žinutę visai komandai.
-                </div>
-              </div>
-              <b>{teamChats.length}</b>
-            </div>
-
-            {teamChats.length ? (
-              <div className="admin-list">
-                {adminPageSlice(teamChats).map((chat) => (
-                  <div className="admin-row" key={chat.company_id}>
-                    <div className="admin-row-title">
-                      <b>{chat.company_name || "Įmonė"}</b>
-                      <span>
-                        {chat.last_message_at ? "Pokalbis aktyvus" : "Pokalbis dar tuščias"}
-                      </span>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Planas</span>
-                      <b>{employerPlanName(chat.plan_key)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Komandos narių</span>
-                      <b>{Number(chat.active_members || 0)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Žinučių</span>
-                      <b>{Number(chat.message_count || 0)}</b>
-                    </div>
-
-                    <div className="admin-row-actions">
-                      <span className="admin-pill gray">
-                        {formatAdminDate(chat.last_message_at)}
-                      </span>
-                      <button
-                        className="admin-small-btn"
-                        type="button"
-                        onClick={() => setAdminTeamConversation(chat)}
-                      >
-                        Atidaryti pokalbį
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(teamChats.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">
-                Įmonių vadovų pokalbių dar nėra.
-              </div>
-            )}
-          </section>
+          <AdminTeamChatsList chats={teamChats} onView={setAdminTeamConversation} />
         )}
 
         {activeTab === "ratings" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbuotojų atsiliepimai</h2>
-                <div className="admin-muted">
-                  Matomi visi darbdavių palikti balai ir komentarai. Administratorius
-                  gali pašalinti netinkamą ar piktnaudžiaujantį atsiliepimą.
-                </div>
-              </div>
-              <b>{ratings.length}</b>
-            </div>
-
-            {ratings.length ? (
-              <div className="admin-list">
-                {adminPageSlice(ratings).map((rating) => (
-                  <div className="admin-row" key={rating.rating_id}>
-                    <div className="admin-row-title">
-                      <b>
-                        {rating.worker_name} · {rating.score} / 10
-                      </b>
-                      <span>
-                        {rating.company_name} · {formatJobTitle(rating.job_title)}
-                      </span>
-                      {rating.comment && (
-                        <span style={{ color: "#405264", marginTop: 7 }}>
-                          „{rating.comment}“
-                        </span>
-                      )}
-                    </div>
-                    <div className="admin-cell">
-                      <span>Data</span>
-                      <b>{formatAdminDate(rating.created_at)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Darbdavys</span>
-                      <b>{rating.company_name}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Darbas</span>
-                      <b>{formatJobTitle(rating.job_title)}</b>
-                    </div>
-                    <button
-                      className="admin-small-btn danger"
-                      disabled={deletingRatingId === rating.rating_id}
-                      onClick={() => deleteRating(rating)}
-                    >
-                      {deletingRatingId === rating.rating_id
-                        ? "Šalinama..."
-                        : "Pašalinti"}
-                    </button>
-                  </div>
-                ))}
-                {renderAdminPagination(ratings.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Atsiliepimų dar nėra.</div>
-            )}
-          </section>
+          <AdminRatingsList ratings={ratings} busyId={deletingRatingId} onDelete={deleteRating} />
         )}
 
         {activeTab === "files" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įkelti failai</h2>
-                <div className="admin-muted">
-                  Administratoriui rodomas visų sistemos Storage bucketų failų
-                  sąrašas. Šiuo metu naudojami ginčų įrodymų failai; atsiradus
-                  kitoms įkėlimo funkcijoms, jų failai taip pat pateks čia.
-                </div>
-              </div>
-              <b>{files.length}</b>
-            </div>
-
-            {files.length ? (
-              <div className="admin-list">
-                {adminPageSlice(files).map((file) => (
-                  <div className="admin-row" key={file.object_id}>
-                    <div className="admin-row-title">
-                      <b>{file.file_name || file.storage_path}</b>
-                      <span>
-                        {file.bucket_id} · {file.owner_name || "Savininkas nenustatytas"}
-                      </span>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Įkelta</span>
-                      <b>{formatAdminDate(file.uploaded_at)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Dydis</span>
-                      <b>{bytesLabel(file.size_bytes)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Susijęs darbas</span>
-                      <b>{file.job_title ? formatJobTitle(file.job_title) : "—"}</b>
-                    </div>
-                    {file.signedUrl ? (
-                      <a
-                        className="admin-small-btn"
-                        href={file.signedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ textDecoration: "none" }}
-                      >
-                        Atidaryti
-                      </a>
-                    ) : (
-                      <span className="admin-pill gray">Peržiūra negalima</span>
-                    )}
-                  </div>
-                ))}
-                {renderAdminPagination(files.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Įkeltų failų šiuo metu nėra.</div>
-            )}
-          </section>
+          <AdminFilesList files={files} />
         )}
         {activeTab === "bugs" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Svetainės klaidos</h2>
-                <div className="admin-muted">
-                  Aktyvūs pranešimai lieka pažymėti, kol administratorius paspaudžia „Sutvarkiau“.
-                </div>
-              </div>
-              <span className={`admin-pill ${activeSiteBugCount ? "red" : "green"}`}>
-                {activeSiteBugCount} aktyvių
-              </span>
-            </div>
-
-            {siteBugReports.length ? (
-              <>
-                <div className="admin-bug-list">
-                  {adminPageSlice(siteBugReports).map((report) => {
-                    const resolved = report.status === "resolved";
-                    const irrelevant = report.status === "irrelevant";
-                    const statusLabel = resolved
-                      ? "Sutvarkyta"
-                      : irrelevant
-                      ? "Neaktualu"
-                      : "Aktyvi";
-                    return (
-                      <div
-                        className={`admin-bug-row ${
-                          resolved ? "resolved" : irrelevant ? "irrelevant" : "active"
-                        }`}
-                        key={report.id}
-                      >
-                        <div className="admin-bug-person">
-                          <b>{report.reporter_name || "Vartotojas"}</b>
-                          <span>{report.reporter_email || "El. paštas nepasiekiamas"}</span>
-                        </div>
-
-                        <div className="admin-bug-meta">
-                          <span>{resolved ? "Sutvarkyta" : irrelevant ? "Neaktualu" : "Pateikta"}</span>
-                          <b>
-                            {formatAdminDate(
-                              resolved || irrelevant ? report.resolved_at : report.created_at
-                            )}
-                          </b>
-                        </div>
-
-                        <span
-                          className={`admin-pill ${
-                            resolved ? "green" : irrelevant ? "gray" : "red"
-                          }`}
-                        >
-                          {statusLabel}
-                        </span>
-
-                        <div className="admin-bug-actions">
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() => setSelectedBugReport(report)}
-                          >
-                            Atidaryti
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {renderAdminPagination(siteBugReports.length)}
-              </>
-            ) : (
-              <div className="admin-empty">Svetainės klaidų pranešimų nėra.</div>
-            )}
-          </section>
+          <AdminBugsList
+            reports={siteBugReports}
+            onReply={(report) => setAdminMessageTarget({ userId: report.reporter_id, name: report.reporter_name || report.reporter_email || "Vartotojas" })}
+            onResolve={resolveSiteBug}
+            onIrrelevant={markSiteBugIrrelevant}
+            onOpen={setSelectedBugReport}
+          />
         )}
 
         {activeTab === "audit" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Administratoriaus veiksmų istorija</h2>
-                <div className="admin-muted">
-                  Suspendavimai, suspendavimo panaikinimai ir negrįžtami
-                  trynimai registruojami audito istorijoje.
-                </div>
-              </div>
-              <b>{auditLog.length}</b>
-            </div>
-
-            {auditLog.length ? (
-              <div className="admin-list">
-                {adminPageSlice(auditLog).map((item) => (
-                  <div className="admin-row" key={item.audit_id}>
-                    <div className="admin-row-title">
-                      <b>
-                        {item.action === "suspend_user"
-                          ? "Paskyra suspenduota"
-                          : item.action === "unsuspend_user"
-                          ? "Suspendavimas panaikintas"
-                          : item.action === "suspend_worker_mode"
-                          ? "Darbuotojo režimas suspenduotas"
-                          : item.action === "unsuspend_worker_mode"
-                          ? "Darbuotojo režimo suspendavimas panaikintas"
-                          : item.action === "delete_user_account"
-                          ? "Paskyra ištrinta"
-                          : item.action === "delete_job"
-                          ? "Darbas ištrintas"
-                          : item.action}
-                      </b>
-                      <span>
-                        {item.target_email || item.target_user_id || "—"}
-                        {item.target_role ? ` · ${item.target_role}` : ""}
-                      </span>
-                      {item.reason && (
-                        <span style={{ color: "#405264", marginTop: 6 }}>
-                          {item.reason}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Administratorius</span>
-                      <b>{item.admin_name || item.admin_email || "—"}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Data</span>
-                      <b>{formatAdminDate(item.created_at)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Veiksmas</span>
-                      <b>{item.action}</b>
-                    </div>
-
-                    <span className="admin-pill gray">Auditas</span>
-                  </div>
-                ))}
-                {renderAdminPagination(auditLog.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Administratoriaus veiksmų dar nėra.</div>
-            )}
-          </section>
+          <AdminAuditList items={auditLog} actionLabel={adminAuditActionLabel} />
         )}
 
       </main>
@@ -4270,79 +2628,51 @@ export function AdminDashboard({
       />
 
       {editor && (
-        <div
-          className="admin-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !editorSaving) {
-              setEditor(null);
-            }
-          }}
-        >
-          <div className="admin-modal">
-            <div className="admin-modal-head">
-              <div>
-                <div className="eyebrow">ADMINISTRATORIAUS REDAGAVIMAS</div>
-                <h2>
-                  {editor.type === "worker"
-                    ? "Darbuotojo informacija"
-                    : editor.type === "employer"
-                    ? "Darbdavio informacija"
-                    : "Darbo pasiūlymas"}
-                </h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={editorSaving}
-                onClick={() => setEditor(null)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
+        <P24Modal wide eyebrow="Administratoriaus redagavimas" title={editor.type === "worker" ? "Darbuotojo informacija" : editor.type === "employer" ? "Darbdavio informacija" : "Darbo pasiūlymas"} onClose={() => setEditor(null)} busy={editorSaving}>
             {editor.type === "worker" && (
-              <div className="admin-grid-2">
-                <label className="admin-label">
+              <div className="form">
+                <label className="field">
                   Rodomas vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.displayName}
                     onChange={(e) =>
                       updateEditorField("displayName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Teisinis vardas / pavardė
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.legalName}
                     onChange={(e) =>
                       updateEditorField("legalName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Telefonas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.phone}
                     onChange={(e) =>
                       updateEditorField("phone", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Kelionės spindulys, km
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="5"
                     max="50"
@@ -4352,10 +2682,10 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Patirtis, metais
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="0"
                     step="0.5"
@@ -4365,7 +2695,7 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -4380,7 +2710,7 @@ export function AdminDashboard({
                     B kategorija
                   </span>
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -4395,7 +2725,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.shortBio}
                     onChange={(e) =>
                       updateEditorField("shortBio", e.target.value)
@@ -4406,64 +2736,64 @@ export function AdminDashboard({
             )}
 
             {editor.type === "employer" && (
-              <div className="admin-grid-2">
-                <label className="admin-label">
+              <div className="form">
+                <label className="field">
                   Paskyros vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.displayName}
                     onChange={(e) =>
                       updateEditorField("displayName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Telefonas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.phone}
                     onChange={(e) =>
                       updateEditorField("phone", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Darbdavio pavadinimas / vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.name}
                     onChange={(e) => updateEditorField("name", e.target.value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Įmonės kodas (jei taikoma)
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.companyCode}
                     onChange={(e) =>
                       updateEditorField("companyCode", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   PVM kodas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.vatCode}
                     onChange={(e) =>
                       updateEditorField("vatCode", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -4475,7 +2805,7 @@ export function AdminDashboard({
                     Darbdavys patvirtintas
                   </span>
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -4487,10 +2817,10 @@ export function AdminDashboard({
                     Savininko paskyra aktyvi
                   </span>
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Planas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Įmonės planas"
                     value={editorForm.planKey}
                     onChange={(value) => updateEditorField("planKey", value)}
@@ -4498,10 +2828,10 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div className="admin-label">
+                <div className="field">
                   Prenumeratos būsena
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Prenumeratos būsena"
                     value={editorForm.subscriptionStatus}
                     onChange={(value) => {
@@ -4522,7 +2852,7 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div className="admin-label">
+                <div className="field">
                   Apmokėta iki / laikotarpio pabaiga
                   <RoundedDateSelect
                     className="admin-input wd-date-trigger"
@@ -4542,7 +2872,7 @@ export function AdminDashboard({
                       : `Paruošia Business planą, bandomąją būseną ir pabaigos datą po ${EMPLOYER_TRIAL_DAYS} dienų. Įsigalios paspaudus „Išsaugoti“. `}
                   </span>
                   <button
-                    className="admin-small-btn"
+                    className="btn"
                     type="button"
                     disabled={
                       Boolean(editor?.trialEligibilityLoading) ||
@@ -4576,7 +2906,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Įmonės aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.description}
                     onChange={(e) =>
                       updateEditorField("description", e.target.value)
@@ -4587,34 +2917,34 @@ export function AdminDashboard({
             )}
 
             {editor.type === "job" && (
-              <div className="admin-grid-2">
+              <div className="form">
                 <label className="admin-label admin-wide">
                   Pavadinimas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.title}
                     onChange={(e) => updateEditorField("title", e.target.value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Atvykti adresu
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.addressText}
                     onChange={(e) =>
                       updateEditorField("addressText", e.target.value)
                     }
                   />
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Data
                   <RoundedDateSelect
                     className="admin-input wd-date-trigger"
@@ -4623,10 +2953,10 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("workDate", value)}
                   />
                 </div>
-                <label className="admin-label">
+                <label className="field">
                   Žmonių skaičius
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="1"
                     max="100"
@@ -4636,7 +2966,7 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pradžia
                   <RoundedTimeSelect
                     ariaLabel="Darbo pradžios laikas"
@@ -4645,7 +2975,7 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("startTime", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Darbo pabaigos laikas"
@@ -4655,7 +2985,7 @@ export function AdminDashboard({
                     align="right"
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pietų pradžia
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pradžia"
@@ -4665,7 +2995,7 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("breakStartTime", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pietų pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pabaiga"
@@ -4676,10 +3006,10 @@ export function AdminDashboard({
                     align="right"
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Atlygis
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="0"
                     step="0.01"
@@ -4689,10 +3019,10 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Atlygio vienetas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Atlygio vienetas"
                     value={editorForm.payUnit}
                     onChange={(value) => updateEditorField("payUnit", value)}
@@ -4702,7 +3032,7 @@ export function AdminDashboard({
                 <div className="admin-label admin-wide">
                   Atvykimas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Atvykimas"
                     value={editorForm.transportMode}
                     onChange={(value) => updateEditorField("transportMode", value)}
@@ -4712,7 +3042,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.description}
                     onChange={(e) =>
                       updateEditorField("description", e.target.value)
@@ -4722,10 +3052,10 @@ export function AdminDashboard({
               </div>
             )}
 
-            <div className="admin-actions">
+            <div className="row" style={{ justifyContent: "flex-end" }}>
               {editor.type === "job" && (
                 <button
-                  className="admin-small-btn danger"
+                  className="btn danger"
                   disabled={editorSaving}
                   onClick={() =>
                     openJobDelete({
@@ -4741,14 +3071,14 @@ export function AdminDashboard({
               )}
 
               <button
-                className="admin-small-btn"
+                className="btn"
                 disabled={editorSaving}
                 onClick={() => setEditor(null)}
               >
                 Atšaukti
               </button>
               <button
-                className="admin-small-btn"
+                className="btn"
                 style={{
                   background: "#6b5b95",
                   color: "#fff",
@@ -4760,171 +3090,37 @@ export function AdminDashboard({
                 {editorSaving ? "Saugoma..." : "Išsaugoti"}
               </button>
             </div>
-          </div>
-        </div>
+        </P24Modal>
       )}
 
-      {actionDialog && (
-        <div
-          className="admin-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !actionBusy) {
-              setActionDialog(null);
-            }
-          }}
-        >
-          <div className="admin-modal" style={{ width: "min(600px,100%)" }}>
-            <div className="admin-modal-head">
-              <div>
-                <div className="eyebrow">
-                  {actionDialog.type === "suspendWorkerMode"
-                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMAS"
-                    : actionDialog.type === "unsuspendWorkerMode"
-                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMO PANAIKINIMAS"
-                    : actionDialog.type === "suspend"
-                    ? "PASKYROS SUSPENDAVIMAS"
-                    : actionDialog.type === "unsuspend"
-                    ? "SUSPENDAVIMO PANAIKINIMAS"
-                    : actionDialog.type === "deleteJob"
-                    ? "DARBO TRYNIMAS"
-                    : "PASKYROS TRYNIMAS"}
-                </div>
-                <h2>
-                  {actionDialog.type === "suspendWorkerMode"
-                    ? `Suspenduoti darbuotojo režimą: ${actionDialog.name}`
-                    : actionDialog.type === "unsuspendWorkerMode"
-                    ? `Nuimti darbuotojo režimo suspendavimą: ${actionDialog.name}`
-                    : actionDialog.type === "suspend"
-                    ? `Suspenduoti: ${actionDialog.name}`
-                    : actionDialog.type === "unsuspend"
-                    ? `Nuimti suspendavimą: ${actionDialog.name}`
-                    : actionDialog.type === "deleteJob"
-                    ? `Ištrinti darbą: ${actionDialog.name}`
-                    : `Visiškai ištrinti: ${actionDialog.name}`}
-                </h2>
-              </div>
-
-              <button
-                className="rs-close"
-                aria-label="Uždaryti administratoriaus veiksmą"
-                disabled={actionBusy}
-                onClick={() => setActionDialog(null)}
-              >
-                <CloseMark />
-              </button>
+      {actionDialog && (() => {
+        const t = actionDialog.type;
+        const susp = t === "suspend" || t === "suspendWorkerMode";
+        const unsusp = t === "unsuspend" || t === "unsuspendWorkerMode";
+        const del = t === "deleteAccount" || t === "deleteJob";
+        const eyebrow = t === "suspendWorkerMode" ? "Darbuotojo režimo suspendavimas" : t === "unsuspendWorkerMode" ? "Suspendavimo panaikinimas" : t === "suspend" ? "Suspendavimas" : t === "unsuspend" ? "Suspendavimo panaikinimas" : t === "deleteJob" ? "Darbo trynimas" : "Paskyros ištrynimas";
+        const label = t === "suspendWorkerMode" ? "Suspenduoti darbuotojo režimą" : t === "unsuspendWorkerMode" || t === "unsuspend" ? "Nuimti suspendavimą" : t === "suspend" ? "Suspenduoti" : t === "deleteJob" ? "Ištrinti darbą" : "Ištrinti visam laikui";
+        return (
+          <P24Modal eyebrow={eyebrow} title={actionDialog.name} onClose={() => setActionDialog(null)} busy={actionBusy}>
+            {actionError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{actionError}</p> : null}
+            {susp ? (
+              <label className="field">Trukmė<select value={String(actionDays)} onChange={(e) => setActionDays(e.target.value)}>
+                {[["7", "7 dienos"], ["14", "14 dienų"], ["30", "30 dienų"], ["3650", "Neterminuotai"]].concat([["7", ""], ["14", ""], ["30", ""], ["3650", ""]].some(([v]) => v === String(actionDays)) ? [] : [[String(actionDays), `${actionDays} d.`]]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select></label>
+            ) : null}
+            {del ? <p className="small muted" style={{ margin: 0 }}>{t === "deleteAccount" ? "Bus ištrintas profilis, darbų istorija ir failai." : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."} Atkurti negalima.</p> : null}
+            <label className="field">{unsusp ? "Pastaba" : susp ? "Priežastis (matys naudotojas) *" : "Priežastis *"}<textarea value={actionReason} onChange={(e) => setActionReason(e.target.value)}
+              placeholder={susp ? "Pvz. 3 neatvykimai be priežasties per mėnesį" : t === "deleteAccount" ? "Pvz. Pakartotiniai rimti pažeidimai" : t === "deleteJob" ? "Pvz. Netinkamas turinys arba dublikatas" : "Administratoriaus pastaba"} /></label>
+            {del ? <><p className="small muted" style={{ margin: 0 }}>Įrašykite <b style={{ color: "var(--navy)" }}>ISTRINTI</b>, kad patvirtintumėte.</p>
+              <label className="field"><span className="sr">Patvirtinimas</span><input value={actionConfirm} onChange={(e) => setActionConfirm(e.target.value)} placeholder="ISTRINTI" autoComplete="off" /></label></> : null}
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={actionBusy} onClick={() => setActionDialog(null)}>Atgal</button>
+              <button className={`btn ${unsusp ? "primary" : "danger"}`} type="button" disabled={actionBusy} onClick={performAdminAction}>{actionBusy ? "Vykdoma..." : label}</button>
             </div>
+          </P24Modal>
+        );
+      })()}
 
-            {actionError && (
-              <div className="admin-toast err" role="alert" style={{ marginBottom: 14 }}>{actionError}</div>
-            )}
-
-            {(actionDialog.type === "suspend" ||
-              actionDialog.type === "suspendWorkerMode") && (
-              <label className="admin-label">
-                Kiek dienų suspenduoti?
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="1"
-                  max="3650"
-                  value={actionDays}
-                  onChange={(e) => setActionDays(e.target.value)}
-                />
-              </label>
-            )}
-
-            <label className="admin-label" style={{ marginTop: 13 }}>
-              {actionDialog.type === "unsuspend" ||
-              actionDialog.type === "unsuspendWorkerMode"
-                ? "Pastaba"
-                : "Priežastis *"}
-              <textarea
-                className="admin-input admin-textarea"
-                value={actionReason}
-                onChange={(e) => setActionReason(e.target.value)}
-                placeholder={
-                  actionDialog.type === "suspend" ||
-                  actionDialog.type === "suspendWorkerMode"
-                    ? "Pvz. Pakartotinis neatvykimas ir taisyklių pažeidimas..."
-                    : actionDialog.type === "deleteAccount"
-                    ? "Pvz. Pakartotiniai rimti pažeidimai..."
-                    : actionDialog.type === "deleteJob"
-                    ? "Kodėl šis darbo pasiūlymas šalinamas?"
-                    : "Administratoriaus pastaba..."
-                }
-              />
-            </label>
-
-            {(actionDialog.type === "deleteAccount" ||
-              actionDialog.type === "deleteJob") && (
-              <div
-                className="admin-note"
-                style={{ background: "#fff0ec", color: "#9f4529" }}
-              >
-                <b>Negrįžtamas veiksmas.</b>{" "}
-                {actionDialog.type === "deleteAccount"
-                  ? "Bus pašalinta paskyra ir su ja susiję sistemos duomenys."
-                  : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."}
-
-                <label className="admin-label" style={{ marginTop: 12 }}>
-                  Patvirtinimui įrašykite ISTRINTI
-                  <input
-                    className="admin-input"
-                    value={actionConfirm}
-                    onChange={(e) => setActionConfirm(e.target.value)}
-                    placeholder="ISTRINTI"
-                  />
-                </label>
-              </div>
-            )}
-
-            <div className="admin-actions">
-              <button
-                className="admin-small-btn"
-                disabled={actionBusy}
-                onClick={() => setActionDialog(null)}
-              >
-                Atšaukti
-              </button>
-
-              <button
-                className={`admin-small-btn ${
-                  actionDialog.type === "deleteAccount" ||
-                  actionDialog.type === "deleteJob"
-                    ? "danger"
-                    : ""
-                }`}
-                disabled={actionBusy}
-                onClick={performAdminAction}
-                style={
-                  actionDialog.type === "deleteAccount" ||
-                  actionDialog.type === "deleteJob"
-                    ? undefined
-                    : {
-                        background: "#222631",
-                        color: "#fff",
-                        borderColor: "#222631",
-                      }
-                }
-              >
-                {actionBusy
-                  ? "Vykdoma..."
-                  : actionDialog.type === "suspendWorkerMode"
-                  ? "Suspenduoti darbuotojo režimą"
-                  : actionDialog.type === "unsuspendWorkerMode"
-                  ? "Nuimti darbuotojo režimo suspendavimą"
-                  : actionDialog.type === "suspend"
-                  ? "Suspenduoti"
-                  : actionDialog.type === "unsuspend"
-                  ? "Nuimti suspendavimą"
-                  : actionDialog.type === "deleteJob"
-                  ? "Ištrinti darbą"
-                  : "Ištrinti paskyrą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {selectedBugReport && (
         <div
           onMouseDown={(e) =>
@@ -5125,5 +3321,6 @@ export function AdminDashboard({
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
+    </P24Shell>
   );
 }

@@ -1,0 +1,10 @@
+const ROLE = (typeof window !== "undefined" && window.__ROLE) || null;
+const USER = ROLE ? { id: "00000000-0000-0000-0000-000000000001", email: "demo@statybos24.lt", user_metadata: { role: ROLE, full_name: "Demo Vartotojas" }, app_metadata: {} } : null;
+const SESSION = USER ? { access_token: "x", refresh_token: "y", user: USER, expires_at: 9999999999 } : null;
+function chain(kind, name) {
+  let single = false;
+  const res = () => { if (kind === "rpc" && name === "get_my_account_status") return { data: ROLE ? [{ role: ROLE, is_active: true }] : [], error: null }; if (kind === "rpc" && name === "is_admin") return { data: ROLE === "admin", error: null }; if (typeof window !== "undefined" && window.__DATA && kind === "from" && window.__DATA[name]) return { data: single ? window.__DATA[name][0] : window.__DATA[name], error: null, count: window.__DATA[name].length }; if (typeof window !== "undefined" && window.__DATA && kind === "rpc" && window.__DATA["rpc:" + name]) return { data: window.__DATA["rpc:" + name], error: null }; return { data: single ? null : [], error: null, count: 0 }; };
+  const p = new Proxy(function () {}, { get(t, k) { if (k === "then") return (a, b) => Promise.resolve(res()).then(a, b); if (k === "single" || k === "maybeSingle") single = true; if (k === "subscribe") return () => p; return p; }, apply() { return p; } });
+  return p;
+}
+export function createClient() { return { auth: { getSession: async () => ({ data: { session: SESSION }, error: null }), getUser: async () => ({ data: { user: USER }, error: null }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), signOut: async () => ({ error: null }), updateUser: async () => ({ data: {}, error: null }) }, from: (t) => chain("from", t), rpc: (n) => chain("rpc", n), channel: () => chain("ch"), removeChannel() {}, removeAllChannels() {}, storage: { from: () => ({ ...chain("st"), getPublicUrl: () => ({ data: { publicUrl: "" } }), createSignedUrl: async () => ({ data: null, error: null }) }) }, functions: { invoke: async () => ({ data: null, error: null }) } }; }

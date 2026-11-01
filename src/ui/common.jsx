@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CloseMark } from "./brand.jsx";
+import { P24Modal } from "../p24/ui.jsx";
 
 export function ChatConductNotice() {
   return (
@@ -102,76 +102,14 @@ export class SectionErrorBoundary extends React.Component {
 
 export function StyledConfirmDialog({ dialog, onResolve }) {
   if (!dialog) return null;
-
   return (
-    <div
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onResolve(false);
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 4000,
-        display: "grid",
-        placeItems: "center",
-        padding: 20,
-        background: "rgba(34,38,49,.62)",
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="styled-confirm-title"
-        style={{
-          width: "min(520px,100%)",
-          background: "#fff",
-          borderRadius: 18,
-          padding: 22,
-          color: "#222631",
-          boxShadow: "0 26px 80px rgba(34,38,49,.25)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-          <div>
-            {dialog.eyebrow && <div className="eyebrow" style={{ marginBottom: 7 }}>{dialog.eyebrow}</div>}
-            <h2 id="styled-confirm-title" style={{ margin: 0, fontSize: 22 }}>
-              {dialog.title || "Patvirtinkite veiksmą"}
-            </h2>
-          </div>
-          <button
-            type="button"
-            aria-label="Uždaryti"
-            onClick={() => onResolve(false)}
-            style={{
-              border: 0, background: "#f1f4f6", borderRadius: 10, width: 40, height: 40,
-              display: "grid", placeItems: "center", color: "#222631", flex: "0 0 auto",
-            }}
-          >
-            <CloseMark />
-          </button>
-        </div>
-        <p style={{ margin: "16px 0 0", color: "#607180", lineHeight: 1.55 }}>{dialog.message}</p>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 22, flexWrap: "wrap" }}>
-          {!dialog.hideCancel && (
-            <button
-              type="button"
-              onClick={() => onResolve(false)}
-              style={{ minHeight: 42, padding: "9px 16px", border: "1px solid #d7e1e7", borderRadius: 10, background: "#fff", color: "#222631", fontWeight: 800 }}
-            >
-              {dialog.cancelLabel || "Atšaukti"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => onResolve(true)}
-            style={{ minHeight: 42, padding: "9px 16px", border: 0, borderRadius: 10, background: dialog.danger ? "#b64d2a" : "#6b5b95", color: "#fff", fontWeight: 850 }}
-          >
-            {dialog.confirmLabel || "Patvirtinti"}
-          </button>
-        </div>
-      </section>
-    </div>
+    <P24Modal eyebrow={dialog.eyebrow ? String(dialog.eyebrow).charAt(0) + String(dialog.eyebrow).slice(1).toLocaleLowerCase("lt-LT") : ""} title={dialog.title || "Patvirtinkite veiksmą"} onClose={() => onResolve(false)}>
+      {dialog.message ? <p className="muted" style={{ margin: 0, whiteSpace: "pre-line" }}>{dialog.message}</p> : null}
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        {!dialog.hideCancel && <button className="btn" type="button" onClick={() => onResolve(false)}>{dialog.cancelLabel || "Atšaukti"}</button>}
+        <button className={`btn ${dialog.danger ? "danger" : "primary"}`} type="button" onClick={() => onResolve(true)}>{dialog.confirmLabel || "Patvirtinti"}</button>
+      </div>
+    </P24Modal>
   );
 }
 
@@ -618,117 +556,23 @@ export function ArrivalTimeDialog({
   busy = false,
 }) {
   if (!open) return null;
-
   return (
-    <div
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose?.();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 14000,
-        background: "rgba(34,38,49,.68)",
-        display: "grid",
-        placeItems: "center",
-        padding: 16,
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label={title || "Atvykimo laikas"}
-        style={{
-          width: "min(430px,100%)",
-          background: "#fff",
-          borderRadius: 18,
-          padding: 22,
-          color: "#222631",
-          boxShadow: "0 24px 80px rgba(34,38,49,.28)",
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", color: "#453a63" }}>
-          FAKTINIS ATVYKIMAS
-        </div>
-        <h2 style={{ margin: "6px 0 8px", font: "850 22px/1.25 Manrope,Inter,sans-serif" }}>
-          {title || "Nurodykite atvykimo laiką"}
-        </h2>
-        {subject && (
-          <p style={{ margin: "0 0 12px", color: "#526374", fontSize: 13, lineHeight: 1.55 }}>
-            {subject}
-          </p>
-        )}
-        <div
-          style={{
-            marginBottom: 14,
-            padding: "10px 12px",
-            borderRadius: 11,
-            background: "#f7f9fb",
-            color: "#607180",
-            fontSize: 12,
-            lineHeight: 1.5,
-          }}
-        >
-          {scheduledTime ? <>Numatyta darbo pradžia: <b style={{ color: "#222631" }}>{scheduledTime}</b>. </> : null}
-          Atvykimo laikas negali būti ankstesnis už darbo pradžią ar vėlesnis nei dabar.
-        </div>
-        <label style={{ display: "grid", gap: 7, fontSize: 12, fontWeight: 850 }}>
-          Atvykimo laikas
-          <RoundedTimeSelect
-            ariaLabel="Faktinis atvykimo laikas"
-            value={value}
-            disabled={busy}
-            onChange={onChange}
-          />
-        </label>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 20, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            style={{
-              border: "1px solid #d7e0e6",
-              background: "#fff",
-              color: "#222631",
-              borderRadius: 10,
-              padding: "10px 14px",
-              font: "inherit",
-              fontWeight: 800,
-              cursor: busy ? "not-allowed" : "pointer",
-            }}
-          >
-            Atšaukti
-          </button>
-          <button
-            type="button"
-            disabled={busy || !value}
-            onClick={onConfirm}
-            style={{
-              border: 0,
-              background: "#6b5b95",
-              color: "#fff",
-              borderRadius: 10,
-              padding: "10px 15px",
-              font: "inherit",
-              fontWeight: 850,
-              cursor: busy || !value ? "not-allowed" : "pointer",
-              opacity: busy || !value ? .58 : 1,
-            }}
-          >
-            {busy ? "Saugoma..." : "Patvirtinti atvykimą"}
-          </button>
-        </div>
-      </section>
-    </div>
+    <P24Modal eyebrow="Faktinis atvykimas" title={title || "Nurodykite atvykimo laiką"} sub={subject} onClose={onClose} busy={busy}>
+      <div className="notebox">{scheduledTime ? <>Numatyta darbo pradžia: <b>{scheduledTime}</b>. </> : null}Atvykimo laikas negali būti ankstesnis už darbo pradžią ar vėlesnis nei dabar.</div>
+      <label className="field">Atvykimo laikas<RoundedTimeSelect ariaLabel="Faktinis atvykimo laikas" className="ed-input wd-time-trigger" value={value} disabled={busy} onChange={onChange} /></label>
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
+        <button className="btn green" type="button" disabled={busy || !value} onClick={onConfirm}>{busy ? "Saugoma..." : "Patvirtinti atvykimą"}</button>
+      </div>
+    </P24Modal>
   );
 }
 
 export const unifiedCloseStyles = `
-  button.rs-close, button.ctc-close, button.wd-profile-editor-close,
-  button.reliability-modal-close, button.admin-setup-close,
-  button[aria-label="Uždaryti"], button[aria-label="Uždaryti sąlygas"],
-  button[aria-label="Uždaryti pranešimą"], button[aria-label="Uždaryti klaidos pranešimą"] {
+  button.rs-close:not(.p24 *), button.ctc-close:not(.p24 *), button.wd-profile-editor-close:not(.p24 *),
+  button.reliability-modal-close:not(.p24 *), button.admin-setup-close:not(.p24 *),
+  button[aria-label="Uždaryti"]:not(.p24 *), button[aria-label="Uždaryti sąlygas"]:not(.p24 *),
+  button[aria-label="Uždaryti pranešimą"]:not(.p24 *), button[aria-label="Uždaryti klaidos pranešimą"]:not(.p24 *) {
     display:inline-flex !important; align-items:center !important; justify-content:center !important;
     width:44px !important; height:44px !important; min-width:44px !important; flex:0 0 44px !important;
     padding:0 !important; border:0 !important; border-radius:12px !important;

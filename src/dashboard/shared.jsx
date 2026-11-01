@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { P24Modal } from "../p24/ui.jsx";
 import { createPortal } from "react-dom";
 import { isHireProjectPath, supabase } from "../lib/config.js";
-import { CloseMark } from "../ui/brand.jsx";
 import { edgeFunctionErrorMessage } from "../employer/plans.js";
 
 export const DASHBOARD_PAGE_SIZE = 5;
@@ -376,87 +376,16 @@ export function DeleteAccountModal({ open, onClose, accountKind = "paskyra" }) {
   }
 
   return (
-    <div
-      className="account-delete-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose?.();
-      }}
-    >
-      <style>{`
-        .account-delete-overlay{position:fixed;inset:0;z-index:12000;background:rgba(34,38,49,.66);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .account-delete-modal{width:min(560px,100%);background:#fff;border-radius:20px;box-shadow:0 30px 100px rgba(34,38,49,.34);padding:22px;color:#222631}
-        .account-delete-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.account-delete-head h2{margin:5px 0 0;font-family:Manrope,Inter,sans-serif;font-size:24px;line-height:1.2}.account-delete-close{width:40px;height:40px;border:0;border-radius:11px;background:#f1f4f6;color:#222631;display:grid;place-items:center;cursor:pointer;flex:0 0 40px}
-        .account-delete-warning{margin-top:16px;padding:14px;border:1px solid #efc7bb;border-radius:14px;background:#fff5f2;color:#8f4029;font-size:13px;line-height:1.55}.account-delete-warning b{display:block;color:#9f4529;margin-bottom:5px}
-        .account-delete-list{margin:9px 0 0;padding-left:18px}.account-delete-list li+li{margin-top:5px}
-        .account-delete-label{display:grid;gap:7px;margin-top:16px;font-size:12px;font-weight:800;color:#526374}.account-delete-input{width:100%;border:1px solid #d7e0e7;border-radius:11px;padding:11px 12px;font:inherit;color:#222631;outline:none}.account-delete-input:focus{border-color:#c65b37;box-shadow:0 0 0 3px rgba(198,91,55,.11)}
-        .account-delete-error{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff0ec;color:#b64d2a;font-size:12px}.account-delete-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.account-delete-cancel,.account-delete-confirm{border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer}.account-delete-cancel{border:1px solid #dbe4ea;background:#fff;color:#222631}.account-delete-confirm{border:1px solid #d46c4d;background:#c65b37;color:#fff}.account-delete-confirm:disabled,.account-delete-cancel:disabled,.account-delete-close:disabled{opacity:.55;cursor:not-allowed}
-        .account-delete-zone{margin-top:20px;padding:15px 16px;border:1px solid #efc7bb;border-radius:13px;background:#fffafa;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.account-delete-zone b{display:block;color:#222631;font-size:13px;margin-bottom:3px}.account-delete-zone span{display:block;color:#7a625c;font-size:12px;line-height:1.45;max-width:680px}.account-delete-open{border:1px solid #e1a18e;background:#fff;color:#b64d2a;border-radius:10px;padding:9px 12px;font:inherit;font-size:12px;font-weight:850;cursor:pointer;white-space:nowrap}
-        @media(max-width:560px){.account-delete-overlay{padding:10px}.account-delete-modal{padding:18px;border-radius:16px}.account-delete-actions{display:grid;grid-template-columns:1fr}.account-delete-actions button{width:100%}.account-delete-zone{align-items:stretch}.account-delete-open{width:100%}}
-      `}</style>
-
-      <div className="account-delete-modal">
-        <div className="account-delete-head">
-          <div>
-            <div className="eyebrow">PASKYROS IŠTRYNIMAS</div>
-            <h2>Ištrinti paskyrą?</h2>
-          </div>
-          <button
-            className="account-delete-close"
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            aria-label="Uždaryti"
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        <div className="account-delete-warning">
-          <b>Šio veiksmo atkurti nebus galima.</b>
-          Bus pašalinta jūsų {accountKind}, su ja sukurti duomenys ir įkelti failai.
-          <ul className="account-delete-list">
-            <li>Jei turite mokamą prenumeratą, ji bus nedelsiant nutraukta prieš paskyros ištrynimą.</li>
-            <li>Po ištrynimo daugiau automatinių prenumeratos nuskaitymų nebus.</li>
-            <li>Jau kitiems vartotojams suteikti įvertinimai ir jų patikimumo rodikliai nuo paskyros ištrynimo nesumažės.</li>
-            <li>Bendri svetainės istoriniai skaičiai, pvz. kiek darbų buvo sukurta, išliks.</li>
-            <li>Vėliau galėsite susikurti naują paskyrą tuo pačiu el. paštu.</li>
-          </ul>
-        </div>
-
-        <label className="account-delete-label">
-          Patvirtinimui įrašykite ISTRINTI
-          <input
-            className="account-delete-input"
-            value={confirmText}
-            disabled={busy}
-            onChange={(e) => setConfirmText(e.target.value)}
-            placeholder="ISTRINTI"
-            autoComplete="off"
-          />
-        </label>
-
-        {error && <div className="account-delete-error">{error}</div>}
-
-        <div className="account-delete-actions">
-          <button
-            className="account-delete-cancel"
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-          >
-            Atšaukti
-          </button>
-          <button
-            className="account-delete-confirm"
-            type="button"
-            disabled={busy || confirmText.trim().toUpperCase() !== "ISTRINTI"}
-            onClick={confirmDeletion}
-          >
-            {busy ? "Trinama..." : "Taip, negrįžtamai ištrinti"}
-          </button>
-        </div>
+    <P24Modal eyebrow="Paskyros ištrynimas" title="Ištrinti paskyrą?" onClose={onClose} busy={busy}>
+      <p className="small muted" style={{ margin: 0 }}>Bus pašalinta jūsų {accountKind}, su ja sukurti duomenys ir įkelti failai. Atkurti negalima. Mokama prenumerata bus nutraukta prieš ištrynimą. Kitiems suteikti įvertinimai išliks. Vėliau galėsite susikurti naują paskyrą tuo pačiu el. paštu.</p>
+      <p className="small muted" style={{ margin: 0 }}>Įrašykite <b style={{ color: "var(--navy)" }}>ISTRINTI</b>, kad patvirtintumėte.</p>
+      <label className="field"><span className="sr">Patvirtinimas</span><input value={confirmText} disabled={busy} onChange={(e) => setConfirmText(e.target.value)} placeholder="ISTRINTI" autoComplete="off" /></label>
+      {error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p> : null}
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <button className="btn" type="button" disabled={busy} onClick={onClose}>Atgal</button>
+        <button className="btn danger" type="button" disabled={busy || confirmText.trim().toUpperCase() !== "ISTRINTI"} onClick={confirmDeletion}>{busy ? "Trinama..." : "Ištrinti visam laikui"}</button>
       </div>
-    </div>
+    </P24Modal>
   );
 }
 
@@ -545,39 +474,14 @@ export function BugReportModal({ open, onClose, onSubmitted }) {
   }
 
   return (
-    <div
-      onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
-      style={{ position: "fixed", inset: 0, zIndex: 12000, display: "grid", placeItems: "center", padding: 20, background: "rgba(34,38,49,.62)" }}
-    >
-      <div style={{ width: "min(620px,100%)", maxHeight: "calc(100dvh - 40px)", overflow: "auto", background: "#fff", borderRadius: 18, padding: 22, boxShadow: "0 28px 90px rgba(34,38,49,.28)", color: "#222631" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
-          <div>
-            <div className="eyebrow">SVETAINĖS KLAIDA</div>
-            <h2>Pranešti administratoriui</h2>
-          </div>
-          <button type="button" disabled={busy} onClick={onClose} style={{ border: 0, background: "#f2f5f7", color: "#222631", borderRadius: 11, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer" }}><CloseMark /></button>
-        </div>
-        <div style={{ padding: "0 2px 2px" }}>
-          <p style={{ margin: "0 0 12px", color: "#6c7a88", fontSize: 13, lineHeight: 1.5 }}>
-            Trumpai aprašykite, ką darėte, ką paspaudėte ir kokią klaidą pamatėte.
-          </p>
-          <textarea
-            value={message}
-            maxLength={4000}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Pvz. paspaudus „Išsaugoti“ pasirodė baltas ekranas..."
-            style={{ width: "100%", minHeight: 150, resize: "vertical", border: "1px solid #d8e2e8", borderRadius: 12, padding: 12, font: "inherit", color: "#222631", boxSizing: "border-box", outline: "none" }}
-          />
-          {error && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: "#fff1ef", border: "1px solid #f0c9c2", color: "#a23b2f", fontSize: 12, fontWeight: 700 }}>{error}</div>}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 9, marginTop: 14 }}>
-            <button type="button" disabled={busy} onClick={onClose} style={{ border: "1px solid #d8e2e8", background: "#fff", color: "#222631", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 800, cursor: "pointer" }}>Atšaukti</button>
-            <button type="button" disabled={busy || message.trim().length < 10} onClick={submitBugReport} style={{ border: 0, background: "#6b5b95", color: "#fff", borderRadius: 10, padding: "10px 14px", font: "inherit", fontWeight: 850, cursor: busy || message.trim().length < 10 ? "not-allowed" : "pointer", opacity: busy || message.trim().length < 10 ? .55 : 1 }}>
-              {busy ? "Siunčiama..." : "Išsiųsti pranešimą"}
-            </button>
-          </div>
-        </div>
+    <P24Modal eyebrow="Svetainės klaida" title="Pranešti administratoriui" sub="Trumpai aprašykite, ką darėte, ką paspaudėte ir kokią klaidą pamatėte." onClose={onClose} busy={busy}>
+      <label className="field"><span className="sr">Klaidos aprašymas</span><textarea value={message} maxLength={4000} onChange={(e) => setMessage(e.target.value)} placeholder="Pvz. paspaudus „Išsaugoti“ pasirodė baltas ekranas..." style={{ minHeight: 140 }} /></label>
+      {error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p> : null}
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
+        <button className="btn primary" type="button" disabled={busy || message.trim().length < 10} onClick={submitBugReport}>{busy ? "Siunčiama..." : "Išsiųsti pranešimą"}</button>
       </div>
-    </div>
+    </P24Modal>
   );
 }
 
@@ -631,33 +535,11 @@ export function BugResolutionNotice({ userId }) {
   const reward = Number(notice.reward_points || 0);
 
   return (
-    <div className="bug-resolution-banner" role="status">
-      <style>{`
-        .bug-resolution-banner{width:100%;min-width:0;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border:1px solid #b9decf;border-radius:13px;background:#eef8f3;color:#125f45;box-shadow:0 4px 14px rgba(34,38,49,.035);display:flex;align-items:center;justify-content:space-between;gap:14px;clear:both}
-        .bug-resolution-banner-copy{display:grid;gap:2px;min-width:0}
-        .bug-resolution-banner-copy b{color:#146f4d;font-size:13px;line-height:1.35}
-        .bug-resolution-banner-copy span{font-size:12px;line-height:1.45;color:#356f5b}
-        .bug-resolution-banner-close{flex:0 0 auto;border:1px solid #b9decf;background:#fff;color:#146f4d;border-radius:9px;width:38px;height:34px;display:grid;place-items:center;cursor:pointer}
-        .bug-resolution-banner-close:hover{background:#f7fcf9}
-        @media(max-width:700px){.bug-resolution-banner{align-items:flex-start}.bug-resolution-banner-close{width:34px}}
-      `}</style>
-      <div className="bug-resolution-banner-copy">
-        <b>Svetainės klaida sutvarkyta</b>
-        <span>
-          Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
-          {reward > 0
-            ? `Jums pridėtas +${reward} patikimumo taškas.`
-            : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}
-        </span>
-      </div>
-      <button
-        className="bug-resolution-banner-close"
-        type="button"
-        aria-label="Uždaryti pranešimą"
-        onClick={() => acknowledge(notice.report_id)}
-      >
-        <CloseMark />
-      </button>
+    <div className="alert green" role="status">
+      <div><b>Svetainės klaida sutvarkyta</b>
+        <p>Jūsų pranešta svetainės klaida pašalinta. Ačiū, kad padėjote gerinti platformą.{" "}
+          {reward > 0 ? `Jums pridėtas +${reward} patikimumo taškas.` : "Patikimumo balas jau buvo 100 / 100, todėl papildomi taškai nepridėti."}</p></div>
+      <button className="btn sm" type="button" onClick={() => acknowledge(notice.report_id)}>Supratau</button>
     </div>
   );
 }
@@ -768,29 +650,17 @@ export function MainSiteInPageAlerts({ user, kind }) {
   }, [user?.id, kind]);
 
   if (!user?.id || isHireProjectPath || !alerts.length) return null;
+  // Prototipo „toast“: tamsus pranešimas ekrano apačioje.
   return createPortal(
-    <div aria-live="polite" aria-relevant="additions" style={{
-      position:"fixed",top:"max(15px, env(safe-area-inset-top, 0px))",right:12,
-      width:"min(365px, calc(100vw - 24px))",display:"grid",gap:9,
-      zIndex:6500,pointerEvents:"none",
-    }}>
-      {alerts.map(alert => (
-        <div key={alert.key} role="status" style={{
-          display:"flex",gap:12,alignItems:"flex-start",padding:"13px 14px",
-          background:"#fff",border:"1px solid #dfE7ED",borderLeft:"4px solid #6b5b95",
-          borderRadius:14,boxShadow:"0 12px 38px rgba(34,38,49,.18)",
-          fontFamily:"Inter,system-ui,sans-serif",color:"#222631",pointerEvents:"auto",
-        }}>
-          <div style={{flex:1,minWidth:0}}>
-            <strong style={{display:"block",fontSize:13,lineHeight:1.35}}>Statybos24</strong>
-            <span style={{display:"block",fontSize:12,lineHeight:1.5,marginTop:3}}>{alert.title}</span>
-          </div>
-          <button type="button" aria-label="Uždaryti pranešimą" onClick={() => setAlerts(current => current.filter(a => a.key !== alert.key))}
-            style={{cursor:"pointer",border:0,background:"#f1f4f6",color:"#526374",width:28,height:28,
-              flex:"0 0 28px",borderRadius:8,fontSize:17,lineHeight:1}}>×</button>
+    <div className="p24 p24-portal" aria-live="polite" aria-relevant="additions">
+      {alerts.slice(-1).map((alert) => (
+        <div key={alert.key} className="toast" role="status" style={{ zIndex: 9500, display: "flex", alignItems: "center", gap: 12 }}>
+          <span>{alert.title}</span>
+          <button type="button" aria-label="Uždaryti pranešimą" onClick={() => setAlerts((current) => current.filter((a) => a.key !== alert.key))}
+            style={{ border: 0, background: "transparent", color: "inherit", opacity: .7, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
         </div>
       ))}
-    </div>,document.body
+    </div>, document.body
   );
 }
 
@@ -1029,7 +899,22 @@ export function WebPushSettings({ user, kind = "worker", profileOpen = false }) 
 
   if (!user?.id || isHireProjectPath) return null;
   return <>
-    {profileAnchor && createPortal(
+    {profileAnchor && profileAnchor.dataset?.variant === "p24" && createPortal(
+      <div className="setrow">
+        <span className="setic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+        <div className="settx"><b>Pranešimai telefone</b><span>
+          {pushStatus === "blocked" ? "Užblokuoti šiame įrenginyje. Leidimą pakeiskite naršyklės ar įrenginio nustatymuose."
+            : pushStatus === "unsupported" ? "Šiame įrenginyje ar naršyklėje pranešimai nepalaikomi."
+            : busy ? "Vykdoma..."
+            : kind === "employer" ? "Darbuotojų atsakymai ir darbų atnaujinimai" : "Nauji kvietimai, žinutės ir grafiko priminimai"}
+          {problem && <span className="pushprob" role="alert">{problem}</span>}
+        </span></div>
+        <button type="button" className={`tgl${pushStatus === "on" ? " on" : ""}`} role="switch" aria-checked={pushStatus === "on"} aria-label="Pranešimai telefone"
+          onClick={pushStatus === "on" ? decline : accept}
+          disabled={busy || pushStatus === "checking" || pushStatus === "unsupported" || pushStatus === "blocked"}><i /></button>
+      </div>, profileAnchor
+    )}
+    {profileAnchor && profileAnchor.dataset?.variant !== "p24" && createPortal(
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",padding:"15px 17px",border:"1px solid #e2e9ee",background:"#f7f9fb",borderRadius:12,margin:"10px 0 20px"}}>
         <div style={{flex:"1 1 215px",minWidth:0}}>
           <strong style={{display:"block",fontSize:15,color:"#222631",marginBottom:5}}>Pranešimai</strong>

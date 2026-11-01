@@ -272,7 +272,15 @@ async function adminLogin(request, env) {
     body: "{}",
   }).catch(() => null);
   const isAdmin = check && check.ok ? (await check.json().catch(() => false)) === true : false;
-  if (!isAdmin) return fail();
+  // Testuotojai: tik Cloudflare kintamajame MAINTENANCE_TESTERS išvardyti el. paštai (pvz. testinės paskyros).
+  // Slaptažodį vis tiek patikrina Supabase, el. paštas imamas iš Supabase atsakymo, ne iš formos.
+  const testers = String(env?.MAINTENANCE_TESTERS || "")
+    .split(/[\s,;]+/)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const sessionEmail = String(session.user.email || "").trim().toLowerCase();
+  const isTester = Boolean(sessionEmail) && testers.includes(sessionEmail);
+  if (!isAdmin && !isTester) return fail();
 
   loginAttempts.delete(ip);
   const exp = Math.floor(Date.now() / 1000) + BYPASS_SECONDS;
@@ -353,5 +361,22 @@ async function handle(request, env) {
       return jsonResponse({ ok: false, error: "not_found" }, 404);
     }
 
-    return env.ASSETS.fetch(request);
+    return withSiteHeaders(url, await env.ASSETS.fetch(request));
+}
+
+// Saugumo antraštės visiems svetainės atsakymams ir ilgas talpinimas versijuotiems JS/CSS failams.
+const HASHED_BUILD_FILE = /^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(?:js|css)$/;
+function withSiteHeaders(url, response) {
+  // Po naujo diegimo seno failo nebėra: grąžiname 404, o ne pradinio puslapio HTML (kitaip naršyklė gautų klaidingą tipą).
+  if (url.pathname.startsWith("/assets/") && (response.headers.get("content-type") || "").includes("text/html")) {
+    return new Response("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+  }
+  const headers = new Headers(response.headers);
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("x-frame-options", "SAMEORIGIN");
+  headers.set("permissions-policy", "geolocation=(self), camera=(), microphone=(), payment=(), usb=()");
+  if (url.protocol === "https:") headers.set("strict-transport-security", "max-age=31536000");
+  if (response.ok && HASHED_BUILD_FILE.test(url.pathname)) headers.set("cache-control", "public, max-age=31536000, immutable");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }

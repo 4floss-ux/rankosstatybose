@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TERMS_VERSION, getVilniusTodayISO, supabase, workerBirthDateError } from "../lib/config.js";
-import { CloseMark, SilentLoader } from "../ui/brand.jsx";
+import { SilentLoader } from "../ui/brand.jsx";
+import { P24Modal } from "../p24/ui.jsx";
 import { normalizeLithuanianMobilePhone } from "../ui/common.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { sendPasswordRecoveryEmail } from "./passwordRecovery.jsx";
@@ -241,464 +242,124 @@ export function AuthModal({
     }
   }
 
-  const overlay = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(34,38,49,.58)",
-    zIndex: 1000,
-    display: "grid",
-    placeItems: "center",
-    padding: 20,
+  const switchMode = (next) => {
+    setMode(next);
+    setMessage("");
+    setSuccess(false);
+    if (next === "forgot") setForm((current) => ({ ...current, password: "" }));
   };
-
-  const card = {
-    width: "min(520px, 100%)",
-    maxHeight: "calc(100dvh - 40px)",
-    overflow: "hidden",
-    background: "#fff",
-    borderRadius: 20,
-    boxShadow: "0 24px 80px rgba(34,38,49,.24)",
-    padding: 0,
-  };
-
-  const cardScroll = {
-    maxHeight: "calc(100dvh - 40px)",
-    overflowY: "auto",
-    padding: 28,
-    boxSizing: "border-box",
-    scrollbarGutter: "stable",
-  };
-
-  const twoColumns = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-  };
-
-  const tabStyle = (active) => ({
-    border: "1px solid #dfe7ed",
-    borderRadius: 10,
-    padding: "11px 12px",
-    background: active ? "#222631" : "#fff",
-    color: active ? "#fff" : "#222631",
-    fontWeight: 700,
-    cursor: "pointer",
-  });
-
-  const labelStyle = {
-    display: "grid",
-    gap: 6,
-    fontSize: 14,
-    fontWeight: 700,
-  };
-
-  const inputStyle = {
-    width: "100%",
-    border: "1px solid #dfe7ed",
-    borderRadius: 10,
-    padding: "12px 13px",
-    font: "inherit",
-    outline: "none",
-  };
+  const signupBlocked = mode === "signup" && (phoneVerification.busy || phoneVerification.unavailable || (phoneVerification.required && !phoneVerification.verified));
+  const eyebrow = mode === "forgot" ? "Slaptažodžio atkūrimas" : mode === "login" ? "Prisijungimas" : "Registracija";
+  const title = mode === "forgot" ? "Pamiršote slaptažodį?" : mode === "login" ? "Sveiki sugrįžę" : "Sukurkite paskyrą";
+  const msgBox = message ? <div className={success ? "notebox" : "alert"} role={success ? "status" : "alert"}><div>{message}</div></div> : null;
 
   return (
-    <div
-      style={overlay}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !loading) onClose();
-      }}
-    >
-      <div style={card} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-        <div style={cardScroll}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 16,
-            alignItems: "flex-start",
-            marginBottom: 20,
-          }}
-        >
-          <div>
-            <div className="eyebrow">
-              {mode === "forgot" ? "SLAPTAŽODŽIO ATKŪRIMAS" : mode === "login" ? "PRISIJUNGIMAS" : "REGISTRACIJA"}
+    <P24Modal eyebrow={eyebrow} title={title} onClose={onClose} busy={loading} wide={mode === "signup"}>
+      {mode === "signup" && success ? (
+        <>
+          <div className="notebox" role="status"><b>Paskyra sukurta!</b> SMS kodas patvirtintas. Patvirtinkite ir el. paštą paspausdami nuorodą iš laiško. Jeigu el. paštą jau patvirtinote, spauskite žemiau ir atsidarys jūsų paskyra.</div>
+          {msgBox}
+          <div className="row" style={{ justifyContent: "flex-end" }}>
+            <button type="button" className="btn" disabled={loading} onClick={() => switchMode("login")}>Prisijungti įprastai</button>
+            <button type="button" className="btn primary" disabled={loading} onClick={openRegisteredAccount}>{loading ? <SilentLoader size={16} minHeight={18} /> : "Atidaryti paskyrą"}</button>
+          </div>
+        </>
+      ) : (
+        <form onSubmit={submit} style={{ display: "contents" }}>
+          {mode !== "forgot" ? (
+            <div className="toggle2" role="group" aria-label="Prisijungti arba registruotis">
+              <button type="button" aria-pressed={mode === "login"} disabled={loading} onClick={() => switchMode("login")}>Prisijungti</button>
+              <button type="button" aria-pressed={mode === "signup"} disabled={loading} onClick={() => switchMode("signup")}>Registruotis</button>
             </div>
-            <h2 id="auth-modal-title" style={{ margin: "6px 0 0", fontSize: 30 }}>
-              {mode === "forgot" ? "Pamiršote slaptažodį?" : mode === "login" ? "Sveiki sugrįžę" : "Sukurkite paskyrą"}
-            </h2>
-          </div>
+          ) : null}
 
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            aria-label="Uždaryti"
-            style={{
-              border: 0,
-              background: "#f3f6f8",
-              borderRadius: 10,
-              width: 38,
-              height: 38,
-              cursor: "pointer",
-              fontSize: 20,
-            }}
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        {mode === "signup" && success ? (
-          <div style={{ display: "grid", gap: 16 }}>
-            <div role="status" style={{ padding: 18, borderRadius: 14, background: "#edf8f3", color: "#222631" }}>
-              <h3 style={{ margin: "0 0 8px", fontSize: 19 }}>Paskyra sukurta!</h3>
-              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>
-                SMS kodas patvirtintas. Patvirtinkite ir el. paštą paspausdami nuorodą iš laiško.
-                Jeigu el. paštą jau patvirtinote, spauskite žemiau ir atsidarys jūsų paskyra.
-              </p>
+          {mode === "signup" && !teamInvite ? (
+            <div className="toggle2" role="group" aria-label="Paskyros tipas">
+              <button type="button" aria-pressed={role === "worker"} onClick={() => setRole("worker")}>Ieškau darbo</button>
+              <button type="button" aria-pressed={role === "employer"} onClick={() => setRole("employer")}>Ieškau darbuotojų</button>
             </div>
-            {message && <div role="status" style={{ fontSize: 14, lineHeight: 1.5, padding: "11px 12px", borderRadius: 10, background: "#f3f6f8" }}>{message}</div>}
-            <button type="button" className="btn primary" disabled={loading} onClick={openRegisteredAccount}
-              style={{ width: "100%", justifyContent: "center" }}>
-              {loading ? <SilentLoader size={16} minHeight={18} /> : "Atidaryti paskyrą"}
-            </button>
-            <button type="button" className="btn ghost" disabled={loading} onClick={() => { setMode("login"); setSuccess(false); setMessage(""); }}
-              style={{ width: "100%", justifyContent: "center" }}>Prisijungti įprastai</button>
-          </div>
-        ) : (
-          <>
-        {mode !== "signup" && (
-        <div style={{ ...twoColumns, marginBottom: 18 }}>
-          <button
-            type="button"
-            style={tabStyle(mode === "login")}
-            disabled={loading}
-            onClick={() => {
-              setMode("login");
-              setMessage("");
-              setSuccess(false);
-            }}
-          >
-            Prisijungti
-          </button>
-          <button
-            type="button"
-            style={tabStyle(mode === "signup")}
-            disabled={loading}
-            onClick={() => {
-              setMode("signup");
-              setMessage("");
-              setSuccess(false);
-            }}
-          >
-            Registruotis
-          </button>
-        </div>
-        )}
+          ) : null}
 
-        {mode === "signup" && !teamInvite && (
-          <div style={{ ...twoColumns, marginBottom: 18 }}>
-            <button
-              type="button"
-              style={tabStyle(role === "worker")}
-              onClick={() => setRole("worker")}
-            >
-              Ieškau darbo
-            </button>
-            <button
-              type="button"
-              style={tabStyle(role === "employer")}
-              onClick={() => setRole("employer")}
-            >
-              Ieškau darbuotojų
-            </button>
-          </div>
-        )}
-
-        <form onSubmit={submit} style={{ display: "grid", gap: 13 }}>
-          {mode === "signup" && (
+          {mode === "login" ? (
             <>
-              {role === "employer" && !teamInvite && (
-                <>
-                  <div style={{ display: "grid", gap: 7 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#222631" }}>
-                      Darbdavio tipas
-                    </span>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 8,
-                        padding: 4,
-                        borderRadius: 12,
-                        background: "#f1f4f6",
-                      }}
-                    >
-                      {[
-                        ["company", "Įmonė"],
-                        ["individual", "Privatus asmuo"],
-                      ].map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() =>
-                            setForm((current) => ({
-                              ...current,
-                              employerType: value,
-                              ...(value === "individual"
-                                ? { companyName: "", companyCode: "" }
-                                : {}),
-                            }))
-                          }
-                          style={{
-                            minHeight: 42,
-                            border: 0,
-                            borderRadius: 9,
-                            background: form.employerType === value ? "#fff" : "transparent",
-                            color: "#222631",
-                            font: "inherit",
-                            fontSize: 13,
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            boxShadow:
-                              form.employerType === value
-                                ? "0 1px 5px rgba(34,38,49,.10)"
-                                : "none",
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {form.employerType === "company" && (
-                    <div style={twoColumns}>
-                      <label style={labelStyle}>
-                        Įmonės pavadinimas *
-                        <input
-                          style={inputStyle}
-                          value={form.companyName}
-                          onChange={setField("companyName")}
-                          placeholder="UAB Statyba"
-                          required
-                        />
-                      </label>
-
-                      <label style={labelStyle}>
-                        Įmonės kodas
-                        <input
-                          style={inputStyle}
-                          value={form.companyCode}
-                          onChange={setField("companyCode")}
-                          placeholder="123456789"
-                        />
-                      </label>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div style={twoColumns}>
-                <label style={labelStyle}>
-                  Vardas *
-                  <input
-                    style={inputStyle}
-                    value={form.firstName}
-                    onChange={setField("firstName")}
-                    placeholder="Pvz. Tomas"
-                    autoComplete="given-name"
-                    required
-                  />
-                </label>
-
-                <label style={labelStyle}>
-                  Pavardė *
-                  <input
-                    style={inputStyle}
-                    value={form.lastName}
-                    onChange={setField("lastName")}
-                    placeholder="Pvz. Jonaitis"
-                    autoComplete="family-name"
-                    required
-                  />
-                </label>
+              <div className="form" style={{ gridTemplateColumns: "1fr" }}>
+                <label className="field" htmlFor="a-mail">El. paštas<input id="a-mail" type="email" value={form.email} onChange={setField("email")} placeholder="vardas@pastas.lt" autoComplete="email" readOnly={Boolean(teamInvite)} disabled={loading} required /></label>
+                <label className="field" htmlFor="a-pass">Slaptažodis<input id="a-pass" type="password" value={form.password} onChange={setField("password")} placeholder="Jūsų slaptažodis" autoComplete="current-password" required /></label>
               </div>
-
-              {role === "worker" && (
-                <label style={labelStyle}>
-                  Gimimo data *
-                  <input
-                    style={{ ...inputStyle, boxSizing: "border-box", minWidth: 0 }}
-                    type="date"
-                    min="1900-01-01"
-                    max={getVilniusTodayISO()}
-                    value={form.birthDate}
-                    onChange={setField("birthDate")}
-                    autoComplete="bday"
-                    required
-                  />
-                  <span style={{ color: "#71808d", fontSize: 11, fontWeight: 400 }}>
-                    Gimimo data nėra rodoma darbdaviams.
-                  </span>
-                </label>
-              )}
-
-              {role === "worker" && <fieldset style={{border:"1px solid #dfe7ed",borderRadius:12,padding:14,margin:0}}><legend style={{fontSize:13,fontWeight:800,color:"#222631"}}>Ar domina darbas užsienyje? *</legend><div style={{display:"flex",gap:18,flexWrap:"wrap"}}>{[["yes","Taip, domina"],["no","Ne, nedomina"]].map(([value,label])=><label key={value} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,cursor:"pointer"}}><input type="radio" name="signup-work-abroad" value={value} checked={form.workAbroadChoice===value} onChange={()=>setForm(current=>({...current,workAbroadChoice:value}))} required disabled={loading}/>{label}</label>)}</div></fieldset>}
-
-              <div style={twoColumns}>
-                <label style={labelStyle}>
-                  Miestas
-                  <CityAutocomplete
-                    style={inputStyle}
-                    value={form.city}
-                    onChange={(value) =>
-                      setForm((current) => ({ ...current, city: value }))
-                    }
-                    placeholder="Pradėkite rašyti miestą"
-                  />
-                </label>
-
-                <label style={labelStyle}>
-                  Telefonas *
-                  <input
-                    style={inputStyle}
-                    value={form.phone}
-                    onChange={setField("phone")}
-                    onBlur={() => {
-                      const normalized = normalizeLithuanianMobilePhone(form.phone);
-                      if (normalized) {
-                        setForm((current) => ({ ...current, phone: normalized }));
-                      }
-                    }}
-                    placeholder="+37061234567"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    required
-                  />
-                  <PhoneAvailabilityHint verification={phoneVerification} />
-                </label>
+              <button className="btn ghost sm" type="button" disabled={loading} onClick={() => switchMode("forgot")} style={{ alignSelf: "flex-start" }}>Pamiršau slaptažodį</button>
+              {msgBox}
+              <div className="row" style={{ justifyContent: "flex-end" }}>
+                <button className="btn primary" type="submit" disabled={loading}>{loading ? <SilentLoader size={16} minHeight={18} /> : "Prisijungti"}</button>
+              </div>
+            </>
+          ) : mode === "forgot" ? (
+            <>
+              <p className="muted small" style={{ margin: 0 }}>Įveskite paskyros el. paštą. Atsiųsime nuorodą naujam slaptažodžiui nustatyti.</p>
+              <div className="form" style={{ gridTemplateColumns: "1fr" }}>
+                <label className="field" htmlFor="f-mail">El. paštas<input id="f-mail" type="email" value={form.email} onChange={setField("email")} placeholder="vardas@pastas.lt" autoComplete="email" disabled={loading} required /></label>
+              </div>
+              {msgBox}
+              <div className="row" style={{ justifyContent: "flex-end" }}>
+                <button className="btn" type="button" disabled={loading} onClick={() => switchMode("login")}>Grįžti</button>
+                <button className="btn primary" type="submit" disabled={loading}>{loading ? <SilentLoader size={16} minHeight={18} /> : "Siųsti atkūrimo nuorodą"}</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="form">
+                {role === "employer" && !teamInvite ? (
+                  <>
+                    <div className="field wide"><span>Kas registruojasi?</span>
+                      <div className="segs wide2" role="radiogroup" aria-label="Darbdavio tipas">
+                        {[["company", "Įmonė"], ["individual", "Privatus asmuo"]].map(([value, label]) => (
+                          <label key={value}><input type="radio" name="r-et" checked={form.employerType === value}
+                            onChange={() => setForm((current) => ({ ...current, employerType: value, ...(value === "individual" ? { companyName: "", companyCode: "" } : {}) }))} /><span>{label}</span></label>
+                        ))}
+                      </div>
+                    </div>
+                    {form.employerType === "company" ? (
+                      <>
+                        <label className="field wide" htmlFor="r-co">Įmonės pavadinimas *<input id="r-co" value={form.companyName} onChange={setField("companyName")} placeholder="UAB ..." required /></label>
+                        <label className="field" htmlFor="r-code">Įmonės kodas<input id="r-code" inputMode="numeric" maxLength={9} value={form.companyCode} onChange={setField("companyCode")} placeholder="9 skaitmenys" /></label>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+                <label className="field" htmlFor="r-fn">Vardas *<input id="r-fn" value={form.firstName} onChange={setField("firstName")} placeholder="Pvz. Jonas" autoComplete="given-name" required /></label>
+                <label className="field" htmlFor="r-ln">Pavardė *<input id="r-ln" value={form.lastName} onChange={setField("lastName")} placeholder="Pvz. Petrauskas" autoComplete="family-name" required /></label>
+                {role === "employer" && form.employerType === "individual" && !teamInvite
+                  ? <p className="hint wide nmhint">Pvz. namo savininkas, ūkininkas ar meistras su individualia veikla. Darbuotojai matys „Privatus darbdavys“.</p>
+                  : <p className="hint wide nmhint">Rašykite pilną vardą ir pavardę, kaip asmens dokumente.</p>}
+                {role === "worker" ? (
+                  <>
+                    <label className="field" htmlFor="r-bd">Gimimo data *<input id="r-bd" type="date" min="1900-01-01" max={getVilniusTodayISO()} value={form.birthDate} onChange={setField("birthDate")} autoComplete="bday" required /><span className="hint">Gimimo data nėra rodoma darbdaviams.</span></label>
+                    <div className="field"><span>Ar domina darbas užsienyje? *</span>
+                      <div className="segs wide2" role="radiogroup" aria-label="Ar domina darbas užsienyje">
+                        {[["yes", "Taip, domina"], ["no", "Ne, nedomina"]].map(([value, label]) => (
+                          <label key={value}><input type="radio" name="signup-work-abroad" value={value} checked={form.workAbroadChoice === value} onChange={() => setForm((current) => ({ ...current, workAbroadChoice: value }))} required disabled={loading} /><span>{label}</span></label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+                <label className="field" htmlFor="r-city">Miestas<CityAutocomplete value={form.city} onChange={(value) => setForm((current) => ({ ...current, city: value }))} placeholder="Pradėkite rašyti miestą" /></label>
+                <label className="field" htmlFor="r-ph">Telefonas *<input id="r-ph" value={form.phone} onChange={setField("phone")}
+                  onBlur={() => { const normalized = normalizeLithuanianMobilePhone(form.phone); if (normalized) setForm((current) => ({ ...current, phone: normalized })); }}
+                  placeholder="+37061234567" autoComplete="tel" inputMode="tel" required /><PhoneAvailabilityHint verification={phoneVerification} /></label>
+                <label className="field" htmlFor="r-mail">El. paštas<input id="r-mail" type="email" value={form.email} onChange={setField("email")} placeholder="vardas@pastas.lt" autoComplete="email" readOnly={Boolean(teamInvite)} disabled={loading} required /></label>
+                <label className="field" htmlFor="r-pass">Slaptažodis<input id="r-pass" type="password" minLength={8} value={form.password} onChange={setField("password")} placeholder="Bent 8 simboliai" autoComplete="new-password" required /></label>
+                <PhoneVerificationFields verification={phoneVerification} />
+              </div>
+              <label className="check"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} required />
+                <span>Susipažinau su <a href="/naudojimosi-salygos" target="_blank" rel="noopener noreferrer">naudojimosi sąlygomis</a> ir <a href="/privatumo-politika" target="_blank" rel="noopener noreferrer">privatumo politika</a></span></label>
+              {msgBox}
+              <div className="row" style={{ justifyContent: "flex-end" }}>
+                <button className="btn primary" type="submit" disabled={loading || signupBlocked}>{loading ? <SilentLoader size={16} minHeight={18} /> : phoneVerification.config?.enabled ? "Užbaigti registraciją" : "Sukurti paskyrą"}</button>
               </div>
             </>
           )}
-
-          {mode === "forgot" && (
-            <p style={{ margin: 0, color: "#526374", lineHeight: 1.5 }}>
-              Įveskite paskyros el. paštą. Atsiųsime nuorodą naujam slaptažodžiui nustatyti.
-            </p>
-          )}
-
-          <label style={labelStyle}>
-            El. paštas
-            <input
-              style={inputStyle}
-              type="email"
-              value={form.email}
-              onChange={setField("email")}
-              placeholder="vardas@email.lt"
-              autoComplete="email"
-              readOnly={Boolean(teamInvite) && mode !== "forgot"}
-              disabled={loading}
-              required
-            />
-          </label>
-
-          {mode !== "forgot" && <label style={labelStyle}>
-            Slaptažodis
-            <input
-              style={inputStyle}
-              type="password"
-              required
-              minLength={mode === "signup" ? 8 : undefined}
-              value={form.password}
-              onChange={setField("password")}
-              placeholder={
-                mode === "signup" ? "Bent 8 simboliai" : "Jūsų slaptažodis"
-              }
-              autoComplete={
-                mode === "signup" ? "new-password" : "current-password"
-              }
-            />
-          </label>}
-
-          {mode === "signup" && <PhoneVerificationFields verification={phoneVerification} />}
-
-          {mode === "login" && (
-            <button type="button" disabled={loading}
-              onClick={() => {
-                setMode("forgot");
-                setForm((current) => ({ ...current, password: "" }));
-                setMessage("");
-                setSuccess(false);
-              }}
-              style={{ border: 0, padding: 0, background: "none", color: "#453a63",
-                font: "inherit", fontSize: 13, lineHeight: 1.2, fontWeight: 750,
-                cursor: "pointer", textAlign: "right" }}>
-              Pamiršau slaptažodį
-            </button>
-          )}
-
-          {mode === "signup" && (
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, color: "#405264", fontSize: 13, lineHeight: 1.5 }}>
-              <input
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(event) => setTermsAccepted(event.target.checked)}
-                required
-                style={{ marginTop: 3, accentColor: "#6b5b95", width: 17, height: 17, flexShrink: 0 }}
-              />
-              <span>
-                Susipažinau ir sutinku su{" "}
-                <a href="/naudojimosi-salygos" target="_blank" rel="noopener noreferrer" style={{ color: "#453a63", fontWeight: 800, textDecoration: "underline" }}>
-                  naudojimosi sąlygomis
-                </a>{" "}ir susipažinau su{" "}
-                <a href="/privatumo-politika" target="_blank" rel="noopener noreferrer" style={{ color: "#453a63", fontWeight: 800, textDecoration: "underline" }}>
-                  privatumo politika
-                </a>.
-              </span>
-            </label>
-          )}
-
-          {message && (
-            <div
-              role={success ? "status" : "alert"}
-              style={{
-                padding: "11px 12px",
-                borderRadius: 10,
-                background: success ? "#edf8f3" : "#fff3ed",
-                color: "#222631",
-                fontSize: 14,
-                lineHeight: 1.45,
-              }}
-            >
-              {message}
-            </div>
-          )}
-
-          <button
-            className="btn primary"
-            type="submit"
-            disabled={loading || (mode === "signup" && (phoneVerification.busy || phoneVerification.unavailable || (phoneVerification.required && !phoneVerification.verified)))}
-            style={{
-              width: "100%",
-              justifyContent: "center",
-              marginTop: 4,
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading
-              ? <SilentLoader size={16} minHeight={18} />
-              : mode === "forgot"
-              ? "Siųsti atkūrimo nuorodą"
-              : mode === "login"
-              ? "Prisijungti"
-              : phoneVerification.config?.enabled ? "Užbaigti registraciją" : "Sukurti paskyrą"}
-          </button>
         </form>
-          </>
-        )}
-        </div>
-
-      </div>
-    </div>
+      )}
+    </P24Modal>
   );
 }

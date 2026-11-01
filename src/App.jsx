@@ -1,18 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { lazyPage } from "./lib/lazyPage.js";
 import { initialPasswordRecovery, isHireProjectPath, statybos24IsStandalone, supabase } from "./lib/config.js";
 import { PasswordRecoveryPage, clearPasswordRecoveryUrl, rememberPasswordRecoveryUser, rememberedPasswordRecoveryUser } from "./auth/passwordRecovery.jsx";
 import { AuthModal } from "./auth/AuthModal.jsx";
+import { endImpersonation, getImpersonation } from "./admin/impersonation.js";
 import { TeamInvitePage } from "./team/TeamInvitePage.jsx";
 import { localDateISO } from "./lib/jobs.js";
-import { WorkerDashboard } from "./worker/WorkerDashboard.jsx";
 import { BUSINESS_PRESENTATION_TOKEN } from "./employer/plans.js";
-import { EmployerDashboard } from "./employer/EmployerDashboard.jsx";
-import { AdminEmployerGateway, AdminWorkerGateway } from "./admin/adminParts.jsx";
-import { AdminDashboard } from "./admin/AdminDashboard.jsx";
 import { SuspendedAccount } from "./public/SuspendedAccount.jsx";
-import { PublicLandingPage } from "./public/PublicLandingPage.jsx";
-import { BusinessPresentationPage } from "./public/BusinessPresentationPage.jsx";
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
+import { PublicLandingP24 } from "./p24/public/PublicLandingP24.jsx";
+
+// Kodo dalys kraunamos pagal rolę – pradinis puslapis lieka lengvas.
+const WorkerDashboard = lazyPage(() => import("./worker/WorkerDashboard.jsx"), "WorkerDashboard");
+const EmployerDashboard = lazyPage(() => import("./employer/EmployerDashboard.jsx"), "EmployerDashboard");
+const AdminDashboard = lazyPage(() => import("./admin/AdminDashboard.jsx"), "AdminDashboard");
+const AdminWorkerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminWorkerGateway");
+const AdminEmployerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminEmployerGateway");
+const BusinessPresentationPage = lazyPage(() => import("./public/BusinessPresentationPage.jsx"), "BusinessPresentationPage");
 
 export function App() {
   const [user, setUser] = useState(null);
@@ -372,15 +377,18 @@ export function App() {
     );
   }
 
+  const impersonated = user && accountRole !== "admin" ? getImpersonation(user.id) : null;
+  const impersonation = impersonated ? { name: impersonated.name, onEnd: endImpersonation } : null;
+
   if (user && accountRole === "worker") {
     return (
-      <WorkerDashboard user={user} onLogout={logout} />
+      <WorkerDashboard user={user} onLogout={impersonation ? endImpersonation : logout} impersonation={impersonation} />
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <EmployerDashboard user={user} onLogout={logout} />
+      <EmployerDashboard user={user} onLogout={impersonation ? endImpersonation : logout} impersonation={impersonation} />
     );
   }
 
@@ -418,12 +426,10 @@ export function App() {
 
   return (
     <>
-      <PublicLandingPage
+      <PublicLandingP24
         onLogin={openLogin}
         onEmployerSignup={openEmployerSignup}
         onWorkerSignup={openWorkerSignup}
-        pricingBillingCycle={pricingBillingCycle}
-        setPricingBillingCycle={setPricingBillingCycle}
       />
 
       <AuthModal
