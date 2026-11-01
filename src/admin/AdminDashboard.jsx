@@ -2386,9 +2386,9 @@ export function AdminDashboard({
       groups={[
         ["Apžvalga", [{ key: "overview", label: "Suvestinė", icon: "overview" }]],
         ["Naudotojai", [
-          { key: "workers", label: "Darbuotojai", icon: "team" },
+          { key: "workers", label: "Darbuotojai", icon: "people" },
           { key: "employers", label: "Darbdaviai", icon: "home" },
-          { key: "workAbroadInterest", label: "Domisi darbu užsienyje", icon: "briefcase" },
+          { key: "workAbroadInterest", label: "Domisi darbu užsienyje", icon: "nav" },
         ]],
         ["Darbai", [
           { key: "jobs", label: "Visi darbai", icon: "jobs" },
@@ -2396,21 +2396,21 @@ export function AdminDashboard({
           { key: "foreignHire", label: "Tarptautinė atranka", icon: "user", badge: foreignHireAlertCount },
         ]],
         ["Priežiūra", [
-          { key: "disputes", label: "Ginčai", icon: "bell", badge: activeDisputeCount },
+          { key: "disputes", label: "Ginčai", icon: "shield", badge: activeDisputeCount },
           { key: "bugs", label: "Svetainės klaidos", icon: "bell", badge: activeSiteBugCount },
-          { key: "ratings", label: "Atsiliepimai", icon: "heart" },
+          { key: "ratings", label: "Atsiliepimai", icon: "star" },
           { key: "teamChats", label: "Vadovų pokalbiai", icon: "chat" },
-          { key: "files", label: "Failai", icon: "card" },
+          { key: "files", label: "Failai", icon: "file" },
         ]],
         ["Sistema", [
-          { key: "monthlyAwards", label: "Mėnesio geriausi", icon: "heart" },
+          { key: "monthlyAwards", label: "Mėnesio geriausi", icon: "star" },
           { key: "audit", label: "Veiksmų istorija", icon: "history" },
         ]],
       ]}
       tabs={[
         { key: "overview", label: "Suvestinė", icon: "overview" },
-        { key: "workers", label: "Žmonės", icon: "team" },
-        { key: "disputes", label: "Ginčai", icon: "bell", badge: activeDisputeCount },
+        { key: "workers", label: "Žmonės", icon: "people" },
+        { key: "disputes", label: "Ginčai", icon: "shield", badge: activeDisputeCount },
         { key: "bugs", label: "Klaidos", icon: "bell", badge: activeSiteBugCount },
       ]}
       who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD", onClick: () => adminGoTab("audit"), onLogout }}
