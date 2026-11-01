@@ -63,9 +63,21 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
 - `get_admin_private_job_threads`, `get_admin_private_job_messages`, `admin_send_private_job_message` (+ 'admin' režimas `set_job_message_sender_context`)
 - lentelė `worker_favorite_companies` su RLS
 
+**Padaryta 2026-11-01 (2 sesija):**
+- Darbuotojo profilis 1:1 (`p24/worker/WorkerProfileEditor.jsx`): apdovanojimai, laukai, telefonas su „Keisti“, užrakintas el. paštas,
+  pažymėjimai (lentelė `worker_documents` + bucket `worker-documents`), pranešimų perjungiklis (`WebPushSettings` su `data-variant="p24"`),
+  lokacija, užsienis, slaptažodžio keitimas, klaidos pranešimas, ištrynimas, neišsaugotų pakeitimų juosta.
+- **Darbo skelbimai** (nauja sistema vietoj senų ilgalaikių pasiūlymų, kurie paslėpti `data-wv="legacy"`):
+  DB `job_ads`, `job_ad_applications`, `job_ad_saves`, `job_ad_nudges`, `job_ad_views`, `job_ad_payments` (RLS be politikų – tik per RPC),
+  bucket `job-ad-cv`. Darbuotojas – `p24/worker/WorkerAds.jsx`, įmonė – `p24/employer/EmployerAds.jsx` (meniu „Įdarbinimas“, savininkas/vadovas),
+  administratorius – `p24/admin/AdminJobAds.jsx`.
+- Apmokėjimas 9,99 € / 30 d. (Business Pro – nemokamai): **atskira** edge funkcija `job-ad-checkout` (šaltinis `supabase/functions/job-ad-checkout`).
+  Esamos Stripe prenumeratų funkcijos nekeistos. Apmokėjimas tikrinamas serveryje (grįžus `?adpay=success…` arba mygtuku „Apmokėti“ – pakartotinai naudoja sesiją).
+- Telefono paraštės be dvigubo atitraukimo (`.wd-shell`, `.ed-shell`), pilkas fonas iki ekrano apačios.
+
 ## 5. Kas liko (eilės tvarka)
 
-1. Darbuotojas: ilgalaikiai pasiūlymai (ads) 1:1; profilio redaktorius pilnai 1:1.
+1. Skelbimų smulkmenos: „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo dar nėra); pažymėjimų rodymas darbdavio darbuotojo profilio lange.
 2. Darbdavys: mėgstami, skubūs, komanda, planai, įmonės profilis, kalendorius, statistika – iš senų langų į prototipo ekranus.
 3. Admin: visi skyriai, išskyrus suvestinę (dabar seni su skin) → prototipo `admin.js`.
 4. Verslo pristatymo SVG ekrano nuotraukos (rodo seną UI).
@@ -93,4 +105,5 @@ Prototipas (palyginimui): `docs/redesign/prototype/statybos24-prototipas.html` (
 
 - **Moderatoriai su teisėmis:** būtina serverio pusės apsauga (~40 admin RPC). Saugumui jautru – pirmiau parodyti planą, tik tada daryti.
 - **Cloudflare:** pridėti kintamąjį `MAINTENANCE_TESTERS = tattoo.staponas@gmail.com, beatabune@gmail.com` (jei dar nepadaryta).
+- **Stripe:** skelbimų mokėjimai eina per tą patį `STRIPE_SECRET_KEY` (live). Peržiūroje bandant apmokėti bus tikras mokėjimas.
 - **Pabaiga:** savininkas sujungia PR #14 priežiūros lango metu, po to patikrinama gyvai.

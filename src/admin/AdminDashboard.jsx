@@ -17,6 +17,7 @@ import { P24Shell } from "../p24/Shell.jsx";
 import { Svg } from "../p24/Shell.jsx";
 import { Empty, PageHead } from "../p24/ui.jsx";
 import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
+import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
 
 export function AdminDashboard({
   user,
@@ -207,6 +208,7 @@ export function AdminDashboard({
     ["workAbroadInterest", "Domisi darbu užsienyje"],
     ["employers", "Darbdaviai"],
     ["jobs", "Darbai"],
+    ["jobAds", "Darbo skelbimai"],
     ["employment", `Įdarbinti darbuotojai${longTermPlacements.filter((item) => item.status === "active").length ? ` (${longTermPlacements.filter((item) => item.status === "active").length})` : ""}`],
     ["teamChats", "Vadovų pokalbiai"],
     ["disputes", `Ginčai${activeDisputeCount ? ` (${activeDisputeCount})` : ""}`],
@@ -2395,6 +2397,7 @@ export function AdminDashboard({
         ]],
         ["Darbai", [
           { key: "jobs", label: "Visi darbai", icon: "jobs" },
+          { key: "jobAds", label: "Darbo skelbimai", icon: "briefcase" },
           { key: "employment", label: "Įdarbinti darbuotojai", icon: "briefcase", badge: adminEmploymentActive },
           { key: "foreignHire", label: "Tarptautinė atranka", icon: "user", badge: foreignHireAlertCount },
         ]],
@@ -2566,6 +2569,7 @@ export function AdminDashboard({
 
 
         {activeTab === "workAbroadInterest" && <AdminWorkAbroadInterests onOpenProfile={openAbroadWorkerProfile}/>}
+        {activeTab === "jobAds" && <AdminJobAds />}
         <WorkerProfileModal worker={abroadProfile} jobId={null} canViewWorkerMetrics={true} onClose={()=>setAbroadProfile(null)}/>
 
         {activeTab === "overview" && (
