@@ -99,6 +99,7 @@ export function EmployerJob(p) {
             <WkRow w={w} sub={w.activityLabel || [w.city, `Atlikta darbų: ${Number(w.completedJobs || 0)}`].filter(Boolean).join(" · ")} actions={workerActions(w)} extra={statusLine(w)} onProfile={() => a.profile(w)} />
           </div>
         )} />
+        : ended || cancelled ? <Empty title="Šiame darbe darbuotojų nebuvo." icon="people" />
         : <Empty title="Šiuo metu pasiūlymo dar nepriėmė nė vienas darbuotojas." sub="Pakvieskite laisvus darbuotojus žemiau." icon="people" />}
     </section>
   );

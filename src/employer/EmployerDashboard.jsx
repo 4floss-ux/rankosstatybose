@@ -4477,7 +4477,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const employerMessengerUnread = visibleConversations(employerConversations, chatHidden).filter((conv) => conv.unread).length;
 
   const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
-  const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? "active" : employerView;
+  const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? (["completed", "cancelled"].includes(currentJob?.status) ? "ended" : "active") : employerView;
 
   const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
     ? ""

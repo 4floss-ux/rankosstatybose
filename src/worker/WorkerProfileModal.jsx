@@ -98,7 +98,7 @@ export function WorkerProfileModal({ worker, jobId, canViewWorkerMetrics = false
           {canViewWorkerMetrics ? (
             <div className="stats">
               <div className="stat"><small>Atvykimo patikimumas</small><b>{att == null ? "–" : Math.round(Number(att))}</b></div>
-              <div className="stat"><small>Darbdavių įvertinimas</small><b>{rating == null ? "–" : Number(rating).toFixed(1).replace(".", ",")}</b><span>{ratingCount ? `Iš ${ratingCount} įvertinimų` : "Dar nėra vertinimų"}</span></div>
+              <div className="stat"><small>Darbdavių įvertinimas</small><b>{rating == null ? "–" : Number(rating).toFixed(1).replace(".", ",")}</b>{ratingCount ? <span>{`Iš ${ratingCount} įvertinimų`}</span> : rating == null ? <span>Dar nėra vertinimų</span> : null}</div>
               <div className="stat"><small>Užbaigti darbai</small><b>{completed ?? "–"}</b></div>
             </div>
           ) : (

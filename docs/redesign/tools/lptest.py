@@ -1,7 +1,7 @@
 import asyncio, os
 from playwright.async_api import async_playwright
-HTML=open('/home/claude/4floss-ux/rankosstatybose/index.html').read().replace('<script type="module" src="/src/main.jsx"></script>','<link rel="stylesheet" href="/__b/app.css"><script type="module" src="/__b/app.js"></script>')
-PUB='/home/claude/4floss-ux/rankosstatybose/public'
+HTML=open('/home/claude/rankosstatybose/index.html').read().replace('<script type="module" src="/src/main.jsx"></script>','<link rel="stylesheet" href="/__b/app.css"><script type="module" src="/__b/app.js"></script>')
+PUB='/home/claude/rankosstatybose/public'
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(); errs=[]
