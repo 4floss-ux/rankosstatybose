@@ -7,7 +7,7 @@ dabartinė svetainė su jais veikia kaip anksčiau, todėl paleisti galima bet k
 
 - Visos 166 DB funkcijos ir 23 lentelės, kurias kviečia kodas, egzistuoja; visų 137 iškvietimų parametrai sutampa.
 - 82 ekranai (darbuotojas, darbdavys, admin × kompiuteris ir telefonas) – be klaidų ir be horizontalaus perpildymo.
-- /hire, /hire/login, teisiniai puslapiai, pradinis puslapis – veikia.
+- /hire, /hire/login (nauji, kaip prototipe), teisiniai puslapiai, pradinis puslapis – veikia.
 - Cloudflare build – sėkmingas. PR #14 – be konfliktų.
 - Teisės DB (transakcijose su testinėmis paskyromis, viskas atšaukta): darbuotojas nemato įmonės duomenų,
   skelbimo be apmokėjimo aktyvuoti neįmanoma, pažymėjimus mato tik leidus.
@@ -33,10 +33,14 @@ Darbdavys (`tattoo.staponas@gmail.com`, Business Pro – skelbimai nemokami):
 - [ ] Apžvalga, Aktyvūs darbai, naujas darbo pasiūlymas (galima atšaukti)
 - [ ] Darbo skelbimai → Naujas skelbimas → Paskelbti (nemokamai) → matosi darbuotojo paskyroje
 - [ ] Kandidatas → Kviesti pokalbiui → darbuotojas patvirtina
-- [ ] Žinutės, Komanda, Planai atsidaro
+- [ ] Žinutės, Komanda, Planai, Statistika, Kalendorius atsidaro
+- [ ] Įmonės profilis (paspausti įmonės kortelę apačioje kairėje): pakeisti „Trumpai apie įmonę“, Išsaugoti; Keisti slaptažodį (reikia dabartinio)
 
 Administratorius:
-- [ ] Suvestinė, Darbuotojai, Darbdaviai, Darbo skelbimai, Pokalbiai
+- [ ] Suvestinė, Darbuotojai (Valdyti → langas), Darbdaviai, Visi darbai, Ginčai, Klaidos, Darbo skelbimai, Pokalbiai
+
+/hire:
+- [ ] statybos24.lt/hire – forma (galima nesiųsti), „Sign in“ → /hire/login
 
 Pastaba: 9,99 € apmokėjimas naudoja tikrą (live) Stripe raktą – testuojant bus tikras mokėjimas.
 Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (Refund).
@@ -55,7 +59,6 @@ Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (
 
 ## Kas sąmoningai atidėta (paleidimui netrukdo)
 
-- Kai kurie darbdavio langai (mėgstami, Skubiai!, komanda, planai, įmonės profilis, kalendorius, statistika)
-  veikia su nauju stiliumi, bet dar ne 1:1 kaip prototipe.
-- /hire – senas dizainas (veikia).
+- Admin „Tarptautinė atranka“ ir /hire/portal – esamas (veikiantis) vidus su nauju stiliumi, ne 1:1.
+- Verslo pristatymo puslapio ekrano nuotraukos rodo seną dizainą.
 - Skelbimuose nėra „Rašyti įmonei / kandidatui“ pokalbio.
