@@ -15,6 +15,7 @@ import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { WorkAbroadPreference } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
+import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
@@ -859,6 +860,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function showProfileFieldError(field, message) {
     setProfileFormErrors((current) => ({ ...current, [field]: message }));
+    setWorkerView("profile");
+    setWorkerProfileEditorTarget("profile");
+    setShowProfileEditor(true);
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const node = profileFieldRefs.current[field];
@@ -3390,11 +3394,25 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         </div>
 
+        <div data-wv="schedule" style={{ display: "contents" }}>
+          <WorkerSchedule
+            days={days}
+            availability={availability}
+            onUpdate={updateAvailability}
+            occupiedOn={confirmedJobsOnDate}
+            validation={availabilityValidationMessages}
+            onSave={saveEverything}
+            saving={saving}
+            saved={profileSaved}
+            needsConfirm={false}
+          />
+        </div>
+
         {showProfileEditor && (
           <section
             ref={workerProfileEditorRef}
             id="worker-profile-editor"
-            data-wv="schedule profile"
+            data-wv="profile"
             className="wd-profile-editor"
             style={{ scrollMarginTop: 88 }}
           >
@@ -3715,7 +3733,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             <div
               className="wd-profile-editor-section"
               id="worker-availability-editor"
-              data-wv={Object.keys(availabilityValidationMessages || {}).length ? "schedule profile" : "schedule"}
+              data-wv={Object.keys(availabilityValidationMessages || {}).length ? "profile" : "legacy"}
               style={{ scrollMarginTop: 92 }}
             >
               <h3>Kada galite dirbti?</h3>
