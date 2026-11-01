@@ -112,6 +112,11 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
 - Meniu sutankinimas kaip prototipe (`mfit1–4` P24Shell), pašalinta prototipe nesanti admino „Paskyra“ grupė (darbuotojo/darbdavio režimai, paskyros trynimas).
 - Smulkūs: darbo puslapio širdelė prieš įmonę, klaidos pataisymo pranešimas `.alert green`, pasibaigęs darbas paryškina „Pasibaigę darbai“.
 
+### 5 sesija
+- Pritaikyta DB: komandos veiksmų istorija, skelbimo pokalbis, „Nuolatinė komanda“, kvietimų terminas (12/24 val.; priėmimo trigeris IŠJUNGTAS iki paleidimo – žr. LAUNCH.md).
+- Objektai ir šablonai – UI padarytas, migracija `20261101233000_redesign_sites_templates.sql` DAR NEPRITAIKYTA (Supabase patvirtinimas atšauktas automatiškai).
+- Likę: automatinis kvietimas, objekto vadovo rolė, moderatoriai (planas `docs/redesign/ADMIN_MODERATORS_PLAN.md`).
+
 ## 5. Kas liko
 
 1. Komandos „Veiksmų istorija“ (prototipe yra). Paruošta papildoma migracija `docs/redesign/pending-migrations/20261101210000_redesign_company_team_activity.sql`
