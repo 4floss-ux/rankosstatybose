@@ -4951,6 +4951,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             onCopy={copyTeamInvite}
             onRole={changeTeamMemberRole}
             onRemove={removeTeamMember}
+            companyId={company?.id}
           />
         </div>
         <div data-wv="favorites" style={{ display: "contents" }}>

@@ -24,6 +24,14 @@ import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const v = [lat1, lng1, lat2, lng2].map((x) => (x === null || x === undefined || x === "" ? NaN : Number(x)));
+  if (v.some((x) => !Number.isFinite(x))) return null;
+  const r = (d) => (d * Math.PI) / 180;
+  const a = Math.sin(r(v[2] - v[0]) / 2) ** 2 + Math.cos(r(v[0])) * Math.cos(r(v[2])) * Math.sin(r(v[3] - v[1]) / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null }) {
   const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
@@ -272,6 +280,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
     updatedAt: null,
   });
   const [searchLocationBusy, setSearchLocationBusy] = useState(false);
+  const [mutualCompanies, setMutualCompanies] = useState(() => new Set());
+  useEffect(() => {
+    let off = false;
+    supabase.rpc("get_worker_mutual_companies").then(({ data, error }) => { if (!off && !error) setMutualCompanies(new Set((data || []).map((r) => r.company_id))); });
+    return () => { off = true; };
+  }, [user.id]);
   const [searchLocationError, setSearchLocationError] = useState("");
   const searchLocationFresh = Boolean(
     searchLocation.enabled && isSearchLocationFresh(searchLocation.updatedAt)
@@ -683,7 +697,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
         supabase
           .from("worker_profiles")
           .select(
-            "travel_radius_km, has_driving_license_b, has_individual_activity, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at, search_location_enabled, search_location_accuracy_m, search_location_updated_at"
+            "travel_radius_km, has_driving_license_b, has_individual_activity, years_experience, short_bio, avatar_path, attendance_rate, completed_jobs, rating_average, rating_count, no_show_count, restricted_until, last_active_at, availability_confirmed_at, urgent_city, urgent_is_active, reliability_good_jobs_since_penalty, reliability_last_penalty_at, search_location_enabled, search_location_accuracy_m, search_location_updated_at, search_latitude, search_longitude"
           )
           .eq("user_id", user.id)
           .single(),
@@ -775,6 +789,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
             ? null
             : Number(worker.search_location_accuracy_m),
         updatedAt: worker?.search_location_updated_at || null,
+        lat: worker?.search_latitude ?? null,
+        lng: worker?.search_longitude ?? null,
       });
       setSearchLocationError("");
 
@@ -1338,7 +1354,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
     const jobsResult = await supabase
       .from("jobs")
       .select(
-        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at"
+        "id, title, city, address_text, work_date, start_time, end_time, break_start_time, break_end_time, description, pay_amount, pay_unit, company_id, status, transport_mode, cancellation_reason, cancelled_at, location_latitude, location_longitude"
       )
       .in("id", allJobIds);
 
@@ -2072,6 +2088,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
             ? null
             : Number(result.data.search_location_accuracy_m),
         updatedAt: result.data?.search_location_updated_at || updatedAt,
+        lat: latitude,
+        lng: longitude,
       });
     } catch (err) {
       setSearchLocationError(browserLocationErrorMessage(err));
@@ -4045,15 +4063,23 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
               job={workerJobPageItem.job}
               company={workerJobPageItem.companyName}
               companyAvatar={companyAvatarUrl(workerJobPageItem.companyAvatarPath)}
-              pills={workerJobPageIsInvite
-                ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
-                : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
+              pills={<>
+                {workerJobPageIsInvite
+                  ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
+                  : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
+                {mutualCompanies.has(workerJobPageItem.job?.company_id) ? <span className="pill green"><Svg name="people" size={13} />Nuolatinė komanda</span> : null}
+              </>}
               metaLead={workerJobPageItem.job?.company_id ? (
                 <button type="button" className={`favbtn${isFavorite(workerJobPageItem.job.company_id) ? " on" : ""}`} title={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-label={isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"} aria-pressed={isFavorite(workerJobPageItem.job.company_id)} onClick={() => toggleFavorite(workerJobPageItem.job.company_id, { name: workerJobPageItem.companyName, avatar_path: workerJobPageItem.companyAvatarPath })}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorite(workerJobPageItem.job.company_id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
                 </button>
               ) : null}
               metaExtra={<>
+                {(() => {
+                  const j = workerJobPageItem.job || {};
+                  const km = distanceKm(searchLocation.enabled ? searchLocation.lat : null, searchLocation.enabled ? searchLocation.lng : null, j.location_latitude, j.location_longitude);
+                  return km == null ? null : <span title="Tiesiu atstumu nuo jūsų paieškos vietos"><Svg name="car" size={16} />{km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km nuo jūsų</span>;
+                })()}
                 {workerJobPageIsInvite && workerJobPageItem.status === "pending" && invitationHasConflict(workerJobPageItem) ? <span className="jd-warn"><Svg name="clock" size={14} width={2.4} />Sutampa su jau priimtu darbu</span> : null}
               </>}
               alert={workerJobPageItem.job?.status === "cancelled" ? (

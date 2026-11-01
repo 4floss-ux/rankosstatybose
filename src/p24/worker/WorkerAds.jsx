@@ -3,6 +3,8 @@ import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { companyAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
+import { AdChat } from "../AdChat.jsx";
+import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { Empty, Paged, Pill, initialsOf, up } from "../ui.jsx";
 
 /* Darbo skelbimai darbuotojui (prototipo wAds / wAd / adApply). Duomenys – RPC job_ads_worker_list ir kt. */
@@ -128,6 +130,8 @@ function ApplyModal({ ad, me, onClose, onSent }) {
 }
 
 function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onChanged, onCompany }) {
+  const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
+  const [chat, setChat] = useState(false);
   const x = ad.application;
   const st = x?.status;
   const [apply, setApply] = useState(false);
@@ -190,7 +194,8 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
           {x.interview_confirmed_at ? <span className="ivok"><Svg name="check" size={13} width={3} />Patvirtinote</span>
             : <button className="btn primary jd-wide" type="button" disabled={busy} onClick={() => run("job_ad_confirm_interview", { p_application_id: x.id })}>Patvirtinti pokalbį</button>}
         </div>) : null}
-      {st !== "rejected" ? <button className="btn jd-wide" type="button" disabled={busy} onClick={() => { if (window.confirm("Atšaukti kandidatūrą?")) run("job_ad_withdraw", { p_application_id: x.id }); }}>Atšaukti kandidatūrą</button> : null}
+      {st === "interview" ? <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />Rašyti įmonei</button> : null}
+      {st !== "rejected" ? <button className="btn jd-wide" type="button" disabled={busy} onClick={async () => { if (await askConfirm({ title: "Atšaukti kandidatūrą?", message: "Įmonė nebematys jūsų kandidatūros šiam skelbimui.", confirmLabel: "Atšaukti kandidatūrą", cancelLabel: "Ne", danger: true })) run("job_ad_withdraw", { p_application_id: x.id }); }}>Atšaukti kandidatūrą</button> : null}
     </>
   ) : ad.live ? (
     <>
@@ -239,6 +244,8 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}
+      {chat && x ? <AdChat applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} closed={st === "rejected"} onClose={() => setChat(false)} /> : null}
+      <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
 }

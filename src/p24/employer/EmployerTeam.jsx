@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
 import { Empty, Pill, initialsOf } from "../ui.jsx";
 import { PlanLock } from "./EmployerPeople.jsx";
@@ -33,7 +34,36 @@ function RoleModal({ member, busy, onClose, onRole, onRemove }) {
   );
 }
 
-export function EmployerTeam({ locked, onPlans, myRole, myUserId, myEmail, members, invites, loading, busy, form, setForm, onInvite, onCopy, onRole, onRemove }) {
+const ACT_TXT = { job_created: "sukūrė darbą", job_cancelled: "atšaukė darbą", job_transferred: "perdavė darbą", role_changed: "pakeitė rolę" };
+const shortName = (n) => { const p = String(n || "").trim().split(/\s+/).filter(Boolean); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : (p[0] || ""); };
+function whenText(iso) {
+  const d = new Date(iso); const now = new Date();
+  const time = d.toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" });
+  const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
+  return days <= 0 ? `Šiandien ${time}` : days === 1 ? `Vakar ${time}` : `Prieš ${days} d.`;
+}
+function TeamActivity({ companyId, myUserId }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    if (!companyId) return undefined;
+    let off = false;
+    supabase.rpc("get_company_team_activity", { p_company_id: companyId, p_limit: 20 }).then(({ data, error }) => { if (!off) setRows(error ? null : data || []); });
+    return () => { off = true; };
+  }, [companyId]);
+  if (!rows) return null;
+  const who = (id, name) => (id === myUserId ? "Jūs" : shortName(name) || "Narys");
+  return (
+    <section className="card"><header><div><h2>Veiksmų istorija</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Kas sukūrė, atšaukė, perdavė darbą ar pakeitė teises</p></div></header>
+      {rows.length ? <div className="loglist">{rows.map((r) => {
+        const actor = who(r.actor_id, r.actor_name);
+        const obj = r.action === "role_changed" ? `${who(r.target_user_id, r.target_name)} → ${ROLE_LT[r.detail] || r.detail || ""}` : r.action === "job_transferred" ? `${r.job_title || ""} → ${who(r.target_user_id, r.target_name)}` : (r.job_title || "");
+        return <div className="logrow" key={r.id}><span className="av lt sm">{actor === "Jūs" ? "JŪ" : initialsOf(r.actor_name || "?")}</span><div><b>{actor}</b> {ACT_TXT[r.action] || r.action} <span className="logobj">{obj}</span></div><small>{whenText(r.created_at)}</small></div>;
+      })}</div> : <Empty title="Veiksmų dar nėra" sub="Čia matysite, kas sukūrė, atšaukė ar perdavė darbą." icon="history" />}
+    </section>
+  );
+}
+
+export function EmployerTeam({ locked, onPlans, myRole, myUserId, myEmail, members, invites, loading, busy, form, setForm, onInvite, onCopy, onRole, onRemove, companyId }) {
   const [edit, setEdit] = useState(null);
   if (locked) return <PlanLock title="Komanda" lead="Darbai ir žinutės lieka įmonės paskyroje." plan="Business Pro" onPlans={onPlans} />;
   const owner = myRole === "owner";
@@ -83,6 +113,7 @@ export function EmployerTeam({ locked, onPlans, myRole, myUserId, myEmail, membe
           )) : <Empty title="Išsiųstų kvietimų nėra" sub="Sukurtas kvietimas atsiras čia." icon="mail" />}
         </div></section>
       ) : null}
+      <TeamActivity companyId={companyId} myUserId={myUserId} />
       {edit && <RoleModal member={edit} busy={busy} onClose={() => setEdit(null)} onRole={async (m, r) => { await onRole(m, r); setEdit(null); }} onRemove={async (m) => { await onRemove(m); setEdit(null); }} />}
     </>
   );

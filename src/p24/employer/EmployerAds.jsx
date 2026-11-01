@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
+import { AdChat } from "../AdChat.jsx";
+import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { Empty, Pill, initialsOf, up } from "../ui.jsx";
 import { salKind, salTxt } from "../worker/WorkerAds.jsx";
 
@@ -264,6 +266,8 @@ function ExtendModal({ ad, isPro, onClose, onDone }) {
 
 /* ---------- Skelbimo puslapis su kandidatais ---------- */
 function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
+  const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
+  const [chat, setChat] = useState(null);
   const [ad, setAd] = useState(null);
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
@@ -295,7 +299,7 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   }
   async function close() {
-    if (!window.confirm("Uždaryti skelbimą? Darbuotojai jo nebematys.")) return;
+    if (!(await askConfirm({ title: "Uždaryti skelbimą?", message: "Darbuotojai jo nebematys.", confirmLabel: "Uždaryti", danger: true }))) return;
     const { error } = await supabase.rpc("job_ad_close", { p_ad_id: adId });
     if (error) setErr(error.message); else { await load(); onChanged(); }
   }
@@ -323,8 +327,8 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
       : <button className="btn sm" type="button" disabled={busy === c.id + "request_cv"} onClick={() => act(c, "request_cv")}><Svg name="file" size={14} />Prašyti CV</button>;
     const prof = <button className="btn sm" type="button" onClick={() => onWorkerProfile(c)}><Svg name="user" size={14} />Profilis</button>;
     const acts = c.status === "rejected" ? <><Pill>Atmesta</Pill>{prof}</>
-      : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button>{cvB}{prof}</>
-      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={() => { if (window.confirm(`Atmesti ${c.name} kandidatūrą?`)) act(c, "reject"); }}>Atmesti</button>{prof}</>;
+      : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}{prof}</>
+      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
     return (
       <div className="wk cand" key={c.id}>
         <Av w={c} />
@@ -376,6 +380,8 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
           </div>)) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Kol kas niekas neįsiminė.</p>}</div></section>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
+      {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
+      <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
 }

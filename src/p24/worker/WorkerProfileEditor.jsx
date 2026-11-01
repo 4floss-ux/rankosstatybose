@@ -3,6 +3,7 @@ import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { Svg } from "../Shell.jsx";
 import { Pill } from "../ui.jsx";
+import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { PasswordModal } from "../account/PasswordModal.jsx";
 import { activeMonthlyAwards, monthlyAwardMeta, monthlyAwardMetricText, monthlyAwardMonthLabel } from "../../awards/monthlyAwards.jsx";
 
@@ -74,6 +75,7 @@ function Modal({ title, eyebrow, onClose, children }) {
 
 /* ---------- Pažymėjimai ir dokumentai ---------- */
 function DocsSection({ userId }) {
+  const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [docs, setDocs] = useState([]);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState(DOC_TYPES[0]);
@@ -119,7 +121,7 @@ function DocsSection({ userId }) {
     if (!error) setDocs((cur) => cur.map((x) => x.id === d.id ? { ...x, show_to_employers: !x.show_to_employers } : x));
   }
   async function remove(d) {
-    if (!window.confirm(`Ištrinti „${d.doc_type}“?`)) return;
+    if (!(await askConfirm({ title: `Ištrinti „${d.doc_type}“?`, message: "Dokumentas bus ištrintas ir darbdaviai jo nebematys.", confirmLabel: "Ištrinti", danger: true }))) return;
     const { error } = await supabase.from("worker_documents").delete().eq("id", d.id);
     if (error) return;
     await supabase.storage.from("worker-documents").remove([d.file_path]);
@@ -172,6 +174,7 @@ function DocsSection({ userId }) {
           </div>
         </Modal>
       )}
+    <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
 }
