@@ -91,7 +91,7 @@
 .p24 .hp-main{padding-block:24px 60px;display:flex;flex-direction:column;gap:16px}
 .p24 .hp-hello{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .p24 .hp-hello h1{margin:6px 0 4px;font-size:clamp(24px,3vw,32px);letter-spacing:-.03em}
-.p24 .hp-hello p{margin:0;max-width:620px}
+.p24 .hp-hello p{margin:0;max-width:620px;font-size:14px;line-height:1.5}
 .p24 .hp-need{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%;padding:14px;border:1px solid var(--line);border-radius:6px;background:var(--white);text-align:left;cursor:pointer;color:var(--navy)}
 .p24 .hp-need:hover{border-color:#bfb5d6}
 .p24 .hp-need b{display:block;font-size:15px}
