@@ -17,11 +17,11 @@ import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
-import { WorkerProfileEditor } from "../p24/worker/WorkerProfileEditor.jsx";
+import { AwardPanel, WorkerProfileEditor } from "../p24/worker/WorkerProfileEditor.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
 import { WorkerAds, useWorkerAds } from "../p24/worker/WorkerAds.jsx";
 import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
-import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
+import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
@@ -923,8 +923,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     });
   }
 
-  async function enableUrgentAvailability() {
-    const city = urgentForm.city.trim();
+  async function enableUrgentAvailability(cityOverride) {
+    const city = String(cityOverride || urgentForm.city || "").trim();
 
     if (hasCurrentScheduledWork()) {
       setError("Šiuo metu turite patvirtintą darbą. „Laisvas dabar“ galėsite įjungti pasibaigus suplanuotam darbo laikui.");
@@ -3002,9 +3002,13 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         on: urgentAvailabilityIsActive(),
         locked: hasCurrentScheduledWork(),
         tip: hasCurrentScheduledWork() ? "Dabar dirbate. „Laisvas dabar“ galėsite įjungti pasibaigus darbui." : urgentAvailabilityIsActive() ? "Įjungta. Darbdaviai „Skubiai!“ paieškoje mato jūsų telefono numerį ir gali skambinti dėl darbo šiandien." : "Įjunkite, jei galite atvykti dirbti dabar. Darbdaviai „Skubiai!“ paieškoje matys jūsų telefono numerį.",
+        // Kaip prototipe: jungiklis įjungia / išjungia iš karto (miestas – iš profilio).
         onToggle: () => {
-          setUrgentForm((current) => ({ ...current, city: urgentAvailability.city || current.city || form.city || "Vilnius" }));
-          setShowUrgentAvailability(true);
+          if (urgentSaving) return;
+          if (urgentAvailabilityIsActive()) { disableUrgentAvailability(); return; }
+          const city = urgentAvailability.city || urgentForm.city || form.city || "Vilnius";
+          setUrgentForm((current) => ({ ...current, city }));
+          enableUrgentAvailability(city);
         },
       }}
       roleBar={onAdminReturn ? (
@@ -5493,249 +5497,36 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       )}
 
-      {workerCompanyProfileTarget && (
-        <div
-          className="wd-job-info-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !workerCompanyProfileLoading) {
-              setWorkerCompanyProfileTarget(null);
-            }
-          }}
-        >
-          <div className="wd-job-info-modal wd-company-profile-modal">
-            <style>{`
-              .wd-job-info-overlay{position:fixed;inset:0;z-index:9650;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-              .wd-job-info-modal{width:min(780px,100%);max-height:calc(100dvh - 40px);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(34,38,49,.30);color:#222631}
-              .wd-company-profile-modal{width:min(860px,100%)}
-              .wd-job-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 18px;border-bottom:1px solid #e8eef2;background:#fff}
-              .wd-job-info-head h2{margin:7px 0 0;font-family:Manrope,Inter,sans-serif;font-size:26px;line-height:1.2}
-              .wd-job-info-close{width:44px;height:44px;border:0;border-radius:12px;background:#f2f5f7;color:#222631;display:grid;place-items:center;cursor:pointer;flex:0 0 44px}
-              .wd-job-info-close:hover{background:#e9eef2}
-              .wd-job-info-scroll{overflow:auto;padding:18px 24px 22px;scrollbar-width:thin;scrollbar-color:#aab4bc transparent}
-              .wd-job-info-scroll::-webkit-scrollbar{width:8px}
-              .wd-job-info-scroll::-webkit-scrollbar-track{background:transparent}
-              .wd-job-info-scroll::-webkit-scrollbar-thumb{background:#aab4bc;border-radius:999px;border:2px solid #fff}
-              @media(max-width:620px){.wd-job-info-overlay{padding:10px}.wd-job-info-modal,.wd-company-profile-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:18px}.wd-job-info-head{padding:17px}.wd-job-info-scroll{padding:15px 17px 18px}.wd-job-info-head h2{font-size:22px}}
-            `}</style>
-            <div className="wd-job-info-head">
-              <div>
-                <div className="eyebrow">DARBDAVIO PROFILIS</div>
-                <h2>{workerCompanyProfileTarget.name || "Darbdavys"}</h2>
-              </div>
-              <button
-                className="wd-job-info-close"
-                type="button"
-                onClick={() => setWorkerCompanyProfileTarget(null)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            <div className="wd-job-info-scroll">
-              <div style={{ display: "grid", gap: 12 }}>
-                <div
-                  className="wd-company-profile-identity"
-                  style={{
-                    border: "1px solid #e4ebf0",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "#f8fafb",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <MonthlyAwardMiniList
-                      awards={workerCompanyProfileTarget.awards || []}
-                      size={54}
-                    />
-                    <CompanyBadge
-                      name={workerCompanyProfileTarget.name || "Darbdavys"}
-                      avatarPath={workerCompanyProfileTarget.avatarPath}
-                      size={54}
-                      fontSize={18}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <b style={{ display: "block", fontSize: 19 }}>
-                        {workerCompanyProfileTarget.name || "Darbdavys"}
-                      </b>
-                      <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                        {workerCompanyProfileTarget.city || "Miestas nenurodytas"}
-                      </div>
-                    </div>
-                  </div>
+      {workerCompanyProfileTarget && (() => {
+        const c = workerCompanyProfileTarget;
+        const fav = isFavorite(c.id);
+        const rel = Math.round(Number(c.reliabilityRate || 0));
+        const logo = companyAvatarUrl(c.avatarPath);
+        const HEART = `<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"${fav ? ' fill="currentColor"' : ""}/>`;
+        return (
+          <div className="p24 p24-portal">
+            <div className="modal-bg" style={{ zIndex: 9000 }} role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setWorkerCompanyProfileTarget(null); }}>
+              <div className="modal" role="dialog" aria-modal="true" aria-label={c.name || "Darbdavys"}>
+                <header><div className="cphead">
+                  {c.id ? <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title="Mėgstama įmonė" onClick={() => toggleFavorite(c.id, { name: c.name, avatar_path: c.avatarPath })}><Svg size={17} paths={HEART} /></button> : null}
+                  <span className="av co lg cplogo" style={{ overflow: "hidden" }}>{logo ? <img src={logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(String(c.name || "D").replace(/^(UAB|MB|IĮ|AB)\s+/i, ""))}</span>
+                  <div><h2>{c.name || "Darbdavys"}</h2><span className="muted small"><Svg name="pin" size={14} /> {c.city || "Miestas nenurodytas"}</span></div>
+                </div><button type="button" className="x" style={{ background: "var(--white)", border: "1px solid var(--line)", borderRadius: 4 }} aria-label="Uždaryti" onClick={() => setWorkerCompanyProfileTarget(null)}><Svg name="x" size={18} width={2.2} /></button></header>
+                {workerCompanyProfileLoading ? <p className="muted small" style={{ margin: 0 }}>Įkeliama...</p> : null}
+                <div className="cprel"><div className="cprel-top"><span>Patikimumas</span><b>{rel} <small>iš 100</small></b></div><div className="jd-bar"><i style={{ width: `${Math.max(0, Math.min(100, rel))}%` }} /></div><span className="muted small">Įmonė pradeda nuo 100 taškų. Taškai mažėja, jei atšaukia jau patvirtintus darbus.</span></div>
+                <AwardPanel awards={c.awards || []} />
+                <div className="cpstats"><div><b>{Number(c.completedJobs || 0)}</b><span>Įvykdyti darbai</span></div><div><b>{Number(c.cancelledJobs || 0)}</b><span>Atšaukti darbai</span></div><div><b>{c.reviewAverage != null ? Number(c.reviewAverage).toFixed(1).replace(".", ",") : "–"}</b><span>Vid. įvertinimas</span></div></div>
+                {c.description ? <div className="kv"><div className="wide"><small>Apie įmonę</small><b style={{ fontWeight: 500, whiteSpace: "pre-wrap" }}>{c.description}</b></div></div> : null}
+                <div className="cprev"><h3>Paskutiniai 3 atsiliepimai</h3>
+                  {c.reviews?.length ? c.reviews.slice(0, 3).map((review) => (
+                    <div className="cpr" key={review.id}><span className="av lt sm">{initialsOf(review.worker_name || "D")}</span><div><div className="cpr-top"><b>{review.worker_name || "Darbuotojas"}</b><span className="cpr-score">{review.score}/10</span></div><p>{review.comment || "Atsiliepimas be komentaro."}</p><small>{review.created_at ? new Date(review.created_at).toLocaleDateString("lt-LT") : review.work_date || ""}</small></div></div>
+                  )) : <p className="small muted" style={{ margin: 0 }}>Darbuotojų atsiliepimų apie šią įmonę dar nėra.</p>}
                 </div>
-
-                <div
-                  className="wd-company-profile-metrics"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
-                    gap: 10,
-                  }}
-                >
-                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Įvykdyti darbai</div>
-                    <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
-                      {Number(workerCompanyProfileTarget.completedJobs || 0)}
-                    </b>
-                  </div>
-
-                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Atšaukti darbai</div>
-                    <b style={{ display: "block", marginTop: 4, fontSize: 20 }}>
-                      {Number(workerCompanyProfileTarget.cancelledJobs || 0)}
-                    </b>
-                  </div>
-
-                  <div className="wd-company-profile-metric" style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbdavio patikimumas</div>
-                    <b
-                      style={{
-                        display: "block",
-                        marginTop: 4,
-                        fontSize: 20,
-                        color: reliabilityScoreColor(workerCompanyProfileTarget.reliabilityRate),
-                      }}
-                    >
-                      {Math.round(Number(workerCompanyProfileTarget.reliabilityRate || 0))} / 100
-                    </b>
-                  </div>
-                </div>
-
-                {!!workerCompanyProfileTarget.description && (
-                  <div style={{ border: "1px solid #e4ebf0", borderRadius: 16, padding: 14 }}>
-                    <div style={{ color: "#6c7a88", fontSize: 12 }}>Darbdavio aprašymas</div>
-                    <div style={{ marginTop: 6, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                      {workerCompanyProfileTarget.description}
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    border: "1px solid #e4ebf0",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "#f8fafb",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      flexWrap: "wrap",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, color: "#222631" }}>
-                      Darbuotojų atsiliepimai apie įmonę
-                    </div>
-                    {Number(workerCompanyProfileTarget.reviewCount || 0) > 0 && (
-                      <span style={{ color: "#6c7a88", fontSize: 12, fontWeight: 700 }}>
-                        {workerCompanyProfileTarget.reviewAverage !== null
-                          ? `${Number(workerCompanyProfileTarget.reviewAverage).toFixed(1)} / 10 · `
-                          : ""}
-                        {Number(workerCompanyProfileTarget.reviewCount || 0)} atsiliep.
-                      </span>
-                    )}
-                  </div>
-
-                  {workerCompanyProfileTarget.reviews?.length > 0 ? (
-                    <div style={{ display: "grid", gap: 9 }}>
-                      {workerCompanyProfileTarget.reviews.slice(0, 3).map((review) => (
-                        <div
-                          key={review.id}
-                          style={{
-                            background: "#fff",
-                            border: "1px solid #e4ebf0",
-                            borderRadius: 14,
-                            padding: 12,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 10,
-                              flexWrap: "wrap",
-                              marginBottom: 6,
-                            }}
-                          >
-                            <div>
-                              <b style={{ display: "block", color: "#222631" }}>
-                                {review.worker_name || "Darbuotojas"}
-                              </b>
-                              <span style={{ color: "#7a8996", fontSize: 11 }}>
-                                {review.created_at
-                                  ? new Date(review.created_at).toLocaleDateString("lt-LT")
-                                  : review.work_date || ""}
-                              </span>
-                            </div>
-                            <b style={{ color: "#222631" }}>{review.score} / 10</b>
-                          </div>
-
-                          {!!review.job_title && (
-                            <div
-                              style={{
-                                color: "#6c7a88",
-                                fontSize: 11,
-                                marginBottom: 6,
-                              }}
-                            >
-                              Darbas: {formatJobTitle(review.job_title)}
-                            </div>
-                          )}
-
-                          <div
-                            style={{
-                              lineHeight: 1.5,
-                              whiteSpace: "pre-wrap",
-                              color: "#24384a",
-                            }}
-                          >
-                            {review.comment || "Atsiliepimas be komentaro."}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ color: "#6c7a88", fontSize: 13 }}>
-                      Darbuotojų atsiliepimų apie šią įmonę dar nėra.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 16,
-                }}
-              >
-                <button
-                  className="wd-decline"
-                  type="button"
-                  onClick={() => setWorkerCompanyProfileTarget(null)}
-                >
-                  Uždaryti
-                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {showUrgentAvailability && (
         <div
@@ -5802,7 +5593,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               onClick={
                 urgentAvailabilityIsActive()
                   ? disableUrgentAvailability
-                  : enableUrgentAvailability
+                  : () => enableUrgentAvailability()
               }
               style={{
                 width: "100%",
@@ -5823,581 +5614,78 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       )}
 
       {employerReviewTarget && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !employerReviewSaving) {
-              setEmployerReviewTarget(null);
-            }
-          }}
-        >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">ATSILIEPIMAS APIE DARBDAVĮ</div>
-                <h2>Jūs laimėjote ginčą</h2>
-              </div>
-              <button
-                className="rs-close"
-                type="button"
-                disabled={employerReviewSaving}
-                onClick={() => setEmployerReviewTarget(null)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            <ReviewConductNotice />
-
-            <div
-              style={{
-                background: "#fffaf5",
-                border: "1px solid #c5bddb",
-                borderRadius: 16,
-                padding: 14,
-                marginBottom: 16,
-                lineHeight: 1.5,
-              }}
-            >
-              <b>{employerReviewTarget.company_name}</b>
-              <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                {formatJobTitle(employerReviewTarget.job_title)} ·{" "}
-                {employerReviewTarget.work_date}
-              </div>
-              <div style={{ marginTop: 8, color: "#526374" }}>
-                Ginčas oficialiai išspręstas jūsų naudai. Galite pasidalinti
-                savo patirtimi, kad kiti darbuotojai turėtų daugiau informacijos
-                prieš priimdami šios įmonės darbo pasiūlymą.
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <b>Įvertinimas</b>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(10, minmax(34px,1fr))",
-                  gap: 6,
-                  marginTop: 9,
-                }}
-              >
-                {Array.from({ length: 10 }, (_, index) => index + 1).map(
-                  (score) => (
-                    <button
-                      key={score}
-                      type="button"
-                      onClick={() => setEmployerReviewScore(score)}
-                      style={{
-                        border:
-                          employerReviewScore === score
-                            ? "1px solid #6b5b95"
-                            : "1px solid #dbe4ea",
-                        background:
-                          employerReviewScore === score ? "#f1eef8" : "#fff",
-                        color: "#222631",
-                        borderRadius: 9,
-                        minHeight: 40,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {score}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            <label style={{ display: "grid", gap: 7, fontWeight: 700 }}>
-              Atsiliepimas *
-              <textarea
-                className="wd-textarea"
-                maxLength={1500}
-                value={employerReviewComment}
-                onChange={(e) => setEmployerReviewComment(e.target.value)}
-                placeholder="Trumpai ir konkrečiai aprašykite, kas nutiko ir ką kiti darbuotojai turėtų žinoti."
-                style={{ minHeight: 120 }}
-              />
-              <span
-                style={{
-                  color: "#7a8996",
-                  fontSize: 11,
-                  fontWeight: 500,
-                }}
-              >
-                {employerReviewComment.trim().length}/1500 · mažiausiai 10
-                simbolių
-              </span>
-            </label>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 9,
-                marginTop: 18,
-              }}
-            >
-              <button
-                className="wd-decline"
-                type="button"
-                disabled={employerReviewSaving}
-                onClick={() => setEmployerReviewTarget(null)}
-              >
-                Vėliau
-              </button>
-              <button
-                className="wd-accept"
-                type="button"
-                disabled={
-                  employerReviewSaving ||
-                  !employerReviewScore ||
-                  employerReviewComment.trim().length < 10
-                }
-                onClick={submitEmployerReview}
-              >
-                {employerReviewSaving
-                  ? "Skelbiama..."
-                  : "Paskelbti atsiliepimą"}
-              </button>
-            </div>
+        <P24Modal eyebrow="Atsiliepimas apie darbdavį" title="Jūs laimėjote ginčą" sub={`${employerReviewTarget.company_name} · ${formatJobTitle(employerReviewTarget.job_title)} · ${employerReviewTarget.work_date}`} onClose={() => setEmployerReviewTarget(null)} busy={employerReviewSaving}>
+          <p className="small muted" style={{ margin: 0 }}>Ginčas oficialiai išspręstas jūsų naudai. Galite pasidalinti patirtimi, kad kiti darbuotojai turėtų daugiau informacijos prieš priimdami šios įmonės darbą.</p>
+          <div className="field"><span>Įvertinimas *</span><div className="rating" role="group" aria-label="Įvertinimas nuo 1 iki 10">
+            {Array.from({ length: 10 }, (_, index) => index + 1).map((score) => <button key={score} type="button" aria-pressed={employerReviewScore === score} onClick={() => setEmployerReviewScore(score)}>{score}</button>)}
+          </div></div>
+          <label className="field">Atsiliepimas *<textarea maxLength={1500} value={employerReviewComment} onChange={(e) => setEmployerReviewComment(e.target.value)} placeholder="Trumpai ir konkrečiai aprašykite, kas nutiko ir ką kiti darbuotojai turėtų žinoti." /><span className="hint">{employerReviewComment.trim().length}/1500 · mažiausiai 10 simbolių</span></label>
+          <div className="row" style={{ justifyContent: "flex-end" }}>
+            <button className="btn" type="button" disabled={employerReviewSaving} onClick={() => setEmployerReviewTarget(null)}>Vėliau</button>
+            <button className="btn primary" type="button" disabled={employerReviewSaving || !employerReviewScore || employerReviewComment.trim().length < 10} onClick={submitEmployerReview}>{employerReviewSaving ? "Skelbiama..." : "Paskelbti atsiliepimą"}</button>
           </div>
-        </div>
+        </P24Modal>
       )}
 
-      {arrivalHelpTarget && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              setArrivalHelpTarget(null);
-            }
-          }}
-        >
-          <div className="rs-modal-card" role="dialog" aria-modal="true" aria-label="Pagalba atvykus">
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">PAGALBA ATVYKUS</div>
-                <h2>Atvykau, bet nerandu darbdavio</h2>
-              </div>
-              <button
-                className="rs-close"
-                type="button"
-                aria-label="Uždaryti atvykimo pagalbą"
-                onClick={() => setArrivalHelpTarget(null)}
-              >
-                <CloseMark />
-              </button>
+      {arrivalHelpTarget && (() => {
+        const t = arrivalHelpTarget;
+        const openChat = () => { setArrivalHelpTarget(null); setConversation({ invitationId: t.invitation_id, title: `${t.companyName} · ${formatJobTitle(t.job?.title)}` }); };
+        return (
+          <P24Modal title="Atvykote, bet nerandate darbdavio?" sub={`${formatJobTitle(t.job?.title).toLocaleUpperCase("lt-LT")} · ${t.job?.address_text || "Atvykimo adresas nenurodytas"}`} onClose={() => setArrivalHelpTarget(null)}>
+            <div className="ahelp">
+              {t.companyPhone ? <a className="ahopt" href={`tel:${String(t.companyPhone).replace(/\s/g, "")}`}><span className="ahic"><Svg name="phone" size={22} /></span><span><b>Skambinti darbdaviui</b><small>{t.companyPhone}</small></span></a>
+                : <div className="ahopt" aria-disabled="true"><span className="ahic"><Svg name="phone" size={22} /></span><span><b>Skambinti darbdaviui</b><small>Numeris nenurodytas</small></span></div>}
+              <button type="button" className="ahopt" onClick={openChat}><span className="ahic"><Svg name="chat" size={22} /></span><span><b>Rašyti darbdaviui</b><small>Atidaryti darbo pokalbį</small></span></button>
             </div>
+          </P24Modal>
+        );
+      })()}
 
-            {error && <div className="wd-note err" role="alert">{error}</div>}
-            {notice && <div className="wd-note ok" role="status">{notice}</div>}
 
-            <div
-              style={{
-                background: "#f6f8fa",
-                borderRadius: 16,
-                padding: 14,
-                marginBottom: 16,
-              }}
-            >
-              <b>{arrivalHelpTarget.companyName}</b>
-              <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                {formatJobTitle(arrivalHelpTarget.job?.title)} · {arrivalHelpTarget.job?.work_date}
-              </div>
-              <div style={{ color: "#6c7a88", marginTop: 4 }}>
-                Atvykti adresu: {arrivalHelpTarget.job?.address_text || "Atvykimo adresas nenurodytas"}
-              </div>
-            </div>
-
-            <div className="wd-note ok" style={{ marginBottom: 16 }}>
-              Jei jau esate vietoje, pirmiausia parašykite žinutę darbdaviui.
-              Jei reikia, galite nukopijuoti jo telefono numerį ir susisiekti tiesiogiai.
-            </div>
-
-            <div style={{ display: "grid", gap: 12, marginBottom: 18 }}>
-              <button
-                className="wd-accept"
-                type="button"
-                onClick={() => {
-                  setArrivalHelpTarget(null);
-                  setConversation({
-                    invitationId: arrivalHelpTarget.invitation_id,
-                    title: `${arrivalHelpTarget.companyName} · ${formatJobTitle(arrivalHelpTarget.job?.title)}`,
-                  });
-                }}
-              >
-                Rašyti žinutę darbdaviui
-              </button>
-
-              {arrivalHelpTarget.companyPhone ? (
-                <div
-                  style={{
-                    border: "1px solid #dbe4ea",
-                    borderRadius: 16,
-                    padding: 14,
-                    background: "#fff",
-                  }}
-                >
-                  <div style={{ color: "#6c7a88", fontSize: 13, marginBottom: 6 }}>
-                    Darbo kontakto telefono numeris
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <b style={{ fontSize: 18 }}>{arrivalHelpTarget.companyPhone}</b>
-                    <button
-                      className="wd-decline"
-                      type="button"
-                      onClick={() => copyPhoneNumber(arrivalHelpTarget.companyPhone)}
-                    >
-                      Kopijuoti numerį
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="wd-note err" style={{ marginBottom: 0 }}>
-                  Šiuo metu darbdavio telefono numeris nenurodytas. Parašykite jam žinutę platformoje.
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button
-                className="wd-decline"
-                type="button"
-                onClick={() => setArrivalHelpTarget(null)}
-              >
-                Uždaryti
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {workerAttendanceTarget && workerAttendanceMode && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !attendanceBusy) {
-              setWorkerAttendanceTarget(null);
-              setWorkerAttendanceMode(null);
-              setWorkerAttendanceNote("");
-              setWorkerEvidenceFile(null);
-            }
-          }}
-        >
-          <div className="rs-modal-card">
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">
-                  {workerAttendanceMode === "dispute"
-                    ? "DARBO DIENOS GINČAS"
-                    : "DARBO DIENOS PATVIRTINIMAS"}
-                </div>
-                <h2>
-                  {workerAttendanceMode === "dispute"
-                    ? "Nesutinkate su darbdavio pažymėjimu?"
-                    : "Patvirtinti, kad neatvykote?"}
-                </h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={attendanceBusy}
-                onClick={() => {
-                  setWorkerAttendanceTarget(null);
-                  setWorkerAttendanceMode(null);
-                  setWorkerAttendanceNote("");
-                  setWorkerEvidenceFile(null);
-                }}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            {workerAttendanceMode === "dispute" ? (
+      {workerAttendanceTarget && workerAttendanceMode && (() => {
+        const dispute = workerAttendanceMode === "dispute";
+        const closeIt = () => { setWorkerAttendanceTarget(null); setWorkerAttendanceMode(null); setWorkerAttendanceNote(""); setWorkerEvidenceFile(null); };
+        return (
+          <P24Modal eyebrow={dispute ? "Darbo dienos ginčas" : "Darbo dienos patvirtinimas"} title={dispute ? "Nesutinkate su darbdavio pažymėjimu?" : "Patvirtinti, kad neatvykote?"} onClose={closeIt} busy={attendanceBusy}>
+            {dispute ? (
               <>
-                <div className="wd-note err" style={{ marginBottom: 14 }}>
-                  Kol ginčas neišspręstas, jūsų patikimumo reitingas nebus
-                  mažinamas. Trumpai parašykite, kas įvyko.
-                </div>
-                <label className="wd-label">
-                  Paaiškinimas *
-                  <textarea
-                    className="wd-textarea"
-                    value={workerAttendanceNote}
-                    maxLength={1000}
-                    onChange={(e) => setWorkerAttendanceNote(e.target.value)}
-                    placeholder="Pvz. Atvykau 07:55 ir dirbau iki 17:00. Darbdaviui parašiau žinutę..."
-                  />
-                </label>
-                <label className="wd-label" style={{ marginTop: 14 }}>
-                  Įrodymas (nebūtina)
-                  <input
-                    className="wd-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    disabled={attendanceBusy}
-                    onChange={(e) =>
-                      setWorkerEvidenceFile(e.target.files?.[0] || null)
-                    }
-                  />
-                  <span
-                    style={{
-                      display: "block",
-                      marginTop: 6,
-                      color: "#6c7a88",
-                      fontSize: 12,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    Galite pridėti nuotrauką arba PDF iki 8 MB. Failą matys tik
-                    ginčą nagrinėjantis administratorius.
-                  </span>
-                  {workerEvidenceFile && (
-                    <span
-                      style={{
-                        display: "block",
-                        marginTop: 6,
-                        color: "#167a54",
-                        fontSize: 12,
-                        fontWeight: 700,
-                      }}
-                    >
-                      Pasirinkta: {workerEvidenceFile.name}
-                    </span>
-                  )}
-                </label>
+                <div className="notebox">Kol ginčas neišspręstas, jūsų patikimumo reitingas nebus mažinamas. Trumpai parašykite, kas įvyko.</div>
+                <label className="field">Paaiškinimas *<textarea value={workerAttendanceNote} maxLength={1000} onChange={(e) => setWorkerAttendanceNote(e.target.value)} placeholder="Pvz. Atvykau 07:55 ir dirbau iki 17:00. Darbdaviui parašiau žinutę..." /></label>
+                <div className="field"><span>Įrodymas (nebūtina)</span>
+                  <label className="btn" style={{ alignSelf: "flex-start", cursor: "pointer" }}><Svg name="upload" size={16} />{workerEvidenceFile ? workerEvidenceFile.name : "Pridėti nuotrauką ar PDF"}
+                    <input type="file" hidden accept="image/jpeg,image/png,image/webp,application/pdf" disabled={attendanceBusy} onChange={(e) => setWorkerEvidenceFile(e.target.files?.[0] || null)} /></label>
+                  <span className="hint">Iki 8 MB. Failą matys tik ginčą nagrinėjantis administratorius.</span></div>
               </>
-            ) : (
-              <div className="wd-note err" style={{ marginBottom: 0 }}>
-                Patvirtinus neatvykimą, bus pritaikytas 3 dienų naujų darbų
-                priėmimo apribojimas ir sumažės atvykimo patikimumas.
-              </div>
-            )}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 9,
-                marginTop: 18,
-              }}
-            >
-              <button
-                className="wd-decline"
-                disabled={attendanceBusy}
-                onClick={() => {
-                  setWorkerAttendanceTarget(null);
-                  setWorkerAttendanceMode(null);
-                  setWorkerAttendanceNote("");
-                  setWorkerEvidenceFile(null);
-                }}
-              >
-                Grįžti
-              </button>
-              <button
-                className={
-                  workerAttendanceMode === "dispute"
-                    ? "wd-danger"
-                    : "wd-danger"
-                }
-                disabled={
-                  attendanceBusy ||
-                  (workerAttendanceMode === "dispute" &&
-                    workerAttendanceNote.trim().length < 5)
-                }
-                onClick={() => {
-                  if (workerAttendanceMode === "dispute") {
-                    workerRespondAttendance(
-                      workerAttendanceTarget.attendance.id,
-                      "disputed",
-                      workerAttendanceNote.trim()
-                    );
-                  } else {
-                    workerClaimWorkday(
-                      workerAttendanceTarget.id,
-                      "no_show"
-                    );
-                  }
-                }}
-              >
-                {attendanceBusy
-                  ? "Prašome..."
-                  : workerAttendanceMode === "dispute"
-                  ? "Pateikti ginčą"
-                  : "Taip, neatvykau"}
-              </button>
+            ) : <div className="notebox">Patvirtinus neatvykimą, bus pritaikytas 3 dienų naujų darbų priėmimo apribojimas ir sumažės atvykimo patikimumas.</div>}
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={attendanceBusy} onClick={closeIt}>Atšaukti</button>
+              <button className="btn danger" type="button" disabled={attendanceBusy || (dispute && workerAttendanceNote.trim().length < 5)}
+                onClick={() => (dispute ? workerRespondAttendance(workerAttendanceTarget.attendance.id, "disputed", workerAttendanceNote.trim()) : workerClaimWorkday(workerAttendanceTarget.id, "no_show"))}>
+                {attendanceBusy ? "Siunčiama..." : dispute ? "Pateikti ginčą" : "Taip, neatvykau"}</button>
             </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
-      {confirmInvitation && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !respondingInvitation) {
-              setConfirmInvitation(null);
-              setCommitmentChecked(false);
-            }
-          }}
-        >
-          <div className="rs-modal-card worker-accept-modal">
-            <style>{`
-              .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:2000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(34,38,49,.25);padding:22px;color:#222631}
-              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-              .rs-modal-head h2{margin:0;font-size:22px}.rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-              .worker-accept-modal{width:min(620px,100%)!important;max-height:calc(100dvh - 40px)!important;padding:0!important;overflow:hidden!important;border-radius:18px!important;box-sizing:border-box}
-              .worker-accept-modal-scroll{max-height:calc(100dvh - 40px);overflow-y:auto;overflow-x:hidden;padding:22px;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#aeb8c0 transparent}
-              .worker-accept-modal-scroll::-webkit-scrollbar{width:8px}.worker-accept-modal-scroll::-webkit-scrollbar-track{background:transparent}.worker-accept-modal-scroll::-webkit-scrollbar-thumb{background:#aeb8c0;border-radius:999px}
-              .worker-accept-modal *{box-sizing:border-box}
-              @media(max-width:620px){.rs-modal-overlay{padding:10px}.worker-accept-modal{max-height:calc(100dvh - 20px)!important;border-radius:18px!important}.worker-accept-modal-scroll{max-height:calc(100dvh - 20px);padding:18px}}
-            `}</style>
-            <div className="worker-accept-modal-scroll">
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">DARBO PATVIRTINIMAS</div>
-                <h2>Ar tikrai įsipareigojate atvykti laiku?</h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={Boolean(respondingInvitation)}
-                onClick={() => {
-                  setConfirmInvitation(null);
-                  setCommitmentChecked(false);
-                }}
-              >
-                <CloseMark />
-              </button>
+      {confirmInvitation && (() => {
+        const closeCommit = () => { setConfirmInvitation(null); setCommitmentChecked(false); };
+        const j = confirmInvitation.job || {};
+        return (
+          <P24Modal eyebrow="Darbo patvirtinimas" title="Ar tikrai įsipareigojate atvykti laiku?" onClose={closeCommit} busy={Boolean(respondingInvitation)}>
+            <div className="kv">
+              <div><small>Darbas</small><b>{formatJobTitle(j.title).toLocaleUpperCase("lt-LT")}</b></div>
+              <div><small>Data ir laikas</small><b>{j.work_date} · {j.start_time?.slice(0, 5)}{j.end_time ? `–${j.end_time.slice(0, 5)}` : ""}</b></div>
+              <div className="wide"><small>Adresas</small><b>{j.address_text || "Atvykimo adresas nenurodytas"}</b></div>
             </div>
-
-            <div style={{ background: "#f6f8fa", borderRadius: 12, padding: 15 }}>
-              <b>{formatJobTitle(confirmInvitation.job?.title)}</b>
-              <div style={{ color: "#6c7a88", marginTop: 5, lineHeight: 1.55 }}>
-                {confirmInvitation.companyName} · {confirmInvitation.job?.city}
-                <br />
-                Atvykti adresu: <b>{confirmInvitation.job?.address_text || "Atvykimo adresas nenurodytas"}</b>
-                <br />
-                Darbdavio patikimumas:{" "}
-                <b
-                  style={{
-                    color: reliabilityScoreColor(
-                      confirmInvitation.companyReliability
-                    ),
-                  }}
-                >
-                  {Math.round(confirmInvitation.companyReliability)} / 100
-                </b>
-                {confirmInvitation.companyCancelledConfirmed > 0
-                  ? ` · atšauktų patvirtintų darbų: ${confirmInvitation.companyCancelledConfirmed}`
-                  : ""}
-                <br />
-                {confirmInvitation.job?.work_date} ·{" "}
-                {confirmInvitation.job?.start_time?.slice(0, 5)}
-                {confirmInvitation.job?.end_time
-                  ? `–${confirmInvitation.job.end_time.slice(0, 5)}`
-                  : ""}
-                <br />
-                Atvykimas:{" "}
-                <b>
-                  {confirmInvitation.job?.transport_mode === "employer_pickup"
-                    ? "darbdavys paima darbuotoją"
-                    : "darbuotojas atvyksta pats"}
-                </b>
-                <>
-                  <br />
-                  Pietų pertrauka:{" "}
-                  <b>
-                    {confirmInvitation.job?.break_start_time &&
-                    confirmInvitation.job?.break_end_time
-                      ? `${confirmInvitation.job.break_start_time.slice(0, 5)}–${confirmInvitation.job.break_end_time.slice(0, 5)}`
-                      : "nėra"}
-                  </b>
-                </>
-              </div>
-              <div className="wd-pay">
-                {formatNetPay(
-                  confirmInvitation.job?.pay_amount,
-                  confirmInvitation.job?.pay_unit
-                )}
-              </div>
+            <div className="notebox"><b style={{ color: "var(--navy)" }}>Priimdami darbą prisiimate realų įsipareigojimą.</b><br />Neatvykus į patvirtintą darbą, 3 dienas negalėsite priimti naujų darbų, o patikimumo reitingas sumažės. Jei negalite atvykti, svarbiausia nepradingti – informuokite darbdavį žinute.</div>
+            <label className="check"><input type="checkbox" checked={commitmentChecked} onChange={(e) => setCommitmentChecked(e.target.checked)} /> Perskaičiau darbo aprašymą ir visus nurodytus reikalavimus, jie man tinka, todėl patvirtinu, kad planuoju atvykti.</label>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={Boolean(respondingInvitation)} onClick={closeCommit}>Atšaukti</button>
+              <button className="btn primary" type="button" disabled={!commitmentChecked || Boolean(respondingInvitation)} onClick={() => respondToInvitation(confirmInvitation.id, "accepted")}>{respondingInvitation ? "Patvirtinama..." : "Taip, įsipareigoju atvykti"}</button>
             </div>
-
-            <div style={{ marginTop: 18 }}>
-              <b>Priimdami darbą prisiimate realų įsipareigojimą.</b>
-              <ul style={{ lineHeight: 1.65, color: "#425466", paddingLeft: 22 }}>
-                <li>
-                  Prieš priimdami perskaitykite visą darbo aprašymą ir patikrinkite,
-                  ar atitinkate jame nurodytus dokumentų, kvalifikacijos, aprangos,
-                  apsaugos priemonių ar kitus reikalavimus.
-                </li>
-                <li>
-                  Jei atsiranda problema dėl atvykimo, kuo greičiau parašykite
-                  darbdaviui žinutę šiame darbo pokalbyje.
-                </li>
-                <li>
-                  Neatvykus į patvirtintą darbą, 3 dienas negalėsite priimti
-                  naujų darbų.
-                </li>
-                <li>
-                  Neatvykimas sumažins jūsų patikimumo reitingą, todėl darbdavių
-                  paieškoje būsite rodomi žemiau ir galite gauti mažiau kvietimų.
-                </li>
-              </ul>
-              <p style={{ fontSize: 13, color: "#6c7a88", lineHeight: 1.5 }}>
-                Jei negalite atvykti, svarbiausia nepradingti — informuokite
-                darbdavį žinute kuo anksčiau.
-              </p>
-            </div>
-
-            <label style={{
-              display: "flex", gap: 9, alignItems: "flex-start",
-              padding: "12px 0", fontWeight: 700
-            }}>
-              <input
-                type="checkbox"
-                checked={commitmentChecked}
-                onChange={(e) => setCommitmentChecked(e.target.checked)}
-                style={{ marginTop: 3 }}
-              />
-              Perskaičiau darbo aprašymą ir visus nurodytus reikalavimus, jie man tinka, todėl patvirtinu, kad planuoju atvykti.
-            </label>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 9 }}>
-              <button
-                className="wd-decline"
-                disabled={Boolean(respondingInvitation)}
-                onClick={() => {
-                  setConfirmInvitation(null);
-                  setCommitmentChecked(false);
-                }}
-              >
-                Grįžti
-              </button>
-              <button
-                className="wd-accept"
-                disabled={!commitmentChecked || Boolean(respondingInvitation)}
-                onClick={() =>
-                  respondToInvitation(confirmInvitation.id, "accepted")
-                }
-              >
-                {respondingInvitation
-                  ? "Patvirtinama..."
-                  : "Taip, įsipareigoju atvykti"}
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
       <ArrivalTimeDialog
         open={Boolean(workerCheckInTarget)}
@@ -6706,139 +5994,27 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       )}
 
       {showWorkerReliabilityInfo && (
-        <div
-          className="reliability-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowWorkerReliabilityInfo(false);
-          }}
-        >
-          <style>{RELIABILITY_MODAL_STYLES}</style>
-
-          <div
-            className="reliability-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="worker-reliability-modal-title"
-          >
-            <div className="reliability-modal-scroll">
-            <div className="reliability-modal-head">
-              <div>
-                <div className="reliability-modal-eyebrow">PATIKIMUMO REITINGAS</div>
-                <h2 id="worker-reliability-modal-title">
-                  Kaip veikia darbuotojo patikimumas?
-                </h2>
-              </div>
-              <button
-                className="reliability-modal-close"
-                type="button"
-                aria-label="Uždaryti"
-                onClick={() => setShowWorkerReliabilityInfo(false)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            <div className="reliability-score-box">
-              <div className="reliability-score-copy">
-                <strong>
-                  Dabartinis patikimumas: {" "}
-                  <span style={{ color: reliabilityScoreColor(metrics.attendanceRate) }}>
-                    {formatReliabilityScore(metrics.attendanceRate)} / 100
-                  </span>
-                </strong>
-                <span>
-                  Darbdaviai šį rodiklį mato vertindami jūsų profilį prieš kviesdami į darbą.
-                </span>
-              </div>
-            </div>
-
-            <div className="reliability-rules">
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">100</div>
-                <p>Naujas darbuotojas pradeda nuo <b>100 patikimumo taškų</b>.</p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−7</div>
-                <p>Patvirtintas <b>neatvykimas</b> sumažina patikimumą 7 taškais ir taikomas 3 dienų darbo priėmimo apribojimas.</p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−3</div>
-                <p>Patvirtintas <b>nepagrįstas ankstyvas išėjimas</b> sumažina patikimumą 3 taškais.</p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">+</div>
-                <p>
-                  Tvarkingai užbaigus visą darbo dieną patikimumas atsistato pagal dabartinį rezultatą: 0–49 – <b>+3</b>, 50–69 – <b>+2</b>, 70–89 – <b>+1</b>, 90–99 – <b>+0,5</b>.
-                </p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">½</div>
-                <p>Suderintas ankstyvas išėjimas laikomas tvarkingu rezultatu, tačiau suteikia <b>pusę įprasto atkūrimo</b>.</p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">30</div>
-                <p>
-                  Jei 30 dienų nėra naujo pažeidimo, rezultatas iki 80 / 100 gali augti po <b>+1 tašką kas 30 dienų</b>. Nuo 80 iki 100 reikia sėkmingai dirbti.
-                </p>
-              </div>
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">✓</div>
-                <p>
-                  Po paskutinio pažeidimo tvarkingai užbaigta darbo dienų: {" "}
-                  <b>{metrics.reliabilityGoodJobsSincePenalty}</b>.
-                </p>
-              </div>
-            </div>
-
-            <div className="reliability-history">
-              <div className="reliability-history-head">
-                <h3>Patikimumo sumažėjimų istorija</h3>
-                {workerPenaltyHistory.length > 5 && (
-                  <span>Rodomi 5 naujausi iš {workerPenaltyHistory.length}</span>
-                )}
-              </div>
-
-              {workerPenaltyHistory.length ? (
-                <div className="reliability-history-list">
-                  {workerPenaltyHistory.slice(0, 5).map((penalty) => {
-                    const meta = workerReliabilityPenaltyMeta(penalty);
-                    return (
-                      <div className="reliability-history-item" key={penalty.id}>
-                        <div className="reliability-history-change">
-                          {meta.change < 0 ? formatReliabilityChange(meta.change) : "—"}
-                        </div>
-                        <div className="reliability-history-copy">
-                          <b>{meta.label}</b>
-                          {penalty.reason && penalty.reason !== meta.label && (
-                            <small>{penalty.reason}</small>
-                          )}
-                        </div>
-                        <div className="reliability-history-date">
-                          {formatReliabilityPenaltyDate(penalty.created_at)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="reliability-history-empty">
-                  Patikimumas dar nebuvo sumažintas.
-                </div>
-              )}
-            </div>
-
-            <div className="reliability-note">
-              <b>Svarbu:</b> ginčijamas darbo dienos rezultatas patikimumo nemažina tol, kol ginčas neišspręstas. Darbdavių įvertinimas balais yra atskiras rodiklis ir į šį patikimumo skaičių neįtraukiamas.
-            </div>
-
-            <div className="reliability-modal-actions">
-              <button type="button" onClick={() => setShowWorkerReliabilityInfo(false)}>
-                Supratau
-              </button>
-            </div>
-            </div>
+        <P24Modal eyebrow="Patikimumo reitingas" title="Kaip veikia darbuotojo patikimumas?" onClose={() => setShowWorkerReliabilityInfo(false)}>
+          <p className="muted" style={{ margin: 0 }}>Darbdaviai šį rodiklį mato vertindami jūsų profilį prieš kviesdami į darbą. Dabartinis patikimumas: <b style={{ color: "var(--navy)" }}>{formatReliabilityScore(metrics.attendanceRate)} / 100</b>.</p>
+          <div className="list">
+            {[
+              ["Pradžia", "Naujas darbuotojas pradeda nuo 100 patikimumo taškų."],
+              ["Neatvykimas", "Patvirtintas neatvykimas sumažina patikimumą 7 taškais ir taikomas 3 dienų darbo priėmimo apribojimas."],
+              ["Ankstyvas išėjimas", "Nepagrįstas ankstyvas išėjimas sumažina patikimumą 3 taškais. Suderintas – laikomas tvarkingu rezultatu (pusė įprasto atkūrimo)."],
+              ["Atsikūrimas", "Už tvarkingai užbaigtą dieną: 0–49 – +3, 50–69 – +2, 70–89 – +1, 90–99 – +0,5. Jei 30 dienų nėra pažeidimų – +1 taškas kas 30 dienų (iki 80)."],
+              ["Po paskutinio pažeidimo", `Tvarkingai užbaigta darbo dienų: ${metrics.reliabilityGoodJobsSincePenalty}.`],
+            ].map(([title, text]) => <div className="step info" key={title}><span className="dot" /><div><b>{title}</b><p>{text}</p></div></div>)}
           </div>
-        </div>
+          {workerPenaltyHistory.length ? (
+            <div className="list">
+              {workerPenaltyHistory.slice(0, 5).map((penalty) => {
+                const meta = workerReliabilityPenaltyMeta(penalty);
+                return <div className="step" key={penalty.id}><span className="dot" /><div><b>{meta.change < 0 ? `${formatReliabilityChange(meta.change)} · ` : ""}{meta.label}</b><p>{penalty.reason && penalty.reason !== meta.label ? `${penalty.reason} · ` : ""}{formatReliabilityPenaltyDate(penalty.created_at)}</p></div></div>;
+              })}
+            </div>
+          ) : <p className="small muted" style={{ margin: 0 }}>Patikimumo sumažėjimų istorija: patikimumas dar nebuvo sumažintas.</p>}
+          <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" type="button" onClick={() => setShowWorkerReliabilityInfo(false)}>Supratau</button></div>
+        </P24Modal>
       )}
 
       {longTermEndNotice && (

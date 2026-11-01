@@ -179,3 +179,21 @@ export function ActionButtons({ items }) {
     </button>
   ));
 }
+
+// Prototipo modalas („modal-bg“ + „modal“): eyebrow, pavadinimas, paantraštė ir uždarymo mygtukas.
+export function P24Modal({ eyebrow, title, sub, onClose, wide, children, busy, label }) {
+  const close = () => { if (!busy && onClose) onClose(); };
+  return (
+    <div className="p24 p24-portal">
+      <div className="modal-bg" style={{ zIndex: 9000 }} role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+        <div className={`modal${wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-label={label || (typeof title === "string" ? title : eyebrow)}>
+          {title || eyebrow ? (
+            <header><div>{eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}{title ? <h2>{title}</h2> : null}{sub ? <span className="muted small">{sub}</span> : null}</div>
+              {onClose ? <button type="button" className="x" style={{ background: "var(--white)", border: "1px solid var(--line)", borderRadius: 4 }} aria-label="Uždaryti" disabled={busy} onClick={close}><Svg name="x" size={18} width={2.2} /></button> : null}</header>
+          ) : null}
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}

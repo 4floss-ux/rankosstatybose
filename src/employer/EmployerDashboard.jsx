@@ -17,7 +17,7 @@ import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
 import { P24Shell, Svg } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
-import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
+import { Empty, ListGroup, P24Modal, PageHead, Paged, Pill } from "../p24/ui.jsx";
 import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
 import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
 import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
@@ -5380,7 +5380,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
                 groupChat: () => openEmployerGroupConversation(currentJob),
                 disputeChat: (worker) => setDisputeConversation({ attendanceId: worker.attendance.id, title: `${formatJobTitle(currentJob.title)} · Ginčo aptarimas`, workerName: worker.name || "Darbuotojas", companyName: company?.name || "Darbdavys" }),
                 checkIn: (worker) => openEmployerCheckIn(worker),
-                closeDay: (worker) => { setAttendanceTarget(worker); setAttendanceMode("choose"); setAttendanceEndTime(""); setAttendanceNote(""); },
+                closeDay: (worker) => { setAttendanceTarget(worker); setAttendanceMode(canRateCurrentJob ? "full_day" : "no_show"); setAttendanceEndTime(""); setAttendanceNote(""); },
                 rate: (worker) => openWorkerRating(worker),
                 favorite: (worker) => saveWorkerToTeam(worker),
                 edit: () => startEditJob(currentJob),
@@ -5913,388 +5913,71 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         onConfirm={() => employerCheckInWorker(employerCheckInTarget, employerCheckInTime)}
       />
 
-      {attendanceTarget && attendanceMode && (
-        <div
-          className="ed-attendance-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9600,
-            background: "rgba(34,38,49,.64)",
-            display: "grid",
-            placeItems: "center",
-            padding: 20,
-          }}
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !attendanceSaving) {
-              setAttendanceTarget(null);
-              setAttendanceMode(null);
-              setAttendanceEndTime("");
-              setAttendanceNote("");
-            }
-          }}
-        >
-          <div
-            className="ed-attendance-modal"
-            style={{
-              width: "min(560px, 100%)",
-              maxHeight: "calc(100dvh - 40px)",
-              overflow: "auto",
-              background: "#fff",
-              borderRadius: 20,
-              padding: 22,
-              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
-              color: "#222631",
-            }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Darbo dienos uždarymas"
-          >
-            <div className="ed-attendance-head">
-              <div>
-                <div className="eyebrow">DARBO DIENOS UŽDARYMAS</div>
-                <h2>
-                  {attendanceMode === "choose"
-                    ? "Kaip baigėsi darbuotojo darbo diena?"
-                    : attendanceMode === "full_day"
-                    ? "Įvertinkite darbuotoją ir uždarykite dieną"
-                    : attendanceMode === "no_show"
-                    ? "Pažymėti, kad darbuotojas neatvyko?"
-                    : "Darbuotojas išėjo anksčiau"}
-                </h2>
-              </div>
-
-              <button
-                className="ed-attendance-close"
-                aria-label="Uždaryti darbo dienos formą"
-                disabled={attendanceSaving}
-                onClick={() => {
-                  setAttendanceTarget(null);
-                  setAttendanceMode(null);
-                  setAttendanceEndTime("");
-                  setAttendanceNote("");
-                }}
-              >
-                <CloseMark />
-              </button>
+      {attendanceTarget && attendanceMode && (() => {
+        const closeAttendance = () => { setAttendanceTarget(null); setAttendanceMode(null); setAttendanceEndTime(""); setAttendanceNote(""); };
+        const early = ["left_early_agreed", "left_early_unexcused"].includes(attendanceMode);
+        const pick = (mode) => { setAttendanceMode(mode); setAttendanceEndTime(""); setAttendanceNote(""); };
+        const chosen = attendanceMode !== "choose";
+        const disabledSave = attendanceSaving || !chosen
+          || (attendanceMode !== "no_show" && !attendanceScore)
+          || (early && !attendanceEndTime)
+          || (["no_show", "left_early_unexcused"].includes(attendanceMode) && attendanceNote.trim().length < 5);
+        return (
+          <P24Modal eyebrow="Darbo dienos uždarymas" title={`Kaip baigėsi ${shortWorkerName(attendanceTarget.name || "darbuotojo")} darbo diena?`} sub={`${formatJobTitle(currentJob?.title)} · ${currentJob?.work_date || ""}`} onClose={closeAttendance} busy={attendanceSaving}>
+            {attendanceError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{attendanceError}</p> : null}
+            <div className="toggle2" role="group" aria-label="Rezultatas">
+              <button type="button" aria-pressed={attendanceMode === "full_day"} disabled={attendanceSaving || !canRateCurrentJob} onClick={() => pick("full_day")}>Išdirbo visą dieną</button>
+              <button type="button" aria-pressed={early} disabled={attendanceSaving || !canRateCurrentJob} onClick={() => pick("left_early_agreed")}>Išėjo anksčiau</button>
+              {!attendanceTarget?.attendance?.employer_check_in_at ? <button type="button" aria-pressed={attendanceMode === "no_show"} disabled={attendanceSaving} onClick={() => pick("no_show")}>Neatvyko</button> : null}
             </div>
-
-            {attendanceError && (
-              <div className="ed-error" role="alert">{attendanceError}</div>
-            )}
-
-            <div className="ed-attendance-person">
-              <b>{attendanceTarget.name}</b>
-              <span>
-                {currentJob?.title} · {currentJob?.work_date}
-              </span>
-            </div>
-
-            {attendanceMode === "choose" && (
-              <div className="ed-attendance-choice">
-                <button
-                  className="ed-primary"
-                  disabled={attendanceSaving || !canRateCurrentJob}
-                  onClick={() => setAttendanceMode("full_day")}
-                >
-                  Išdirbo visą dieną
-                </button>
-
-                <button
-                  className="ed-secondary"
-                  disabled={attendanceSaving || !canRateCurrentJob}
-                  onClick={() => {
-                    setAttendanceMode("left_early_agreed");
-                    setAttendanceEndTime("");
-                    setAttendanceNote("");
-                  }}
-                >
-                  Išėjo anksčiau
-                </button>
-
-                {!attendanceTarget?.attendance?.employer_check_in_at && (
-                  <button
-                    className="ed-secondary ed-danger"
-                    disabled={attendanceSaving}
-                    onClick={() => {
-                      setAttendanceMode("no_show");
-                      setAttendanceEndTime("");
-                      setAttendanceNote("");
-                    }}
-                  >
-                    Neatvyko
-                  </button>
-                )}
+            {!canRateCurrentJob ? <p className="small muted" style={{ margin: 0 }}>Darbo dieną su įvertinimu uždaro už darbą atsakingas: {teamMemberName(currentJobResponsibleUserId)}.</p> : null}
+            {early ? (
+              <div className="form">
+                <label className="field">Ankstyvo išėjimo tipas *<select value={attendanceMode} onChange={(e) => setAttendanceMode(e.target.value)}>
+                  <option value="left_early_agreed">Išėjo anksčiau – suderinta</option><option value="left_early_unexcused">Išėjo anksčiau be pateisinamos priežasties</option></select></label>
+                <label className="field">Faktinis išėjimo laikas *<RoundedTimeSelect ariaLabel="Faktinis išėjimo laikas" className="ed-input wd-time-trigger" value={attendanceEndTime} onChange={setAttendanceEndTime} /></label>
               </div>
-            )}
-
-            {["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && (
-                <>
-                  <div className="ed-label" style={{ marginBottom: 14 }}>
-                    Ankstyvo išėjimo tipas *
-                    <RoundedSelect
-                      ariaLabel="Ankstyvo išėjimo tipas"
-                      value={attendanceMode}
-                      onChange={setAttendanceMode}
-                      options={[{ value: "left_early_agreed", label: "Išėjo anksčiau – suderinta" }, { value: "left_early_unexcused", label: "Išėjo anksčiau be pateisinamos priežasties" }]}
-                    />
-                  </div>
-
-                  <label className="ed-label" style={{ marginBottom: 14 }}>
-                    Faktinis išėjimo laikas *
-                    <RoundedTimeSelect
-                      ariaLabel="Faktinis išėjimo laikas"
-                      className="ed-input wd-time-trigger"
-                      value={attendanceEndTime}
-                      onChange={setAttendanceEndTime}
-                    />
-                  </label>
-                </>
-              )}
-
-            {attendanceMode !== "choose" && (
+            ) : null}
+            {chosen && attendanceMode !== "no_show" ? (
               <>
-                {attendanceMode !== "no_show" && (
-                  <>
-                    <div className="ed-label">Darbuotojo įvertinimas *</div>
-                    <div className="ed-rating-scores" style={{ marginBottom: 16 }}>
-                      {[1,2,3,4,5,6,7,8,9,10].map((score) => (
-                        <button
-                          key={score}
-                          type="button"
-                          className={Number(attendanceScore) === score ? "ed-primary" : "ed-secondary"}
-                          disabled={attendanceSaving}
-                          aria-pressed={Number(attendanceScore) === score}
-                          onClick={() => setAttendanceScore(score)}
-                        >{score}</button>
-                      ))}
-                    </div>
-                    <label className="ed-label" style={{ marginBottom: 14 }}>
-                      Komentaras apie darbuotoją
-                      <textarea className="ed-textarea" maxLength={1000}
-                        value={attendanceRatingComment}
-                        disabled={attendanceSaving}
-                        onChange={(e) => setAttendanceRatingComment(e.target.value)}
-                        placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." />
-                    </label>
-                    <ReviewConductNotice />
-                  </>
-                )}
-                {attendanceMode !== "full_day" && (
-                <label className="ed-label">
-                  {attendanceMode === "left_early_agreed"
-                    ? "Pastaba"
-                    : "Paaiškinimas *"}
-                  <textarea
-                    className="ed-textarea"
-                    maxLength={1000}
-                    value={attendanceNote}
-                    onChange={(e) => setAttendanceNote(e.target.value)}
-                    placeholder={
-                      attendanceMode === "no_show"
-                        ? "Trumpai parašykite, kodėl pažymite neatvykimą."
-                        : attendanceMode === "left_early_unexcused"
-                        ? "Trumpai aprašykite, kas įvyko."
-                        : "Pvz. Išėjimas buvo suderintas iš anksto."
-                    }
-                  />
-                </label>
-                )}
-
-                {["no_show", "left_early_unexcused"].includes(
-                  attendanceMode
-                ) && (
-                  <div className="ed-note err" style={{ marginTop: 14 }}>
-                    Šis neigiamas pažymėjimas{" "}
-                    <b>darbuotojo reitingo iškart nemažina</b>. Darbuotojas
-                    galės jį patvirtinti arba ginčyti.
-                  </div>
-                )}
-
-                {attendanceMode === "left_early_agreed" && (
-                  <div className="ed-note ok" style={{ marginTop: 14 }}>
-                    Suderintas ankstyvas išėjimas darbuotojo patikimumo
-                    nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas
-                    laikas.
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 9,
-                    marginTop: 18,
-                  }}
-                >
-                  <button
-                    className="ed-secondary"
-                    disabled={attendanceSaving}
-                    onClick={() => {
-                      setAttendanceMode("choose");
-                      setAttendanceEndTime("");
-                      setAttendanceNote("");
-                    }}
-                  >
-                    Grįžti
-                  </button>
-
-                  <button
-                    className={
-                      ["no_show", "left_early_unexcused"].includes(
-                        attendanceMode
-                      )
-                        ? "ed-secondary ed-danger"
-                        : "ed-primary"
-                    }
-                    disabled={
-                      attendanceSaving ||
-                      (attendanceMode !== "no_show" && !attendanceScore) ||
-                      (["left_early_agreed", "left_early_unexcused"].includes(attendanceMode) && !attendanceEndTime) ||
-                      (["no_show", "left_early_unexcused"].includes(
-                        attendanceMode
-                      ) &&
-                        attendanceNote.trim().length < 5)
-                    }
-                    onClick={() =>
-                      recordEmployerAttendance(
-                        attendanceTarget,
-                        attendanceMode,
-                        attendanceEndTime || null,
-                        attendanceNote
-                      )
-                    }
-                  >
-                    {attendanceSaving
-                      ? "Saugoma..."
-                      : attendanceMode === "full_day"
-                      ? "Išsaugoti įvertinimą ir uždaryti dieną"
-                      : "Patvirtinti rezultatą"}
-                  </button>
-                </div>
+                <div className="field"><span>Darbuotojo įvertinimas *</span><div className="rating" role="group" aria-label="Įvertinimas nuo 1 iki 10">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => <button key={score} type="button" aria-pressed={Number(attendanceScore) === score} disabled={attendanceSaving} onClick={() => setAttendanceScore(score)}>{score}</button>)}
+                </div></div>
+                <label className="field">Komentaras apie darbuotoją<textarea maxLength={1000} value={attendanceRatingComment} disabled={attendanceSaving} onChange={(e) => setAttendanceRatingComment(e.target.value)} placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." /></label>
               </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {ratingTarget && (
-        <div
-          className="ed-rating-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9700,
-            background: "rgba(34,38,49,.64)",
-            display: "grid",
-            placeItems: "center",
-            padding: 20,
-          }}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !ratingSaving) {
-              setRatingTarget(null);
-              setRatingScore(null);
-              setRatingComment("");
-            }
-          }}
-        >
-          <div
-            className="ed-rating-modal"
-            style={{
-              width: "min(620px, 100%)",
-              maxHeight: "calc(100dvh - 40px)",
-              overflow: "auto",
-              background: "#fff",
-              borderRadius: 20,
-              padding: 22,
-              boxShadow: "0 30px 100px rgba(34,38,49,.32)",
-              color: "#222631",
-            }}
-          >
-            <div className="ed-rating-head">
-              <div>
-                <div className="eyebrow">DARBUOTOJO ĮVERTINIMAS</div>
-                <h2>Kaip įvertintumėte {ratingTarget.name}?</h2>
-                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
-                  {ratingTarget.jobTitle} · {ratingTarget.workDate}
-                </div>
-                <div style={{ color: "#6c7a88", marginTop: 5, fontSize: 13 }}>
-                  Pasirinkite bendrą įvertinimą nuo 1 iki 10. Vertinimą ir
-                  komentarą paliekate kaip už šį darbą atsakingas žmogus.
-                </div>
-              </div>
-              <button
-                className="ed-rating-close"
-                disabled={ratingSaving}
-                onClick={() => {
-                  setRatingTarget(null);
-                  setRatingScore(null);
-                  setRatingComment("");
-                }}
-              >
-                <CloseMark />
-              </button>
+            ) : null}
+            {chosen && attendanceMode !== "full_day" ? (
+              <label className="field">{attendanceMode === "left_early_agreed" ? "Pastaba" : "Paaiškinimas *"}<textarea maxLength={1000} value={attendanceNote} onChange={(e) => setAttendanceNote(e.target.value)}
+                placeholder={attendanceMode === "no_show" ? "Trumpai parašykite, kodėl pažymite neatvykimą." : attendanceMode === "left_early_unexcused" ? "Trumpai aprašykite, kas įvyko." : "Pvz. Išėjimas buvo suderintas iš anksto."} /></label>
+            ) : null}
+            {["no_show", "left_early_unexcused"].includes(attendanceMode) ? <div className="notebox">Pažymėjus „{attendanceMode === "no_show" ? "Neatvyko" : "Išėjo be priežasties"}“, darbuotojo reitingas iškart nemažinamas – darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.</div> : null}
+            {attendanceMode === "left_early_agreed" ? <div className="notebox">Suderintas ankstyvas išėjimas darbuotojo patikimumo nemažina. Į statistiką bus įskaitytas tik faktiškai dirbtas laikas.</div> : null}
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={attendanceSaving} onClick={closeAttendance}>Atšaukti</button>
+              <button className={`btn ${["no_show", "left_early_unexcused"].includes(attendanceMode) ? "danger" : "primary"}`} type="button" disabled={disabledSave}
+                onClick={() => recordEmployerAttendance(attendanceTarget, attendanceMode, attendanceEndTime || null, attendanceNote)}>
+                {attendanceSaving ? "Saugoma..." : attendanceMode === "no_show" || early ? "Patvirtinti rezultatą" : "Išsaugoti įvertinimą ir uždaryti dieną"}</button>
             </div>
+          </P24Modal>
+        );
+      })()}
 
-            {ratingError && <div className="ed-error" role="alert">{ratingError}</div>}
-
-            <ReviewConductNotice />
-
-            <div style={{ marginBottom: 16 }}>
-              <div className="ed-rating-scores">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
-                  <button
-                    key={score}
-                    type="button"
-                    className={
-                      Number(ratingScore) === score
-                        ? "ed-primary"
-                        : "ed-secondary"
-                    }
-                    style={{ minWidth: 46 }}
-                    onClick={() => setRatingScore(score)}
-                  >
-                    {score}
-                  </button>
-                ))}
-              </div>
+      {ratingTarget && (() => {
+        const closeRating = () => { setRatingTarget(null); setRatingScore(null); setRatingComment(""); };
+        return (
+          <P24Modal eyebrow="Darbuotojo įvertinimas" title={`Kaip įvertintumėte ${shortWorkerName(ratingTarget.name || "darbuotoją")}?`} sub={`${formatJobTitle(ratingTarget.jobTitle)} · ${ratingTarget.workDate || ""}`} onClose={closeRating} busy={ratingSaving}>
+            {ratingError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{ratingError}</p> : null}
+            <div className="field"><span>Darbuotojo įvertinimas *</span><div className="rating" role="group" aria-label="Įvertinimas nuo 1 iki 10">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => <button key={score} type="button" aria-pressed={Number(ratingScore) === score} disabled={ratingSaving} onClick={() => setRatingScore(score)}>{score}</button>)}
+            </div></div>
+            <label className="field">Komentaras apie darbuotoją<textarea maxLength={1000} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Pvz. gerai atliko užduotis, buvo punktualus..." /></label>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={ratingSaving} onClick={closeRating}>Atšaukti</button>
+              <button className="btn primary" type="button" disabled={ratingSaving || !ratingScore} onClick={submitWorkerRating}>{ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}</button>
             </div>
-
-            <label className="ed-label">
-              Komentaras apie darbuotoją
-              <textarea
-                className="ed-textarea"
-                maxLength={1000}
-                value={ratingComment}
-                onChange={(e) => setRatingComment(e.target.value)}
-                placeholder="Pvz. punktualus, gerai atliko užduotis, lengva susitarti..."
-              />
-            </label>
-
-            <div className="ed-rating-actions">
-              <button
-                className="ed-secondary"
-                disabled={ratingSaving}
-                onClick={() => {
-                  setRatingTarget(null);
-                  setRatingScore(null);
-                  setRatingComment("");
-                }}
-              >
-                Grįžti
-              </button>
-              <button
-                className="ed-primary"
-                disabled={ratingSaving || !ratingScore}
-                onClick={submitWorkerRating}
-              >
-                {ratingSaving ? "Saugoma..." : "Išsaugoti įvertinimą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
       {showTeam && (
         <div
@@ -7642,285 +7325,43 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
       )}
 
       {showReliabilityInfo && (
-        <div
-          className="reliability-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowReliabilityInfo(false);
-          }}
-        >
-          <style>{RELIABILITY_MODAL_STYLES}</style>
-
-          <div
-            className="reliability-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reliability-modal-title"
-          >
-            <div className="reliability-modal-scroll">
-            <div className="reliability-modal-head">
-              <div>
-                <div className="reliability-modal-eyebrow">
-                  PATIKIMUMO REITINGAS
-                </div>
-                <h2 id="reliability-modal-title">
-                  Kaip veikia įmonės patikimumas?
-                </h2>
-              </div>
-
-              <button
-                className="reliability-modal-close"
-                type="button"
-                aria-label="Uždaryti"
-                onClick={() => setShowReliabilityInfo(false)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            <div className="reliability-score-box">
-              <div className="reliability-score-copy">
-                <strong>
-                  Dabartinis patikimumas:{" "}
-                  <span
-                    style={{
-                      color: reliabilityScoreColor(employerStats.reliabilityRate),
-                    }}
-                  >
-                    {formatReliabilityScore(employerStats.reliabilityRate)} / 100
-                  </span>
-                </strong>
-                <span>
-                  Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą.
-                </span>
-              </div>
-            </div>
-
-            <div className="reliability-rules">
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">100</div>
-                <p>
-                  Nauja darbdavio paskyra pradeda nuo <b>100 patikimumo taškų</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−7</div>
-                <p>
-                  Jei darbuotojas jau <b>patvirtino darbą</b>, o darbdavys visą
-                  darbą atšaukia, patikimumas sumažėja <b>7 taškais</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">0</div>
-                <p>
-                  Pažymėjus „Neatvyko“ ar „Išėjo anksčiau be pateisinamos
-                  priežasties“, darbuotojo reitingas <b>nesumažėja iškart</b>.
-                  Darbuotojas pirmiausia gali patvirtinti arba ginčyti rezultatą.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">−15</div>
-                <p>
-                  Jei ginčas išsprendžiamas darbuotojo naudai ir paaiškėja, kad
-                  darbdavio neigiamas pažymėjimas buvo nepagrįstas, darbdavio
-                  patikimumas sumažėja <b>15 taškų</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">+</div>
-                <p>
-                  Patikimumas atsistato per <b>tvarkingai užbaigtus darbus</b>.
-                  Kai rezultatas yra 0–49, už darbą pridedami 3 taškai; 50–69 –
-                  2; 70–89 – 1; 90–99 – 0,5 taško. Daugiau kaip 100 taškų
-                  sukaupti negalima.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">30</div>
-                <p>
-                  Jei 30 dienų nėra naujo pažeidimo, žemas patikimumas gali
-                  natūraliai paaugti po <b>1 tašką kas 30 dienų</b>, tačiau vien
-                  laiku galima atsistatyti tik iki <b>80 / 100</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">✓</div>
-                <p>
-                  Po paskutinio pažeidimo tvarkingai užbaigta darbų: {" "}
-                  <b>{employerStats.reliabilityGoodJobsSincePenalty}</b>.
-                </p>
-              </div>
-
-              <div className="reliability-rule">
-                <div className="reliability-rule-icon">#</div>
-                <p>
-                  Jei darbuotojas užginčija jūsų pažymėtą neigiamą darbo dienos
-                  rezultatą ir administratorius nusprendžia darbuotojo naudai,
-                  tai skaičiuojama kaip <b>nepagrįstas pažymėjimas</b>. Tokių
-                  atvejų šiuo metu: <b>{employerStats.falseAttendanceClaimCount}</b>.
-                </p>
-              </div>
-            </div>
-
-            <div className="reliability-history">
-              <div className="reliability-history-head">
-                <h3>Patikimumo sumažėjimų istorija</h3>
-                {employerPenaltyHistory.length > 5 && (
-                  <span>Rodomi 5 naujausi iš {employerPenaltyHistory.length}</span>
-                )}
-              </div>
-
-              {employerPenaltyHistory.length ? (
-                <div className="reliability-history-list">
-                  {employerPenaltyHistory.slice(0, 5).map((penalty) => {
-                    const meta = employerReliabilityPenaltyMeta(penalty);
-                    return (
-                      <div className="reliability-history-item" key={penalty.id}>
-                        <div className="reliability-history-change">
-                          {meta.change < 0 ? formatReliabilityChange(meta.change) : "—"}
-                        </div>
-                        <div className="reliability-history-copy">
-                          <b>{meta.label}</b>
-                          {penalty.reason && penalty.reason !== meta.label && (
-                            <small>{penalty.reason}</small>
-                          )}
-                        </div>
-                        <div className="reliability-history-date">
-                          {formatReliabilityPenaltyDate(penalty.created_at)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="reliability-history-empty">
-                  Patikimumas dar nebuvo sumažintas.
-                </div>
-              )}
-            </div>
-
-            <div className="reliability-note">
-              <b>Svarbu:</b> nei darbdavys, nei darbuotojas negali vienašališkai
-              sugadinti kitos pusės reitingo ginčytinoje situacijoje. Ginčo metu
-              sankcijos sustabdomos iki sprendimo.
-            </div>
-
-            <div className="reliability-modal-actions">
-              <button
-                type="button"
-                onClick={() => setShowReliabilityInfo(false)}
-              >
-                Supratau
-              </button>
-            </div>
-            </div>
+        <P24Modal eyebrow="Patikimumo reitingas" title="Kaip veikia įmonės patikimumas?" onClose={() => setShowReliabilityInfo(false)}>
+          <p className="muted" style={{ margin: 0 }}>Darbuotojai šį rodiklį mato prieš priimdami jūsų darbo kvietimą. Dabartinis patikimumas: <b style={{ color: "var(--navy)" }}>{formatReliabilityScore(employerStats.reliabilityRate)} / 100</b>.</p>
+          <div className="list">
+            {[
+              ["Pradžia", "Nauja įmonė pradeda nuo 100 patikimumo taškų."],
+              ["Atšaukimas", "Atšaukus darbą, kurį jau patvirtino darbuotojas, patikimumas sumažėja 7 taškais."],
+              ["Neigiamas pažymėjimas", "Pažymėjus „Neatvyko“ ar „Išėjo be priežasties“, darbuotojo reitingas nesumažėja iškart – jis gali patvirtinti arba ginčyti."],
+              ["Nepagrįstas pažymėjimas", `Jei ginčas išsprendžiamas darbuotojo naudai, patikimumas sumažėja 15 taškų. Tokių atvejų: ${employerStats.falseAttendanceClaimCount}.`],
+              ["Atsikūrimas", "Už tvarkingai užbaigtus darbus pridedama: 0–49 – 3 taškai, 50–69 – 2, 70–89 – 1, 90–99 – 0,5. Jei 30 dienų nėra pažeidimų – +1 taškas kas 30 dienų (iki 80)."],
+              ["Po paskutinio pažeidimo", `Tvarkingai užbaigta darbų: ${employerStats.reliabilityGoodJobsSincePenalty}.`],
+            ].map(([title, text]) => <div className="step info" key={title}><span className="dot" /><div><b>{title}</b><p>{text}</p></div></div>)}
           </div>
-        </div>
+          {employerPenaltyHistory.length ? (
+            <div className="list">
+              {employerPenaltyHistory.slice(0, 5).map((penalty) => {
+                const meta = employerReliabilityPenaltyMeta(penalty);
+                return <div className="step" key={penalty.id}><span className="dot" /><div><b>{meta.change < 0 ? `${formatReliabilityChange(meta.change)} · ` : ""}{meta.label}</b><p>{penalty.reason && penalty.reason !== meta.label ? `${penalty.reason} · ` : ""}{formatReliabilityPenaltyDate(penalty.created_at)}</p></div></div>;
+              })}
+            </div>
+          ) : <p className="small muted" style={{ margin: 0 }}>Patikimumo sumažėjimų istorija: patikimumas dar nebuvo sumažintas.</p>}
+          <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" type="button" onClick={() => setShowReliabilityInfo(false)}>Supratau</button></div>
+        </P24Modal>
       )}
 
-      {cancelJobTarget && (
-        <div
-          className="rs-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !cancellingJob) {
-              setCancelJobTarget(null);
-              setCancelReason("");
-            }
-          }}
-        >
-          <div className="rs-modal-card">
-            <style>{`
-              .rs-modal-overlay{position:fixed;inset:0;background:rgba(34,38,49,.62);z-index:12000;display:grid;place-items:center;padding:20px}
-              .rs-modal-card{width:min(620px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 26px 80px rgba(34,38,49,.25);padding:22px;color:#222631}
-              .rs-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-              .rs-modal-head h2{margin:0;font-size:22px}
-              .rs-close{border:0;background:#f1f4f6;border-radius:9px;width:38px;height:38px;font-size:20px;cursor:pointer}
-              .rs-cancel-warning{background:#fff0ec;color:#9f4529;border-radius:12px;padding:14px;line-height:1.5;margin-bottom:16px}
-              .rs-cancel-reason{width:100%;min-height:105px;border:1px solid #dbe4ea;border-radius:10px;padding:12px;font:inherit;resize:vertical}
-              .rs-cancel-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
-            `}</style>
-
-            <div className="rs-modal-head">
-              <div>
-                <div className="eyebrow">DARBO ATŠAUKIMAS</div>
-                <h2>Ar tikrai norite atšaukti šį darbą?</h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={cancellingJob}
-                onClick={() => {
-                  setCancelJobTarget(null);
-                  setCancelReason("");
-                }}
-              >
-                <CloseMark />
-              </button>
+      {cancelJobTarget && (() => {
+        const closeCancel = () => { setCancelJobTarget(null); setCancelReason(""); };
+        return (
+          <P24Modal eyebrow="Darbo atšaukimas" title="Ar tikrai norite atšaukti šį darbą?" onClose={closeCancel} busy={cancellingJob}>
+            <div className="notebox">Šį darbą jau patvirtino {cancelJobTarget.confirmedCount} {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}. Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus uždarytas. Kadangi darbą jau patvirtino darbuotojai, atšaukimas sumažins įmonės patikimumą 7 punktais.</div>
+            <label className="field">Atšaukimo priežastis *<textarea value={cancelReason} maxLength={500} onChange={(e) => setCancelReason(e.target.value)} placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę." /><span className="hint">Šią priežastį matys darbą patvirtinę darbuotojai.</span></label>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={cancellingJob} onClick={closeCancel}>Ne, grįžti</button>
+              <button className="btn danger" type="button" disabled={cancellingJob || cancelReason.trim().length < 5} onClick={confirmEmployerCancellation}>{cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}</button>
             </div>
-
-            <div className="rs-cancel-warning">
-              <b>
-                Šį darbą jau patvirtino {cancelJobTarget.confirmedCount}{" "}
-                {cancelJobTarget.confirmedCount === 1 ? "darbuotojas" : "darbuotojai"}.
-              </b>
-              <div style={{ marginTop: 5 }}>
-                Atšaukus darbą jų rezervacijos bus panaikintos, pokalbis bus
-                uždarytas, o darbuotojai matys jūsų nurodytą atšaukimo priežastį.
-              </div>
-              <div style={{ marginTop: 5 }}>
-                Kadangi darbą jau patvirtino darbuotojas, atšaukimas sumažins
-                jūsų darbdavio patikimumo reitingą 7 punktais.
-              </div>
-            </div>
-
-            <label className="ed-label">
-              Atšaukimo priežastis *
-              <textarea
-                className="rs-cancel-reason"
-                value={cancelReason}
-                maxLength={500}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Pvz. Užsakovas netikėtai nukėlė darbus į kitą savaitę."
-              />
-            </label>
-
-            <div
-              style={{
-                marginTop: 6,
-                color: "#6c7a88",
-                fontSize: 12,
-              }}
-            >
-              Šią priežastį matys darbą patvirtinę darbuotojai.
-            </div>
-
-            <div className="rs-cancel-actions">
-              <button
-                className="ed-secondary"
-                disabled={cancellingJob}
-                onClick={() => {
-                  setCancelJobTarget(null);
-                  setCancelReason("");
-                }}
-              >
-                Ne, grįžti
-              </button>
-              <button
-                className="ed-primary"
-                style={{ background: "#b64d2a" }}
-                disabled={cancellingJob || cancelReason.trim().length < 5}
-                onClick={confirmEmployerCancellation}
-              >
-                {cancellingJob ? "Atšaukiama..." : "Taip, atšaukti darbą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </P24Modal>
+        );
+      })()}
 
       {showLongTermEmployment && (
         <div
