@@ -12,13 +12,18 @@ const right = '<path d="m9 18 6-6-6-6"/>';
 function useRpcList(fn, companyId, enabled) {
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
+  // Kol DB funkcija nepritaikyta (PGRST202 / 42883), funkcija tiesiog nerodoma.
+  const [missing, setMissing] = useState(false);
   const reload = useCallback(async () => {
     if (!companyId || !enabled) { setRows([]); return; }
     const { data, error: err } = await supabase.rpc(fn, { p_company_id: companyId });
-    if (err) { setError(err.message || "Nepavyko įkelti."); setRows([]); } else { setError(""); setRows(data || []); }
+    if (err) {
+      if (["PGRST202", "42883"].includes(err.code) || /could not find the function|does not exist/i.test(err.message || "")) setMissing(true);
+      setError(err.message || "Nepavyko įkelti."); setRows([]);
+    } else { setMissing(false); setError(""); setRows(data || []); }
   }, [fn, companyId, enabled]);
   useEffect(() => { reload(); }, [reload]);
-  return { rows, error, reload };
+  return { rows, error, reload, missing };
 }
 export const useCompanySites = (companyId, enabled) => useRpcList("get_company_sites", companyId, enabled);
 export const useCompanyTemplates = (companyId, enabled) => useRpcList("get_company_job_templates", companyId, enabled);
@@ -26,7 +31,7 @@ export const siteTransportLabel = (mode) => TRANSPORT[mode] || TRANSPORT.self;
 
 /* ---------- Objektai (įmonės profilis) ---------- */
 export function SitesSection({ companyId, locked, canEdit, onPlans }) {
-  const { rows, error, reload } = useCompanySites(companyId, !locked);
+  const { rows, error, reload, missing } = useCompanySites(companyId, !locked);
   const [open, setOpen] = useState(false);
   const blank = { name: "", city: "Vilnius", address: "", transport: "self", note: "" };
   const [form, setForm] = useState(blank);
@@ -46,6 +51,7 @@ export function SitesSection({ companyId, locked, canEdit, onPlans }) {
     const { error: e } = await supabase.rpc("delete_company_site", { p_site_id: site.id });
     if (!e) reload();
   }
+  if (missing) return null;
   return (
     <section className="card"><header><div><h2>Objektai {locked ? <span className="protag">Business</span> : null}</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Kuriant darbą adresas ir atvykimo informacija užsipildys automatiškai.</p></div>
       {!locked && canEdit ? <button className="btn sm" type="button" onClick={() => { setErr(""); setOpen(true); }}><Svg name="plus" size={14} width={2.4} />Pridėti objektą</button> : null}</header>

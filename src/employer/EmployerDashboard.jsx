@@ -5199,7 +5199,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               <div className={`limbox${used / limit >= 0.8 ? " warn" : ""}`}><div className="limtx"><span>Šį mėnesį panaudota <b>{used} iš {limit}</b> darbo pasiūlymų</span><div className="limbar"><i style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} /></div></div>
                 {used / limit >= 0.8 ? <><span className="limup">{used >= limit ? "Limitas pasiektas." : `Liko ${limit - used}.`} Su Business Pro – neribotai.</span><button className="btn sm primary" type="button" onClick={() => goEmployerView("plans")}>Pereiti į Pro</button></> : null}</div>
             ) : null}
-            {!editingJobId ? <TemplateBar templates={companyTemplates.rows} locked={!bizPlan} onUse={applyJobTemplate} onManage={() => setTemplatesOpen(true)} onPlans={() => goEmployerView("plans")} /> : null}
+            {!editingJobId && !companyTemplates.missing ? <TemplateBar templates={companyTemplates.rows} locked={!bizPlan} onUse={applyJobTemplate} onManage={() => setTemplatesOpen(true)} onPlans={() => goEmployerView("plans")} /> : null}
             {templatesOpen ? <TemplatesModal templates={companyTemplates.rows} onUse={applyJobTemplate} onClose={() => setTemplatesOpen(false)} onChanged={companyTemplates.reload} /> : null}
             <form className="jd-grid adnew newjob" noValidate onSubmit={(e) => { e.preventDefault(); if (!saving) saveJobAndFind(); }}>
               <div className="jd-main">
@@ -5214,7 +5214,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
                 </div></section>
 
                 <section className="card afsec"><header className="afh"><span className="afn">2</span><h2>Vieta ir laikas</h2></header><div className="form">
-                  {bizPlan ? (
+                  {companySites.missing ? null : bizPlan ? (
                     <label className="field wide">Objektas<select value={jobSiteId} disabled={editingConfirmedCount > 0} onChange={(e) => (e.target.value ? applyJobSite(e.target.value) : setJobSiteId(""))}>
                       <option value="">Naujas adresas</option>{companySites.rows.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
                   ) : (
@@ -5279,7 +5279,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
                   ) : null}
                   {jobFormErrors.scopeAcknowledgement ? <p className="small" style={{ color: "var(--red)", fontWeight: 600, margin: 0 }} role="alert">{jobFormErrors.scopeAcknowledgement}</p> : null}
                   <button className="btn primary jd-wide" type="submit" disabled={saving || (limited && used >= limit)}>{saving ? "Saugoma..." : editingJobId ? "Išsaugoti pakeitimus" : "Sukurti darbo pasiūlymą"}</button>
-                  {bizPlan && !editingJobId ? <button className="btn jd-wide" type="button" disabled={saving} onClick={saveJobTemplate}><Svg name="file" size={15} />Išsaugoti kaip šabloną</button> : null}
+                  {bizPlan && !editingJobId && !companyTemplates.missing ? <button className="btn jd-wide" type="button" disabled={saving} onClick={saveJobTemplate}><Svg name="file" size={15} />Išsaugoti kaip šabloną</button> : null}
                   {templateNotice ? <p className="small muted" role="status" style={{ margin: 0 }}>{templateNotice}</p> : null}
                   <button className="btn jd-wide" type="button" disabled={saving} onClick={() => { closeForm(); if (!editingJobId) goEmployerView("overview"); }}>Atšaukti</button>
                 </section>
