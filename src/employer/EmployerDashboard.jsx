@@ -4850,35 +4850,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
         <div style={{display: calendarVisible ? "none" : "contents"}}>
 
-        {!onAdminReturn && jobs.length === 0 && (
-          <section
-            data-wv="overview active"
-            style={{
-              marginBottom: 18,
-              padding: 16,
-              border: "1px solid #dfe7ed",
-              borderRadius: 16,
-              background: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                <h3 style={{ margin: "5px 0 4px", color: "#222631" }}>Sukurkite pirmą darbo poreikį</h3>
-                <div style={{ color: "#607180", fontSize: 12 }}>Įmonė jau paruošta. Dabar nurodykite konkretų darbą ir sistema padės ieškoti tinkamų žmonių.</div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="ed-secondary" type="button" onClick={() => setShowPlans(true)}>Planas: {planSummary?.plan_name || "Basic"}</button>
-                <button className="ed-primary" type="button" onClick={openNewJobForm}>Sukurti pirmą darbą</button>
-              </div>
-            </div>
-            <div className="ed-onboarding-steps">
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Įmonės profilis</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>✓</b> Pasirinktas planas</div>
-              <div style={{ padding: 11, borderRadius: 11, background: "#f6f4fa", fontSize: 12 }}><b>3</b> Pirmas darbas ir kvietimai</div>
-            </div>
-          </section>
-        )}
         {showCompanyEditor && (
           <div ref={companyEditorRef} id="employer-profile-editor" data-wv="company" style={{ display: "contents" }}>
             <EmployerCompany
@@ -5002,7 +4973,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             results={urgentSearchResults}
             copied={urgentPhoneCopied}
             onCopy={copyUrgentPhone}
-            onProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.display_name, city: w.city, avatarUrl: w.avatarUrl, initials: workerInitials(w.display_name), hasDrivingLicenseB: w.has_driving_license_b, yearsExperience: w.years_experience })}
+            onProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.display_name, city: w.city, avatarUrl: w.avatarUrl, initials: workerInitials(w.display_name), hasDrivingLicenseB: w.has_driving_license_b, yearsExperience: w.years_experience, phone: w.phone, shortBio: w.short_bio, lastActiveAt: w.urgent_updated_at })}
           />
         </div>
         {employerCanAds && (
@@ -9812,6 +9783,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         jobId={selectedWorker?.profileJobId || currentJob?.id || null}
         canViewWorkerMetrics={canViewWorkerMetrics}
         onClose={() => setSelectedWorker(null)}
+        isFavorite={Boolean(selectedWorker && savedWorkers.some((item) => item.id === selectedWorker.id))}
+        onToggleFavorite={selectedWorker?.isDemoProfile ? null : (worker) => (savedWorkers.some((item) => item.id === worker.id) ? removeWorkerFromTeam(worker) : saveWorkerToTeam(worker))}
+        contactsLocked={planSummary?.plan_key !== "business_pro"}
+        onPlans={() => goEmployerView("plans")}
       />
 
       <ConversationModal

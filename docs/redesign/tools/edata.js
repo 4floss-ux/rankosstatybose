@@ -24,6 +24,7 @@ window.__DATA={
  user_private:[{phone:"+37061234567"}],
  profiles:[{id:"00000000-0000-0000-0000-000000000001",first_name:"Jonas",last_name:"Pavyzdys",display_name:"Jonas Pavyzdys",city:"Vilnius"}],
  "rpc:get_company_worker_reviews_for_company":[{id:"r1",worker_name:"Tomas K.",score:10,comment:"Viskas sutarta aiškiai, atsiskaitė laiku."},{id:"r2",worker_name:"Rytis K.",score:9,comment:"Geras objektas, aiškios užduotys."}],
+ "rpc:worker_profile_card_v1":{completed_jobs:22,last_active_at:new Date().toISOString(),short_bio:"6 metai statybose: betonavimas, armatūra, pagalbiniai darbai.",has_driving_license_b:true},
  companies:[{id:"c1",name:"UAB Pavyzdinė statyba",reliability_rate:97,cancelled_confirmed_count:1,avatar_path:""}],
  jobs:[{id:"j1",title:"Betonavimo pagalba",city:"Vilnius",address_text:"Linkmenų g. 34, Vilnius",work_date:t,start_time:"08:00:00",end_time:"17:00:00",workers_needed:2,status:"open",company_id:"c1",created_by:"00000000-0000-0000-0000-000000000001",pay_amount:130,pay_unit:"day"},
        {id:"j2",title:"Pagalbiniai mūro darbai",city:"Vilnius",address_text:"Kalvarijų g. 120, Vilnius",work_date:tm,start_time:"07:30:00",end_time:"16:30:00",workers_needed:3,status:"open",company_id:"c1",created_by:"00000000-0000-0000-0000-000000000001",pay_amount:15,pay_unit:"hour"}],

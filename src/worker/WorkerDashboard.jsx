@@ -2364,6 +2364,11 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       setAvatarMarkedForRemoval(false);
       setProfileSaved(true);
       setNotice("Profilio informacija atnaujinta.");
+      // Kaip prototipe: išsaugotas grafikas laikomas patvirtintu.
+      if (needsAvailabilityConfirm) {
+        const confirmed = await supabase.rpc("worker_confirm_availability");
+        if (!confirmed.error) setNeedsAvailabilityConfirm(false);
+      }
     } catch (err) {
       setError(err?.message || "Nepavyko išsaugoti duomenų.");
     } finally {
@@ -3283,33 +3288,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             </div>
           )}
 
-        {showWorkTimeLoginReminder && (
-          <div className="alert" role="status" data-wv="overview">
-            <div>
-              <b>Būtinai atnaujinkite darbo laikus</b>
-              <p>Patikrinkite, ar jūsų prieinamumas vis dar tikslus, kad darbdaviai matytų realų laiką, kada galite dirbti.</p>
-            </div>
-            <div className="row"><button className="btn primary" type="button" onClick={openWorkerWorkTimeEditor}>Atnaujinti</button></div>
-          </div>
-        )}
 
-        {!onAdminReturn &&
-          (!form.displayName.trim() ||
-            !form.phone.trim() ||
-            availableCount === 0) && (
-            <div className="alert blue" data-wv="overview">
-              <div>
-                <b>Paruoškite profilį kvietimams į darbą</b>
-                <p>
-                  {form.displayName.trim() && form.phone.trim() ? "✓" : "1."} Profilis ir telefonas · {availableCount > 0 ? "✓" : "2."} Bent viena laisva diena · 3. Priimkite tinkamą kvietimą
-                </p>
-              </div>
-              <div className="row">
-                <button className="btn" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
-                <button className="btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
-              </div>
-            </div>
-          )}
         <div className="wd-overview-heading eyebrow" data-wv="legacy">DABAR SVARBIAUSIA</div>
 
         <div className="wd-overview" data-wv="legacy">
@@ -3677,20 +3656,6 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        {needsAvailabilityConfirm && (
-          <div id="worker-availability-alert" className="alert" style={{ scrollMarginTop: 88 }} data-wv="overview schedule">
-            <div>
-              <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
-              <p>Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų darbuotojų paieškoje. Tai padeda rodyti tik realiai aktyvius žmones.</p>
-            </div>
-            <div className="row">
-              <button className="btn" type="button" disabled={confirmingAvailability} onClick={() => openWorkerProfileEditor("availability")}>Keisti grafiką</button>
-              <button className="btn primary" type="button" disabled={confirmingAvailability} onClick={confirmCurrentAvailability}>
-                {confirmingAvailability ? "Patvirtinama..." : "Patvirtinti grafiką"}
-              </button>
-            </div>
-          </div>
-        )}
 
         <BugResolutionNotice userId={user.id} />
 
