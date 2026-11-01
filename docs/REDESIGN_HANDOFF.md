@@ -106,6 +106,10 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
   poreikis, kandidatai su eiga, sutartimis ir dokumentais, kontaktas, tarpininkavimo sutartis, sąskaita), kandidato pridėjimas iš Statybos24 bazės
   (`admin_search_foreign_hire_workers` – anksčiau nebuvo rodoma) arba išorinis. Visos RPC ir failų funkcijos – esamos.
 - Verslo pristatymo ekranai – nauji `public/assets/screens/bp-screen-*.webp` iš naujo dizaino (senų `.svg` nebėra).
+- Admin „Prisijungti kaip“ (Darbuotojai / Darbdaviai → Valdyti): edge funkcija `admin-impersonate` (tik aktyvus adminas, ne kitam adminui,
+  įrašas `admin_audit_log` „impersonate_start“) duoda vienkartinį raktą; admino sesija laikoma naršyklėje (`src/admin/impersonation.js`),
+  viršuje juosta „Grįžti į administratorių“ (ji ir „Atsijungti“ grąžina admino sesiją). Užsiėmus kitu naudotoju juosta nerodoma (tikrinamas user.id, 12 val.).
+- Meniu sutankinimas kaip prototipe (`mfit1–4` P24Shell), pašalinta prototipe nesanti admino „Paskyra“ grupė (darbuotojo/darbdavio režimai, paskyros trynimas).
 - Smulkūs: darbo puslapio širdelė prieš įmonę, klaidos pataisymo pranešimas `.alert green`, pasibaigęs darbas paryškina „Pasibaigę darbai“.
 
 ## 5. Kas liko
@@ -114,7 +118,10 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
    (nauja lentelė, AFTER trigeriai su `exception when others`, RPC `get_company_team_activity`). Nepritaikyta – DB patvirtinimas buvo atšauktas.
    Pritaikius: perkelti į `supabase/migrations/` ir prijungti prie Komandos puslapio.
 2. Skelbimų „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo nėra) – reikia naujos DB lentelės; nedaryta, kad nebūtų netikros funkcijos.
-3. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis (žr. `docs/LAUNCH.md`).
+3. Admin „Administratoriai“ (moderatoriai su teisėmis) – laukia savininko plano (saugumas).
+4. Prototipo dalys be duomenų sistemoje: atstumas ir kelionės laikas iki darbo, „Atsakykite iki“ kvietimo terminas, „Nuolatinė komanda“,
+   objektai / šablonai / automatinis kvietimas / objekto vadovo rolė. Reikia naujų DB laukų ir logikos.
+5. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis (žr. `docs/LAUNCH.md`).
 
 ## 6. Kaip tikrinti (prieš kiekvieną commit)
 
