@@ -3177,3 +3177,16 @@
 .p24 .admin-btn,.p24 .admin-primary{border-radius:5px!important}
 .p24 .admin-primary{background:var(--orange)!important;border-color:var(--orange)!important;color:#fff!important}
 .p24 .admin-head h1{font-family:var(--display);letter-spacing:-.2px}
+/* Darbdavio atidaryto darbo antraštė kaip prototipo jd-hero */
+.p24 #employer-open-job{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;display:flex;flex-direction:column;gap:18px}
+.p24 #employer-open-job .ed-current-job-overview{display:flex;flex-direction:column;gap:18px;background:transparent;border:0;padding:0}
+.p24 #employer-open-job .ed-current-job-overview-head{background:var(--navy)!important;color:var(--white)!important;border-radius:8px!important;padding:22px 24px!important;position:relative;overflow:hidden;border:0!important}
+.p24 #employer-open-job .ed-current-job-overview-head::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:999px;background:radial-gradient(circle,rgba(107,91,149,.22),transparent 70%);pointer-events:none}
+.p24 #employer-open-job .ed-current-job-overview-head .eyebrow{color:#c9bce9!important}
+.p24 #employer-open-job .ed-current-job-overview-head h2{color:var(--white)!important;font-size:clamp(19px,2.4vw,24.5px)!important;letter-spacing:.4px;text-transform:uppercase}
+.p24 #employer-open-job .ed-current-job-head-meta,.p24 #employer-open-job .ed-current-job-head-meta *{color:rgba(255,255,255,.78)!important}
+.p24 #employer-open-job .ed-current-job-head-meta b{color:var(--white)!important}
+.p24 #employer-open-job .ed-current-job-status{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.2)!important;color:var(--white)!important;border-radius:4px!important}
+.p24 #employer-open-job .ed-current-job-head-actions button{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.2)!important;color:var(--white)!important;border-radius:5px!important}
+.p24 #employer-open-job .ed-current-job-grid{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:16px!important}
+.p24 #employer-open-job .ed-attendance-panel,.p24 #employer-open-job .ed-results-head{background:var(--white);border:1px solid var(--line);border-radius:7px;padding:20px 22px}
