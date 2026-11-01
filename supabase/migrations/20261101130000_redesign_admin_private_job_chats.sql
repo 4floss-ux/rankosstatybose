@@ -1,0 +1,4 @@
+-- Taikyta per Supabase MCP 2026-11-01.
+-- set_job_message_sender_context papildyta 'admin' režimu (app.private_message_mode='admin' ir is_admin()).
+-- Naujos funkcijos: get_admin_private_job_threads(int), get_admin_private_job_messages(uuid),
+-- admin_send_private_job_message(uuid,text) – tik administratoriams (is_admin()).

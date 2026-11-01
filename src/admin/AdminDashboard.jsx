@@ -16,6 +16,7 @@ import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { Svg } from "../p24/Shell.jsx";
 import { Empty, PageHead } from "../p24/ui.jsx";
+import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
 
 export function AdminDashboard({
   user,
@@ -2401,7 +2402,7 @@ export function AdminDashboard({
           { key: "disputes", label: "Ginčai", icon: "shield", badge: activeDisputeCount },
           { key: "bugs", label: "Svetainės klaidos", icon: "bell", badge: activeSiteBugCount },
           { key: "ratings", label: "Atsiliepimai", icon: "star" },
-          { key: "teamChats", label: "Vadovų pokalbiai", icon: "chat" },
+          { key: "teamChats", label: "Pokalbiai", icon: "chat" },
           { key: "files", label: "Failai", icon: "file" },
         ]],
         ["Sistema", [
@@ -3883,6 +3884,7 @@ export function AdminDashboard({
           </section>
         )}
 
+        {activeTab === "teamChats" && <AdminPrivateChats />}
         {activeTab === "teamChats" && (
           <section className="admin-section">
             <div className="admin-section-head">
