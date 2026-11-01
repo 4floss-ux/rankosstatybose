@@ -173,6 +173,7 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
       {st === "interview" && x.interview_at ? (
         <div className="ivcard"><span className="ivk">Pokalbis</span><b>{ivWhen(x.interview_at)}</b>
           <span>{IV_HOW[x.interview_how]}{x.interview_how === "live" ? ` · ${x.interview_address || ""}` : " – įmonė paskambins"}</span>
+          {x.interview_note ? <span className="small">„{x.interview_note}“</span> : null}
           {x.interview_how === "live" && x.interview_address ? <a className="jd-map" href={mapLink(x.interview_address)} target="_blank" rel="noopener noreferrer">Rodyti žemėlapyje ↗</a> : null}
           {x.interview_confirmed_at ? <span className="ivok"><Svg name="check" size={13} width={3} />Patvirtinote</span>
             : <button className="btn primary jd-wide" type="button" disabled={busy} onClick={() => run("job_ad_confirm_interview", { p_application_id: x.id })}>Patvirtinti pokalbį</button>}
