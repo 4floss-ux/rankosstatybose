@@ -1,5 +1,8 @@
 (function(){const t=new Date().toISOString().slice(0,10);const d=new Date();d.setDate(d.getDate()+1);const tm=d.toISOString().slice(0,10);
 window.__DATA={
+ "rpc:get_company_team":[{user_id:"00000000-0000-0000-0000-000000000001",display_name:"Jonas Pavyzdys",email:"vadovas@pavyzdys.lt",member_role:"owner"},{user_id:"u2",display_name:"Ieva Marcinkė",email:"ieva@pavyzdys.lt",member_role:"manager"},{user_id:"u3",display_name:"Paulius Rimkus",email:"paulius@pavyzdys.lt",member_role:"recruiter"}],
+ "rpc:get_company_team_invites":[{invite_id:"i1",display_name:"Justas Lukas",email:"justas@pavyzdys.lt",member_role:"recruiter",token:"t"}],
+ "rpc:get_company_billing_status":[{effective_plan_key:"business_pro",billing_interval:"monthly",has_stripe_subscription:true,has_stripe_customer:true}],
  "rpc:employer_stats_v1":{plan:"business_pro",role:"owner",own_only:false,jobs_created:18,jobs_filled:15,jobs_completed:14,jobs_cancelled:1,jobs_short:2,avg_fill_minutes:220,spend_net:8639,minutes:36720,completed_bookings:42,invites:{sent:96,accepted:61,declined:21,no_answer:14},arrival:{present:40,late:2,no_show:1},monthly:[{m:"2026-06",created:9,completed:7},{m:"2026-07",created:11,completed:9},{m:"2026-08",created:14,completed:12},{m:"2026-09",created:12,completed:10},{m:"2026-10",created:16,completed:14},{m:"2026-11",created:4,completed:2}],
   top_workers:[{worker_id:"w1",name:"Tomas Kazlauskas",jobs:14,rating:9.8,on_time:100,spend:1680},{worker_id:"w2",name:"Rytis Kairys",jobs:11,rating:9.5,on_time:92,spend:1320},{worker_id:"w3",name:"Mantas Petraitis",jobs:9,rating:9.6,on_time:100,spend:1050}],
   top_spend:[{worker_id:"w1",name:"Tomas Kazlauskas",jobs:14,rating:9.8,spend:1680},{worker_id:"w2",name:"Rytis Kairys",jobs:11,rating:9.5,spend:1320}],

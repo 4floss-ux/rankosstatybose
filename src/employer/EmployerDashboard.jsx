@@ -22,6 +22,8 @@ import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
 import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
 import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
 import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
+import { EmployerTeam } from "../p24/employer/EmployerTeam.jsx";
+import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
@@ -784,12 +786,17 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
+  // Planai – atskiras ekranas (kaip prototipe); senas iššokantis langas nebenaudojamas.
+  useEffect(() => {
+    if (!showPlans) return;
+    setShowPlans(false);
+    goEmployerView("plans");
+  }, [showPlans]);
+
   function goEmployerView(view) {
     const actions = {
       longterm: () => openLongTermEmployment("hire"),
       teamchat: openCompanyTeamChat,
-      team: openCompanyTeam,
-      plans: () => setShowPlans(true),
     };
     if (actions[view]) {
       actions[view]();
@@ -815,16 +822,13 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setEmployerView(view);
     if (view === "favorites") openSavedWorkerTeam();
     if (view === "urgent") openUrgentSearch();
+    if (view === "team") openCompanyTeam();
     window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   }
 
   async function openCompanyTeam() {
-    if (!planSummary?.can_team_management) {
-      setNotice("Įmonės komandos valdymas prieinamas tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“.");
-      return;
-    }
+    if (!planSummary?.can_team_management) return;
 
-    setShowTeam(true);
     setLastTeamInviteLink("");
     await loadCompanyTeam(company?.id, companyMemberRole, planSummary);
   }
@@ -4456,7 +4460,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}.ed-shell[data-view="team"] [data-wv]:not([data-wv~="team"]){display:none!important}.ed-shell[data-view="plans"] [data-wv]:not([data-wv~="plans"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
@@ -5144,6 +5148,54 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
             />
           </div>
         )}
+        <div data-wv="plans" style={{ display: "contents" }}>
+          <EmployerPlans
+            planKey={planSummary?.plan_key}
+            billing={billingStatus}
+            cycle={planBillingCycle}
+            setCycle={setPlanBillingCycle}
+            busy={planActionBusy}
+            isOwner={companyMemberRole === "owner"}
+            adminMode={Boolean(onAdminReturn)}
+            onRequest={requestPaidPlan}
+            onPortal={openBillingPortal}
+            onAdminActivate={activatePlanForAdminTest}
+            notes={<>
+              {error && employerView === "plans" ? <p className="ferr" role="alert">{error}</p> : null}
+              {isComplimentaryBusinessTrial(planSummary, billingStatus) && planSummary?.current_period_end ? (
+                <div className="notebox"><b>Business išbandymas aktyvus</b> iki {new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(planSummary.current_period_end))}. Kortelės nereikia. Jei nepasirinksite mokamos prenumeratos, planas grįš į Basic.</div>
+              ) : null}
+              {billingStatus?.in_payment_grace ? (
+                <div className="notebox warn"><b>Nepavyko automatiškai apmokėti prenumeratos.</b> Plano teisės paliktos iki {new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(billingStatus.payment_grace_until))}. Atnaujinkite mokėjimo būdą („Valdyti prenumeratą“).</div>
+              ) : null}
+              {planSummary?.cancel_at_period_end ? (
+                <div className="notebox"><b>Prenumeratos atšaukimas suplanuotas.</b>{planSummary?.current_period_end ? ` Teisės galioja iki ${new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(planSummary.current_period_end))}.` : ""} Po to planas taps Basic.</div>
+              ) : null}
+              {pendingPlanChange?.pending_plan_key ? (
+                <div className="notebox"><b>Suplanuotas plano pakeitimas:</b> {pendingPlanChange.pending_plan_name || employerPlanName(pendingPlanChange.pending_plan_key)}{pendingPlanChange.pending_effective_at ? ` nuo ${new Intl.DateTimeFormat("lt-LT", { year: "numeric", month: "long", day: "numeric" }).format(new Date(pendingPlanChange.pending_effective_at))}` : ""}.</div>
+              ) : null}
+            </>}
+          />
+        </div>
+        <div data-wv="team" style={{ display: "contents" }}>
+          <EmployerTeam
+            locked={!planSummary?.can_team_management}
+            onPlans={() => setShowPlans(true)}
+            myRole={companyMemberRole}
+            myUserId={user.id}
+            myEmail={user.email}
+            members={teamMembers}
+            invites={teamInvites}
+            loading={teamLoading}
+            busy={teamActionBusy}
+            form={teamInviteForm}
+            setForm={setTeamInviteForm}
+            onInvite={createTeamInvite}
+            onCopy={copyTeamInvite}
+            onRole={changeTeamMemberRole}
+            onRemove={removeTeamMember}
+          />
+        </div>
         <div data-wv="favorites" style={{ display: "contents" }}>
           <EmployerFavorites
             locked={!planSummary?.can_saved_workers}
