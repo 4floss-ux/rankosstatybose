@@ -7,7 +7,7 @@ import { PhoneAvailabilityHint, PhoneVerificationFields, usePhoneVerification } 
 import { addPlatformDays, attendanceOutcomeLabel, browserLocationErrorMessage, currentVilniusTimeRounded5, formatJobTitle, formatNetPay, formatWorkedMinutes, isSearchLocationFresh, jobHasEnded, jobStartMoment, localDateISO, nextFourteenDays, notificationPresentation, requestBrowserLocation, timeRangesOverlap, workerCheckInWindowOpen } from "../lib/jobs.js";
 import { ConversationModal, DisputeConversationModal, GroupConversationModal } from "../chat/conversations.jsx";
 import { LongTermConversationModal, LongTermOfferDetails, longTermContractLabel, longTermStatusLabel, longTermWorkerUpdateLabel, longTermWorkerUpdateTone, openEmploymentContract, safeStorageFileName } from "../longterm/longTerm.jsx";
-import { AccountBugReportZone, AccountDeleteZone, BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings } from "../dashboard/shared.jsx";
+import { BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings } from "../dashboard/shared.jsx";
 import { formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, reliabilityScoreColor, workerReliabilityPenaltyMeta } from "../employer/plans.js";
 import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { CompanyBadge, companyAvatarUrl, workerAvatarUrl } from "../ui/avatars.jsx";
@@ -17,6 +17,7 @@ import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
+import { WorkerProfileEditor } from "../p24/worker/WorkerProfileEditor.jsx";
 import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
@@ -289,6 +290,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     shortBio: "",
     avatarPath: "",
   });
+  const [formBaseline, setFormBaseline] = useState(null);
   const phoneVerification = usePhoneVerification({
     active: true, purpose: "change", phone: form.phone, email: user.email, userId: user.id,
   });
@@ -743,7 +745,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       const firstName = profile?.first_name || fallbackNameParts[0] || "";
       const lastName = profile?.last_name || fallbackNameParts.slice(1).join(" ") || "";
 
-      setForm({
+      const loadedForm = {
         firstName,
         lastName,
         birthDate: privateData?.birth_date || "",
@@ -756,7 +758,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         yearsExperience: worker?.years_experience ?? 0,
         shortBio: worker?.short_bio || "",
         avatarPath: worker?.avatar_path || "",
-      });
+      };
+      setForm(loadedForm);
+      setFormBaseline(loadedForm);
       setAvatarFile(null);
       setAvatarPreview("");
       setAvatarMarkedForRemoval(false);
@@ -2342,11 +2346,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
       setNeedsAvailabilityConfirm(false);
       setOriginalSkills([...selectedSkills]);
-      setForm((current) => ({
-        ...current,
-        city: canonicalCity,
-        avatarPath: nextAvatarPath,
-      }));
+      const savedForm = { ...form, city: canonicalCity, avatarPath: nextAvatarPath, phone: normalizedPhone };
+      setForm(savedForm);
+      setFormBaseline(savedForm);
       if (avatarPreview?.startsWith("blob:")) {
         URL.revokeObjectURL(avatarPreview);
       }
@@ -2382,6 +2384,25 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       ? [availabilityMobileDay]
       : []
     : days;
+
+  const profileDirty = Boolean(
+    formBaseline &&
+      (avatarFile ||
+        avatarMarkedForRemoval ||
+        ["firstName", "lastName", "birthDate", "city", "phone", "travelRadius", "hasDrivingLicenseB", "hasIndividualActivity", "yearsExperience", "shortBio"].some(
+          (key) => String(form[key] ?? "") !== String(formBaseline[key] ?? "")
+        ))
+  );
+
+  function undoProfileChanges() {
+    if (!formBaseline) return;
+    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    setForm(formBaseline);
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setAvatarMarkedForRemoval(false);
+    setProfileFormErrors({});
+  }
 
   const profileAvatarUrl = avatarMarkedForRemoval
     ? ""
@@ -3125,7 +3146,6 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       {!onAdminReturn && <WebPushSettings user={user} kind="worker" profileOpen={showProfileEditor} />}
 
       <main className="wd-shell" data-view={workerView}>
-        {showProfileEditor && <section className="card setsec" data-wv="profile" style={{ order: 1 }}><h2>Kita</h2><div className="setlist"><AbroadSetting user={user} /></div></section>}
 
         <div data-wv="overview" style={{ display: "contents" }}>
           <WorkerOverview
@@ -3441,311 +3461,42 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             className="wd-profile-editor"
             style={{ scrollMarginTop: 88 }}
           >
-            <div className="head">
-              <div>
-                <span className="eyebrow">Mano informacija</span>
-                <h1>Profilis</h1>
-                <p className="lead">Atnaujinkite savo profilį ir laiką, kada galite priimti darbo kvietimus.</p>
-              </div>
-              <div className="row">
-                <button className="btn primary savebtn" type="button" disabled={saving} onClick={saveEverything}>
-                  <Svg name="check" size={16} width={2.4} /><span>{saving ? "Saugoma..." : profileSaved ? "Išsaugota" : "Išsaugoti"}</span>
-                </button>
-              </div>
-            </div>
-
-            <div id="s24-worker-push-settings" data-wv="profile" />
-            <div className="wd-profile-editor-section" data-wv="profile">
-              <h3>Pagrindinė informacija</h3>
-
-              <div className="wd-avatar-editor">
-                <div className="wd-avatar-preview">
-                  {profileAvatarUrl ? (
-                    <img
-                      src={profileAvatarUrl}
-                      alt={form.displayName || "Profilio nuotrauka"}
-                    />
-                  ) : (
-                    initials || "D"
-                  )}
-                </div>
-
-                <div className="wd-avatar-editor-copy">
-                  <b>Profilio nuotrauka</b>
-                  <span>
-                    Nuotrauką matys darbdaviai prie jūsų profilio. JPG, PNG arba
-                    WEBP, iki 5 MB.
-                  </span>
-                  <div className="wd-avatar-actions">
-                    <label className="wd-avatar-upload">
-                      {profileAvatarUrl ? "Keisti nuotrauką" : "Pridėti nuotrauką"}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) =>
-                          chooseAvatarFile(e.target.files?.[0] || null)
-                        }
-                      />
-                    </label>
-                    {profileAvatarUrl && (
-                      <button
-                        className="wd-avatar-remove"
-                        type="button"
-                        onClick={markAvatarForRemoval}
-                      >
-                        Ištrinti logotipą
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="wd-grid-2">
-                <label
-                  className={`wd-label${profileFormErrors.firstName ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.firstName = node; }}
-                >
-                  Vardas *
-                  <input
-                    className="wd-input"
-                    value={form.firstName}
-                    onChange={(e) => updateField("firstName", e.target.value)}
-                    autoComplete="given-name"
-                    aria-invalid={Boolean(profileFormErrors.firstName)}
-                    required
-                  />
-                  {profileFormErrors.firstName && <span className="wd-field-error" role="alert">{profileFormErrors.firstName}</span>}
-                </label>
-
-                <label
-                  className={`wd-label${profileFormErrors.lastName ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.lastName = node; }}
-                >
-                  Pavardė *
-                  <input
-                    className="wd-input"
-                    value={form.lastName}
-                    onChange={(e) => updateField("lastName", e.target.value)}
-                    autoComplete="family-name"
-                    aria-invalid={Boolean(profileFormErrors.lastName)}
-                    required
-                  />
-                  {profileFormErrors.lastName && <span className="wd-field-error" role="alert">{profileFormErrors.lastName}</span>}
-                </label>
-
-                <label
-                  className={`wd-label${profileFormErrors.birthDate ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.birthDate = node; }}
-                >
-                  Gimimo data
-                  <input
-                    className="wd-input"
-                    style={{ minWidth: 0, width: "100%", boxSizing: "border-box" }}
-                    type="date"
-                    min="1900-01-01"
-                    max={getVilniusTodayISO()}
-                    value={form.birthDate}
-                    onChange={(e) => updateField("birthDate", e.target.value)}
-                    autoComplete="bday"
-                    aria-invalid={Boolean(profileFormErrors.birthDate)}
-                  />
-                  {profileFormErrors.birthDate && <span className="wd-field-error" role="alert">{profileFormErrors.birthDate}</span>}
-                  <small style={{ fontSize: 11, color: "#72818d", fontWeight: 400 }}>
-                    Šią datą matote tik savo profilyje – darbdaviams ji nerodoma.
-                  </small>
-                </label>
-
-                <label
-                  className={`wd-label${profileFormErrors.city ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.city = node; }}
-                >
-                  Miestas *
-                  <CityAutocomplete
-                    className="wd-input"
-                    value={form.city}
-                    onChange={(value) => updateField("city", value)}
-                    placeholder="Pradėkite rašyti miestą"
-                  />
-                  {profileFormErrors.city && <span className="wd-field-error" role="alert">{profileFormErrors.city}</span>}
-                </label>
-
-                <label
-                  className={`wd-label${profileFormErrors.phone ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.phone = node; }}
-                >
-                  Telefonas *
-                  <input
-                    className="wd-input"
-                    value={form.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
-                    onBlur={() => {
-                      const normalized = normalizeLithuanianMobilePhone(form.phone);
-                      if (normalized) updateField("phone", normalized);
-                    }}
-                    placeholder="+37061234567"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    aria-invalid={Boolean(profileFormErrors.phone)}
-                    required
-                  />
-                  {profileFormErrors.phone && <span className="wd-field-error" role="alert">{profileFormErrors.phone}</span>}
-                  <PhoneAvailabilityHint verification={phoneVerification} />
-                </label>
-
-                <PhoneVerificationFields verification={phoneVerification} />
-
-                <label
-                  className={`wd-label${profileFormErrors.travelRadius ? " has-error" : ""}`}
-                  ref={(node) => { profileFieldRefs.current.travelRadius = node; }}
-                >
-                  Kiek km galite nuvykti?
-                  <input
-                    className="wd-input"
-                    type="number"
-                    min="5"
-                    max="50"
-                    value={form.travelRadius}
-                    onChange={(e) =>
-                      updateField("travelRadius", e.target.value)
-                    }
-                    aria-invalid={Boolean(profileFormErrors.travelRadius)}
-                  />
-                  {profileFormErrors.travelRadius && <span className="wd-field-error" role="alert">{profileFormErrors.travelRadius}</span>}
-                </label>
-
-                <div className="wd-location-card">
-                  <button
-                    className={`wd-location-toggle ${searchLocationFresh ? "on" : "off"}`}
-                    type="button"
-                    disabled={searchLocationBusy}
-                    aria-pressed={searchLocationFresh}
-                    aria-label={
-                      searchLocationNeedsRefresh
-                        ? "Atnaujinti lokaciją"
-                        : searchLocationFresh
-                        ? "Išjungti lokaciją"
-                        : "Įjungti lokaciją"
-                    }
-                    title={
-                      searchLocationNeedsRefresh
-                        ? "Lokacija senesnė nei 7 dienos. Paspauskite, kad atnaujintumėte."
-                        : searchLocationFresh
-                        ? "Paspauskite, kad išjungtumėte lokaciją ir ištrintumėte išsaugotas koordinates."
-                        : "Paspauskite, kad įjungtumėte lokaciją tikslesniam atstumo iki darbo skaičiavimui."
-                    }
-                    onClick={
-                      searchLocationFresh
-                        ? disableSearchLocation
-                        : updateSearchLocationFromBrowser
-                    }
-                  >
-                    <span className="wd-location-toggle-dot" aria-hidden="true" />
-                    <span>Lokacija</span>
-                    <span className="wd-location-toggle-state">
-                      {searchLocationBusy
-                        ? searchLocationFresh
-                          ? "Išjungiama..."
-                          : "Nustatoma..."
-                        : searchLocationNeedsRefresh
-                        ? "Atnaujinti"
-                        : searchLocationFresh
-                        ? "Įjungta"
-                        : "Išjungta"}
-                    </span>
-                  </button>
-                  <span className="wd-location-copy">
-                    <span className="wd-location-copy-title">Raskite arčiau esančius darbus</span>
-                    <span className="wd-location-copy-text">Vietą naudojame tik atstumui apskaičiuoti — darbdaviui jos nerodome.</span>
-                  </span>
-                  {searchLocationError && (
-                    <span className="wd-location-message err">{searchLocationError}</span>
-                  )}
-                </div>
-
-                <label className="wd-label">
-                  Patirtis statybose (metais)
-                  <input
-                    className="wd-input"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={form.yearsExperience}
-                    onChange={(e) =>
-                      updateField("yearsExperience", e.target.value)
-                    }
-                  />
-                </label>
-
-                <div className="wd-profile-editor-check-stack">
-                  <label className="wd-check wd-profile-editor-check">
-                    <input
-                      type="checkbox"
-                      checked={form.hasDrivingLicenseB}
-                      onChange={(e) =>
-                        updateField("hasDrivingLicenseB", e.target.checked)
-                      }
-                    />
-                    Turiu B kategorijos vairuotojo pažymėjimą
-                  </label>
-
-                  <label className="wd-check wd-profile-editor-check">
-                    <input
-                      type="checkbox"
-                      checked={form.hasIndividualActivity}
-                      onChange={(e) =>
-                        updateField("hasIndividualActivity", e.target.checked)
-                      }
-                    />
-                    Turiu individualią veiklą
-                  </label>
-                </div>
-              </div>
-
-              <label
-                className={`wd-label${profileFormErrors.shortBio ? " has-error" : ""}`}
-                style={{ marginTop: 16 }}
-                ref={(node) => { profileFieldRefs.current.shortBio = node; }}
-              >
-                Patirtis *
-                <textarea
-                  className="wd-textarea"
-                  value={form.shortBio}
-                  required
-                  onChange={(e) => updateField("shortBio", e.target.value)}
-                  placeholder="Pvz. 2 metus dirbau statybų pagalbiniu. Jei patirties neturite, įrašykite „Neturiu“."
-                  aria-invalid={Boolean(profileFormErrors.shortBio)}
-                />
-                {profileFormErrors.shortBio && <span className="wd-field-error" role="alert">{profileFormErrors.shortBio}</span>}
-              </label>
-            </div>
-
-            <div className="wd-profile-editor-section wd-recent-ratings-card" data-wv="profile">
-              <div className="eyebrow">PASKUTINIAI 3 DARBDAVIŲ ĮVERTINIMAI</div>
-
-              {recentEmployerRatingsLoading ? (
-                <SilentLoader size={18} minHeight={36} />
-              ) : recentEmployerRatings.length ? (
-                <div className="wd-recent-ratings-list">
-                  {recentEmployerRatings.map((review) => (
-                    <div className="wd-recent-rating" key={review.id}>
-                      <div className="wd-recent-rating-head">
-                        <b>{review.score} / 10</b>
-                        <span>{new Date(review.created_at).toLocaleDateString("lt-LT")}</span>
-                      </div>
-                      {review.comment?.trim() && <p>{review.comment}</p>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="wd-empty-friendly" style={{ marginTop: 4 }}>
-                  <div className="wd-empty-friendly-icon">☆</div>
-                  <div>
-                    <b>Dar nėra darbdavių įvertinimų</b>
-                    Kai gausite įvertinimą po užbaigto darbo, naujausi bus rodomi čia.
-                  </div>
-                </div>
-              )}
-            </div>
+            <WorkerProfileEditor
+              user={user}
+              form={form}
+              baseline={formBaseline}
+              updateField={updateField}
+              errors={profileFormErrors}
+              fieldRefs={profileFieldRefs}
+              saving={saving}
+              saved={profileSaved}
+              dirty={profileDirty}
+              onSave={saveEverything}
+              onUndo={undoProfileChanges}
+              avatarUrl={profileAvatarUrl}
+              initials={initials}
+              onAvatarFile={chooseAvatarFile}
+              onAvatarRemove={markAvatarForRemoval}
+              phoneVerification={phoneVerification}
+              PhoneHint={<PhoneAvailabilityHint verification={phoneVerification} />}
+              PhoneFields={<PhoneVerificationFields verification={phoneVerification} />}
+              normalizePhone={normalizeLithuanianMobilePhone}
+              cityInput={<CityAutocomplete className="" value={form.city} onChange={(value) => updateField("city", value)} placeholder="Pradėkite rašyti miestą" />}
+              location={{
+                on: searchLocationFresh,
+                stale: searchLocationNeedsRefresh,
+                busy: searchLocationBusy,
+                error: searchLocationError,
+                toggle: searchLocationFresh ? disableSearchLocation : updateSearchLocationFromBrowser,
+              }}
+              ratings={recentEmployerRatings}
+              ratingsLoading={recentEmployerRatingsLoading}
+              awards={monthlyAwards}
+              abroad={<AbroadSetting user={user} />}
+              bugNotice={bugReportNotice}
+              onBugReport={() => { setBugReportNotice(""); setBugReportOpen(true); }}
+              onDelete={() => setDeleteAccountOpen(true)}
+            />
 
             <div
               className="wd-profile-editor-section"
@@ -3913,39 +3664,6 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               </div>
             </div>
 
-            <div className="wd-profile-editor-actions">
-              <button
-                className="wd-profile-editor-cancel"
-                type="button"
-                disabled={saving}
-                onClick={() => setShowProfileEditor(false)}
-              >
-                Atšaukti
-              </button>
-
-              <button
-                className="wd-save"
-                type="button"
-                disabled={saving}
-                onClick={saveEverything}
-              >
-                {saving ? "Saugoma..." : profileSaved ? "Išsaugota" : "Išsaugoti"}
-              </button>
-            </div>
-
-            <div data-wv="profile">
-            <AccountDeleteZone
-              onDelete={() => setDeleteAccountOpen(true)}
-              description="Ištrynus darbuotojo paskyrą bus pašalintas jūsų profilis, sukurti duomenys ir įkelti failai. Šio veiksmo atkurti nebus galima."
-            />
-            <AccountBugReportZone
-              successMessage={bugReportNotice}
-              onOpen={() => {
-                setBugReportNotice("");
-                setBugReportOpen(true);
-              }}
-            />
-            </div>
           </section>
         )}
 

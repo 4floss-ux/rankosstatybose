@@ -3159,7 +3159,7 @@
 
 /* ---- Senų (dar neperrašytų) blokų suderinimas su nauju dizainu ---- */
 .p24 .wd-profile-editor,.p24 .wd-card,.p24 .ed-card,.p24 .admin-card,.p24 .ed-company-editor{background:var(--white)!important;border:1px solid var(--line)!important;border-radius:7px!important;box-shadow:0 1px 2px rgba(34,38,49,.04)!important;padding:24px!important}
-.p24 .wd-profile-editor h2,.p24 .wd-card h2,.p24 .ed-card h2,.p24 .ed-company-editor h2{font-family:var(--display);font-size:19px;letter-spacing:-.2px;margin:0 0 4px}
+.p24 .wd-profile-editor .wd-profile-editor-section h2,.p24 .wd-card h2,.p24 .ed-card h2,.p24 .ed-company-editor h2{font-family:var(--display);font-size:19px;letter-spacing:-.2px;margin:0 0 4px}
 .p24 .wd-profile-editor-section{border-top:1px solid var(--line)!important}
 .p24 .wd-label,.p24 .ed-label{font-size:12px!important;font-weight:700!important;color:var(--navy)!important;gap:6px!important}
 .p24 .wd-input,.p24 .wd-textarea,.p24 .ed-input,.p24 .ed-textarea,.p24 .admin-input{min-height:44px;border:1px solid var(--line-2)!important;border-radius:5px!important;background:var(--white)!important;color:var(--navy)!important;font-size:14px!important;font-weight:500!important;padding:0 12px!important;box-shadow:none!important}
@@ -3211,3 +3211,24 @@
 .p24 .rs-modal-head .eyebrow,.p24 .reliability-modal-eyebrow{color:var(--orange-text)!important}
 .p24 .rs-modal-card button:not(.rs-close):not([class*="close"]):not(.wd-accept):not(.wd-decline):not(.wd-danger),.p24 .admin-modal button.btn{border-radius:5px}
 .p24 .rs-modal-card textarea,.p24 .rs-modal-card input[type="text"],.p24 .rs-modal-card input:not([type]),.p24 .admin-modal input,.p24 .admin-modal textarea,.p24 .admin-modal select{border:1px solid var(--line-2)!important;border-radius:5px!important}
+
+/* ---- Darbuotojo profilis (wProfile) ---- */
+.p24 .awpanel{display:flex;flex-direction:column;gap:10px}
+.p24 .awpanel h3{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-family:var(--body);margin:0}
+.p24 .awlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.p24 .awitem{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:5px;border:1px solid var(--line);background:var(--white)}
+.p24 .awitem.aw-best{background:#f5f3fb;border-color:#d2c9ea}
+.p24 .awitem.aw-reliability{background:#f1fbf6;border-color:#c9ecdb}
+.p24 .awitem.aw-activity{background:#f5f3fb;border-color:#ddd6ed}
+.p24 .awitem svg{flex:none}.p24 .awitem b{display:block;font-size:13px}.p24 .awitem span{display:block;font-size:12px;color:var(--muted)}
+.p24 .av.lg{overflow:hidden}.p24 .av img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+.p24 .field.has-error input,.p24 .field.has-error textarea,.p24 .field.has-error select{border-color:var(--red)}
+.p24 .field .linkin{font-size:12px}
+.p24 .p24-modal{width:min(480px,100%)!important}
+.p24 .p24-modal .mhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.p24 .p24-modal .mhead h2{margin:2px 0 0;font-family:var(--display);font-size:20px}
+.p24 .setrow .tgl[disabled]{opacity:.5;cursor:default}
+.p24 .setrow .pushprob{display:block;color:var(--orange-text);margin-top:3px}
+.p24 .docrow .docopen{font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;text-align:left}
+.p24 .wd-shell{width:100%!important;margin-left:0!important;margin-right:0!important}@media(max-width:899px){.p24 .wd-shell{margin-top:0}}
+.p24 .rs-modal-overlay.p24-ov{z-index:9000}

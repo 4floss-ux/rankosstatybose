@@ -1029,7 +1029,22 @@ export function WebPushSettings({ user, kind = "worker", profileOpen = false }) 
 
   if (!user?.id || isHireProjectPath) return null;
   return <>
-    {profileAnchor && createPortal(
+    {profileAnchor && profileAnchor.dataset?.variant === "p24" && createPortal(
+      <div className="setrow">
+        <span className="setic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+        <div className="settx"><b>Pranešimai telefone</b><span>
+          {pushStatus === "blocked" ? "Užblokuoti šiame įrenginyje. Leidimą pakeiskite naršyklės ar įrenginio nustatymuose."
+            : pushStatus === "unsupported" ? "Šiame įrenginyje ar naršyklėje pranešimai nepalaikomi."
+            : busy ? "Vykdoma..."
+            : kind === "employer" ? "Darbuotojų atsakymai ir darbų atnaujinimai" : "Nauji kvietimai, žinutės ir grafiko priminimai"}
+          {problem && <span className="pushprob" role="alert">{problem}</span>}
+        </span></div>
+        <button type="button" className={`tgl${pushStatus === "on" ? " on" : ""}`} role="switch" aria-checked={pushStatus === "on"} aria-label="Pranešimai telefone"
+          onClick={pushStatus === "on" ? decline : accept}
+          disabled={busy || pushStatus === "checking" || pushStatus === "unsupported" || pushStatus === "blocked"}><i /></button>
+      </div>, profileAnchor
+    )}
+    {profileAnchor && profileAnchor.dataset?.variant !== "p24" && createPortal(
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",padding:"15px 17px",border:"1px solid #e2e9ee",background:"#f7f9fb",borderRadius:12,margin:"10px 0 20px"}}>
         <div style={{flex:"1 1 215px",minWidth:0}}>
           <strong style={{display:"block",fontSize:15,color:"#222631",marginBottom:5}}>Pranešimai</strong>
