@@ -569,10 +569,10 @@ export function ArrivalTimeDialog({
 }
 
 export const unifiedCloseStyles = `
-  button.rs-close, button.ctc-close, button.wd-profile-editor-close,
-  button.reliability-modal-close, button.admin-setup-close,
-  button[aria-label="Uždaryti"], button[aria-label="Uždaryti sąlygas"],
-  button[aria-label="Uždaryti pranešimą"], button[aria-label="Uždaryti klaidos pranešimą"] {
+  button.rs-close:not(.p24 *), button.ctc-close:not(.p24 *), button.wd-profile-editor-close:not(.p24 *),
+  button.reliability-modal-close:not(.p24 *), button.admin-setup-close:not(.p24 *),
+  button[aria-label="Uždaryti"]:not(.p24 *), button[aria-label="Uždaryti sąlygas"]:not(.p24 *),
+  button[aria-label="Uždaryti pranešimą"]:not(.p24 *), button[aria-label="Uždaryti klaidos pranešimą"]:not(.p24 *) {
     display:inline-flex !important; align-items:center !important; justify-content:center !important;
     width:44px !important; height:44px !important; min-width:44px !important; flex:0 0 44px !important;
     padding:0 !important; border:0 !important; border-radius:12px !important;
