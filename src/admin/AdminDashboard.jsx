@@ -2418,112 +2418,25 @@ export function AdminDashboard({
               );
             })()}
 
-            <section className="admin-section admin-traffic">
-              <div className="admin-section-head">
-                <div>
-                  <div className="eyebrow">SVETAINĖS LANKOMUMAS</div>
-                </div>
-              </div>
-
-              <div className="admin-traffic-top">
-                <div className="admin-traffic-stat">
-                  <span>Šiandien</span>
-                  <b>{trafficToday}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Vakar</span>
-                  <b>{trafficYesterday}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Telefonu šiandien</span>
-                  <b>{Number(trafficDevices.mobile || 0)}</b>
-                </div>
-                <div className="admin-traffic-stat">
-                  <span>Kompiuteriu šiandien</span>
-                  <b>{Number(trafficDevices.desktop || 0)}</b>
-                </div>
-              </div>
-
-              <div className="admin-traffic-grid">
-                <div>
-                  <div className="admin-traffic-subtitle">
-                    Paskutinės {trafficDaily.length || 14} dienų
-                  </div>
-                  <div className="admin-traffic-chart">
-                    {trafficDaily.map((item) => {
-                      const count = Number(item?.count || 0);
-                      const height = Math.max(
-                        count > 0 ? 5 : 2,
-                        Math.round((count / trafficMaxDaily) * 100)
-                      );
-
-                      return (
-                        <div className="admin-traffic-day" key={item.date}>
-                          <div className="admin-traffic-value">{count}</div>
-                          <div className="admin-traffic-bar-wrap">
-                            <div
-                              className="admin-traffic-bar"
-                              style={{ height: `${height}%` }}
-                              title={`${item.date}: ${count}`}
-                            />
-                          </div>
-                          <div className="admin-traffic-day-label">
-                            {adminTrafficDateLabel(item.date)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="admin-traffic-subtitle">Lietuvos miestai šiandien</div>
-                  <div className="admin-traffic-cities">
-                    {trafficCities.length ? (
-                      trafficCities.map((item) => (
-                        <div
-                          className="admin-traffic-city"
-                          key={`${item.city}-${item.count}`}
-                        >
-                          <span>{item.city || "Nežinoma"}</span>
-                          <b>{Number(item.count || 0)}</b>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="admin-muted">
-                        Šiandien lankytojų iš Lietuvos dar neužfiksuota.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="admin-section" style={{ marginTop: 18, border: "1px solid #c6bfdc", background: "linear-gradient(135deg,#fff8f1,#fff)" }}>
-              <div className="admin-section-head">
-                <div>
-                  <div className="eyebrow">PRISTATYMAS ĮMONĖMS</div>
-                  <h2>Privati dalinimosi nuoroda</h2>
-                </div>
-                <span className="admin-pill green">Paruošta dalintis</span>
-              </div>
-
-              <div
-                className="admin-presentation-share"
-                style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12, alignItems: "center", marginTop: 14 }}
-              >
-                <div
-                  className="admin-presentation-link"
-                  style={{ minWidth: 0, padding: "11px 13px", border: "1px solid #dfe7ed", borderRadius: 10, background: "#fff", color: "#526374", fontSize: 12, overflowWrap: "anywhere" }}
-                >
-                  {presentationLink}
-                </div>
-                <div className="admin-presentation-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="admin-small-btn" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button>
-                  <button className="admin-small-btn" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button>
-                </div>
-              </div>
-            </section>
+            <div className="agrid2">
+              <section className="card"><header><div><h2>Svetainės lankomumas šiandien</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Iš viso {trafficToday} · vakar {trafficYesterday}</p></div></header>
+                {(() => {
+                  const devices = [["Telefonu", Number(trafficDevices.mobile || 0)], ["Kompiuteriu", Number(trafficDevices.desktop || 0)]];
+                  const total = Math.max(1, devices.reduce((sum, item) => sum + item[1], 0));
+                  const cityMax = Math.max(1, ...trafficCities.map((item) => Number(item.count || 0)));
+                  return <>
+                    <div className="abars">{devices.map(([label, value]) => <div className="abar" key={label}><span>{label}</span><div className="abar-t"><i style={{ width: `${(value / total) * 100}%` }} /></div><b>{value}</b></div>)}</div>
+                    <h3 className="tch" style={{ margin: "14px 0 8px", fontSize: 11.5, letterSpacing: ".06em", fontWeight: 700 }}>Lietuvos miestai šiandien</h3>
+                    {trafficCities.length ? <div className="abars">{trafficCities.map((item) => <div className="abar" key={`${item.city}-${item.count}`}><span>{item.city || "Nežinoma"}</span><div className="abar-t"><i style={{ width: `${(Number(item.count || 0) / cityMax) * 100}%` }} /></div><b>{Number(item.count || 0)}</b></div>)}</div>
+                      : <p className="small muted" style={{ margin: 0 }}>Šiandien lankytojų iš Lietuvos dar neužfiksuota.</p>}
+                  </>;
+                })()}
+              </section>
+              <section className="card"><header><div><h2>Pristatymas įmonėms</h2><p className="small muted" style={{ margin: "2px 0 0" }}>Privati nuoroda, kurią galite siųsti potencialiems klientams.</p></div></header>
+                <div className="phrow"><b style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(presentationLink).replace(/pristatymas=.*/, "pristatymas=•••••")}</b><span className="phok" style={{ marginRight: "auto" }}><Svg name="check" size={12} width={3} />Paruošta dalintis</span></div>
+                <div className="row" style={{ gap: 8 }}><button className="btn sm" type="button" onClick={copyBusinessPresentationLink}>Kopijuoti nuorodą</button><button className="btn sm" type="button" onClick={openBusinessPresentation}>Atidaryti puslapį</button></div>
+              </section>
+            </div>
           </>
         )}
 
