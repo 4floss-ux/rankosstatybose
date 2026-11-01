@@ -3156,3 +3156,17 @@
 
 .p24 .p24-utility-desktop{display:flex;justify-content:flex-end;gap:8px}
 .p24 .p24-utility-desktop:empty{display:none}
+
+/* ---- Senų (dar neperrašytų) blokų suderinimas su nauju dizainu ---- */
+.p24 .wd-profile-editor,.p24 .wd-card,.p24 .ed-card,.p24 .admin-card,.p24 .ed-company-editor{background:var(--white)!important;border:1px solid var(--line)!important;border-radius:7px!important;box-shadow:0 1px 2px rgba(34,38,49,.04)!important;padding:24px!important}
+.p24 .wd-profile-editor h2,.p24 .wd-card h2,.p24 .ed-card h2,.p24 .ed-company-editor h2{font-family:var(--display);font-size:19px;letter-spacing:-.2px;margin:0 0 4px}
+.p24 .wd-profile-editor-section{border-top:1px solid var(--line)!important}
+.p24 .wd-label,.p24 .ed-label{font-size:12px!important;font-weight:700!important;color:var(--navy)!important;gap:6px!important}
+.p24 .wd-input,.p24 .wd-textarea,.p24 .ed-input,.p24 .ed-textarea,.p24 .admin-input{min-height:44px;border:1px solid var(--line-2)!important;border-radius:5px!important;background:var(--white)!important;color:var(--navy)!important;font-size:14px!important;font-weight:500!important;padding:0 12px!important;box-shadow:none!important}
+.p24 .wd-textarea,.p24 .ed-textarea{padding:12px 14px!important;min-height:96px;line-height:1.5}
+.p24 .wd-input:focus,.p24 .wd-textarea:focus,.p24 .ed-input:focus,.p24 .ed-textarea:focus{outline:2px solid var(--orange)!important;border-color:var(--orange)!important}
+.p24 .wd-save,.p24 .wd-accept,.p24 .ed-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:5px!important;border:1px solid var(--orange)!important;background:var(--orange)!important;color:#fff!important;font-size:13px!important;font-weight:700!important;box-shadow:none!important}
+.p24 .wd-profile-editor-cancel,.p24 .wd-decline,.p24 .ed-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:5px!important;border:1px solid var(--line)!important;background:var(--white)!important;color:var(--navy)!important;font-size:13px!important;font-weight:700!important;box-shadow:none!important}
+.p24 .wd-danger{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:5px!important;border:1px solid #f0c9c1!important;background:var(--white)!important;color:var(--red)!important;font-size:13px!important;font-weight:700!important}
+.p24 .wd-profile-editor-close{border-radius:5px!important;background:var(--soft)!important}
+.p24 .eyebrow{color:var(--orange-text)}
