@@ -13,6 +13,7 @@ import { SuspendedAccount } from "./public/SuspendedAccount.jsx";
 import { PublicLandingPage } from "./public/PublicLandingPage.jsx";
 import { BusinessPresentationPage } from "./public/BusinessPresentationPage.jsx";
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
+import { PublicLandingP24 } from "./p24/public/PublicLandingP24.jsx";
 
 export function App() {
   const [user, setUser] = useState(null);
@@ -418,12 +419,10 @@ export function App() {
 
   return (
     <>
-      <PublicLandingPage
+      <PublicLandingP24
         onLogin={openLogin}
         onEmployerSignup={openEmployerSignup}
         onWorkerSignup={openWorkerSignup}
-        pricingBillingCycle={pricingBillingCycle}
-        setPricingBillingCycle={setPricingBillingCycle}
       />
 
       <AuthModal
