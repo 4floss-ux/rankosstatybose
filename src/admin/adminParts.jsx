@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { CloseMark, SilentLoader } from "../ui/brand.jsx";
-import { ChatConductNotice } from "../ui/common.jsx";
+import { ChatThreadView } from "../chat/conversations.jsx";
+import { P24Modal } from "../p24/ui.jsx";
+import { Svg } from "../p24/Shell.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { formatJobTitle } from "../lib/jobs.js";
 import { WorkerDashboard } from "../worker/WorkerDashboard.jsx";
@@ -17,56 +19,10 @@ export function AdminSetupModal({
   children,
 }) {
   return (
-    <div
-      className="admin-setup-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <style>{`
-        .admin-setup-overlay{position:fixed;inset:0;z-index:9500;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px}
-        .admin-setup-card{width:min(760px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 28px 90px rgba(34,38,49,.30);padding:24px;color:#222631}
-        .admin-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
-        .admin-setup-head h2{font-family:Manrope,Inter,sans-serif;margin:4px 0 0;font-size:25px}
-        .admin-setup-head p{margin:7px 0 0;color:#6c7a88;line-height:1.5;max-width:620px}
-        .admin-setup-close{border:0;background:#f1f4f6;color:#222631;border-radius:9px;width:38px;height:38px;font:inherit;font-size:20px;cursor:pointer}
-        .admin-setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-        .admin-setup-wide{grid-column:1/-1}
-        .admin-setup-label{display:grid;gap:6px;font-size:13px;font-weight:800;color:#526374}
-        .admin-setup-input{width:100%;border:1px solid #dbe4ea;border-radius:10px;padding:11px 12px;font:inherit;color:#222631;background:#fff;outline:none}
-        .admin-setup-input:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-        .admin-setup-textarea{min-height:105px;resize:vertical}
-        .admin-setup-check{display:flex;align-items:center;gap:9px;min-height:44px;color:#222631;font-size:13px;font-weight:800}
-        .admin-setup-error{margin-bottom:14px;border-radius:10px;padding:11px 12px;background:#fff0ec;color:#b64d2a;font-size:13px;font-weight:700}
-        .admin-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
-        .admin-setup-cancel,.admin-setup-save{border-radius:10px;padding:11px 15px;font:inherit;font-weight:800;cursor:pointer}
-        .admin-setup-cancel{border:1px solid #dbe4ea;background:#fff;color:#222631}
-        .admin-setup-save{border:0;background:#6b5b95;color:#fff}
-        .admin-setup-save:disabled,.admin-setup-cancel:disabled{opacity:.55;cursor:wait}
-        @media(max-width:620px){.admin-setup-grid{grid-template-columns:1fr}.admin-setup-wide{grid-column:auto}.admin-setup-card{padding:18px}}
-      `}</style>
-
-      <div className="admin-setup-card">
-        <div className="admin-setup-head">
-          <div>
-            <div className="eyebrow">{eyebrow}</div>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <button
-            className="admin-setup-close"
-            type="button"
-            onClick={onClose}
-            aria-label="Uždaryti"
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        {error && <div className="admin-setup-error">{error}</div>}
-        {children}
-      </div>
-    </div>
+    <P24Modal wide eyebrow={eyebrow} title={title} sub={description} onClose={onClose}>
+      {error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p> : null}
+      {children}
+    </P24Modal>
   );
 }
 
@@ -608,123 +564,11 @@ export function AdminJobChatModal({ job, user, onClose }) {
   if (!job) return null;
 
   return (
-    <div
-      className="admin-chat-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !sending) onClose();
-      }}
-    >
-      <style>{`
-        .admin-chat-overlay{position:fixed;inset:0;z-index:9700;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(34,38,49,.30);padding:22px;color:#222631;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
-        .admin-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
-        .admin-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
-        .admin-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-chat-info{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.45}
-        .admin-chat-info.cancelled{background:#f1eef8;color:#433960}.admin-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow-y:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
-        .admin-chat-message{max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(34,38,49,.04)}
-        .admin-chat-message.mine{margin-left:auto;background:#f5f3fa;border-color:#c9c2de;border-radius:14px 14px 5px 14px}.admin-chat-message.admin-other{background:#eef3f8;border-color:#d7e4ef}
-        .admin-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}.admin-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
-        .admin-chat-empty{text-align:center;color:#6c7a88;padding:34px 10px}.admin-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
-        .admin-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-        .admin-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#222631;outline:none}.admin-chat-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-        .admin-chat-form button{border:0;background:#6b5b95;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-chat-form{grid-template-columns:1fr}.admin-chat-form button{min-height:44px}.admin-chat-message{max-width:92%}}
-      `}</style>
-
-      <div className="admin-chat-card">
-        <div className="admin-chat-head">
-          <div>
-            <div className="eyebrow">ADMINISTRATORIUS · DARBO POKALBIS</div>
-            <h2>{job.title ? formatJobTitle(job.title) : "Darbo pokalbis"}</h2>
-            <div className="admin-chat-meta">
-              {job.company_name || "Įmonė"} · {job.city || "—"} ·{" "}
-              {job.work_date || "—"}
-            </div>
-          </div>
-
-          <button
-            className="rs-close"
-            type="button"
-            disabled={sending}
-            onClick={onClose}
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        <div
-          className={`admin-chat-info ${
-            job.status === "cancelled" ? "cancelled" : ""
-          }`}
-        >
-          {job.status === "cancelled"
-            ? "Darbas atšauktas. Administratorius vis tiek gali peržiūrėti istoriją ir rašyti administracinę žinutę."
-            : "Matote visą šio darbo grupinio pokalbio istoriją. Jūsų žinutė bus siunčiama kaip administratoriaus žinutė darbo komandai."}
-        </div>
-
-        {error && <div className="admin-chat-error">{error}</div>}
-
-        <ChatConductNotice />
-
-        <div className="admin-chat-messages" ref={messagesRef}>
-          {loading && !messages.length ? (
-            <div className="admin-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
-          ) : messages.length ? (
-            messages.map((message) => {
-              const mine = message.sender_id === user?.id;
-              const adminOther =
-                !mine && String(message.sender_role || "") === "admin";
-
-              return (
-                <div
-                  className={`admin-chat-message ${
-                    mine ? "mine" : adminOther ? "admin-other" : ""
-                  }`}
-                  key={message.message_id}
-                >
-                  <b>{message.sender_name || "Vartotojas"}</b>
-                  <p>{message.body}</p>
-                  <time>
-                    {new Date(message.created_at).toLocaleString("lt-LT", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </time>
-                </div>
-              );
-            })
-          ) : (
-            <div className="admin-chat-empty">
-              Šiame darbe žinučių dar nėra.
-            </div>
-          )}
-        </div>
-
-        <form className="admin-chat-form" onSubmit={sendMessage}>
-          <textarea
-            value={textValue}
-            maxLength={2000}
-            onChange={(e) => setTextValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                !e.nativeEvent?.isComposing
-              ) {
-                e.preventDefault();
-                if (!sending && textValue.trim()) {
-                  sendMessage(e);
-                }
-              }
-            }}
-            placeholder="Administratoriaus žinutė darbo komandai..."
-          />
-          <button disabled={sending || !textValue.trim()}>
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <ChatThreadView kind="group" title={job.title ? formatJobTitle(job.title).toLocaleUpperCase("lt-LT") : "Darbo pokalbis"} sub={`${job.company_name || "Įmonė"} · darbo pokalbis`}
+      privacy={["Bendras darbo pokalbis", "Matote kaip administratorius. Žinutes mato visi darbo dalyviai."]}
+      messages={messages} isMine={(m) => m.sender_id === user?.id} senderOf={(m) => m.sender_name || "Vartotojas"} isAdmin={(m) => String(m.sender_role || "") === "admin"}
+      loading={loading} error={error} messagesRef={messagesRef} locked={false}
+      value={textValue} setValue={setTextValue} onSend={sendMessage} sending={sending} onClose={onClose} placeholder="Rašyti visiems" />
   );
 }
 
@@ -836,116 +680,11 @@ export function AdminCompanyTeamChatModal({ chat, user, onClose }) {
   if (!chat) return null;
 
   return (
-    <div
-      className="admin-team-chat-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !sending) onClose();
-      }}
-    >
-      <style>{`
-        .admin-team-chat-overlay{position:fixed;inset:0;z-index:9720;background:rgba(34,38,49,.62);display:grid;place-items:center;padding:20px;backdrop-filter:blur(2px)}
-        .admin-team-chat-card{width:min(720px,100%);max-height:calc(100dvh - 40px);background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(34,38,49,.3);padding:22px;color:#222631;display:grid;grid-template-rows:auto auto auto minmax(180px,1fr) auto;overflow:hidden}
-        .admin-team-chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
-        .admin-team-chat-head h2{font-family:Manrope,Inter,sans-serif;margin:6px 0 0;font-size:24px;line-height:1.2}
-        .admin-team-chat-meta{margin-top:6px;color:#6c7a88;font-size:12px}.admin-team-chat-note{background:#edf8f3;color:#167a54;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
-        .admin-team-chat-error{background:#fff0ec;color:#b64d2a;border-radius:10px;padding:10px 11px;margin-bottom:12px;font-size:12px}
-        .admin-team-chat-messages{display:grid;align-content:start;gap:10px;min-height:220px;max-height:420px;overflow:auto;padding:18px 4px 14px;background:#f8fafb;border:1px solid #e8eef2;border-radius:16px}
-        .admin-team-chat-message{width:fit-content;max-width:min(84%,560px);border-radius:14px 14px 14px 5px;padding:11px 13px;background:#fff;border:1px solid #dfe7ec;box-shadow:0 2px 8px rgba(34,38,49,.04)}
-        .admin-team-chat-message.mine{justify-self:end;background:#f5f3fa;border-color:#c9c2de;border-radius:14px 14px 5px 14px}.admin-team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
-        .admin-team-chat-message b{display:block;font-size:12px;margin-bottom:5px}.admin-team-chat-role{font-weight:600;color:#7a8996}.admin-team-chat-message time{display:block;margin-top:7px;font-size:10px;color:#7a8996}
-        .admin-team-chat-empty{text-align:center;color:#6c7a88;padding:42px 10px}.admin-team-chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #e5ebef;padding-top:14px;margin-top:14px}
-        .admin-team-chat-form textarea{width:100%;min-height:54px;max-height:130px;resize:vertical;border:1px solid #d7e0e7;border-radius:12px;padding:11px 12px;font:inherit;color:#222631;outline:none}.admin-team-chat-form textarea:focus{border-color:#6b5b95;box-shadow:0 0 0 3px rgba(107,91,149,.12)}
-        .admin-team-chat-form button{border:0;background:#6b5b95;color:#fff;border-radius:11px;padding:0 17px;font:inherit;font-weight:800;cursor:pointer;min-width:92px}.admin-team-chat-form button:disabled{opacity:.55;cursor:wait}
-        @media(max-width:560px){.admin-team-chat-card{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-team-chat-message{max-width:92%}.admin-team-chat-form{grid-template-columns:1fr}.admin-team-chat-form button{min-height:44px}}
-      `}</style>
-
-      <div className="admin-team-chat-card">
-        <div className="admin-team-chat-head">
-          <div>
-            <div className="eyebrow">ADMINISTRATORIUS · KOMANDOS POKALBIS</div>
-            <h2>{chat.company_name || "Įmonės komanda"}</h2>
-            <div className="admin-team-chat-meta">
-              {employerPlanName(chat.plan_key)} ·{" "}
-              {Number(chat.active_members || 0)} komandos nariai ·{" "}
-              {Number(chat.message_count || 0)} žinutės
-            </div>
-          </div>
-
-          <button
-            className="rs-close"
-            type="button"
-            disabled={sending}
-            onClick={onClose}
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        <div className="admin-team-chat-note">
-          Matote visą įmonės komandos pokalbį ir galite parašyti administratoriaus
-          žinutę visai komandai.
-        </div>
-
-        {error && <div className="admin-team-chat-error">{error}</div>}
-
-        <ChatConductNotice />
-
-        <div className="admin-team-chat-messages" ref={messagesRef}>
-          {loading && !messages.length ? (
-            <div className="admin-team-chat-empty"><SilentLoader size={18} minHeight={42} /></div>
-          ) : messages.length ? (
-            messages.map((message) => (
-              <div
-                className={`admin-team-chat-message ${
-                  message.sender_id === user?.id ? "mine" : ""
-                }`}
-                key={message.id}
-              >
-                <b>
-                  {message.sender_label ||
-                    (message.sender_role === "admin"
-                      ? "Administratorius"
-                      : "Komandos narys")}
-                </b>
-                <p>{message.body}</p>
-                <time>
-                  {new Date(message.created_at).toLocaleString("lt-LT", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </time>
-              </div>
-            ))
-          ) : (
-            <div className="admin-team-chat-empty">
-              Šios įmonės komandos pokalbyje žinučių nėra.
-            </div>
-          )}
-        </div>
-
-        <form className="admin-team-chat-form" onSubmit={sendMessage}>
-          <textarea
-            value={textValue}
-            maxLength={2000}
-            onChange={(e) => setTextValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                !e.nativeEvent?.isComposing
-              ) {
-                e.preventDefault();
-                if (!sending && textValue.trim()) sendMessage(e);
-              }
-            }}
-            placeholder="Administratoriaus žinutė įmonės komandai..."
-          />
-          <button disabled={sending || !textValue.trim()}>
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </form>
-      </div>
-    </div>
+    <ChatThreadView kind="team" title="Vadovų pokalbis" sub={chat.company_name || "Įmonės komanda"}
+      privacy={["Vadovų pokalbis", "Matote kaip administratorius. Darbuotojai šio pokalbio nemato."]}
+      messages={messages} isMine={(m) => m.sender_id === user?.id} senderOf={(m) => m.sender_label || (m.sender_role === "admin" ? "Administratorius" : "Komandos narys")} isAdmin={(m) => m.sender_role === "admin"}
+      loading={loading} error={error} messagesRef={messagesRef} locked={false}
+      value={textValue} setValue={setTextValue} onSend={sendMessage} sending={sending} onClose={onClose} placeholder="Rašyti komandai" />
   );
 }
 
@@ -1019,110 +758,13 @@ export function AdminPrivateMessageComposer({ target, onClose, onSent }) {
   }
 
   return (
-    <div
-      className="admin-modal-overlay"
-      style={{ zIndex: 15000 }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !sending) onClose?.();
-      }}
-    >
-      <div className="admin-modal" style={{ width: "min(620px,100%)" }}>
-        <div className="admin-modal-head">
-          <div>
-            <div className="eyebrow">PRIVATI ADMINISTRATORIAUS ŽINUTĖ</div>
-            <h2>{target.name || "Vartotojas"}</h2>
-          </div>
-          <button
-            className="rs-close"
-            type="button"
-            disabled={sending}
-            onClick={onClose}
-            aria-label="Uždaryti"
-          >
-            <CloseMark />
-          </button>
-        </div>
-
-        <div
-          style={{
-            marginTop: 14,
-            padding: "11px 12px",
-            border: "1px solid #e3e9ee",
-            borderRadius: 11,
-            background: "#f8fafb",
-            fontSize: 12.5,
-            color: "#526374",
-          }}
-        >
-          {loadingStatus ? (
-            "Tikrinama..."
-          ) : latestMessage ? (
-            latestMessage.read_at ? (
-              <span style={{ color: "#16845b", fontWeight: 850 }}>
-                ✓ Paskutinę žinutę peržiūrėjo
-              </span>
-            ) : (
-              <span style={{ fontWeight: 800 }}>Paskutinė žinutė dar neperžiūrėta</span>
-            )
-          ) : (
-            "Žinutė dar nebuvo siųsta"
-          )}
-        </div>
-
-        <label className="admin-label" style={{ marginTop: 16 }}>
-          Nauja žinutė
-          <textarea
-            className="admin-input admin-textarea"
-            value={body}
-            maxLength={2000}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Parašykite privačią žinutę..."
-            style={{ minHeight: 120 }}
-          />
-        </label>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 8,
-            alignItems: "center",
-            marginTop: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <span className="admin-muted">{body.length}/2000</span>
-          <button
-            className="admin-small-btn"
-            type="button"
-            disabled={sending || !body.trim()}
-            onClick={sendMessage}
-            style={{
-              background: "#222631",
-              color: "#fff",
-              borderColor: "#222631",
-              minWidth: 120,
-            }}
-          >
-            {sending ? "Siunčiama..." : "Siųsti"}
-          </button>
-        </div>
-
-        {error && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "#fff3ef",
-              color: "#a84b2a",
-              fontSize: 12,
-            }}
-          >
-            {error}
-          </div>
-        )}
+    <P24Modal eyebrow="Privati administratoriaus žinutė" title={target.name || "Vartotojas"} sub={loadingStatus ? "Tikrinama..." : latestMessage ? (latestMessage.read_at ? "✓ Paskutinę žinutę peržiūrėjo" : "Paskutinė žinutė dar neperžiūrėta") : "Žinutė dar nebuvo siųsta"} onClose={onClose} busy={sending}>
+      <label className="field">Nauja žinutė<textarea value={body} maxLength={2000} onChange={(e) => setBody(e.target.value)} placeholder="Parašykite privačią žinutę..." style={{ minHeight: 120 }} /><span className="hint">{body.length}/2000</span></label>
+      {error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p> : null}
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <button className="btn" type="button" disabled={sending} onClick={onClose}>Atšaukti</button>
+        <button className="btn primary" type="button" disabled={sending || !body.trim()} onClick={sendMessage}><Svg name="send" size={15} />{sending ? "Siunčiama..." : "Siųsti"}</button>
       </div>
-    </div>
+    </P24Modal>
   );
 }

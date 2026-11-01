@@ -21,7 +21,7 @@ import { AwardPanel, WorkerProfileEditor } from "../p24/worker/WorkerProfileEdit
 import { shrinkImage } from "../lib/imageUpload.js";
 import { WorkerAds, useWorkerAds } from "../p24/worker/WorkerAds.jsx";
 import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
-import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
+import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
@@ -3279,8 +3279,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
-        {notice && <div className="wd-note ok">{notice}</div>}
-        {error && <div className="wd-note err">{error}</div>}
+        <NoticeToast notice={notice} error={error} onClear={() => setNotice("")} />
         {metrics.restrictedUntil &&
           new Date(metrics.restrictedUntil) > new Date() && (
             <div className="wd-note err">

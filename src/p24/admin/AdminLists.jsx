@@ -285,7 +285,6 @@ export function AdminBugsList({ reports, onReply, onResolve, onIrrelevant, onOpe
           </div></div>
           <div className="row dact">
             {r.reporter_id ? <button className="btn sm" type="button" onClick={() => onReply(r)}><Svg name="chat" size={14} />Atsakyti</button> : null}
-            <button className="btn sm ghost" type="button" onClick={() => onOpen(r)}>Plačiau</button>
             <span className="spacer" />
             {s === "active" ? <><button className="btn sm" type="button" onClick={() => onIrrelevant(r)}>Neaktualu</button><button className="btn sm primary" type="button" onClick={() => onResolve(r)}><Svg name="check" size={14} width={2.6} />Sutvarkyta</button></> : null}
           </div>

@@ -673,29 +673,17 @@ export function MainSiteInPageAlerts({ user, kind }) {
   }, [user?.id, kind]);
 
   if (!user?.id || isHireProjectPath || !alerts.length) return null;
+  // Prototipo „toast“: tamsus pranešimas ekrano apačioje.
   return createPortal(
-    <div aria-live="polite" aria-relevant="additions" style={{
-      position:"fixed",top:"max(15px, env(safe-area-inset-top, 0px))",right:12,
-      width:"min(365px, calc(100vw - 24px))",display:"grid",gap:9,
-      zIndex:6500,pointerEvents:"none",
-    }}>
-      {alerts.map(alert => (
-        <div key={alert.key} role="status" style={{
-          display:"flex",gap:12,alignItems:"flex-start",padding:"13px 14px",
-          background:"#fff",border:"1px solid #dfE7ED",borderLeft:"4px solid #6b5b95",
-          borderRadius:14,boxShadow:"0 12px 38px rgba(34,38,49,.18)",
-          fontFamily:"Inter,system-ui,sans-serif",color:"#222631",pointerEvents:"auto",
-        }}>
-          <div style={{flex:1,minWidth:0}}>
-            <strong style={{display:"block",fontSize:13,lineHeight:1.35}}>Statybos24</strong>
-            <span style={{display:"block",fontSize:12,lineHeight:1.5,marginTop:3}}>{alert.title}</span>
-          </div>
-          <button type="button" aria-label="Uždaryti pranešimą" onClick={() => setAlerts(current => current.filter(a => a.key !== alert.key))}
-            style={{cursor:"pointer",border:0,background:"#f1f4f6",color:"#526374",width:28,height:28,
-              flex:"0 0 28px",borderRadius:8,fontSize:17,lineHeight:1}}>×</button>
+    <div className="p24 p24-portal" aria-live="polite" aria-relevant="additions">
+      {alerts.slice(-1).map((alert) => (
+        <div key={alert.key} className="toast" role="status" style={{ zIndex: 9500, display: "flex", alignItems: "center", gap: 12 }}>
+          <span>{alert.title}</span>
+          <button type="button" aria-label="Uždaryti pranešimą" onClick={() => setAlerts((current) => current.filter((a) => a.key !== alert.key))}
+            style={{ border: 0, background: "transparent", color: "inherit", opacity: .7, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
         </div>
       ))}
-    </div>,document.body
+    </div>, document.body
   );
 }
 

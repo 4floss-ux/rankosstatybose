@@ -15,7 +15,7 @@ import { AdminCompanyTeamChatModal, AdminJobChatModal, AdminPrivateMessageCompos
 import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { Svg } from "../p24/Shell.jsx";
-import { Empty, PageHead } from "../p24/ui.jsx";
+import { Empty, NoticeToast, P24Modal, PageHead } from "../p24/ui.jsx";
 import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
 import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
 import { AdminAuditList, AdminAwardsList, AdminBugsList, AdminDisputesList, AdminEmployersList, AdminEmploymentList, AdminFilesList, AdminJobsList, AdminRatingsList, AdminTeamChatsList, AdminWorkersList } from "../p24/admin/AdminLists.jsx";
@@ -2575,35 +2575,7 @@ export function AdminDashboard({
 
 
       <main className="admin-shell">
-        {(notice || error) && (
-          <div className="admin-toast-stack">
-            {notice && (
-              <div className="admin-toast ok">
-                <span>{notice}</span>
-                <button
-                  type="button"
-                  aria-label="Uždaryti pranešimą"
-                  onClick={() => setNotice("")}
-                >
-                  <CloseMark />
-                </button>
-              </div>
-            )}
-
-            {error && (
-              <div className="admin-toast err">
-                <span>{error}</span>
-                <button
-                  type="button"
-                  aria-label="Uždaryti klaidos pranešimą"
-                  onClick={() => setError("")}
-                >
-                  <CloseMark />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        <NoticeToast notice={notice} error={error} onClear={() => setNotice("")} />
 
 
 
@@ -3287,79 +3259,51 @@ export function AdminDashboard({
       />
 
       {editor && (
-        <div
-          className="admin-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !editorSaving) {
-              setEditor(null);
-            }
-          }}
-        >
-          <div className="admin-modal">
-            <div className="admin-modal-head">
-              <div>
-                <div className="eyebrow">ADMINISTRATORIAUS REDAGAVIMAS</div>
-                <h2>
-                  {editor.type === "worker"
-                    ? "Darbuotojo informacija"
-                    : editor.type === "employer"
-                    ? "Darbdavio informacija"
-                    : "Darbo pasiūlymas"}
-                </h2>
-              </div>
-              <button
-                className="rs-close"
-                disabled={editorSaving}
-                onClick={() => setEditor(null)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
+        <P24Modal wide eyebrow="Administratoriaus redagavimas" title={editor.type === "worker" ? "Darbuotojo informacija" : editor.type === "employer" ? "Darbdavio informacija" : "Darbo pasiūlymas"} onClose={() => setEditor(null)} busy={editorSaving}>
             {editor.type === "worker" && (
-              <div className="admin-grid-2">
-                <label className="admin-label">
+              <div className="form">
+                <label className="field">
                   Rodomas vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.displayName}
                     onChange={(e) =>
                       updateEditorField("displayName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Teisinis vardas / pavardė
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.legalName}
                     onChange={(e) =>
                       updateEditorField("legalName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Telefonas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.phone}
                     onChange={(e) =>
                       updateEditorField("phone", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Kelionės spindulys, km
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="5"
                     max="50"
@@ -3369,10 +3313,10 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Patirtis, metais
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="0"
                     step="0.5"
@@ -3382,7 +3326,7 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -3397,7 +3341,7 @@ export function AdminDashboard({
                     B kategorija
                   </span>
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -3412,7 +3356,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.shortBio}
                     onChange={(e) =>
                       updateEditorField("shortBio", e.target.value)
@@ -3423,64 +3367,64 @@ export function AdminDashboard({
             )}
 
             {editor.type === "employer" && (
-              <div className="admin-grid-2">
-                <label className="admin-label">
+              <div className="form">
+                <label className="field">
                   Paskyros vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.displayName}
                     onChange={(e) =>
                       updateEditorField("displayName", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Telefonas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.phone}
                     onChange={(e) =>
                       updateEditorField("phone", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Darbdavio pavadinimas / vardas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.name}
                     onChange={(e) => updateEditorField("name", e.target.value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Įmonės kodas (jei taikoma)
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.companyCode}
                     onChange={(e) =>
                       updateEditorField("companyCode", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   PVM kodas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.vatCode}
                     onChange={(e) =>
                       updateEditorField("vatCode", e.target.value)
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -3492,7 +3436,7 @@ export function AdminDashboard({
                     Darbdavys patvirtintas
                   </span>
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   <span>
                     <input
                       type="checkbox"
@@ -3504,10 +3448,10 @@ export function AdminDashboard({
                     Savininko paskyra aktyvi
                   </span>
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Planas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Įmonės planas"
                     value={editorForm.planKey}
                     onChange={(value) => updateEditorField("planKey", value)}
@@ -3515,10 +3459,10 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div className="admin-label">
+                <div className="field">
                   Prenumeratos būsena
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Prenumeratos būsena"
                     value={editorForm.subscriptionStatus}
                     onChange={(value) => {
@@ -3539,7 +3483,7 @@ export function AdminDashboard({
                   />
                 </div>
 
-                <div className="admin-label">
+                <div className="field">
                   Apmokėta iki / laikotarpio pabaiga
                   <RoundedDateSelect
                     className="admin-input wd-date-trigger"
@@ -3559,7 +3503,7 @@ export function AdminDashboard({
                       : `Paruošia Business planą, bandomąją būseną ir pabaigos datą po ${EMPLOYER_TRIAL_DAYS} dienų. Įsigalios paspaudus „Išsaugoti“. `}
                   </span>
                   <button
-                    className="admin-small-btn"
+                    className="btn"
                     type="button"
                     disabled={
                       Boolean(editor?.trialEligibilityLoading) ||
@@ -3593,7 +3537,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Įmonės aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.description}
                     onChange={(e) =>
                       updateEditorField("description", e.target.value)
@@ -3604,34 +3548,34 @@ export function AdminDashboard({
             )}
 
             {editor.type === "job" && (
-              <div className="admin-grid-2">
+              <div className="form">
                 <label className="admin-label admin-wide">
                   Pavadinimas
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.title}
                     onChange={(e) => updateEditorField("title", e.target.value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Miestas
                   <CityAutocomplete
-                    className="admin-input"
+                   
                     value={editorForm.city}
                     onChange={(value) => updateEditorField("city", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Atvykti adresu
                   <input
-                    className="admin-input"
+                   
                     value={editorForm.addressText}
                     onChange={(e) =>
                       updateEditorField("addressText", e.target.value)
                     }
                   />
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Data
                   <RoundedDateSelect
                     className="admin-input wd-date-trigger"
@@ -3640,10 +3584,10 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("workDate", value)}
                   />
                 </div>
-                <label className="admin-label">
+                <label className="field">
                   Žmonių skaičius
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="1"
                     max="100"
@@ -3653,7 +3597,7 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pradžia
                   <RoundedTimeSelect
                     ariaLabel="Darbo pradžios laikas"
@@ -3662,7 +3606,7 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("startTime", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Darbo pabaigos laikas"
@@ -3672,7 +3616,7 @@ export function AdminDashboard({
                     align="right"
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pietų pradžia
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pradžia"
@@ -3682,7 +3626,7 @@ export function AdminDashboard({
                     onChange={(value) => updateEditorField("breakStartTime", value)}
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Pietų pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pabaiga"
@@ -3693,10 +3637,10 @@ export function AdminDashboard({
                     align="right"
                   />
                 </label>
-                <label className="admin-label">
+                <label className="field">
                   Atlygis
                   <input
-                    className="admin-input"
+                   
                     type="number"
                     min="0"
                     step="0.01"
@@ -3706,10 +3650,10 @@ export function AdminDashboard({
                     }
                   />
                 </label>
-                <div className="admin-label">
+                <div className="field">
                   Atlygio vienetas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Atlygio vienetas"
                     value={editorForm.payUnit}
                     onChange={(value) => updateEditorField("payUnit", value)}
@@ -3719,7 +3663,7 @@ export function AdminDashboard({
                 <div className="admin-label admin-wide">
                   Atvykimas
                   <RoundedSelect
-                    className="admin-input"
+                   
                     ariaLabel="Atvykimas"
                     value={editorForm.transportMode}
                     onChange={(value) => updateEditorField("transportMode", value)}
@@ -3729,7 +3673,7 @@ export function AdminDashboard({
                 <label className="admin-label admin-wide">
                   Aprašymas
                   <textarea
-                    className="admin-input admin-textarea"
+                   
                     value={editorForm.description}
                     onChange={(e) =>
                       updateEditorField("description", e.target.value)
@@ -3739,10 +3683,10 @@ export function AdminDashboard({
               </div>
             )}
 
-            <div className="admin-actions">
+            <div className="row" style={{ justifyContent: "flex-end" }}>
               {editor.type === "job" && (
                 <button
-                  className="admin-small-btn danger"
+                  className="btn danger"
                   disabled={editorSaving}
                   onClick={() =>
                     openJobDelete({
@@ -3758,14 +3702,14 @@ export function AdminDashboard({
               )}
 
               <button
-                className="admin-small-btn"
+                className="btn"
                 disabled={editorSaving}
                 onClick={() => setEditor(null)}
               >
                 Atšaukti
               </button>
               <button
-                className="admin-small-btn"
+                className="btn"
                 style={{
                   background: "#6b5b95",
                   color: "#fff",
@@ -3777,171 +3721,37 @@ export function AdminDashboard({
                 {editorSaving ? "Saugoma..." : "Išsaugoti"}
               </button>
             </div>
-          </div>
-        </div>
+        </P24Modal>
       )}
 
-      {actionDialog && (
-        <div
-          className="admin-modal-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !actionBusy) {
-              setActionDialog(null);
-            }
-          }}
-        >
-          <div className="admin-modal" style={{ width: "min(600px,100%)" }}>
-            <div className="admin-modal-head">
-              <div>
-                <div className="eyebrow">
-                  {actionDialog.type === "suspendWorkerMode"
-                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMAS"
-                    : actionDialog.type === "unsuspendWorkerMode"
-                    ? "DARBUOTOJO REŽIMO SUSPENDAVIMO PANAIKINIMAS"
-                    : actionDialog.type === "suspend"
-                    ? "PASKYROS SUSPENDAVIMAS"
-                    : actionDialog.type === "unsuspend"
-                    ? "SUSPENDAVIMO PANAIKINIMAS"
-                    : actionDialog.type === "deleteJob"
-                    ? "DARBO TRYNIMAS"
-                    : "PASKYROS TRYNIMAS"}
-                </div>
-                <h2>
-                  {actionDialog.type === "suspendWorkerMode"
-                    ? `Suspenduoti darbuotojo režimą: ${actionDialog.name}`
-                    : actionDialog.type === "unsuspendWorkerMode"
-                    ? `Nuimti darbuotojo režimo suspendavimą: ${actionDialog.name}`
-                    : actionDialog.type === "suspend"
-                    ? `Suspenduoti: ${actionDialog.name}`
-                    : actionDialog.type === "unsuspend"
-                    ? `Nuimti suspendavimą: ${actionDialog.name}`
-                    : actionDialog.type === "deleteJob"
-                    ? `Ištrinti darbą: ${actionDialog.name}`
-                    : `Visiškai ištrinti: ${actionDialog.name}`}
-                </h2>
-              </div>
-
-              <button
-                className="rs-close"
-                aria-label="Uždaryti administratoriaus veiksmą"
-                disabled={actionBusy}
-                onClick={() => setActionDialog(null)}
-              >
-                <CloseMark />
-              </button>
+      {actionDialog && (() => {
+        const t = actionDialog.type;
+        const susp = t === "suspend" || t === "suspendWorkerMode";
+        const unsusp = t === "unsuspend" || t === "unsuspendWorkerMode";
+        const del = t === "deleteAccount" || t === "deleteJob";
+        const eyebrow = t === "suspendWorkerMode" ? "Darbuotojo režimo suspendavimas" : t === "unsuspendWorkerMode" ? "Suspendavimo panaikinimas" : t === "suspend" ? "Suspendavimas" : t === "unsuspend" ? "Suspendavimo panaikinimas" : t === "deleteJob" ? "Darbo trynimas" : "Paskyros ištrynimas";
+        const label = t === "suspendWorkerMode" ? "Suspenduoti darbuotojo režimą" : t === "unsuspendWorkerMode" || t === "unsuspend" ? "Nuimti suspendavimą" : t === "suspend" ? "Suspenduoti" : t === "deleteJob" ? "Ištrinti darbą" : "Ištrinti visam laikui";
+        return (
+          <P24Modal eyebrow={eyebrow} title={actionDialog.name} onClose={() => setActionDialog(null)} busy={actionBusy}>
+            {actionError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{actionError}</p> : null}
+            {susp ? (
+              <label className="field">Trukmė<select value={String(actionDays)} onChange={(e) => setActionDays(e.target.value)}>
+                {[["7", "7 dienos"], ["14", "14 dienų"], ["30", "30 dienų"], ["3650", "Neterminuotai"]].concat([["7", ""], ["14", ""], ["30", ""], ["3650", ""]].some(([v]) => v === String(actionDays)) ? [] : [[String(actionDays), `${actionDays} d.`]]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select></label>
+            ) : null}
+            {del ? <p className="small muted" style={{ margin: 0 }}>{t === "deleteAccount" ? "Bus ištrintas profilis, darbų istorija ir failai." : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."} Atkurti negalima.</p> : null}
+            <label className="field">{unsusp ? "Pastaba" : susp ? "Priežastis (matys naudotojas) *" : "Priežastis *"}<textarea value={actionReason} onChange={(e) => setActionReason(e.target.value)}
+              placeholder={susp ? "Pvz. 3 neatvykimai be priežasties per mėnesį" : t === "deleteAccount" ? "Pvz. Pakartotiniai rimti pažeidimai" : t === "deleteJob" ? "Pvz. Netinkamas turinys arba dublikatas" : "Administratoriaus pastaba"} /></label>
+            {del ? <><p className="small muted" style={{ margin: 0 }}>Įrašykite <b style={{ color: "var(--navy)" }}>ISTRINTI</b>, kad patvirtintumėte.</p>
+              <label className="field"><span className="sr">Patvirtinimas</span><input value={actionConfirm} onChange={(e) => setActionConfirm(e.target.value)} placeholder="ISTRINTI" autoComplete="off" /></label></> : null}
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" type="button" disabled={actionBusy} onClick={() => setActionDialog(null)}>Atgal</button>
+              <button className={`btn ${unsusp ? "primary" : "danger"}`} type="button" disabled={actionBusy} onClick={performAdminAction}>{actionBusy ? "Vykdoma..." : label}</button>
             </div>
+          </P24Modal>
+        );
+      })()}
 
-            {actionError && (
-              <div className="admin-toast err" role="alert" style={{ marginBottom: 14 }}>{actionError}</div>
-            )}
-
-            {(actionDialog.type === "suspend" ||
-              actionDialog.type === "suspendWorkerMode") && (
-              <label className="admin-label">
-                Kiek dienų suspenduoti?
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="1"
-                  max="3650"
-                  value={actionDays}
-                  onChange={(e) => setActionDays(e.target.value)}
-                />
-              </label>
-            )}
-
-            <label className="admin-label" style={{ marginTop: 13 }}>
-              {actionDialog.type === "unsuspend" ||
-              actionDialog.type === "unsuspendWorkerMode"
-                ? "Pastaba"
-                : "Priežastis *"}
-              <textarea
-                className="admin-input admin-textarea"
-                value={actionReason}
-                onChange={(e) => setActionReason(e.target.value)}
-                placeholder={
-                  actionDialog.type === "suspend" ||
-                  actionDialog.type === "suspendWorkerMode"
-                    ? "Pvz. Pakartotinis neatvykimas ir taisyklių pažeidimas..."
-                    : actionDialog.type === "deleteAccount"
-                    ? "Pvz. Pakartotiniai rimti pažeidimai..."
-                    : actionDialog.type === "deleteJob"
-                    ? "Kodėl šis darbo pasiūlymas šalinamas?"
-                    : "Administratoriaus pastaba..."
-                }
-              />
-            </label>
-
-            {(actionDialog.type === "deleteAccount" ||
-              actionDialog.type === "deleteJob") && (
-              <div
-                className="admin-note"
-                style={{ background: "#fff0ec", color: "#9f4529" }}
-              >
-                <b>Negrįžtamas veiksmas.</b>{" "}
-                {actionDialog.type === "deleteAccount"
-                  ? "Bus pašalinta paskyra ir su ja susiję sistemos duomenys."
-                  : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."}
-
-                <label className="admin-label" style={{ marginTop: 12 }}>
-                  Patvirtinimui įrašykite ISTRINTI
-                  <input
-                    className="admin-input"
-                    value={actionConfirm}
-                    onChange={(e) => setActionConfirm(e.target.value)}
-                    placeholder="ISTRINTI"
-                  />
-                </label>
-              </div>
-            )}
-
-            <div className="admin-actions">
-              <button
-                className="admin-small-btn"
-                disabled={actionBusy}
-                onClick={() => setActionDialog(null)}
-              >
-                Atšaukti
-              </button>
-
-              <button
-                className={`admin-small-btn ${
-                  actionDialog.type === "deleteAccount" ||
-                  actionDialog.type === "deleteJob"
-                    ? "danger"
-                    : ""
-                }`}
-                disabled={actionBusy}
-                onClick={performAdminAction}
-                style={
-                  actionDialog.type === "deleteAccount" ||
-                  actionDialog.type === "deleteJob"
-                    ? undefined
-                    : {
-                        background: "#222631",
-                        color: "#fff",
-                        borderColor: "#222631",
-                      }
-                }
-              >
-                {actionBusy
-                  ? "Vykdoma..."
-                  : actionDialog.type === "suspendWorkerMode"
-                  ? "Suspenduoti darbuotojo režimą"
-                  : actionDialog.type === "unsuspendWorkerMode"
-                  ? "Nuimti darbuotojo režimo suspendavimą"
-                  : actionDialog.type === "suspend"
-                  ? "Suspenduoti"
-                  : actionDialog.type === "unsuspend"
-                  ? "Nuimti suspendavimą"
-                  : actionDialog.type === "deleteJob"
-                  ? "Ištrinti darbą"
-                  : "Ištrinti paskyrą"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {selectedBugReport && (
         <div
           onMouseDown={(e) =>

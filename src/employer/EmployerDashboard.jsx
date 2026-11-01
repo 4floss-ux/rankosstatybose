@@ -17,7 +17,7 @@ import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
 import { P24Shell, Svg } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
-import { Empty, ListGroup, P24Modal, PageHead, Paged, Pill } from "../p24/ui.jsx";
+import { Empty, ListGroup, NoticeToast, P24Modal, PageHead, Paged, Pill } from "../p24/ui.jsx";
 import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
 import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
 import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
@@ -5111,8 +5111,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </div>
         </div>
 
-        {notice && <div className="ed-note ok">{notice}</div>}
-        {error && <div className="ed-note err">{error}</div>}
+        <NoticeToast notice={notice} error={error} onClear={() => setNotice("")} />
 
         {showJobForm && (() => {
           const errText = (key) => (jobFormErrors[key] ? <span className="ferr">{jobFormErrors[key]}</span> : null);

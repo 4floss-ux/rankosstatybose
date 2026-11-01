@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Svg } from "./Shell.jsx";
 
 // Bendri prototipo komponentai (pill, empty, co-line, puslapiavimas, darbo kortelė, darbo puslapis).
@@ -195,5 +195,20 @@ export function P24Modal({ eyebrow, title, sub, onClose, wide, children, busy, l
         </div>
       </div>
     </div>
+  );
+}
+
+// Prototipo „toast“ (sėkmės pranešimas) ir klaidos juosta. Sėkmės pranešimas dingsta pats.
+export function NoticeToast({ notice, error, onClear }) {
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => onClear?.(), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return (
+    <>
+      {error ? <div className="alert" role="alert"><div><b>{error}</b></div></div> : null}
+      {notice ? <div className="p24 p24-portal"><div className="toast" role="status" style={{ zIndex: 9500 }}>{notice}</div></div> : null}
+    </>
   );
 }
