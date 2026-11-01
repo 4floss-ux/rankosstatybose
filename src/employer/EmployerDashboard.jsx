@@ -20,6 +20,8 @@ import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger
 import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
 import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
 import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
+import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
+import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
@@ -94,7 +96,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   // Temporary calendar rollout: existing admin preview plus the explicitly authorized tester.
   // This controls feature visibility only; existing plan, company and database permissions still apply.
   const calendarTesterEmail = String(user?.email || "").trim().toLowerCase();
-  const calendarPreviewEnabled = typeof onAdminReturn === "function" || calendarTesterEmail === "tattoo.staponas@gmail.com";
+  // Kalendorius rodomas visiems (kaip prototipe); naudotis gali Business Pro.
+  const calendarPreviewEnabled = Boolean(calendarTesterEmail) || typeof onAdminReturn === "function";
   const calendarAllowed = calendarPreviewEnabled && planSummary?.plan_key === "business_pro";
   const calendarVisible = calendarRequested && calendarAllowed;
   useEffect(() => {
@@ -783,8 +786,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   function goEmployerView(view) {
     const actions = {
-      favorites: openSavedWorkerTeam,
-      urgent: openUrgentSearch,
       longterm: () => openLongTermEmployment("hire"),
       teamchat: openCompanyTeamChat,
       team: openCompanyTeam,
@@ -812,6 +813,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     if (showJobForm) setShowJobForm(false);
     if (currentJob) setCurrentJob(null);
     setEmployerView(view);
+    if (view === "favorites") openSavedWorkerTeam();
+    if (view === "urgent") openUrgentSearch();
     window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   }
 
@@ -3430,14 +3433,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   async function openSavedWorkerTeam() {
-    if (!planSummary?.can_saved_workers) {
-      setNotice(
-        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
-      );
-      return;
-    }
+    if (!planSummary?.can_saved_workers) return;
 
-    setShowSavedWorkers(true);
     setSavedWorkersLoading(true);
     setError("");
 
@@ -3558,31 +3555,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   }
 
   function openUrgentSearch() {
-    const canUseUrgent = Boolean(planSummary?.can_team_management);
-
-    if (!canUseUrgent) {
-      setNotice(
-        "„Skubiai!“ kontaktų paieška prieinama tik Business Pro plane. Planus galite peržiūrėti paspaudę „Planai“."
-      );
-      return;
-    }
-
-    setUrgentSearchCompleted(false);
+    if (!planSummary?.can_team_management) return;
+    const startCity = ["Vilnius", "Kaunas", "Klaipėda"].includes(company?.city) ? company.city : "Vilnius";
     setUrgentSearchError("");
-    setUrgentSearchCity(company?.city || "");
-    setUrgentSearchResults([]);
-    setUrgentSearchPage(1);
-    setShowUrgentSearch(true);
     setError("");
+    searchUrgentWorkers(startCity);
   }
 
-  async function searchUrgentWorkers() {
+  async function searchUrgentWorkers(cityOverride) {
     if (!company?.id) return;
 
     setUrgentSearchError("");
     setUrgentSearchCompleted(false);
     setUrgentSearchResults([]);
-    const city = urgentSearchCity.trim();
+    const city = String(typeof cityOverride === "string" ? cityOverride : urgentSearchCity).trim();
+    setUrgentSearchCity(city);
     if (!city) {
       setUrgentSearchError("Nurodykite miestą.");
       return;
@@ -4438,25 +4425,25 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           { key: "overview", label: "Apžvalga", icon: "overview" },
           { key: "active", label: "Aktyvūs darbai", icon: "jobs", badge: activeVisibleJobs.length },
           { key: "ended", label: "Pasibaigę darbai", icon: "history" },
-          ...(calendarPreviewEnabled ? [{ key: "calendar", label: "Darbų kalendorius", icon: "cal", badge: calendarAllowed ? 0 : "Pro" }] : []),
+          { key: "calendar", label: "Darbų kalendorius", icon: "cal", badge: "Pro" },
         ]],
         ["Darbuotojai", [
-          { key: "favorites", label: "Mėgstami darbuotojai", icon: "heart", badge: planSummary?.can_saved_workers ? savedWorkers.length : "Business" },
-          { key: "urgent", label: "Skubiai!", icon: "bolt", badge: employerPlanLocked("can_team_management", "Pro") },
+          { key: "favorites", label: "Mėgstami darbuotojai", icon: "heart" },
+          { key: "urgent", label: "Skubiai!", icon: "bolt", badge: "Pro" },
         ]],
         ...(employerCanAds ? [["Įdarbinimas", [{ key: "eads", label: "Darbo skelbimai", icon: "briefcase", badge: employerAds.newCount }]]] : []),
         ["Įmonė", [
-          { key: "teamchat", label: "Vadovų pokalbis", icon: "chat", badge: planSummary?.can_team_chat ? teamChatUnread : "Pro" },
-          { key: "team", label: "Komanda", icon: "team", badge: employerPlanLocked("can_team_management", "Pro") },
-          ...(planSummary ? [{ key: "plans", label: "Planai", icon: "card", badge: planSummary.plan_name || 0 }] : []),
-          ...(company ? [{ key: "company", label: "Įmonės profilis", icon: "home" }] : []),
+          ...(["owner", "manager"].includes(companyMemberRole) ? [{ key: "team", label: "Komanda", icon: "team", badge: "Pro" }] : []),
+          { key: "stats", label: "Statistika", icon: "pie" },
+          ...(companyMemberRole === "owner" && planSummary ? [{ key: "plans", label: "Planai", icon: "card" }] : []),
         ]],
       ]}
       tabs={[
         { key: "overview", label: "Apžvalga", icon: "overview" },
         { key: "active", label: "Darbai", icon: "jobs", badge: activeVisibleJobs.length },
         { key: "new", label: "Naujas darbo pasiūlymas", icon: "plus", plus: true },
-        { key: "ended", label: "Istorija", icon: "history" },
+        { key: "calendar", label: "Kalendorius", icon: "cal" },
+        employerCanAds ? { key: "eads", label: "Skelbimai", icon: "briefcase", badge: employerAds.newCount } : { key: "favorites", label: "Mėgstami", icon: "heart" },
       ]}
       who={{ name: company?.name || "Įmonė", sub: planSummary?.plan_name || "Darbdavys", company: true, initials: String(company?.name || "Į").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").slice(0, 2).toUpperCase(), avatar: currentCompanyAvatarUrl, current: employerView === "company", onClick: () => company && goEmployerView("company"), onLogout }}
       messenger={{ unread: employerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
@@ -4469,7 +4456,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     <div className="ed-page">
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
-        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}
+        .ed-page{min-height:0;background:transparent;color:#222631}.ed-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.ed-shell[data-view="active"] [data-wv]:not([data-wv~="active"]){display:none!important}.ed-shell[data-view="ended"] [data-wv]:not([data-wv~="ended"]){display:none!important}.ed-shell[data-view="new"] [data-wv]:not([data-wv~="new"]){display:none!important}.ed-shell[data-view="company"] [data-wv]:not([data-wv~="company"]){display:none!important}.ed-shell[data-view="job"] [data-wv]:not([data-wv~="job"]){display:none!important}.ed-shell[data-view="eads"] [data-wv]:not([data-wv~="eads"]){display:none!important}.ed-shell[data-view="favorites"] [data-wv]:not([data-wv~="favorites"]){display:none!important}.ed-shell[data-view="urgent"] [data-wv]:not([data-wv~="urgent"]){display:none!important}.ed-shell[data-view="stats"] [data-wv]:not([data-wv~="stats"]){display:none!important}
         .ed-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .ed-topbar-inner{width:min(1180px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
         .ed-company{display:flex;align-items:center;gap:12px}.ed-company-icon{width:42px;height:42px;border-radius:11px;background:#222631;color:#fff;display:grid;place-items:center;font-weight:800}
@@ -5145,6 +5132,44 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
+        {employerView === "stats" && (
+          <div data-wv="stats" style={{ display: "contents" }}>
+            <EmployerStats
+              company={company}
+              planKey={planSummary?.plan_key}
+              onPlans={() => setShowPlans(true)}
+              onGo={goEmployerView}
+              onWorkerProfile={(w) => openWorkerProfile({ id: w.id, name: w.name || "Darbuotojas", initials: workerInitials(w.name || "D") })}
+              onReliabilityRules={() => setShowReliabilityInfo(true)}
+            />
+          </div>
+        )}
+        <div data-wv="favorites" style={{ display: "contents" }}>
+          <EmployerFavorites
+            locked={!planSummary?.can_saved_workers}
+            onPlans={() => setShowPlans(true)}
+            loading={savedWorkersLoading}
+            workers={savedWorkers}
+            busyId={savedWorkerBusy}
+            onRemove={removeWorkerFromTeam}
+            onProfile={(w) => openWorkerProfile(w)}
+          />
+        </div>
+        <div data-wv="urgent" style={{ display: "contents" }}>
+          <EmployerUrgent
+            locked={!planSummary?.can_team_management}
+            onPlans={() => setShowPlans(true)}
+            city={urgentSearchCity}
+            onCity={(c) => searchUrgentWorkers(c)}
+            loading={urgentSearchLoading}
+            error={urgentSearchError}
+            completed={urgentSearchCompleted}
+            results={urgentSearchResults}
+            copied={urgentPhoneCopied}
+            onCopy={copyUrgentPhone}
+            onProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.display_name, city: w.city, avatarUrl: w.avatarUrl, initials: workerInitials(w.display_name), hasDrivingLicenseB: w.has_driving_license_b, yearsExperience: w.years_experience })}
+          />
+        </div>
         {employerCanAds && (
           <div data-wv="eads" style={{ display: "contents" }}>
             <EmployerAds
