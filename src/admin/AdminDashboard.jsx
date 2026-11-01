@@ -19,6 +19,7 @@ import { Empty, NoticeToast, P24Modal, PageHead } from "../p24/ui.jsx";
 import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
 import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
 import { AdminAuditList, AdminAwardsList, AdminBugsList, AdminDisputesList, AdminEmployersList, AdminEmploymentList, AdminFilesList, AdminJobsList, AdminRatingsList, AdminTeamChatsList, AdminWorkersList } from "../p24/admin/AdminLists.jsx";
+import { AdminForeignHire } from "../p24/admin/AdminForeignHire.jsx";
 
 export function AdminDashboard({
   user,
@@ -1056,257 +1057,6 @@ export function AdminDashboard({
     } finally {
       setForeignHireCandidateBusyId(null);
     }
-  }
-
-  function renderForeignHireCandidatePanel(request, candidates) {
-    const loadingCandidates = foreignHireCandidateLoadingId === request.request_id;
-    const externalOpen = foreignHireExternalRequestId === request.request_id;
-    const roles = request.brief_workforce_details?.roles || [];
-    const required = Array.isArray(roles) ? roles.reduce((total, role) => total + Math.max(1, Number(role?.count) || 1), 0) : 0;
-    const hired = candidates.filter((candidate) => ["hired", "started"].includes(candidate.status)).length;
-    const hiringComplete = request.status === "closed" || (required > 0 && hired >= required);
-
-    return (
-      <div className="admin-candidate-zone" id={`foreign-hire-candidates-${request.request_id}`} style={{ scrollMarginTop: 100 }}>
-        <div className="admin-candidate-zone-head">
-          <div>
-            <strong>Kandidatai</strong>
-            <span>Čia kandidatą tiesiog pridedame rankiniu būdu ir toliau valdome jo eigą.</span>
-          </div>
-          <button className="admin-small-btn" type="button" disabled={hiringComplete} title={hiringComplete ? "Visi reikalingi darbuotojai įdarbinti. Paieška uždaryta." : undefined} onClick={() => { if (!hiringComplete) openExternalForeignHireCandidate(request); }} style={{ background: hiringComplete ? "#e8eef0" : "#222631", color: hiringComplete ? "#647583" : "#fff", borderColor: hiringComplete ? "#d5dfe4" : "#222631", cursor: hiringComplete ? "not-allowed" : "pointer" }}>
-            {hiringComplete ? "Darbuotojai surinkti" : "+ Pridėti kandidatą"}
-          </button>
-        </div>
-
-        <div className="admin-candidate-tools">
-            {externalOpen && !hiringComplete ? (
-              <div className="admin-external-form">
-                <div className="admin-candidate-zone-head">
-                  <div>
-                    <strong>Pridėti kandidatą</strong>
-                    <span>Įveskite kandidato informaciją. Šaltinį galite nurodyti, jei norite.</span>
-                  </div>
-                </div>
-                <div className="admin-external-grid" style={{ marginTop: 10 }}>
-                  <div className="admin-external-field"><label>Vardas, pavardė *</label><input value={foreignHireExternalForm.fullName} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, fullName: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Profesija *</label><input value={foreignHireExternalForm.profession} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, profession: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Amžius</label><input inputMode="numeric" value={foreignHireExternalForm.ageYears} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, ageYears: event.target.value.replace(/[^0-9]/g, "").slice(0, 2) }))} placeholder="Pvz. 34" /></div>
-                  <div className="admin-external-field"><label>Patirtis, metai</label><input inputMode="decimal" value={foreignHireExternalForm.yearsExperience} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, yearsExperience: event.target.value.replace(/[^0-9.,]/g, "").replace(",", ".") }))} /></div>
-                  <div className="admin-external-field"><label>El. paštas</label><input value={foreignHireExternalForm.email} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, email: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Telefonas</label><input value={foreignHireExternalForm.phone} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, phone: event.target.value }))} /></div>
-                  <div className="admin-external-field"><label>Galimas nuo</label><input value={foreignHireExternalForm.availableFrom} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, availableFrom: event.target.value }))} placeholder="YYYY-MM-DD" /></div>
-                  <div className="admin-external-field wide"><label>Kandidato patirtis / kompetencijos</label><input value={foreignHireExternalForm.skills} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, skills: event.target.value }))} placeholder="Pvz. 6 m. gipso montavimas, metalinis karkasas, lubos, Q2/Q3" /></div>
-                  <div className="admin-external-field wide">
-                    <label>Kalbos ir lygiai</label>
-                    {(foreignHireExternalForm.languageDetails.split("\n").length ? foreignHireExternalForm.languageDetails.split("\n") : [""]).map((language, index, all) => (
-                      <div key={index} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                        <input
-                          style={{ flex: 1, minWidth: 0 }}
-                          value={language}
-                          placeholder={index === 0 ? "Pvz. English B1" : "Kita kalba ir jos lygis"}
-                          onChange={(event) => setForeignHireExternalForm((current) => {
-                            const languages = current.languageDetails.split("\n");
-                            languages[index] = event.target.value.replace(/[\r\n]/g, " ");
-                            return { ...current, languageDetails: languages.join("\n") };
-                          })}
-                        />
-                        {all.length > 1 ? <button type="button" className="admin-small-btn" aria-label="Pašalinti kalbą" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: current.languageDetails.split("\n").filter((_, i) => i !== index).join("\n") }))}>×</button> : null}
-                      </div>
-                    ))}
-                    <button type="button" className="admin-small-btn" onClick={() => setForeignHireExternalForm((current) => ({ ...current, languageDetails: `${current.languageDetails}\n` }))}>+ Pridėti kalbą</button>
-                  </div>
-                  <div className="admin-external-field"><label>Šaltinis (nebūtina)</label><input value={foreignHireExternalForm.sourceDetail} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, sourceDetail: event.target.value }))} placeholder="Facebook grupė / referral..." /></div>
-                  <div className="admin-external-field">
-                    <label>Vairuotojo pažymėjimas</label>
-                    <RoundedSelect
-                      className="admin-external-dropdown"
-                      ariaLabel="Vairuotojo pažymėjimas"
-                      value={foreignHireExternalForm.hasDrivingLicenseB ? "yes" : "no"}
-                      options={[{ value: "yes", label: "Taip (B kategorija)" }, { value: "no", label: "Ne" }]}
-                      onChange={(value) => setForeignHireExternalForm((current) => ({ ...current, hasDrivingLicenseB: value === "yes" }))}
-                    />
-                  </div>
-                  <div className="admin-external-field">
-                    <label>Ar reikalingas būstas?</label>
-                    <RoundedSelect
-                      className="admin-external-dropdown"
-                      ariaLabel="Ar reikalingas būstas?"
-                      value={foreignHireExternalForm.needsAccommodation === null ? "unset" : foreignHireExternalForm.needsAccommodation ? "yes" : "no"}
-                      options={[{ value: "unset", label: "Pasirinkite" }, { value: "yes", label: "Taip" }, { value: "no", label: "Ne" }]}
-                      onChange={(value) => setForeignHireExternalForm((current) => ({ ...current, needsAccommodation: value === "unset" ? null : value === "yes" }))}
-                    />
-                  </div>
-                  <div className="admin-external-field full"><label>Mano komentaras</label><textarea value={foreignHireExternalForm.recruiterNote} onChange={(event) => setForeignHireExternalForm((current) => ({ ...current, recruiterNote: event.target.value }))} placeholder="Trumpas mano komentaras apie kandidatą, pokalbį ar tinkamumą šiai užklausai..." /></div>
-                  <label className="admin-foreign-file">
-                    <span className="admin-foreign-file-copy">
-                      <b>{foreignHireExternalCvFile?.name || "Pilnas kandidato CV nepasirinktas"}</b>
-                      <span>PDF arba DOCX · iki 15 MB · darbdavys galės atidaryti kandidato peržiūroje</span>
-                    </span>
-                    <span className="admin-small-btn">{foreignHireExternalCvFile ? "Pakeisti CV" : "Pasirinkti CV"}</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={(event) => setForeignHireExternalCvFile(event.target.files?.[0] || null)}
-                    />
-                  </label>
-                  <label className="admin-foreign-file">
-                    <span className="admin-foreign-file-copy">
-                      <b>{foreignHireExternalSignedAgreementFile?.name || "Pasirašyta kandidato ir Statybos24 tarpininkavimo sutartis"}</b>
-                      <span>Privatus admin dokumentas · PDF arba DOCX · iki 15 MB · darbdaviui nerodomas</span>
-                    </span>
-                    <span className="admin-small-btn">{foreignHireExternalSignedAgreementFile ? "Pakeisti sutartį" : "Pasirinkti sutartį"}</span>
-                    <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setForeignHireExternalSignedAgreementFile(event.target.files?.[0] || null)} />
-                  </label>
-                </div>
-                <div className="admin-candidate-actions">
-                  <button className="admin-small-btn" type="button" onClick={() => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); setForeignHireExternalSignedAgreementFile(null); }}>Atšaukti</button>
-                  <button className="admin-small-btn" type="button" disabled={foreignHireCandidateBusyId === "external"} onClick={saveExternalForeignHireCandidate} style={{ background: "#222631", color: "#fff", borderColor: "#222631" }}>
-                    {foreignHireCandidateBusyId === "external" ? "Saugoma..." : "Pridėti kandidatą"}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {loadingCandidates ? (
-              <div className="admin-empty" style={{ marginTop: 12 }}>Kraunami kandidatai...</div>
-            ) : candidates.length ? (
-              <div className="admin-candidates-list">
-                {candidates.map((candidate) => {
-                  const next = foreignHireCandidateNext(candidate.status);
-                  const candidateBusy = foreignHireCandidateBusyId === candidate.candidate_id;
-                  const candidateExpanded = !!foreignHireExpandedCandidateIds[candidate.candidate_id];
-                  const needsSignedAgreement = ["presented", "interview", "offer", "hired", "started"].includes(next?.[0]) && !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
-                  const needsEmployerAcceptance = ["hired", "started"].includes(next?.[0]) && candidate.employer_response !== "accepted";
-                  const needsEmploymentAgreement = ["hired", "started"].includes(next?.[0]) && !candidate.job_confirmation?.signedEmploymentAgreementPath;
-                  const needsJobConfirmation = ["hired", "started"].includes(next?.[0]) && !candidate.candidate_job_confirmed_at;
-                  const canHireCandidate = candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status);
-                  const hireBlocked = !candidate.job_confirmation?.signedEmploymentAgreementPath || !candidate.candidate_job_confirmed_at || !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status);
-                  return (
-                    <div className="admin-candidate-card" key={candidate.candidate_id}>
-                      <button
-                        type="button"
-                        className={`admin-candidate-card-head ${candidate.employer_response === "accepted" && !["hired", "started"].includes(candidate.status) ? "is-employer-accepted" : candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at ? "is-interview-requested" : ""}`}
-                        aria-expanded={candidateExpanded}
-                        onClick={() => setForeignHireExpandedCandidateIds((current) => ({ ...current, [candidate.candidate_id]: !current[candidate.candidate_id] }))}
-                        style={{ width: "100%", border: 0, background: "transparent", padding: 0, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
-                      >
-                        <h4 style={{ margin: 0, minWidth: 0, overflowWrap: "anywhere" }}>{candidate.full_name || "Kandidatas"}</h4>
-                        <span aria-hidden="true" style={{ fontSize: 22, color: "#607180", lineHeight: 1, flexShrink: 0 }}>{candidateExpanded ? "−" : "+"}</span>
-                      </button>
-                      {candidateExpanded ? <>
-                        <div className="admin-candidate-card-head" style={{ marginTop: 10 }}>
-                          <p>{candidate.source_type === "platform" ? "Statybos24 bazė" : candidate.source_detail || "Išorinis kandidatas"} · {candidate.profession}</p>
-                          <span className="admin-candidate-chip">{foreignHireCandidateStatusLabel(candidate.status)}</span>
-                        </div>
-                      <div className="admin-candidate-meta">
-                        <div><span>Amžius</span><b>{candidate.age_years ?? "—"}</b></div>
-                        <div><span>Patirtis</span><b>{candidate.years_experience === null ? "—" : `${Number(candidate.years_experience)} m.`}</b></div>
-                        <div><span>Kalba</span><b>{candidate.language_details || "—"}</b></div>
-                        <div><span>Galimas nuo</span><b>{candidate.available_from || "—"}</b></div>
-                        <div><span>B kategorija</span><b>{candidate.has_driving_license_b === true ? "Taip" : candidate.has_driving_license_b === false ? "Ne" : "—"}</b></div>
-                        <div><span>Reikalingas būstas</span><b>{candidate.needs_accommodation === true ? "Taip" : candidate.needs_accommodation === false ? "Ne" : "—"}</b></div>
-                        <div><span>Telefonas</span><b>{candidate.phone || "—"}</b></div>
-                        <div><span>El. paštas</span><b>{candidate.email || "—"}</b></div>
-                        <div><span>Darbdavio atsakymas</span><b>{foreignHireEmployerResponseLabel(candidate.employer_response)}</b></div>
-                        <div><span>Galutinės sąlygos</span><b>{candidate.candidate_job_confirmed_at ? "Kandidatas sutiko" : candidate.job_confirmation?.signedEmploymentAgreementPath ? "Darbo sutartis įkelta" : "Sutartis neįkelta"}</b></div>
-                        {candidate.employer_rejection_reason ? <div className="wide"><span>Atmetimo priežastis (darbdavio)</span><b>{candidate.employer_rejection_reason}</b></div> : null}
-                        <div className="wide"><span>Kandidato patirtis / kompetencijos</span><b>{candidate.skills || "—"}</b></div>
-                        <div className="wide"><span>Mano komentaras</span><b>{candidate.recruiter_note || "—"}</b></div>
-                      </div>
-
-                      <div className="admin-candidate-docs">
-                        {candidate.cvUrl ? <a className="admin-candidate-doc" href={candidate.cvUrl} target="_blank" rel="noreferrer">CV · {candidate.cv_name || "Atidaryti"}</a> : null}
-                        <label className="admin-candidate-doc">{candidate.cv_path ? "Pakeisti CV" : "+ Įkelti CV"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "cv", file); event.target.value = ""; }} /></label>
-                        {candidate.candidate_signed_agreement_path ? (candidate.candidateSignedAgreementUrl ? <a className="admin-candidate-doc" href={candidate.candidateSignedAgreementUrl} target="_blank" rel="noreferrer">Statybos24 ir darbuotojo tarpininkavimo sutartis · {candidate.candidate_signed_agreement_name || "Peržiūrėti"}</a> : <span className="admin-candidate-doc">✓ Tarpininkavimo sutartis įkelta · {candidate.candidate_signed_agreement_name || "Dokumentas"}</span>) : null}
-                        <label className="admin-candidate-doc">{candidate.candidate_signed_agreement_path ? "Pakeisti tarpininkavimo sutartį" : "+ Įkelti tarpininkavimo sutartį"}<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={candidateBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadForeignCandidateDocument(candidate, "signed_agreement", file); event.target.value = ""; }} /></label>
-                      </div>
-
-                      {candidate.employer_contact_shared_at ? (
-                        <div className="admin-candidate-contact-share ok">✓ Kandidato el. paštas perduotas darbdaviui {formatAdminDate(candidate.employer_contact_shared_at)}. Telefono numeris neperduodamas.</div>
-                      ) : candidate.employer_response === "interview_requested" || candidate.employer_response === "accepted" ? (
-                        <div className="admin-candidate-contact-share interview-ready">
-                          <span>Darbdavys paprašė tęsti procesą. Jei reikia, galite perduoti tik kandidato el. paštą; telefono numeris lieka privatus.</span>
-                          <button className="admin-small-btn" type="button" disabled={candidateBusy || !candidate.email} onClick={() => shareForeignHireCandidateEmail(candidate)}>{candidate.email ? "Perduoti el. paštą" : "El. paštas nenurodytas"}</button>
-                        </div>
-                      ) : null}
-
-                      <div className="admin-candidate-job-confirmation">
-                        <div className="admin-candidate-zone-head">
-                          <div>
-                            <strong>Darbdavio ir darbuotojo pasirašyta darbo sutartis</strong>
-                            <span>Įkelkite abiejų šalių pasirašytą darbo sutartį (PDF arba DOCX, iki 15 MB). Tai ne Statybos24 tarpininkavimo sutartis.</span>
-                          </div>
-                        </div>
-                        {candidate.signedEmploymentAgreementUrl ? (
-                          <div className="admin-candidate-consent ok" style={{ marginTop: 12 }}>
-                            <strong>✓ Pasirašyta darbo sutartis įkelta</strong>
-                            <div style={{ marginTop: 8 }}>
-                              <a className="admin-candidate-doc" href={candidate.signedEmploymentAgreementUrl} target="_blank" rel="noreferrer">
-                                Peržiūrėti · {candidate.job_confirmation?.signedEmploymentAgreementName || "Darbo sutartis"}
-                              </a>
-                            </div>
-                          </div>
-                        ) : <div className="admin-candidate-job-note">Pasirašyta darbo sutartis dar neįkelta.</div>}
-                        <label className="admin-foreign-file" style={{ marginTop: 12, cursor: candidate.employer_response === "accepted" && !candidateBusy ? "pointer" : "not-allowed" }}>
-                          <span className="admin-foreign-file-copy">
-                            <b>{candidate.signedEmploymentAgreementUrl ? "Pakeisti pasirašytą darbo sutartį" : "Pasirinkti pasirašytą darbo sutartį"}</b>
-                            <span>Privatus dokumentas · PDF arba DOCX · iki 15 MB</span>
-                          </span>
-                          <span className="admin-small-btn">{candidateBusy ? "Įkeliama..." : "Įkelti sutartį"}</span>
-                          <input
-                            type="file"
-                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            disabled={candidateBusy || candidate.employer_response !== "accepted"}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) uploadForeignHireEmploymentAgreement(request, candidate, file);
-                              event.target.value = "";
-                            }}
-                          />
-                        </label>
-                        {candidate.employer_response !== "accepted" ? <div className="admin-candidate-job-note" style={{ marginTop: 9 }}>Įkelti galima, kai darbdavys patvirtina kandidatą.</div> : null}
-                      </div>
-
-                      <div className="admin-candidate-actions">
-                        {canHireCandidate ? (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={candidateBusy || hireBlocked}
-                            title={!candidate.job_confirmation?.signedEmploymentAgreementPath ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : !candidate.candidate_signed_agreement_path || !["signed_uploaded", "approved"].includes(candidate.candidate_agreement_status) ? "Pirmiausia įkelkite pasirašytą kandidato tarpininkavimo sutartį." : !candidate.candidate_job_confirmed_at ? "Palaukite, kol bus užfiksuotas darbo sutarties patvirtinimas." : ""}
-                            onClick={() => updateForeignHireCandidateStatus(candidate, "hired")}
-                            style={{ background: hireBlocked ? "#eef2f5" : "#222631", color: hireBlocked ? "#83909d" : "#fff", borderColor: hireBlocked ? "#dce5eb" : "#222631" }}
-                          >{candidateBusy ? "Saugoma..." : "Įdarbinti"}</button>
-                        ) : ["hired", "started"].includes(candidate.status) ? (
-                          next ? <button className="admin-small-btn" type="button" disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation} onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}>{candidateBusy ? "Saugoma..." : next[1]}</button> : <span className="admin-foreign-status sourcing">Įdarbintas</span>
-                        ) : next ? (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={candidateBusy || needsSignedAgreement || needsEmployerAcceptance || needsEmploymentAgreement || needsJobConfirmation}
-                            onClick={() => updateForeignHireCandidateStatus(candidate, next[0])}
-                            style={next[0] === "presented" || next[0] === "started" ? { background: "#222631", color: "#fff", borderColor: "#222631" } : undefined}
-                            title={needsEmployerAcceptance ? "Pirmiausia darbdavys turi patvirtinti kandidatą." : needsSignedAgreement ? "Pirmiausia įkelkite kandidato pasirašytą sutartį." : needsEmploymentAgreement ? "Pirmiausia įkelkite darbdavio ir darbuotojo pasirašytą darbo sutartį." : needsJobConfirmation ? "Palaukite, kol sistema užfiksuos pasirašytos darbo sutarties patvirtinimą." : ""}
-                          >
-                            {candidateBusy ? "Saugoma..." : next[1]}
-                          </button>
-                        ) : null}
-                        {!['rejected','withdrawn','started'].includes(candidate.status) ? (
-                          <button className="admin-small-btn danger" type="button" disabled={candidateBusy} onClick={() => updateForeignHireCandidateStatus(candidate, "rejected")}>Atmesti</button>
-                        ) : null}
-                        <button className="admin-small-btn danger" type="button" disabled={candidateBusy} onClick={() => deleteForeignHireCandidate(candidate)}>Ištrinti kandidatą</button>
-                      </div>
-                      </> : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="admin-empty" style={{ marginTop: 12 }}>Prie šios užklausos kandidatų dar nepridėta.</div>
-            )}
-          </div>
-      </div>
-    );
   }
 
   function generateForeignHireLogin() {
@@ -2776,386 +2526,76 @@ export function AdminDashboard({
         )}
 
         {activeTab === "foreignHire" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Tarptautinė atranka</h2>
-                <div className="admin-muted">
-                  Užklausos rodomos kompaktiškai. Išskleiskite ID, kad matytumėte visą informaciją ir veiksmus.
-                </div>
-              </div>
-              <b>{foreignHireRequests.length}</b>
-            </div>
-
-            <style>{`
-              .admin-hire-overview { gap: 9px !important; }
-              .admin-hire-overview-stat { border: 1px solid #e3eaf0 !important; border-radius: 12px !important; background: #fff !important; box-shadow: none !important; padding: 12px 14px !important; position: relative; }
-              /* Visi poreikio santraukos duomenys turi vienodą švelnų mėlyną foną. */
-              .admin-hire-overview-stat,
-              .admin-hire-overview-stat:first-child,
-              .admin-hire-overview-stat:nth-child(4) { background: #eef6ff !important; border-color: #d4e5f6 !important; }
-              .admin-hire-overview-stat > div:first-child { color: #56718a !important; }
-              .admin-hire-details-toggle { border-color: #dce6ed !important; border-radius: 12px !important; background: #f6f9fb !important; padding: 12px 14px !important; }
-              .admin-hire-details-toggle .admin-small-btn { border-radius: 9px; font-weight: 750; white-space: nowrap; }
-              .admin-hire-details-body { padding-top: 12px; }
-              .admin-hire-detail-section { border: 1px solid #e2eaf0 !important; border-radius: 14px !important; background: #fff !important; box-shadow: none !important; padding: 16px !important; margin-bottom: 10px !important; }
-              .admin-hire-detail-section h4 { font-size: 15px !important; letter-spacing: -.015em; }
-              .admin-hire-detail-section .admin-foreign-grid { gap: 8px !important; }
-              .admin-hire-detail-section .admin-foreign-fact { background: #f8fafc !important; border: 1px solid #edf1f5 !important; border-radius: 10px !important; padding: 11px 12px !important; min-width: 0; overflow-wrap: anywhere; }
-              .admin-hire-detail-section .admin-foreign-fact span { color: #718497 !important; }
-              .admin-hire-detail-section .admin-foreign-fact b { color: #242833 !important; line-height: 1.45; }
-
-              @media (max-width: 640px) {
-                .admin-hire-overview { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-                .admin-hire-overview-stat { padding: 10px 11px !important; }
-                .admin-hire-details-toggle { align-items: stretch !important; }
-                .admin-hire-details-toggle .admin-small-btn { width: 100%; }
-                .admin-hire-detail-section { padding: 12px !important; }
-              }
-              @media (max-width: 370px) { .admin-hire-overview { grid-template-columns: 1fr !important; } }
-            `}</style>
-
-            {foreignHireRequests.length ? (
-              <div className="admin-foreign-list">
-                {adminPageSlice(foreignHireRequests).map((request) => {
-                  const busy = foreignHireSavingId === request.request_id;
-                  const setupOpen = foreignHireSetupRequest?.request_id === request.request_id;
-                  const credentials =
-                    foreignHireCredentials?.requestId === request.request_id
-                      ? foreignHireCredentials
-                      : null;
-                  const credentialsText = credentials
-                    ? foreignHireCredentialsText(request, credentials)
-                    : "";
-                  const mailSubject = `Statybos24 employer portal · ${request.company_name}`;
-                  const mailBody = credentialsText ||
-                    `Hello ${request.contact_name || ""},\n\nRegarding your Statybos24 workforce request.\n\nIf anything is unclear, please reply to this email.`;
-                  const mailHref = `mailto:${request.business_email}?subject=${encodeURIComponent(
-                    mailSubject
-                  )}&body=${encodeURIComponent(mailBody)}`;
-                  const candidatePanelOpen = foreignHireCandidateOpenId === request.request_id;
-                  const requestCandidates = foreignHireCandidatesByRequest[request.request_id] || [];
-                  const hasLoadedRequestCandidates = Object.prototype.hasOwnProperty.call(foreignHireCandidatesByRequest, request.request_id);
-                  const pendingInterviewCount = hasLoadedRequestCandidates
-                    ? requestCandidates.filter((candidate) => candidate.employer_response === "interview_requested" && !candidate.employer_contact_shared_at).length
-                    : Number(request.employer_interview_requested_count || 0);
-                  const pendingAcceptedCount = hasLoadedRequestCandidates
-                    ? requestCandidates.filter((candidate) => candidate.employer_response === "accepted" && !["hired", "started", "rejected", "withdrawn"].includes(candidate.status)).length
-                    : Number(request.employer_accepted_count || 0);
-                  const expanded = foreignHireExpandedId === request.request_id;
-                  const shortRequestId = String(request.request_id || "").slice(0, 8).toUpperCase();
-                  const hasFullBrief = ["submitted", "approved"].includes(request.brief_status) && !!request.brief_workforce_details;
-                  const fullNeed = request.brief_workforce_details || {};
-                  const fullNeedTitle = fullNeed.needTitle || fullNeed.roles?.[0]?.profession || request.company_name;
-                  const roleList = Array.isArray(fullNeed.roles) ? fullNeed.roles : [];
-                  const detailsMinimized = foreignHireMinimized[request.request_id] !== false;
-                  const totalRequestedWorkers = roleList.reduce((sum, role) => sum + Math.max(1, Number(role?.count || 0) || 0), 0);
-                  const hiredWorkers = requestCandidates.filter((candidate) => ["hired", "started"].includes(candidate.status)).length;
-                  const searchCompleted = request.status === "closed" || (totalRequestedWorkers > 0 && hiredWorkers >= totalRequestedWorkers);
-                  const projectSummary = [fullNeed.projectCountry, fullNeed.projectLocation].filter(Boolean).join(" · ") || "—";
-                  const salaryValue = `${fullNeed.salaryAmount || fullNeed.salaryMin || "—"}${fullNeed.salaryCurrency ? ` ${fullNeed.salaryCurrency}` : ""}`.trim();
-                  const salarySummary = [salaryValue, fullNeed.salaryBasis].filter(Boolean).join(" · ") || "—";
-                  const accommodationSummary = fullNeed.accommodation === "provided"
-                    ? "Suteikia darbdavys"
-                    : fullNeed.accommodation === "not_provided"
-                      ? "Nesuteikiama"
-                      : fullNeed.accommodation === "employee_contributes"
-                        ? "Moka / prisideda darbuotojas"
-                        : (fullNeed.accommodation || "—");
-                  const homeTravelSummary = fullNeed.homeTravelPaid === "yes"
-                    ? "Apmoka darbdavys"
-                    : fullNeed.homeTravelPaid === "no"
-                      ? "Darbdavys neapmoka"
-                      : (fullNeed.homeTravel || "—");
-
-                  return (
-                    <article className={`admin-foreign-card ${searchCompleted ? "search-completed" : ["new", "employer_submitted"].includes(request.status) ? "is-new" : ""} ${!searchCompleted && (pendingInterviewCount+pendingAcceptedCount)>0 ? "has-employer-action" : ""}`} key={request.request_id}>
-                      <button type="button" className="admin-foreign-summary" onClick={() => {
-                        setForeignHireExpandedId(expanded ? null : request.request_id);
-                        if (!expanded && (["sourcing", "closed"].includes(request.status) || Number(request.candidate_count || 0) > 0)) {
-                          // Show candidates with their current data when opening the workforce request.
-                          if (foreignHireCandidateOpenId !== request.request_id) {
-                            setForeignHireCandidateOpenId(request.request_id);
-                            setForeignHireExternalRequestId(null);
-                            setForeignHireWorkerResults([]);
-                          }
-                          loadForeignHireCandidates(request.request_id).catch(() => {});
-                        }
-                      }} aria-expanded={expanded}>
-                        <span className="admin-foreign-summary-info">
-                          <span className="admin-foreign-summary-id">#{shortRequestId}</span>
-                          <span className="admin-foreign-summary-company" title={request.brief_company_details?.legalName || request.company_name || ""}>{request.brief_company_details?.legalName || request.company_name || "Įmonė nenurodyta"}</span>
-                        </span>
-                        <span className="admin-foreign-summary-toggle" aria-hidden="true">{expanded ? "−" : "+"}</span>
-                      </button>
-
-                      {expanded ? <div className="admin-foreign-expanded">
-                      {!hasFullBrief ? <div className="admin-foreign-head">
-                        <div>
-                          <h3>{request.company_name}</h3>
-                          <p>{request.company_country || "—"} · pateikta {formatAdminDate(request.created_at)}</p>
-                        </div>
-                      </div> : null}
-
-                      {!searchCompleted && pendingInterviewCount > 0 ? (
-                        <div className="admin-foreign-employer-alert interview">
-                          <div>
-                            <strong>Darbdavys paprašė interviu</strong>
-                            <span>{pendingInterviewCount} {pendingInterviewCount === 1 ? "kandidatui reikia suderinti interviu" : "kandidatams reikia suderinti interviu"}.</span>
-                          </div>
-                          <button className="admin-small-btn" type="button" onClick={() => openForeignHireInterviewCandidates(request)}>Peržiūrėti kandidatus</button>
-                        </div>
-                      ) : !searchCompleted && pendingAcceptedCount > 0 ? (
-                        <div className="admin-foreign-employer-alert">
-                          <div>
-                            <strong>Darbdavys patvirtino kandidatą</strong>
-                            <span>Galima ruošti galutinį darbo sąlygų patvirtinimą su kandidatu.</span>
-                          </div>
-                          <button className="admin-small-btn" type="button" onClick={() => openForeignHireAcceptedCandidates(request)}>Peržiūrėti kandidatus</button>
-                        </div>
-                      ) : null}
-
-                      {hasFullBrief ? <>
-                        <div className="admin-hire-details-toggle" style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          flexWrap: "wrap",
-                          padding: "14px 16px",
-                          border: "1px solid #d8e1e8",
-                          borderRadius: 16,
-                          background: searchCompleted ? "#eaf8f0" : "#f7f9fb",
-                          borderColor: searchCompleted ? "#a8ddbf" : "#d8e1e8",
-                          marginBottom: detailsMinimized ? 0 : 12,
-                        }}>
-                          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7 }}>
-                            <strong style={{ color: "#222631", fontSize: 17, lineHeight: 1.35 }}>
-                              {fullNeedTitle} – poreikio duomenys
-                            </strong>
-                            <span className={`admin-foreign-status ${request.status || "new"}`}>{searchCompleted ? "Paieška uždaryta – susisiekite su darbdaviu" : foreignHireStatusLabel(request.status)}</span>
-                          </div>
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() => setForeignHireMinimized((current) => ({ ...current, [request.request_id]: !(current[request.request_id] !== false) }))}
-                            style={{ background: "#fff", color: "#222631", borderColor: "#d8e1e8" }}
-                          >
-                            {detailsMinimized ? "Išskleisti informaciją" : "Suskleisti informaciją"}
-                          </button>
-                        </div>
-
-                        {!detailsMinimized ? <div className="admin-hire-details-body">
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Kontaktinė informacija</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Įmonė ir atsakingas kontaktas</span>
-                            </div>
-                            <div className="admin-foreign-grid">
-                              <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.brief_company_details?.legalName || request.company_name || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Įmonės šalis</span><b>{request.company_country || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Pildė</span><b>{request.brief_company_details?.contactName || request.contact_name || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Pareigos</span><b>{request.brief_company_details?.jobTitle || request.contact_job_title || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.brief_company_details?.businessEmail || request.business_email}`}>{request.brief_company_details?.businessEmail || request.business_email || "—"}</a></div>
-                              <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
-                            </div>
-                          </div>
-
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Poreikio ir darbo sąlygos</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Pagrindinė suvestinė apie projektą ir sąlygas</span>
-                            </div>
-                            <div className="admin-foreign-grid">
-                              <div className="admin-foreign-fact"><span>Darbo / poreikio pavadinimas</span><b>{fullNeedTitle || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Projektas</span><b>{[fullNeed.projectLocation, fullNeed.projectCountry].filter(Boolean).join(", ") || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Darbo pradžia</span><b>{fullNeed.startDate || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Surinkti iki</span><b>{fullNeed.neededBy || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Įdarbinimo tipas</span><b>{fullNeed.employmentType || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Sutarties trukmė</span><b>{fullNeed.duration || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Darbo valandų per savaitę</span><b>{fullNeed.weeklyHours ? `${fullNeed.weeklyHours} val.` : "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Viršvalandžiai</span><b>{fullNeed.overtimeAllowed === "yes" ? "Taip" : fullNeed.overtimeAllowed === "no" ? "Ne" : (fullNeed.overtime || "—")}</b></div>
-                              <div className="admin-foreign-fact"><span>Viršvalandžių apmokėjimas</span><b>{fullNeed.overtimePay || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Atlygis</span><b>{salarySummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Mokėjimo dažnumas</span><b>{fullNeed.salaryPayFrequency || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Apgyvendinimas</span><b>{accommodationSummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Kambarys</span><b>{fullNeed.roomType || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Būsto kaina</span><b>{fullNeed.accommodationCost || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Kelionės namo</span><b>{homeTravelSummary}</b></div>
-                              <div className="admin-foreign-fact"><span>Atostogos</span><b>{fullNeed.vacationTerms || "—"}</b></div>
-                              <div className="admin-foreign-fact"><span>Atostogų apmokėjimas</span><b>{fullNeed.vacationPay || "—"}</b></div>
-                            </div>
-                          </div>
-
-                          {roleList.length ? roleList.map((role, index) => (
-                            <div
-                              className="admin-hire-detail-section"
-                              key={`${request.request_id}-full-role-${index}`}
-                              style={{
-                                border: "1px solid #e2e8ee",
-                                borderRadius: 18,
-                                background: "#fff",
-                                padding: 14,
-                                boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                                marginBottom: 12,
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>{roleList.length > 1 ? `Profesija ${index + 1}` : "Reikalinga profesija"}</h4>
-                                <span style={{ fontSize: 12, color: "#607180" }}>{role.profession || "Profesija nenurodyta"}</span>
-                              </div>
-                              <div className="admin-foreign-grid">
-                                <div className="admin-foreign-fact"><span>Profesija / specialybė</span><b>{role.profession || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Darbuotojų skaičius</span><b>{Number(role.count || 1)} žm.</b></div>
-                                <div className="admin-foreign-fact"><span>Minimali patirtis</span><b>{role.experience || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Kalba / lygis</span><b>{role.language || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Vairuotojo pažymėjimas</span><b>{({required:"Privalomas", advantage:"Privalumas", not_required:"Nereikalingas"})[role.drivingLicense] || role.drivingLicense || "—"}</b></div>
-                                <div className="admin-foreign-fact"><span>Reikalingi įgūdžiai / darbai</span><b style={{ whiteSpace: "pre-wrap" }}>{role.skills || "—"}</b></div>
-                              </div>
-                            </div>
-                          )) : null}
-
-                          {fullNeed.additionalInfo ? (
-                            <div className="admin-hire-additional-section" style={{
-                              border: "1px solid #e2e8ee",
-                              borderRadius: 18,
-                              background: "#fff",
-                              padding: 14,
-                              boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                              marginBottom: 12,
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                                <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Papildoma informacija</h4>
-                                <span style={{ fontSize: 12, color: "#607180" }}>Papildomi reikalavimai ir pastabos</span>
-                              </div>
-                              <div className="admin-foreign-grid">
-                                <div className="admin-foreign-fact" style={{ gridColumn: "1 / -1" }}><span>Papildomi reikalavimai / informacija</span><b style={{ whiteSpace: "pre-wrap" }}>{fullNeed.additionalInfo}</b></div>
-                              </div>
-                            </div>
-                          ) : null}
-
-                          <div className="admin-hire-detail-section" style={{
-                            border: "1px solid #e2e8ee",
-                            borderRadius: 18,
-                            background: "#fff",
-                            padding: 14,
-                            boxShadow: "0 3px 12px rgba(34,38,49,.025)",
-                            marginBottom: 12,
-                          }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap", padding: "10px 12px", borderRadius: 11, background: "#eae7f4", borderLeft: "4px solid #6b5b95" }}>
-                              <h4 style={{ margin: 0, fontSize: 15, color: "#3b3254", fontWeight: 850 }}>Portalas ir dokumentai</h4>
-                              <span style={{ fontSize: 12, color: "#607180" }}>Prisijungimas, sutartys ir prisegti failai</span>
-                            </div>
-                            <div className="admin-foreign-access-summary" style={{ marginTop: 0 }}>
-                              <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
-                              <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">Atidaryti sutartį</a> : <b>Neįkelta</b>}</div>
-                              <div><span>Pasirašyta tarpininkavimo sutartis</span>{request.signedAgreementUrl ? <a href={request.signedAgreementUrl} target="_blank" rel="noreferrer">Peržiūrėti pasirašytą sutartį</a> : <b>Dar negauta</b>}</div>
-                              <div><span>Darbo sutartis susipažinimui</span>{request.employmentContractUrl ? <a href={request.employmentContractUrl} target="_blank" rel="noreferrer">{request.employment_contract_name || "Atidaryti darbo sutartį"}</a> : <b>Neįkelta</b>}</div>
-                            </div>
-                          </div>
-                        </div> : null}
-                      </> : <>
-                        <div className="admin-foreign-grid">
-                          <div className="admin-foreign-fact"><span>Kompanija</span><b>{request.company_name || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>Pildė</span><b>{request.contact_name || "—"}</b></div><div className="admin-foreign-fact"><span>Pareigos</span><b>{request.contact_job_title || "—"}</b></div>
-                          <div className="admin-foreign-fact"><span>El. paštas</span><a href={`mailto:${request.business_email}`}>{request.business_email || "—"}</a></div>
-                          <div className="admin-foreign-fact"><span>Telefonas</span><b>{request.phone || "—"}</b></div>
-                        </div>
-                        {request.employer_account_id ? <div className="admin-foreign-access-summary" style={{marginTop:12}}>
-                          <div><span>Employer login</span><b>{request.employer_login_id || "—"}</b></div>
-                          <div><span>Tarpininkavimo sutartis</span>{request.agreementUrl ? <a href={request.agreementUrl} target="_blank" rel="noreferrer">{request.agreement_name || "Atidaryti sutartį"}</a> : <b>Dar neįkelta</b>}</div>
-                          <div><span>Būsena</span><b>{request.agreement_path ? (request.signed_agreement_path ? "Pasirašyta kopija gauta" : "Laukiama darbdavio parašo") : "Laukiama sutarties"}</b></div>
-                        </div> : null}
-                      </>}
-
-                      {credentials ? (
-                        <div className="admin-foreign-credentials">
-                          <strong>Nauji laikini prisijungimo duomenys — nukopijuokite prieš perkraunant puslapį.</strong>
-                          <code>{credentialsText}</code>
-                          <div className="admin-foreign-actions">
-                            <button
-                              className="admin-small-btn"
-                              type="button"
-                              onClick={() => copyForeignHireText(credentialsText, "Prisijungimo duomenys nukopijuoti.")}
-                            >
-                              Kopijuoti prisijungimus
-                            </button>
-                            <a className="admin-small-btn" href={mailHref} style={{ textDecoration: "none" }}>
-                              Atidaryti el. laišką
-                            </a>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {setupOpen ? (
-                        <div className="admin-foreign-setup">
-                          <h4>{request.employer_account_id ? "Įkelti tarpininkavimo sutartį" : "Sukurti darbdavio prieigą"}</h4>
-                          <p>{request.employer_account_id ? "Įkelta sutartis iš karto atsiras darbdavio portale. Darbdavys galės ją perskaityti, pasirašyti ir įkelti pasirašytą kopiją." : "Sukurkite privatų Company ID ir laikiną slaptažodį. Prisijungimo duomenis nukopijuokite prieš perkraudami puslapį."}</p>
-                          <div className="admin-foreign-setup-grid">
-                            {!request.employer_account_id ? <>
-                              <label className="admin-foreign-field"><span>Company ID</span><input value={foreignHireSetupLogin} onChange={(event) => { const digits = event.target.value.replace(/\D/g, "").slice(0, 6); setForeignHireSetupLogin(`ID-${digits}`); }} inputMode="numeric" autoComplete="off" /></label>
-                              <label className="admin-foreign-field"><span>Laikinas slaptažodis</span><input value={foreignHireSetupPassword} onChange={(event) => setForeignHireSetupPassword(event.target.value.slice(0, 128))} autoComplete="off" /></label>
-                            </> : <label className="admin-foreign-file">
-                              <span className="admin-foreign-file-copy"><b>{foreignHireAgreementFile?.name || "Tarpininkavimo sutartis nepasirinkta"}</b><span>PDF arba DOCX · iki 15 MB</span></span>
-                              <span className="admin-small-btn">Pasirinkti sutartį</span>
-                              <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setForeignHireAgreementFile(event.target.files?.[0] || null)} />
-                            </label>}
-                          </div>
-                          <div className="admin-foreign-setup-actions">
-                            {!request.employer_account_id ? <>
-                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupLogin(generateForeignHireLogin(request))}>Sugeneruoti naują ID</button>
-                              <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => setForeignHireSetupPassword(generateForeignHirePassword())}>Naujas slaptažodis</button>
-                            </> : null}
-                            <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); }}>Atšaukti</button>
-                            <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy || (request.employer_account_id && !foreignHireAgreementFile)} onClick={request.employer_account_id ? replaceForeignEmployerAgreement : createForeignEmployerAccess} style={{ background: "#222631", color: "#fff", borderColor: "#222631" }}>
-                              {foreignHireSetupBusy ? "Saugoma..." : request.employer_account_id ? "Įkelti tarpininkavimo sutartį" : "Sukurti darbdavio prieigą"}
-                            </button>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="admin-foreign-actions">
-                        {!hasFullBrief && !request.employer_account_id ? <button className="admin-small-btn" type="button" disabled={busy} onClick={() => openForeignHireAccessSetup(request)}>Sukurti darbdavio prieigą</button> : null}
-                        {!hasFullBrief && request.employer_account_id && !request.agreement_path ? <button className="admin-small-btn" type="button" disabled={foreignHireSetupBusy} onClick={() => openForeignHireAccessSetup(request)}>Įkelti tarpininkavimo sutartį</button> : null}
-                        {hasFullBrief && request.brief_status !== "approved" ? <button className="admin-small-btn" type="button" disabled={busy || !request.signed_agreement_path} title={!request.signed_agreement_path ? "Pirmiausia turi būti įkelta pasirašyta tarpininkavimo sutartis" : undefined} onClick={() => lockForeignHireSubmission(request)} style={{background:request.signed_agreement_path ? "#222631" : "#e8edf1",color:request.signed_agreement_path ? "#fff" : "#81909c",borderColor:request.signed_agreement_path ? "#222631" : "#d8e1e8",cursor:request.signed_agreement_path ? "pointer" : "not-allowed"}}>{busy ? "Pradedama..." : "Pradėti paiešką"}</button> : null}
-                        {hasFullBrief && !request.signed_agreement_path && request.brief_status !== "approved" ? <span className="admin-candidate-job-note" style={{margin:0}}>Paieškai pradėti būtina pasirašyta tarpininkavimo sutartis.</span> : null}
-                        <a className="admin-small-btn" href={mailHref} style={{textDecoration:"none", ...(searchCompleted ? {background:"#b62e28",color:"#fff",borderColor:"#b62e28",fontWeight:800} : {})}}>Rašyti el. paštu</a>
-                        {searchCompleted ? <>
-                          <label className="admin-small-btn" style={{cursor:foreignHireInvoiceBusyId ? "wait" : "pointer",display:"inline-flex",alignItems:"center",gap:6}}>
-                            {foreignHireInvoiceBusyId === request.request_id ? "Įkeliama..." : foreignHireInvoices[request.request_id] ? "Pakeisti sąskaitą faktūrą" : "+ Įkelti sąskaitą faktūrą"}
-                            <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={!!foreignHireInvoiceBusyId} style={{display:"none"}} onChange={(event) => { const file=event.target.files?.[0]; if (file) uploadForeignHireInvoice(request,file); event.target.value=""; }} />
-                          </label>
-                          {foreignHireInvoices[request.request_id] ? <button className="admin-small-btn" type="button" onClick={() => viewForeignHireInvoice(foreignHireInvoices[request.request_id])}>Sąskaita: {foreignHireInvoices[request.request_id].file_name}</button> : null}
-                          {foreignHireInvoiceFeedback[request.request_id] ? <span role="status" style={{width:"100%",fontSize:12,fontWeight:700,color:foreignHireInvoiceFeedback[request.request_id].kind === "success" ? "#16734a" : foreignHireInvoiceFeedback[request.request_id].kind === "progress" ? "#526779" : "#b52b28"}}>{foreignHireInvoiceFeedback[request.request_id].message}</span> : null}
-                        </> : null}
-                        <button className="admin-small-btn danger" type="button" disabled={busy} onClick={() => deleteForeignHireRequest(request)}>Ištrinti visam laikui</button>
-                      </div>
-
-                      {(["sourcing", "closed"].includes(request.status) || Number(request.candidate_count || 0) > 0) ? renderForeignHireCandidatePanel(request, requestCandidates) : null}
-                      </div> : null}
-                    </article>
-                  );
-                })}
-                {renderAdminPagination(foreignHireRequests.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Tarptautinių užklausų dar nėra.</div>
-            )}
-          </section>
+          <AdminForeignHire requests={foreignHireRequests} h={{
+            expandedId: foreignHireExpandedId,
+            open: (request) => {
+              setForeignHireExpandedId(request.request_id);
+              setForeignHireCandidateOpenId(request.request_id);
+              setForeignHireExternalRequestId(null);
+              setForeignHireWorkerResults([]);
+              setForeignHireCandidateProfession(request.brief_workforce_details?.roles?.[0]?.profession || "");
+              loadForeignHireCandidates(request.request_id).catch(() => {});
+              window.scrollTo(0, 0);
+            },
+            back: () => { setForeignHireExpandedId(null); setForeignHireExternalRequestId(null); setForeignHireSetupRequest(null); window.scrollTo(0, 0); },
+            savingId: foreignHireSavingId,
+            setStatus: updateForeignHireRequestStatus,
+            lock: lockForeignHireSubmission,
+            remove: deleteForeignHireRequest,
+            candidatesByRequest: foreignHireCandidatesByRequest,
+            loadingId: foreignHireCandidateLoadingId,
+            credentials: foreignHireCredentials,
+            credentialsText: foreignHireCredentialsText,
+            copy: copyForeignHireText,
+            invoices: foreignHireInvoices,
+            invoiceFeedback: foreignHireInvoiceFeedback,
+            invoiceBusyId: foreignHireInvoiceBusyId,
+            uploadInvoice: uploadForeignHireInvoice,
+            viewInvoice: viewForeignHireInvoice,
+            setupRequest: foreignHireSetupRequest,
+            setupBusy: foreignHireSetupBusy,
+            openSetup: openForeignHireAccessSetup,
+            closeSetup: () => { setForeignHireSetupRequest(null); setForeignHireAgreementFile(null); },
+            setupLogin: foreignHireSetupLogin,
+            setSetupLogin: setForeignHireSetupLogin,
+            setupPassword: foreignHireSetupPassword,
+            setSetupPassword: setForeignHireSetupPassword,
+            newLogin: () => setForeignHireSetupLogin(generateForeignHireLogin(foreignHireSetupRequest)),
+            newPassword: () => setForeignHireSetupPassword(generateForeignHirePassword()),
+            agreementFile: foreignHireAgreementFile,
+            setAgreementFile: setForeignHireAgreementFile,
+            createAccess: createForeignEmployerAccess,
+            replaceAgreement: replaceForeignEmployerAgreement,
+            candidateNext: foreignHireCandidateNext,
+            candidateStatusLabel: foreignHireCandidateStatusLabel,
+            responseLabel: foreignHireEmployerResponseLabel,
+            candidateBusyId: foreignHireCandidateBusyId,
+            expandedCandidates: foreignHireExpandedCandidateIds,
+            toggleCandidate: (id) => setForeignHireExpandedCandidateIds((current) => ({ ...current, [id]: !current[id] })),
+            setCandidateStatus: updateForeignHireCandidateStatus,
+            shareEmail: shareForeignHireCandidateEmail,
+            deleteCandidate: deleteForeignHireCandidate,
+            uploadCandidateDoc: uploadForeignCandidateDocument,
+            uploadEmployment: uploadForeignHireEmploymentAgreement,
+            externalRequestId: foreignHireExternalRequestId,
+            openAdd: (request) => { setForeignHireCandidateOpenId(request.request_id); openExternalForeignHireCandidate(request); setForeignHireWorkerResults([]); setForeignHireWorkerQuery(""); },
+            closeAdd: () => { setForeignHireExternalRequestId(null); setForeignHireExternalCvFile(null); setForeignHireExternalSignedAgreementFile(null); setForeignHireWorkerResults([]); },
+            externalForm: foreignHireExternalForm,
+            setExternalForm: setForeignHireExternalForm,
+            externalCv: foreignHireExternalCvFile,
+            setExternalCv: setForeignHireExternalCvFile,
+            externalAgreement: foreignHireExternalSignedAgreementFile,
+            setExternalAgreement: setForeignHireExternalSignedAgreementFile,
+            saveExternal: saveExternalForeignHireCandidate,
+            candidateProfession: foreignHireCandidateProfession,
+            setCandidateProfession: setForeignHireCandidateProfession,
+            workerQuery: foreignHireWorkerQuery,
+            setWorkerQuery: setForeignHireWorkerQuery,
+            workerSearchBusy: foreignHireWorkerSearchBusy,
+            searchWorkers: searchForeignHireWorkers,
+            workerResults: foreignHireWorkerResults,
+            addPlatform: addPlatformForeignHireCandidate,
+          }} />
         )}
 
         {activeTab === "workers" && (
