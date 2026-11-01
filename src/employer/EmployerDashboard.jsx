@@ -24,6 +24,7 @@ import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
 import { EmployerTeam } from "../p24/employer/EmployerTeam.jsx";
 import { EmployerJob } from "../p24/employer/EmployerJob.jsx";
 import { EmployerCalendar } from "../p24/employer/EmployerCalendar.jsx";
+import { TemplateBar, TemplatesModal, useCompanySites, useCompanyTemplates } from "../p24/employer/sitesTemplates.jsx";
 import { EmployerCompany } from "../p24/employer/EmployerCompany.jsx";
 import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
@@ -3699,6 +3700,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   }
 
   async function openNewJobForm(options = {}) {
+    setJobSiteId("");
+    setTemplateNotice("");
     if (
       planSummary &&
       !planSummary.unlimited_jobs &&
@@ -4482,6 +4485,62 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   const employerMessengerUnread = visibleConversations(employerConversations, chatHidden).filter((conv) => conv.unread).length;
 
   const employerLongTermUnread = Object.values(longTermUnreadByOffer).reduce((sum, value) => sum + Number(value || 0), 0);
+  // Objektai ir šablonai (Business / Business Pro) naujo darbo formoje.
+  const bizPlan = ["business", "business_pro"].includes(planSummary?.plan_key);
+  const companySites = useCompanySites(company?.id, bizPlan && showJobForm);
+  const companyTemplates = useCompanyTemplates(company?.id, bizPlan && showJobForm);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [jobSiteId, setJobSiteId] = useState("");
+  const [templateNotice, setTemplateNotice] = useState("");
+  function applyJobSite(siteId) {
+    setJobSiteId(siteId);
+    const site = companySites.rows.find((row) => row.id === siteId);
+    if (!site) return;
+    const hasCoords = Number.isFinite(Number(site.latitude)) && Number.isFinite(Number(site.longitude));
+    setForm((current) => ({ ...current, city: site.city || current.city, address: site.address, transportMode: site.transport_mode === "employer_pickup" ? "employer_pickup" : "self_arrival" }));
+    setSelectedJobAddress(hasCoords ? { label: site.address, latitude: Number(site.latitude), longitude: Number(site.longitude) } : null);
+    setJobFormErrors((current) => ({ ...current, address: "", city: "" }));
+  }
+  function applyJobTemplate(template) {
+    const d = template?.data || {};
+    setForm((current) => ({
+      ...current,
+      title: d.title ?? current.title,
+      workersNeeded: d.workersNeeded ?? current.workersNeeded,
+      startTime: d.startTime ?? current.startTime,
+      endTime: d.endTime ?? current.endTime,
+      breakStartTime: d.breakStartTime ?? "",
+      breakEndTime: d.breakEndTime ?? "",
+      payUnit: d.payUnit ?? current.payUnit,
+      payAmount: d.payAmount ?? current.payAmount,
+      description: d.description ?? current.description,
+      ...(d.address ? { city: d.city || current.city, address: d.address } : {}),
+      transportMode: d.transportMode ?? current.transportMode,
+    }));
+    if (d.address && Number.isFinite(Number(d.latitude)) && Number.isFinite(Number(d.longitude))) {
+      setSelectedJobAddress({ label: d.address, latitude: Number(d.latitude), longitude: Number(d.longitude) });
+    }
+    setJobSiteId(d.siteId || "");
+    setJobFormErrors({});
+  }
+  async function saveJobTemplate() {
+    setTemplateNotice("");
+    const title = String(form.title || "").trim();
+    if (!title) { setTemplateNotice("Pirma įrašykite darbo pavadinimą."); return; }
+    const addressOk = selectedJobAddress?.label === String(form.address || "").trim();
+    const data = {
+      title, workersNeeded: form.workersNeeded, startTime: form.startTime, endTime: form.endTime,
+      breakStartTime: form.breakStartTime || "", breakEndTime: form.breakEndTime || "",
+      payUnit: form.payUnit, payAmount: form.payAmount, description: form.description, transportMode: form.transportMode,
+      city: form.city, address: form.address, siteId: jobSiteId || "",
+      latitude: addressOk ? selectedJobAddress.latitude : null, longitude: addressOk ? selectedJobAddress.longitude : null,
+    };
+    const { error: templateError } = await supabase.rpc("save_company_job_template", { p_company_id: company?.id, p_name: title, p_data: data });
+    if (templateError) { setTemplateNotice(templateError.message || "Nepavyko išsaugoti šablono."); return; }
+    setTemplateNotice(`Šablonas „${title}“ išsaugotas.`);
+    companyTemplates.reload();
+  }
+
   const employerShellView = calendarVisible ? "calendar" : employerView === "job" ? (["completed", "cancelled"].includes(currentJob?.status) ? "ended" : "active") : employerView;
 
   const currentCompanyAvatarUrl = companyAvatarMarkedForRemoval
@@ -4865,6 +4924,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               email={user.email}
               roleLabel={companyTeamRoleLabel(companyMemberRole)}
               planName={planSummary?.plan_name || "Basic"}
+              companyId={company?.id}
+              sitesLocked={!["business", "business_pro"].includes(planSummary?.plan_key)}
               seats={planSummary?.can_team_management ? `${Math.max(1, activeTeamMembers.length)}/5` : "1/1"}
               onPlans={companyIsOwner ? () => goEmployerView("plans") : null}
               onTeam={["owner", "manager"].includes(companyMemberRole) ? () => goEmployerView("team") : null}
@@ -5138,6 +5199,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               <div className={`limbox${used / limit >= 0.8 ? " warn" : ""}`}><div className="limtx"><span>Šį mėnesį panaudota <b>{used} iš {limit}</b> darbo pasiūlymų</span><div className="limbar"><i style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} /></div></div>
                 {used / limit >= 0.8 ? <><span className="limup">{used >= limit ? "Limitas pasiektas." : `Liko ${limit - used}.`} Su Business Pro – neribotai.</span><button className="btn sm primary" type="button" onClick={() => goEmployerView("plans")}>Pereiti į Pro</button></> : null}</div>
             ) : null}
+            {!editingJobId ? <TemplateBar templates={companyTemplates.rows} locked={!bizPlan} onUse={applyJobTemplate} onManage={() => setTemplatesOpen(true)} onPlans={() => goEmployerView("plans")} /> : null}
+            {templatesOpen ? <TemplatesModal templates={companyTemplates.rows} onUse={applyJobTemplate} onClose={() => setTemplatesOpen(false)} onChanged={companyTemplates.reload} /> : null}
             <form className="jd-grid adnew newjob" noValidate onSubmit={(e) => { e.preventDefault(); if (!saving) saveJobAndFind(); }}>
               <div className="jd-main">
                 <section className="card afsec"><header className="afh"><span className="afn">1</span><h2>Darbas</h2></header><div className="form">
@@ -5151,6 +5214,12 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
                 </div></section>
 
                 <section className="card afsec"><header className="afh"><span className="afn">2</span><h2>Vieta ir laikas</h2></header><div className="form">
+                  {bizPlan ? (
+                    <label className="field wide">Objektas<select value={jobSiteId} disabled={editingConfirmedCount > 0} onChange={(e) => (e.target.value ? applyJobSite(e.target.value) : setJobSiteId(""))}>
+                      <option value="">Naujas adresas</option>{companySites.rows.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+                  ) : (
+                    <div className="field wide"><span>Objektas <span className="protag">Business</span></span><button className="btn lockd" type="button" onClick={() => goEmployerView("plans")}><Svg name="lock" size={13} width={2.2} />Išsaugoti objektai – Business plane</button></div>
+                  )}
                   <label className="field">Miestas *<CityAutocomplete className="ed-input" value={form.city} disabled={editingCoreTermsLocked} onChange={(value) => updateField("city", value)} placeholder="Pradėkite rašyti miestą" />{errText("city")}</label>
                   <label className="field">Atvykti adresu *
                     <AddressAutocomplete inputRef={addressInputRef} value={form.address} city={form.city} disabled={editingConfirmedCount > 0} invalid={Boolean(jobFormErrors.address)} selectedAddress={selectedJobAddress}
@@ -5210,6 +5279,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
                   ) : null}
                   {jobFormErrors.scopeAcknowledgement ? <p className="small" style={{ color: "var(--red)", fontWeight: 600, margin: 0 }} role="alert">{jobFormErrors.scopeAcknowledgement}</p> : null}
                   <button className="btn primary jd-wide" type="submit" disabled={saving || (limited && used >= limit)}>{saving ? "Saugoma..." : editingJobId ? "Išsaugoti pakeitimus" : "Sukurti darbo pasiūlymą"}</button>
+                  {bizPlan && !editingJobId ? <button className="btn jd-wide" type="button" disabled={saving} onClick={saveJobTemplate}><Svg name="file" size={15} />Išsaugoti kaip šabloną</button> : null}
+                  {templateNotice ? <p className="small muted" role="status" style={{ margin: 0 }}>{templateNotice}</p> : null}
                   <button className="btn jd-wide" type="button" disabled={saving} onClick={() => { closeForm(); if (!editingJobId) goEmployerView("overview"); }}>Atšaukti</button>
                 </section>
               </aside>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Svg } from "../Shell.jsx";
 import { Pill } from "../ui.jsx";
 import { PasswordModal } from "../account/PasswordModal.jsx";
+import { SitesSection } from "./sitesTemplates.jsx";
 
 /* Prototipo eCompany. Logika (saugojimas, logotipas, telefono patvirtinimas) – EmployerDashboard. */
 
@@ -16,7 +17,7 @@ export function EmployerCompany({
   canEdit, email, roleLabel, planName, seats, onPlans, onTeam,
   me, setMe, phone, savedPhone, setPhone, normalizePhone, PhoneHint, PhoneFields,
   form, updateField, cityInput, avatarUrl, initials, onAvatarFile, onAvatarRemove,
-  reviews, dirty, saving, onSave, onUndo, onBugReport, bugNotice, onDelete, deleteText,
+  reviews, dirty, saving, onSave, onUndo, onBugReport, bugNotice, onDelete, deleteText, companyId, sitesLocked,
 }) {
   const [pwOpen, setPwOpen] = useState(false);
   const [phoneEdit, setPhoneEdit] = useState(false);
@@ -82,6 +83,8 @@ export function EmployerCompany({
           <label className="field wide" htmlFor="c-about">Trumpai apie įmonę<textarea id="c-about" maxLength={1200} value={form.description} onChange={(e) => updateField("description", e.target.value)} placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..." /></label>
         </fieldset>
       </section>
+
+      {companyId ? <SitesSection companyId={companyId} locked={sitesLocked} canEdit={canEdit} onPlans={onPlans} /> : null}
 
       <section className="card"><h2>Atsiliepimai</h2>
         {reviews.length ? <div className="list">{reviews.map((r) => (
