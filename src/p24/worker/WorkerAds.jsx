@@ -203,7 +203,6 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
 
   return (
     <>
-      <div className="row" style={{ marginBottom: 4 }}><button type="button" className="btn sm ghost" onClick={onBack}><Svg name="back" size={15} width={2.4} />Visi skelbimai</button></div>
       <header className="jd-hero">
         <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={AD_ST[st]?.[1]}>{AD_ST[st]?.[0]}</Pill> : null}</div>
         <div className="jd-meta">

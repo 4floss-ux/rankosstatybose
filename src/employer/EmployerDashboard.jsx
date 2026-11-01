@@ -797,7 +797,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     goEmployerView("plans");
   }, [showPlans]);
 
+  // Paspaudus „Darbo skelbimai“ meniu – grįžtama į skelbimų sąrašą.
+  const [employerAdsNavKey, setEmployerAdsNavKey] = useState(0);
   function goEmployerView(view) {
+    if (view === "eads") setEmployerAdsNavKey((value) => value + 1);
     const actions = {
       longterm: () => openLongTermEmployment("hire"),
       teamchat: openCompanyTeamChat,
@@ -5005,6 +5008,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         {employerCanAds && (
           <div data-wv="eads" style={{ display: "contents" }}>
             <EmployerAds
+              key={employerAdsNavKey}
               data={employerAds}
               company={company}
               isPro={employerAdsIsPro}

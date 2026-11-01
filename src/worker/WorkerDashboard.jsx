@@ -2791,7 +2791,10 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     openWorkdayDetails(nextConfirmedWorkday);
   }
 
+  // Paspaudus „Darbo skelbimai“ meniu – grįžtama į skelbimų sąrašą.
+  const [workerAdsNavKey, setWorkerAdsNavKey] = useState(0);
   function goWorkerView(view, scrollTargetId = "") {
+    if (view === "ads") setWorkerAdsNavKey((value) => value + 1);
     if (view === "schedule" || view === "profile") {
       openWorkerProfileEditor(view === "schedule" ? "availability" : "profile");
       return;
@@ -3820,6 +3823,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <div data-wv="ads" style={{ display: "contents" }}>
           <WorkerAds
+            key={workerAdsNavKey}
             data={workerAds}
             me={{
               name: form.displayName || "Darbuotojas",

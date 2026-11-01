@@ -149,7 +149,6 @@ function AdForm({ company, isPro, ad, onCancel, onSaved }) {
             <label className="field wide">Pareigos *<input value={f.title} maxLength={120} onChange={set("title")} placeholder="Pvz. Statybų darbininkas" /></label>
             <label className="field">Miestas *<select value={f.city} onChange={set("city")}>{cities.map((c) => <option key={c}>{c}</option>)}</select></label>
             <label className="field">Sutartis<select value={f.contract} onChange={set("contract")}>{contracts.map((c) => <option key={c}>{c}</option>)}</select></label>
-            <label className="field wide">Darbo vieta (adresas)<input value={f.address} maxLength={200} onChange={set("address")} placeholder="Pvz. Ozo g. 25, Vilnius" /></label>
           </div>)}
           {sec(2, "Atlyginimas", <div className="form">
             <label className="field">Nuo *<span className="inpx"><input inputMode="numeric" value={f.s1} onChange={set("s1")} placeholder="1600" /><em>€ / mėn.</em></span></label>
@@ -309,7 +308,6 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
 
   if (!ad) return (
     <>
-      <div className="row" style={{ marginBottom: 4 }}><button type="button" className="btn sm ghost" onClick={onBack}><Svg name="back" size={15} width={2.4} />Visi skelbimai</button></div>
       <section className="card">{err ? <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p> : <p className="muted small" style={{ margin: 0 }}>Įkeliama...</p>}</section>
     </>
   );
@@ -351,7 +349,6 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
   const savers = ad.savers || [];
   return (
     <>
-      <div className="row" style={{ marginBottom: 4 }}><button type="button" className="btn sm ghost" onClick={onBack}><Svg name="back" size={15} width={2.4} />Visi skelbimai</button></div>
       <header className="jd-hero"><div className="jd-titlerow"><h1>{up(ad.title)}</h1>{statusPill(ad)}</div>
         <div className="jd-meta"><span><Svg name="pin" size={16} />{ad.city}</span><span><Svg name="euro" size={16} />{salTxt(ad)} {salKind(ad)} / mėn.</span>{ad.contract_type ? <span><Svg name="file" size={16} />{ad.contract_type}</span> : null}{ad.schedule ? <span><Svg name="clock" size={16} />{ad.schedule}</span> : null}</div></header>
       {err && <p className="ferr" role="alert">{err}</p>}
