@@ -3155,7 +3155,7 @@
 @media (max-width:640px){.p24 .abr-c{padding-left:0}}
 
 .p24 .p24-utility-desktop{display:flex;justify-content:flex-end;gap:8px}
-.p24 .p24-utility-desktop:empty{display:none}
+.p24 .p24-utility-desktop:empty,.p24 .p24-utility-desktop:not(:has(> :not(style,script))){display:none}
 
 /* ---- Senų (dar neperrašytų) blokų suderinimas su nauju dizainu ---- */
 .p24 .wd-profile-editor,.p24 .wd-card,.p24 .ed-card,.p24 .admin-card,.p24 .ed-company-editor{background:var(--white)!important;border:1px solid var(--line)!important;border-radius:7px!important;box-shadow:0 1px 2px rgba(34,38,49,.04)!important;padding:24px!important}

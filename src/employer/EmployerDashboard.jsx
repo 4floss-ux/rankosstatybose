@@ -9,9 +9,9 @@ import { ConversationModal, DisputeConversationModal, GroupConversationModal } f
 import { LongTermConversationModal, defaultLongTermSchedule, longTermContractLabel, longTermEmployerUpdateLabel, longTermEmployerUpdateTone, longTermWeekdayLabel, openEmploymentContract, safeStorageFileName } from "../longterm/longTerm.jsx";
 import { CompanyTeamChatModal } from "../chat/CompanyTeamChatModal.jsx";
 import { WorkerProfileModal } from "../worker/WorkerProfileModal.jsx";
-import { AccountBugReportZone, AccountDeleteZone, BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings, loadAllCompanyJobs } from "../dashboard/shared.jsx";
+import { BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings, loadAllCompanyJobs } from "../dashboard/shared.jsx";
 import { EMPLOYER_PLANS, companyTeamInviteLink, companyTeamRoleLabel, edgeFunctionErrorMessage, employerPlanAnnualMonthlyEquivalent, employerPlanAnnualPrice, employerPlanAnnualSavings, employerPlanName, employerReliabilityPenaltyMeta, employerSubscriptionStatusLabel, employerTomorrowISO, formatPlanPrice, formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, isComplimentaryBusinessTrial, reliabilityScoreColor, shortWorkerName, workerRecentActivityLabel } from "./plans.js";
-import { MonthlyAwardMiniList, MonthlyAwardsPanel, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
+import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
@@ -23,6 +23,7 @@ import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/E
 import { EmployerFavorites, EmployerUrgent } from "../p24/employer/EmployerPeople.jsx";
 import { EmployerStats } from "../p24/employer/EmployerStats.jsx";
 import { EmployerTeam } from "../p24/employer/EmployerTeam.jsx";
+import { EmployerCompany } from "../p24/employer/EmployerCompany.jsx";
 import { EmployerPlans } from "../p24/employer/EmployerPlans.jsx";
 import { shrinkImage } from "../lib/imageUpload.js";
 
@@ -214,6 +215,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     description: "",
     avatarPath: "",
   });
+  // Prisijungusio nario duomenys (prototipo „Mano duomenys“).
+  const [companyMe, setCompanyMe] = useState({ firstName: "", lastName: "" });
+  const [companySavedMe, setCompanySavedMe] = useState({ firstName: "", lastName: "" });
+  const [companySavedPhone, setCompanySavedPhone] = useState("");
   const companyPhoneVerification = usePhoneVerification({
     active: true, purpose: "change", phone: companyForm.phone, email: user.email, userId: user.id,
   });
@@ -1813,6 +1818,22 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
               ...current,
               phone: data?.phone || "",
             }));
+            setCompanySavedPhone(data?.phone || "");
+          }),
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, display_name")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) throw error;
+            const parts = String(data?.display_name || "").trim().split(/\s+/).filter(Boolean);
+            const me = {
+              firstName: data?.first_name || parts[0] || "",
+              lastName: data?.last_name || (data?.first_name ? "" : parts.slice(1).join(" ")),
+            };
+            setCompanyMe(me);
+            setCompanySavedMe(me);
           }),
         supabase
           .from("skills")
@@ -1935,7 +1956,39 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
   }
 
+  const companyIsOwner = companyMemberRole === "owner";
+  const companyDirty = Boolean(company) && (
+    companyMe.firstName !== companySavedMe.firstName ||
+    companyMe.lastName !== companySavedMe.lastName ||
+    (companyForm.phone || "") !== (companySavedPhone || "") ||
+    (companyIsOwner && (
+      companyForm.name !== (company?.name || "") ||
+      companyForm.city !== (company?.city || "") ||
+      companyForm.description !== (company?.description || "") ||
+      Boolean(companyAvatarFile) || companyAvatarMarkedForRemoval
+    ))
+  );
+
+  function undoCompanyChanges() {
+    setCompanyMe(companySavedMe);
+    if (companyAvatarPreview?.startsWith("blob:")) URL.revokeObjectURL(companyAvatarPreview);
+    setCompanyAvatarFile(null);
+    setCompanyAvatarPreview("");
+    setCompanyAvatarMarkedForRemoval(false);
+    setCompanyForm({
+      name: company?.name || "",
+      companyCode: company?.company_code || "",
+      city: company?.city || "",
+      phone: companySavedPhone,
+      description: company?.description || "",
+      avatarPath: company?.avatar_path || "",
+    });
+    setError("");
+  }
+
   async function saveCompanyInformation() {
+    const firstName = companyMe.firstName.trim();
+    const lastName = companyMe.lastName.trim();
     const name = companyForm.name.trim();
     const cityInput = companyForm.city.trim();
     const phone = companyForm.phone.trim();
@@ -1944,17 +1997,17 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
     if (!company?.id) return;
 
-    if (companyMemberRole !== "owner") {
-      setError("Įmonės informaciją gali redaguoti tik įmonės savininkas.");
+    if (firstName.length < 2 || lastName.length < 2) {
+      setError("Įveskite savo vardą ir pavardę.");
       return;
     }
 
-    if (name.length < 2) {
+    if (companyIsOwner && name.length < 2) {
       setError("Įveskite įmonės pavadinimą.");
       return;
     }
 
-    if (cityInput.length < 2) {
+    if (companyIsOwner && cityInput.length < 2) {
       setError("Pasirinkite įmonės miestą.");
       return;
     }
@@ -1968,97 +2021,113 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setError("");
     setNotice("");
 
+    let uploadedPath = "";
     try {
-      const city = await canonicalCityName(cityInput);
-      if (!city) {
+      const city = companyIsOwner ? await canonicalCityName(cityInput) : "";
+      if (companyIsOwner && !city) {
         throw new Error("Pasirinkite miestą iš pasiūlymų sąrašo.");
       }
 
-      await companyPhoneVerification.saveChange();
-
-      let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
-        ? ""
-        : companyForm.avatarPath || "";
-
-      if (companyAvatarFile) {
-        const extension =
-          companyAvatarFile.type === "image/png"
-            ? "png"
-            : companyAvatarFile.type === "image/webp"
-            ? "webp"
-            : "jpg";
-        const uploadPath = `${user.id}/company-${company.id}-${Date.now()}.${extension}`;
-
-        const uploadResult = await supabase.storage
-          .from("worker-avatars")
-          .upload(uploadPath, companyAvatarFile, {
-            cacheControl: "3600",
-            contentType: companyAvatarFile.type,
-            upsert: false,
-          });
-
-        if (uploadResult.error) throw uploadResult.error;
-        nextCompanyAvatarPath = uploadPath;
+      if ((normalizedPhone || "") !== (companySavedPhone || "")) {
+        await companyPhoneVerification.saveChange();
       }
 
-      const companyResult = await supabase
-        .from("companies")
-        .update({
-          name,
-          city,
-          description: description || null,
-          avatar_path: nextCompanyAvatarPath || null,
-        })
-        .eq("id", company.id)
-        .select(
-          "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
-        )
-        .single();
-
-      if (companyResult.error) throw companyResult.error;
-
-      if (
-        companyForm.avatarPath &&
-        companyForm.avatarPath !== nextCompanyAvatarPath &&
-        (companyAvatarFile || companyAvatarMarkedForRemoval)
-      ) {
-        await supabase.storage
-          .from("worker-avatars")
-          .remove([companyForm.avatarPath]);
+      if (firstName !== companySavedMe.firstName || lastName !== companySavedMe.lastName) {
+        const profileResult = await supabase
+          .from("profiles")
+          .update({ first_name: firstName, last_name: lastName, display_name: `${firstName} ${lastName}` })
+          .eq("id", user.id);
+        if (profileResult.error) throw profileResult.error;
+        setCompanySavedMe({ firstName, lastName });
+        setCompanyMe({ firstName, lastName });
       }
 
-      const privateResult = await supabase
-        .from("user_private")
-        .upsert(
-          {
-            user_id: user.id,
-            phone: normalizedPhone || null,
-          },
-          { onConflict: "user_id" }
-        );
+      if ((normalizedPhone || "") !== (companySavedPhone || "")) {
+        const privateResult = await supabase
+          .from("user_private")
+          .upsert({ user_id: user.id, phone: normalizedPhone || null }, { onConflict: "user_id" });
+        if (privateResult.error) throw privateResult.error;
+        setCompanySavedPhone(normalizedPhone);
+      }
 
-      if (privateResult.error) throw privateResult.error;
+      let savedCompany = company;
+      if (companyIsOwner) {
+        let nextCompanyAvatarPath = companyAvatarMarkedForRemoval
+          ? ""
+          : companyForm.avatarPath || "";
 
-      setCompany(companyResult.data);
+        if (companyAvatarFile) {
+          const extension =
+            companyAvatarFile.type === "image/png"
+              ? "png"
+              : companyAvatarFile.type === "image/webp"
+              ? "webp"
+              : "jpg";
+          const uploadPath = `${user.id}/company-${company.id}-${Date.now()}.${extension}`;
+
+          const uploadResult = await supabase.storage
+            .from("worker-avatars")
+            .upload(uploadPath, companyAvatarFile, {
+              cacheControl: "3600",
+              contentType: companyAvatarFile.type,
+              upsert: false,
+            });
+
+          if (uploadResult.error) throw uploadResult.error;
+          uploadedPath = uploadPath;
+          nextCompanyAvatarPath = uploadPath;
+        }
+
+        const companyResult = await supabase
+          .from("companies")
+          .update({
+            name,
+            city,
+            description: description || null,
+            avatar_path: nextCompanyAvatarPath || null,
+          })
+          .eq("id", company.id)
+          .select(
+            "id, name, company_code, city, description, avatar_path, is_verified, reliability_rate, cancelled_confirmed_count, false_attendance_claim_count"
+          )
+          .single();
+
+        if (companyResult.error) throw companyResult.error;
+        uploadedPath = "";
+
+        if (
+          companyForm.avatarPath &&
+          companyForm.avatarPath !== nextCompanyAvatarPath &&
+          (companyAvatarFile || companyAvatarMarkedForRemoval)
+        ) {
+          await supabase.storage
+            .from("worker-avatars")
+            .remove([companyForm.avatarPath]);
+        }
+
+        savedCompany = { ...company, ...companyResult.data };
+        setCompany(savedCompany);
+        if (companyAvatarPreview?.startsWith("blob:")) {
+          URL.revokeObjectURL(companyAvatarPreview);
+        }
+        setCompanyAvatarFile(null);
+        setCompanyAvatarPreview("");
+        setCompanyAvatarMarkedForRemoval(false);
+      }
+
       setCompanyForm({
-        name: companyResult.data?.name || "",
-        companyCode: companyResult.data?.company_code || "",
-        city: companyResult.data?.city || "",
+        name: savedCompany?.name || "",
+        companyCode: savedCompany?.company_code || "",
+        city: savedCompany?.city || "",
         phone: normalizedPhone,
-        description: companyResult.data?.description || "",
-        avatarPath: companyResult.data?.avatar_path || "",
+        description: savedCompany?.description || "",
+        avatarPath: savedCompany?.avatar_path || "",
       });
-      if (companyAvatarPreview?.startsWith("blob:")) {
-        URL.revokeObjectURL(companyAvatarPreview);
-      }
-      setCompanyAvatarFile(null);
-      setCompanyAvatarPreview("");
-      setCompanyAvatarMarkedForRemoval(false);
-
-      setShowCompanyEditor(false);
-      setNotice("Įmonės informacija atnaujinta.");
+      setNotice("Profilis išsaugotas.");
     } catch (err) {
-      setError(err?.message || "Nepavyko atnaujinti įmonės informacijos.");
+      // Įkeltas, bet neprisegtas logotipas nepaliekamas saugykloje.
+      if (uploadedPath) await supabase.storage.from("worker-avatars").remove([uploadedPath]);
+      setError(err?.message || "Nepavyko išsaugoti profilio.");
     } finally {
       setCompanySaving(false);
     }
@@ -4824,315 +4893,43 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
         {showCompanyEditor && (
-          <section
-            ref={companyEditorRef}
-            id="employer-profile-editor"
-            data-wv="company"
-            className="ed-company-editor"
-            style={{ scrollMarginTop: 88 }}
-          >
-            <div className="ed-company-editor-head">
-              <div>
-                <div className="eyebrow">ĮMONĖS PROFILIS</div>
-                <h2>{company?.name || "Įmonės profilis"}</h2>
-                <p>
-                  Čia matote įmonės paskyros informaciją, savo rolę, planą ir
-                  pagrindinius komandos nustatymus.
-                  {companyMemberRole === "owner"
-                    ? " Įmonės savininkas taip pat gali redaguoti informaciją."
-                    : " Įmonės informaciją gali redaguoti tik savininkas."}
-                </p>
-              </div>
-
-            </div>
-
-            <div id="s24-employer-push-settings" />
-            <div className="ed-company-avatar-editor">
-              <div className="ed-company-avatar-preview">
-                {currentCompanyAvatarUrl ? (
-                  <img
-                    src={currentCompanyAvatarUrl}
-                    alt={companyForm.name || "Įmonės logotipas"}
-                  />
-                ) : (
-                  String(companyForm.name || "Į")
-                    .trim()
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0]?.toUpperCase())
-                    .join("") || "Į"
-                )}
-              </div>
-              <div className="ed-company-avatar-copy">
-                <b>Įmonės logotipas</b>
-                <span>JPG, PNG arba WEBP, iki 5 MB. Keisti ir ištrinti gali įmonės savininkas.</span>
-                {companyMemberRole === "owner" && (
-                  <div className="ed-company-avatar-actions">
-                    <label className="ed-company-avatar-upload">
-                      {currentCompanyAvatarUrl ? "Keisti logotipą" : "Įkelti logotipą"}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) =>
-                          chooseCompanyAvatarFile(e.target.files?.[0] || null)
-                        }
-                      />
-                    </label>
-                    <button
-                      className="ed-company-avatar-remove"
-                      type="button"
-                      disabled={!currentCompanyAvatarUrl}
-                      onClick={markCompanyAvatarForRemoval}
-                      title={
-                        currentCompanyAvatarUrl
-                          ? "Pašalinti dabartinį įmonės logotipą"
-                          : "Įmonės logotipas neįkeltas"
-                      }
-                    >
-                      Ištrinti logotipą
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <MonthlyAwardsPanel
-              awards={companyMonthlyAwards}
-              recipientType="company"
-              showEmpty={true}
-            />
-
-            <div className="ed-profile-summary">
-              <div className="ed-profile-summary-card">
-                <span>Jūs prisijungę kaip</span>
-                <b>
-                  {currentTeamMember?.display_name || user.email || "Vartotojas"}
-                </b>
-                <small>{companyTeamRoleLabel(companyMemberRole)}</small>
-              </div>
-
-              <div className="ed-profile-summary-card">
-                <span>Dabartinis planas</span>
-                <b>{planSummary?.plan_name || "Basic"}</b>
-                <button
-                  className="ed-link-btn"
-                  type="button"
-                  onClick={() => setShowPlans(true)}
-                >
-                  Peržiūrėti planus
-                </button>
-              </div>
-
-              <div className="ed-profile-summary-card">
-                <span>Komandos vietos</span>
-                <b>
-                  {planSummary?.can_team_management
-                    ? `${Math.max(1, activeTeamMembers.length)}/5`
-                    : "1/1"}
-                </b>
-                <button
-                  className="ed-link-btn"
-                  type="button"
-                  onClick={openCompanyTeam}
-                >
-                  {planSummary?.can_team_management
-                    ? "Valdyti komandą"
-                    : "Komanda · Business Pro"}
-                </button>
-              </div>
-
-              {companyMemberRole === "owner" && (
-                <div className="ed-profile-summary-card">
-                  <span>Įdarbinti darbuotojai</span>
-                  <b>{employerStats.activeLongTermEmployees}</b>
-                  <button
-                    className="ed-link-btn"
-                    type="button"
-                    onClick={() => openLongTermEmployment("employees")}
-                  >
-                    Valdyti darbuotojus
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="ed-company-editor-grid">
-              <label className="ed-label">
-                Darbdavio pavadinimas / vardas *
-                <input
-                  className="ed-input"
-                  value={companyForm.name}
-                  maxLength={160}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("name", e.target.value)
-                  }
-                />
-              </label>
-
-              <label className="ed-label">
-                Įmonės kodas (jei taikoma)
-                <input
-                  className="ed-input ed-company-readonly"
-                  value={companyForm.companyCode || "Nenurodytas"}
-                  readOnly
-                />
-              </label>
-
-              <label className="ed-label">
-                Miestas *
-                <CityAutocomplete
-                  className="ed-input"
-                  value={companyForm.city}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(value) =>
-                    updateCompanyField("city", value)
-                  }
-                  placeholder="Pradėkite rašyti miestą"
-                />
-              </label>
-
-              <label className="ed-label">
-                Kontaktinis telefono numeris
-                <input
-                  className="ed-input"
-                  type="tel"
-                  value={companyForm.phone}
-                  maxLength={40}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("phone", e.target.value)
-                  }
-                  placeholder="+370..."
-                />
-                  <PhoneAvailabilityHint verification={companyPhoneVerification} />
-              </label>
-
-              {companyMemberRole === "owner" && <PhoneVerificationFields verification={companyPhoneVerification} />}
-
-              <label className="ed-label ed-company-editor-wide">
-                Trumpai apie įmonę
-                <textarea
-                  className="ed-textarea"
-                  value={companyForm.description}
-                  maxLength={1200}
-                  disabled={companyMemberRole !== "owner"}
-                  onChange={(e) =>
-                    updateCompanyField("description", e.target.value)
-                  }
-                  placeholder="Pvz. Dirbame Vilniuje ir Vilniaus rajone, vykdome bendrastatybinius darbus..."
-                />
-              </label>
-            </div>
-
-            <div className="ed-company-reviews">
-              <div className="ed-company-reviews-head">
-                <div>
-                  <h3>Atsiliepimai apie įmonę</h3>
-                  <span>
-                    Atsiliepimus gali palikti tik darbuotojai, kurių ginčas
-                    oficialiai išspręstas jų naudai.
-                  </span>
-                </div>
-                <b>{companyWorkerReviews.length}</b>
-              </div>
-
-              {companyWorkerReviews.length ? (
-                <div className="ed-company-review-list">
-                  {companyWorkerReviews.map((review) => (
-                    <div className="ed-company-review" key={review.id}>
-                      <div className="ed-company-review-top">
-                        <div className="ed-review-worker">
-                          <div className="ed-review-worker-avatar">
-                            {review.avatar_path ? (
-                              <img
-                                src={workerAvatarUrl(review.avatar_path)}
-                                alt={review.worker_name || "Darbuotojas"}
-                              />
-                            ) : (
-                              workerInitials(review.worker_name || "Darbuotojas")
-                            )}
-                          </div>
-                          <div>
-                            <b>
-                              {review.worker_name || "Darbuotojas"} · {review.score} / 10
-                            </b>
-                            <div className="ed-company-review-meta">
-                              {formatJobTitle(review.job_title)}
-                              {review.work_date ? ` · ${review.work_date}` : ""}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="ed-review-actions">
-                          <span>
-                            {new Date(review.created_at).toLocaleDateString("lt-LT")}
-                          </span>
-                          {review.worker_id && (
-                            <button
-                              type="button"
-                              className="ed-secondary"
-                              onClick={() => openReviewWorkerProfile(review)}
-                            >
-                              Profilis
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <p>{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="ed-profile-readonly-note">
-                  Darbuotojų atsiliepimų apie įmonę dar nėra.
-                </div>
-              )}
-            </div>
-
-            {companyMemberRole === "owner" ? (
-              <div className="ed-company-editor-actions">
-                <button
-                  className="ed-secondary"
-                  type="button"
-                  disabled={companySaving}
-                  onClick={() => setShowCompanyEditor(false)}
-                >
-                  Uždaryti
-                </button>
-
-                <button
-                  className="ed-primary"
-                  type="button"
-                  disabled={companySaving}
-                  onClick={saveCompanyInformation}
-                >
-                  {companySaving ? "Saugoma..." : "Išsaugoti pakeitimus"}
-                </button>
-              </div>
-            ) : (
-              <div className="ed-profile-readonly-note">
-                Įmonės duomenis gali keisti tik paskyros Savininkas.
-              </div>
-            )}
-
-            <AccountDeleteZone
+          <div ref={companyEditorRef} id="employer-profile-editor" data-wv="company" style={{ display: "contents" }}>
+            <EmployerCompany
+              canEdit={companyIsOwner}
+              email={user.email}
+              roleLabel={companyTeamRoleLabel(companyMemberRole)}
+              planName={planSummary?.plan_name || "Basic"}
+              seats={planSummary?.can_team_management ? `${Math.max(1, activeTeamMembers.length)}/5` : "1/1"}
+              onPlans={companyIsOwner ? () => goEmployerView("plans") : null}
+              onTeam={["owner", "manager"].includes(companyMemberRole) ? () => goEmployerView("team") : null}
+              me={companyMe}
+              setMe={setCompanyMe}
+              phone={companyForm.phone}
+              savedPhone={companySavedPhone}
+              setPhone={(v) => updateCompanyField("phone", v)}
+              normalizePhone={normalizeLithuanianMobilePhone}
+              PhoneHint={<PhoneAvailabilityHint verification={companyPhoneVerification} />}
+              PhoneFields={<PhoneVerificationFields verification={companyPhoneVerification} />}
+              form={companyForm}
+              updateField={updateCompanyField}
+              cityInput={<CityAutocomplete value={companyForm.city} disabled={!companyIsOwner} onChange={(value) => updateCompanyField("city", value)} placeholder="Pradėkite rašyti miestą" />}
+              avatarUrl={currentCompanyAvatarUrl}
+              initials={String(companyForm.name || "Į").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "Į"}
+              onAvatarFile={chooseCompanyAvatarFile}
+              onAvatarRemove={markCompanyAvatarForRemoval}
+              reviews={companyWorkerReviews}
+              dirty={companyDirty}
+              saving={companySaving}
+              onSave={saveCompanyInformation}
+              onUndo={undoCompanyChanges}
+              bugNotice={bugReportNotice}
+              onBugReport={() => { setBugReportNotice(""); setBugReportOpen(true); }}
               onDelete={() => setDeleteAccountOpen(true)}
-              description={
-                companyMemberRole === "owner"
-                  ? "Ištrynus savininko paskyrą bus pašalinta ir jos valdoma įmonės paskyra, jūsų sukurti darbai bei failai. Aktyvi prenumerata bus nutraukta prieš trynimą."
-                  : "Ištrynus paskyrą bus pašalinta jūsų asmeninė prieiga, jūsų sukurti darbai ir įkelti failai. Įmonės savininko paskyra išliks."
-              }
+              deleteText={companyIsOwner
+                ? "Bus pašalinta įmonės paskyra, darbai ir failai. Aktyvi prenumerata bus nutraukta. Atkurti negalima."
+                : "Bus pašalinta jūsų prieiga, jūsų sukurti darbai ir failai. Įmonės paskyra išliks. Atkurti negalima."}
             />
-            <AccountBugReportZone
-              successMessage={bugReportNotice}
-              onOpen={() => {
-                setBugReportNotice("");
-                setBugReportOpen(true);
-              }}
-            />
-          </section>
+          </div>
         )}
 
         {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}

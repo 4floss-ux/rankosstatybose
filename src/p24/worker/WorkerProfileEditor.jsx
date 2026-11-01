@@ -3,6 +3,7 @@ import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { Svg } from "../Shell.jsx";
 import { Pill } from "../ui.jsx";
+import { PasswordModal } from "../account/PasswordModal.jsx";
 import { activeMonthlyAwards, monthlyAwardMeta, monthlyAwardMetricText, monthlyAwardMonthLabel } from "../../awards/monthlyAwards.jsx";
 
 /* Prototipo profilio ekranas (wProfile). Logika lieka WorkerDashboard – čia tik markup. */
@@ -175,39 +176,6 @@ function DocsSection({ userId }) {
   );
 }
 
-/* ---------- Slaptažodis ---------- */
-function PasswordModal({ onClose }) {
-  const [a, setA] = useState(""); const [b, setB] = useState("");
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [ok, setOk] = useState(false);
-  async function save() {
-    setErr("");
-    if (a.length < 8) { setErr("Slaptažodis turi būti bent 8 simbolių."); return; }
-    if (a !== b) { setErr("Slaptažodžiai nesutampa."); return; }
-    setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password: a });
-    setBusy(false);
-    if (error) setErr(error.message || "Nepavyko pakeisti slaptažodžio."); else setOk(true);
-  }
-  return (
-    <Modal eyebrow="Paskyra" title="Keisti slaptažodį" onClose={() => !busy && onClose()}>
-      {ok ? <>
-        <p className="small" style={{ margin: 0 }}>Slaptažodis pakeistas. Kitą kartą junkitės nauju slaptažodžiu.</p>
-        <div className="row" style={{ justifyContent: "flex-end", marginTop: 16 }}><button className="btn primary" type="button" onClick={onClose}>Gerai</button></div>
-      </> : <>
-        <div className="form" style={{ gridTemplateColumns: "1fr" }}>
-          <label className="field">Naujas slaptažodis<input type="password" autoComplete="new-password" value={a} onChange={(e) => setA(e.target.value)} /></label>
-          <label className="field">Pakartokite slaptažodį<input type="password" autoComplete="new-password" value={b} onChange={(e) => setB(e.target.value)} /></label>
-          {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
-        </div>
-        <div className="row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
-          <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
-          <button className="btn primary" type="button" disabled={busy} onClick={save}>{busy ? "Saugoma..." : "Išsaugoti"}</button>
-        </div>
-      </>}
-    </Modal>
-  );
-}
-
 /* ---------- Pagrindinis ekranas ---------- */
 export function WorkerProfileEditor({
   user, form, baseline, updateField, errors, fieldRefs, saving, saved, onSave, onUndo, dirty,
@@ -276,9 +244,6 @@ export function WorkerProfileEditor({
           <Field label="Kiek km galite nuvykti?" error={errors.travelRadius} fieldRef={ref("travelRadius")}>
             <select value={km} onChange={(e) => updateField("travelRadius", Number(e.target.value))}>{kmOpts.map((k) => <option key={k} value={k}>{k} km</option>)}</select>
           </Field>
-          <Field label="Patirtis statybose (metais)">
-            <input type="number" min="0" step="0.5" value={form.yearsExperience} onChange={(e) => updateField("yearsExperience", e.target.value)} />
-          </Field>
           <Field label="Patirtis *" wide error={errors.shortBio} fieldRef={ref("shortBio")}>
             <textarea value={form.shortBio} onChange={(e) => updateField("shortBio", e.target.value)} placeholder="Pvz. 2 metus dirbau statybų pagalbiniu. Jei patirties neturite, įrašykite „Neturiu“." aria-invalid={Boolean(errors.shortBio)} />
           </Field>
@@ -326,7 +291,7 @@ export function WorkerProfileEditor({
         <div className="row"><button className="btn sm ghostw" type="button" disabled={saving} onClick={() => { setPhoneEdit(false); onUndo(); }}>Atšaukti</button><button className="btn sm primary" type="button" disabled={saving} onClick={onSave}><Svg name="check" size={15} width={2.4} /> {saving ? "Saugoma..." : "Išsaugoti"}</button></div>
       </div>
 
-      {pwOpen && <PasswordModal onClose={() => setPwOpen(false)} />}
+      {pwOpen && <PasswordModal email={user?.email} onClose={() => setPwOpen(false)} />}
     </>
   );
 }
