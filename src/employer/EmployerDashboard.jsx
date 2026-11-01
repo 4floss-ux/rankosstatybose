@@ -16,6 +16,7 @@ import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
+import { EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
@@ -5095,7 +5096,23 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {employerCalendarMemory.current && calendarAllowed && <button type="button" className="ed-secondary" style={{justifySelf:"start"}} onClick={() => navigateEmployerCalendar(true)}>← Grįžti į kalendorių</button>}
-        <div className="ed-heading" data-wv="overview">
+        <div data-wv="overview" style={{ display: "contents" }}>
+          <EmployerOverview
+            jobs={activeVisibleJobs}
+            stateOf={employerJobDashboardState}
+            unreadOf={(job) => unreadEmployerGroupChatNotifications(job.id).length}
+            responsibleOf={(job) => (job.responsible_user_id || job.created_by) === user.id ? "Jūsų darbas" : teamMemberName(job.responsible_user_id || job.created_by)}
+            onOpenJob={openExistingJob}
+            onChat={openEmployerGroupConversation}
+            onGo={goEmployerView}
+            unreadMessages={employerNotifications.filter((item) => item.event_type === "message" && !item.read_at).length}
+            actionCount={activeVisibleJobs.filter((job) => ["action", "disputed"].includes(employerJobDashboardState(job)?.key)).length}
+            company={company}
+            stats={employerStats}
+            canStats={Boolean(planSummary?.can_advanced_analytics)}
+          />
+        </div>
+        <div className="ed-heading" data-wv="legacy">
           <div>
             <div className="eyebrow">DARBDAVIO PASKYRA</div>
             <h1>Sukurkite darbuotojų kvietimą</h1>
@@ -5618,7 +5635,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="ed-stats-section" data-wv="overview">
+        <section className="ed-stats-section" data-wv="legacy">
           <div className="ed-stats-head">
             <button
               className={`ed-stats-toggle ${showEmployerStats ? "open" : ""}`}
@@ -6621,7 +6638,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        <section className="ed-card ed-active-jobs-section" data-wv="active overview">
+        <section className="ed-card ed-active-jobs-section" data-wv="active">
           <div
             style={{
               display: "flex",
