@@ -18,6 +18,7 @@ import { Svg } from "../p24/Shell.jsx";
 import { Empty, PageHead } from "../p24/ui.jsx";
 import { AdminPrivateChats } from "../p24/admin/AdminPrivateChats.jsx";
 import { AdminJobAds } from "../p24/admin/AdminJobAds.jsx";
+import { AdminAuditList, AdminAwardsList, AdminBugsList, AdminDisputesList, AdminEmployersList, AdminEmploymentList, AdminFilesList, AdminJobsList, AdminRatingsList, AdminTeamChatsList, AdminWorkersList } from "../p24/admin/AdminLists.jsx";
 
 export function AdminDashboard({
   user,
@@ -2008,6 +2009,34 @@ export function AdminDashboard({
     }
   }
 
+  const [verifyingCompanyId, setVerifyingCompanyId] = useState(null);
+  // Greitas įmonės patvirtinimas iš sąrašo – kiti duomenys siunčiami nepakeisti.
+  async function verifyEmployer(employer) {
+    if (!employer?.company_id || employer.is_verified) return;
+    setVerifyingCompanyId(employer.company_id);
+    setError("");
+    setNotice("");
+    try {
+      const result = await supabase.rpc("admin_update_company", {
+        p_company_id: employer.company_id,
+        p_name: employer.company_name || "",
+        p_company_code: employer.company_code || null,
+        p_vat_code: employer.vat_code || null,
+        p_city: employer.city || "",
+        p_description: employer.description || null,
+        p_is_verified: true,
+        p_owner_active: Boolean(employer.is_active),
+      });
+      if (result.error) throw result.error;
+      setNotice(`${employer.company_name || "Įmonė"} patvirtinta.`);
+      await loadAdminData(true);
+    } catch (err) {
+      setError(err?.message || "Nepavyko patvirtinti įmonės.");
+    } finally {
+      setVerifyingCompanyId(null);
+    }
+  }
+
   async function deleteRating(rating) {
     const confirmed = await askConfirm({
       eyebrow: "ATSILIEPIMO ŠALINIMAS",
@@ -2036,6 +2065,17 @@ export function AdminDashboard({
     } finally {
       setDeletingRatingId(null);
     }
+  }
+
+  function adminAuditActionLabel(action) {
+    return {
+      suspend_user: "Paskyra suspenduota",
+      unsuspend_user: "Suspendavimas panaikintas",
+      suspend_worker_mode: "Darbuotojo režimas suspenduotas",
+      unsuspend_worker_mode: "Darbuotojo režimo suspendavimas panaikintas",
+      delete_user_account: "Paskyra ištrinta",
+      delete_job: "Darbas ištrintas",
+    }[action] || action;
   }
 
   function isCurrentlySuspended(record) {
@@ -2752,182 +2792,15 @@ export function AdminDashboard({
         )}
 
         {activeTab === "disputes" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbo dienos ginčai</h2>
-                <div className="admin-muted">
-                  Įvertinkite abiejų pusių informaciją ir įrodymus. Kol ginčas
-                  neišspręstas, darbuotojo reitingas nekeičiamas.
-                </div>
-              </div>
-              <span className={`admin-pill ${disputes.length ? "red" : "green"}`}>
-                {disputes.length} neišspręsta
-              </span>
-            </div>
-
-            {disputes.length ? (
-              <>
-                {adminPageSlice(disputes).map((dispute) => {
-                const busy = resolvingId === dispute.attendance_id;
-                return (
-                  <div className="admin-dispute" key={dispute.attendance_id}>
-                    <div className="admin-dispute-head">
-                      <div>
-                        <div className="eyebrow">GINČAS</div>
-                        <h2>{formatJobTitle(dispute.job_title)}</h2>
-                        <div className="admin-muted">
-                          {dispute.work_date} · {dispute.start_time?.slice(0, 5)}
-                          {dispute.end_time
-                            ? `–${dispute.end_time.slice(0, 5)}`
-                            : ""}
-                        </div>
-                      </div>
-                      <span className="admin-pill red">
-                        {attendanceOutcomeLabel({
-                          employer_outcome: dispute.employer_outcome,
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="admin-facts">
-                      <div className="admin-fact">
-                        <span>Darbuotojas</span>
-                        <b>{dispute.worker_name}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbdavys</span>
-                        <b>{dispute.company_name}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbuotojo „Atvykau“</span>
-                        <b>{formatAdminDate(dispute.worker_check_in_at)}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbdavio atvykimo patvirtinimas</span>
-                        <b>{formatAdminDate(dispute.employer_check_in_at)}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Faktinis išėjimo laikas</span>
-                        <b>{dispute.actual_end_time?.slice(0, 5) || "—"}</b>
-                      </div>
-                      <div className="admin-fact">
-                        <span>Darbuotojo dienos pareiškimas</span>
-                        <b>{dispute.worker_workday_claim === "worked"
-                          ? "Dirbau šiame darbe"
-                          : dispute.worker_workday_claim === "no_show"
-                          ? "Neatvykau"
-                          : "—"}</b>
-                      </div>
-                    </div>
-
-                    {dispute.employer_note && (
-                      <div className="admin-note">
-                        <b>Darbdavio paaiškinimas:</b> {dispute.employer_note}
-                      </div>
-                    )}
-
-                    {dispute.worker_response_note && (
-                      <div className="admin-note">
-                        <b>Darbuotojo paaiškinimas:</b>{" "}
-                        {dispute.worker_response_note}
-                      </div>
-                    )}
-
-                    {dispute.worker_evidence_path && (
-                      <div className="admin-note">
-                        <b>Darbuotojo įrodymas:</b>{" "}
-                        {dispute.evidenceUrl ? (
-                          <a
-                            className="admin-file-link"
-                            href={dispute.evidenceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {dispute.worker_evidence_name || "Atidaryti failą"}
-                          </a>
-                        ) : (
-                          <span>
-                            {dispute.worker_evidence_name || "Failas įkeltas"} ·
-                            saugios peržiūros nuorodos sukurti nepavyko
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="admin-resolution-field">
-                      <label htmlFor={`admin-resolution-note-${dispute.attendance_id}`}>
-                        Administratoriaus komentaras *
-                      </label>
-                      <textarea
-                        id={`admin-resolution-note-${dispute.attendance_id}`}
-                        value={disputeResolutionNotes[dispute.attendance_id] || ""}
-                        onChange={(event) =>
-                          setDisputeResolutionNotes((current) => ({
-                            ...current,
-                            [dispute.attendance_id]: event.target.value,
-                          }))
-                        }
-                        maxLength={2000}
-                        placeholder="Trumpai paaiškinkite, kodėl ginčas išspręstas pasirinktos pusės naudai..."
-                        disabled={busy}
-                      />
-                      <div className="admin-resolution-help">
-                        Šis komentaras po sprendimo bus rodomas ir darbuotojui, ir darbdaviui darbo informacijoje.
-                      </div>
-                    </div>
-
-                    <div className="admin-actions">
-                      {dispute.employer_note?.trim() &&
-                        dispute.worker_response_note?.trim() && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              setAdminDisputeConversation({
-                                attendanceId: dispute.attendance_id,
-                                title: `${formatJobTitle(dispute.job_title)} · Ginčo aptarimas`,
-                                workerName: dispute.worker_name,
-                                companyName: dispute.company_name,
-                              })
-                            }
-                          >
-                            Žinutės
-                          </button>
-                        )}
-
-                      <button
-                        className="admin-small-btn danger"
-                        disabled={busy}
-                        onClick={() => resolveDispute(dispute, "employer")}
-                      >
-                        Darbdavio naudai
-                      </button>
-                      <button
-                        className="admin-small-btn"
-                        style={{
-                          background: "#1c9b67",
-                          color: "#fff",
-                          borderColor: "#1c9b67",
-                        }}
-                        disabled={busy}
-                        onClick={() => resolveDispute(dispute, "worker")}
-                      >
-                        {busy ? "Sprendžiama..." : "Darbuotojo naudai"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-                {renderAdminPagination(disputes.length)}
-              </>
-            ) : (
-              <div className="admin-empty">
-                Šiuo metu neišspręstų ginčų nėra.
-              </div>
-            )}
-          </section>
+          <AdminDisputesList
+            disputes={disputes}
+            notes={disputeResolutionNotes}
+            setNote={(id, value) => setDisputeResolutionNotes((current) => ({ ...current, [id]: value }))}
+            resolvingId={resolvingId}
+            onResolve={resolveDispute}
+            onMessage={(target) => setAdminMessageTarget({ ...target, role: "worker" })}
+            onDiscuss={(dispute) => setAdminDisputeConversation({ attendanceId: dispute.attendance_id, title: `${formatJobTitle(dispute.job_title)} · Ginčo aptarimas`, workerName: dispute.worker_name, companyName: dispute.company_name })}
+          />
         )}
 
         {activeTab === "foreignHire" && (
@@ -3314,907 +3187,72 @@ export function AdminDashboard({
         )}
 
         {activeTab === "workers" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbuotojai</h2>
-                <div className="admin-muted">
-                  Profiliai, aktyvumas, suspendavimai, patikimumas ir pagrindinių
-                  duomenų redagavimas.
-                </div>
-              </div>
-              <b>{workers.length}</b>
-            </div>
-
-            {workers.length ? (
-              <div className="admin-list">
-                {adminPageSlice(workers).map((worker) => {
-                  const suspended = isCurrentlySuspended(worker);
-                  const workerModeRestricted = isWorkerModeRestricted(worker);
-                  const isSelf = worker.user_id === user?.id;
-                  const actionSuspended = isSelf ? workerModeRestricted : suspended;
-
-                  return (
-                    <div className="admin-row" key={worker.user_id}>
-                      <div className="admin-row-title">
-                        <b>{worker.display_name || worker.email || "Darbuotojas"}</b>
-                        <span>
-                          {worker.email || "—"} ·{" "}
-                          {worker.city || "Miestas nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 750, color: "#405264" }}>
-                          Tel.: {worker.phone || "Nenurodytas"}
-                        </span>
-                        {suspended && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Paskyra suspenduota iki {formatAdminDate(worker.suspended_until)}
-                            {worker.suspension_reason
-                              ? ` · ${worker.suspension_reason}`
-                              : ""}
-                          </span>
-                        )}
-                        {workerModeRestricted && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Darbuotojo režimas apribotas iki {formatAdminDate(worker.restricted_until)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Patikimumas</span>
-                        <b
-                          style={{
-                            color: reliabilityScoreColor(
-                              worker.attendance_rate ?? 100
-                            ),
-                          }}
-                        >
-                          {Math.round(Number(worker.attendance_rate ?? 100))}%
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Įvertinimas</span>
-                        <b>
-                          {worker.rating_average === null
-                            ? "—"
-                            : `${Number(worker.rating_average).toFixed(1)} / 10`}
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Suspendavimų istorija</span>
-                        <b>{Number(worker.suspension_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-row-actions">
-                        <span
-                          className={`admin-pill ${
-                            suspended || workerModeRestricted
-                              ? "red"
-                              : worker.is_active
-                              ? "green"
-                              : "gray"
-                          }`}
-                        >
-                          {suspended
-                            ? "Suspenduotas"
-                            : workerModeRestricted
-                            ? "Darbuotojo režimas suspenduotas"
-                            : worker.is_active
-                            ? "Aktyvus"
-                            : "Išjungtas"}
-                        </span>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() =>
-                              setAdminMessageTarget({
-                                userId: worker.user_id,
-                                name:
-                                  worker.display_name ||
-                                  worker.email ||
-                                  "Darbuotojas",
-                                role: "worker",
-                              })
-                            }
-                          >
-                            Žinutė
-                          </button>
-                        )}
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() => openWorkerEditor(worker)}
-                        >
-                          Redaguoti
-                        </button>
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() =>
-                            openAccountAction(
-                              isSelf
-                                ? actionSuspended
-                                  ? "unsuspendWorkerMode"
-                                  : "suspendWorkerMode"
-                                : actionSuspended
-                                ? "unsuspend"
-                                : "suspend",
-                              worker,
-                              "worker"
-                            )
-                          }
-                        >
-                          {actionSuspended
-                            ? isSelf
-                              ? "Nuimti darbuotojo režimo suspendavimą"
-                              : "Nuimti suspendavimą"
-                            : isSelf
-                            ? "Suspenduoti darbuotojo režimą"
-                            : "Suspenduoti"}
-                        </button>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn danger"
-                            onClick={() =>
-                              openAccountAction(
-                                "deleteAccount",
-                                worker,
-                                "worker"
-                              )
-                            }
-                          >
-                            Ištrinti paskyrą
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {renderAdminPagination(workers.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbuotojų dar nėra.</div>
-            )}
-          </section>
+          <AdminWorkersList
+            workers={workers}
+            selfId={user?.id}
+            isSuspended={isCurrentlySuspended}
+            isRestricted={isWorkerModeRestricted}
+            onMessage={(worker) => setAdminMessageTarget({ userId: worker.user_id, name: worker.display_name || worker.email || "Darbuotojas", role: "worker" })}
+            onEdit={openWorkerEditor}
+            onSuspend={(worker) => {
+              const isSelf = worker.user_id === user?.id;
+              const suspended = isSelf ? isWorkerModeRestricted(worker) : isCurrentlySuspended(worker);
+              openAccountAction(isSelf ? (suspended ? "unsuspendWorkerMode" : "suspendWorkerMode") : suspended ? "unsuspend" : "suspend", worker, "worker");
+            }}
+            onDelete={(worker) => openAccountAction("deleteAccount", worker, "worker")}
+          />
         )}
 
         {activeTab === "employers" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbdaviai ir įmonės</h2>
-                <div className="admin-muted">
-                  Įmonės informacija, suspendavimai, patikimumas, atšaukimai ir
-                  patvirtinimo būsena.
-                </div>
-              </div>
-              <b>{employers.length}</b>
-            </div>
-
-            {employers.length ? (
-              <div className="admin-list">
-                {adminPageSlice(employers).map((employer) => {
-                  const suspended = isCurrentlySuspended(employer);
-                  const isSelf = employer.owner_id === user?.id;
-
-                  return (
-                    <div
-                      className="admin-row"
-                      key={employer.company_id || employer.owner_id}
-                    >
-                      <div className="admin-row-title">
-                        <b>{employer.company_name || "Įmonė"}</b>
-                        <span>
-                          {employer.email || "—"} ·{" "}
-                          {employer.city || "Miestas nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 750, color: "#405264" }}>
-                          Tel.: {employer.phone || "Nenurodytas"}
-                        </span>
-                        <span style={{ fontWeight: 800, color: "#405264" }}>
-                          Planas: {employerPlanName(employer.plan_key)} ·{" "}
-                          {employer.subscription_status || "active"} ·{" "}
-                          {Number(employer.jobs_used_this_month || 0)} darbai šį mėn.
-                        </span>
-                        {suspended && (
-                          <span style={{ color: "#b64d2a", fontWeight: 800 }}>
-                            Suspenduota iki{" "}
-                            {formatAdminDate(employer.suspended_until)}
-                            {employer.suspension_reason
-                              ? ` · ${employer.suspension_reason}`
-                              : ""}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Patikimumas</span>
-                        <b
-                          style={{
-                            color: reliabilityScoreColor(
-                              employer.reliability_rate ?? 100
-                            ),
-                          }}
-                        >
-                          {Number(employer.reliability_rate ?? 100).toFixed(0)} / 100
-                        </b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Darbų</span>
-                        <b>{Number(employer.jobs_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-cell">
-                        <span>Suspendavimų istorija</span>
-                        <b>{Number(employer.suspension_count || 0)}</b>
-                      </div>
-
-                      <div className="admin-row-actions">
-                        <span
-                          className={`admin-pill ${
-                            suspended
-                              ? "red"
-                              : employer.is_verified
-                              ? "green"
-                              : "gray"
-                          }`}
-                        >
-                          {suspended
-                            ? "Suspenduotas"
-                            : employer.is_verified
-                            ? "Patvirtinta"
-                            : "Nepatvirtinta"}
-                        </span>
-
-                        {!isSelf && (
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() =>
-                              setAdminMessageTarget({
-                                userId: employer.owner_id,
-                                name:
-                                  employer.company_name ||
-                                  employer.email ||
-                                  "Darbdavys",
-                                role: "employer",
-                              })
-                            }
-                          >
-                            Žinutė
-                          </button>
-                        )}
-
-                        <button
-                          className="admin-small-btn"
-                          onClick={() => openEmployerEditor(employer)}
-                        >
-                          Redaguoti
-                        </button>
-
-                        {!isSelf && employer.account_role !== "admin" && (
-                          <>
-                            <button
-                              className="admin-small-btn"
-                              onClick={() =>
-                                openAccountAction(
-                                  suspended ? "unsuspend" : "suspend",
-                                  employer,
-                                  "employer"
-                                )
-                              }
-                            >
-                              {suspended
-                                ? "Nuimti suspendavimą"
-                                : "Suspenduoti"}
-                            </button>
-
-                            <button
-                              className="admin-small-btn danger"
-                              onClick={() =>
-                                openAccountAction(
-                                  "deleteAccount",
-                                  employer,
-                                  "employer"
-                                )
-                              }
-                            >
-                              Ištrinti paskyrą
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {renderAdminPagination(employers.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbdavių dar nėra.</div>
-            )}
-          </section>
+          <AdminEmployersList
+            employers={employers}
+            selfId={user?.id}
+            isSuspended={isCurrentlySuspended}
+            busyId={verifyingCompanyId}
+            onVerify={verifyEmployer}
+            onMessage={(employer) => setAdminMessageTarget({ userId: employer.owner_id, name: employer.company_name || employer.email || "Darbdavys", role: "employer" })}
+            onEdit={openEmployerEditor}
+            onSuspend={(employer) => openAccountAction(isCurrentlySuspended(employer) ? "unsuspend" : "suspend", employer, "employer")}
+            onDelete={(employer) => openAccountAction("deleteAccount", employer, "employer")}
+          />
         )}
 
-        {activeTab === "monthlyAwards" && (() => {
-          const awardMonth =
-            monthlyAwardLeaders[0]?.award_month || monthlyAwardPreviousMonthISO();
-          const awardGroups = [
-            {
-              type: "worker",
-              title: "Darbuotojai",
-              categories: ["activity", "best", "reliability"],
-            },
-            {
-              type: "company",
-              title: "Įmonės",
-              categories: ["activity", "best", "reliability"],
-            },
-          ];
-
-          return (
-            <section className="admin-section">
-              <div className="admin-section-head">
-                <div>
-                  <h2>Mėnesio geriausi</h2>
-                  <div className="admin-muted">
-                    Čia rodoma, kas pagal užbaigto mėnesio statistiką gavo kiekvieną mėnesio apdovanojimą.
-                  </div>
-                  <div className="admin-awards-month">
-                    Vertinamas laikotarpis: {monthlyAwardMonthLabel(awardMonth)}
-                  </div>
-                </div>
-                <b>{monthlyAwardLeaders.length}/6 skirti</b>
-              </div>
-
-              {awardGroups.map((group) => (
-                <div className="admin-awards-group" key={group.type}>
-                  <h3>{group.title}</h3>
-                  <div className="admin-awards-grid">
-                    {group.categories.map((awardType) => {
-                      const award = monthlyAwardLeaders.find(
-                        (row) =>
-                          row.recipient_type === group.type &&
-                          row.award_type === awardType
-                      );
-                      const meta = monthlyAwardMeta({
-                        recipient_type: group.type,
-                        award_type: awardType,
-                      });
-
-                      if (!award) {
-                        return (
-                          <div
-                            className="admin-award-card empty"
-                            key={`${group.type}-${awardType}`}
-                          >
-                            <div className="admin-award-copy">
-                              <span>{meta.title}</span>
-                              <b>Apdovanojimas neskirtas</b>
-                              <small>
-                                Šio mėnesio statistika neatitiko minimalios kategorijos sąlygos.
-                              </small>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          className="admin-award-card"
-                          key={award.id || `${group.type}-${awardType}`}
-                        >
-                          <MonthlyAwardBadgeVisual award={award} size={78} />
-                          <div className="admin-award-copy">
-                            <span>{meta.title}</span>
-                            <b>{award.recipient_name || "—"}</b>
-                            <strong>{monthlyAwardMetricText(award)}</strong>
-                            <small>
-                              {award.metric_detail?.rule ||
-                                "Apdovanojimas skirtas pagal mėnesio statistiką."}
-                            </small>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </section>
-          );
-        })()}
+        {activeTab === "monthlyAwards" && (
+          <AdminAwardsList awards={monthlyAwardLeaders} metricText={monthlyAwardMetricText} />
+        )}
 
         {activeTab === "jobs" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Visi darbai</h2>
-                <div className="admin-muted">
-                  Administratorius gali redaguoti darbo duomenis, atidaryti
-                  visą darbo pokalbį, rašyti darbo komandai arba pašalinti darbą.
-                </div>
-              </div>
-              <b>{jobs.length}</b>
-            </div>
-
-            {jobs.length ? (
-              <div className="admin-list">
-                {adminPageSlice(jobs).map((job) => (
-                  <div className="admin-row" key={job.job_id}>
-                    <div className="admin-row-title">
-                      <b>{formatJobTitle(job.title)}</b>
-                      <span>
-                        {job.company_name} · {job.city} · {job.work_date}
-                      </span>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Būsena</span>
-                      <b>{job.status}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Žmonių</span>
-                      <b>
-                        {Number(job.confirmed_workers || 0)} /{" "}
-                        {Number(job.workers_needed || 0)}
-                      </b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Atlygis</span>
-                      <b>{formatNetPay(job.pay_amount, job.pay_unit)}</b>
-                    </div>
-
-                    <div className="admin-row-actions">
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => setAdminConversation(job)}
-                      >
-                        Darbo pokalbis
-                      </button>
-
-                      <button
-                        className="admin-small-btn"
-                        onClick={() => openJobEditor(job)}
-                      >
-                        Redaguoti
-                      </button>
-
-                      <button
-                        className="admin-small-btn danger"
-                        onClick={() => openJobDelete(job)}
-                      >
-                        Ištrinti darbą
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(jobs.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Darbo pasiūlymų dar nėra.</div>
-            )}
-          </section>
+          <AdminJobsList jobs={jobs} formatPay={formatNetPay} onChat={setAdminConversation} onEdit={openJobEditor} onDelete={openJobDelete} />
         )}
 
         {activeTab === "employment" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įdarbinti darbuotojai</h2>
-                <div className="admin-muted">
-                  Ilgalaikio įdarbinimo pasiūlymai ir aktyvūs įdarbinimai. Matote, kuri įmonė ir savininkas pateikė pasiūlymą, kam jis pateiktas ir kokia dabartinė būsena.
-                </div>
-              </div>
-              <span className="admin-pill green">
-                {activeLongTermPlacements.length} aktyvūs
-              </span>
-            </div>
-
-            <div className="admin-employment-stats">
-              <div className="admin-employment-stat">
-                <span>Aktyviai įdarbinti</span>
-                <b>{activeLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Laukiantys pasiūlymai</span>
-                <b>{pendingLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Pasibaigę įdarbinimai</span>
-                <b>{endedLongTermPlacements.length}</b>
-              </div>
-              <div className="admin-employment-stat">
-                <span>Pasiūlymai šį mėnesį</span>
-                <b>{longTermPlacementsThisMonth}</b>
-              </div>
-            </div>
-
-            {longTermPlacements.length ? (
-              <div className="admin-employment-list">
-                {adminPageSlice(longTermPlacements).map((placement) => (
-                  <div className="admin-employment-row" key={placement.placement_id}>
-                    <div className="admin-employment-person">
-                      <b>{placement.position_title || "Darbo pozicija"}</b>
-                      <span>
-                        Įdarbino: {placement.company_name || "Įmonė"} · {placement.hired_by_name || "Savininkas"}
-                      </span>
-                    </div>
-
-                    <div className="admin-employment-person">
-                      <b>{placement.worker_name || "Darbuotojas"}</b>
-                      <span>Įdarbintas darbuotojas</span>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Sutartis</span>
-                      <b>{longTermContractLabel(placement.contract_type)}</b>
-                      <div className="admin-employment-contract">
-                        nuo {placement.proposed_start_date || "—"}
-                        {placement.proposed_end_date ? ` iki ${placement.proposed_end_date}` : ""}
-                      </div>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Būsena</span>
-                      <span className={`admin-pill ${adminEmploymentStatusTone(placement.status)}`}>
-                        {adminEmploymentStatusLabel(placement.status)}
-                      </span>
-                    </div>
-
-                    <div className="admin-employment-cell">
-                      <span>Patvirtinta / sukurta</span>
-                      <b>
-                        {placement.employer_confirmed_at
-                          ? formatAdminDate(placement.employer_confirmed_at)
-                          : formatAdminDate(placement.created_at)}
-                      </b>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(longTermPlacements.length)}
-              </div>
-            ) : (
-              <div className="admin-employment-empty">
-                Ilgalaikių įdarbinimo pasiūlymų dar nėra.
-              </div>
-            )}
-          </section>
+          <AdminEmploymentList placements={longTermPlacements} />
         )}
 
         {activeTab === "teamChats" && <AdminPrivateChats />}
         {activeTab === "teamChats" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įmonių vadovų pokalbiai</h2>
-                <div className="admin-muted">
-                  Vidinis Business Pro įmonių susirašinėjimas. Administratorius
-                  gali peržiūrėti pokalbių istoriją ir parašyti administratoriaus
-                  žinutę visai komandai.
-                </div>
-              </div>
-              <b>{teamChats.length}</b>
-            </div>
-
-            {teamChats.length ? (
-              <div className="admin-list">
-                {adminPageSlice(teamChats).map((chat) => (
-                  <div className="admin-row" key={chat.company_id}>
-                    <div className="admin-row-title">
-                      <b>{chat.company_name || "Įmonė"}</b>
-                      <span>
-                        {chat.last_message_at ? "Pokalbis aktyvus" : "Pokalbis dar tuščias"}
-                      </span>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Planas</span>
-                      <b>{employerPlanName(chat.plan_key)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Komandos narių</span>
-                      <b>{Number(chat.active_members || 0)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Žinučių</span>
-                      <b>{Number(chat.message_count || 0)}</b>
-                    </div>
-
-                    <div className="admin-row-actions">
-                      <span className="admin-pill gray">
-                        {formatAdminDate(chat.last_message_at)}
-                      </span>
-                      <button
-                        className="admin-small-btn"
-                        type="button"
-                        onClick={() => setAdminTeamConversation(chat)}
-                      >
-                        Atidaryti pokalbį
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {renderAdminPagination(teamChats.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">
-                Įmonių vadovų pokalbių dar nėra.
-              </div>
-            )}
-          </section>
+          <AdminTeamChatsList chats={teamChats} onView={setAdminTeamConversation} />
         )}
 
         {activeTab === "ratings" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Darbuotojų atsiliepimai</h2>
-                <div className="admin-muted">
-                  Matomi visi darbdavių palikti balai ir komentarai. Administratorius
-                  gali pašalinti netinkamą ar piktnaudžiaujantį atsiliepimą.
-                </div>
-              </div>
-              <b>{ratings.length}</b>
-            </div>
-
-            {ratings.length ? (
-              <div className="admin-list">
-                {adminPageSlice(ratings).map((rating) => (
-                  <div className="admin-row" key={rating.rating_id}>
-                    <div className="admin-row-title">
-                      <b>
-                        {rating.worker_name} · {rating.score} / 10
-                      </b>
-                      <span>
-                        {rating.company_name} · {formatJobTitle(rating.job_title)}
-                      </span>
-                      {rating.comment && (
-                        <span style={{ color: "#405264", marginTop: 7 }}>
-                          „{rating.comment}“
-                        </span>
-                      )}
-                    </div>
-                    <div className="admin-cell">
-                      <span>Data</span>
-                      <b>{formatAdminDate(rating.created_at)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Darbdavys</span>
-                      <b>{rating.company_name}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Darbas</span>
-                      <b>{formatJobTitle(rating.job_title)}</b>
-                    </div>
-                    <button
-                      className="admin-small-btn danger"
-                      disabled={deletingRatingId === rating.rating_id}
-                      onClick={() => deleteRating(rating)}
-                    >
-                      {deletingRatingId === rating.rating_id
-                        ? "Šalinama..."
-                        : "Pašalinti"}
-                    </button>
-                  </div>
-                ))}
-                {renderAdminPagination(ratings.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Atsiliepimų dar nėra.</div>
-            )}
-          </section>
+          <AdminRatingsList ratings={ratings} busyId={deletingRatingId} onDelete={deleteRating} />
         )}
 
         {activeTab === "files" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Įkelti failai</h2>
-                <div className="admin-muted">
-                  Administratoriui rodomas visų sistemos Storage bucketų failų
-                  sąrašas. Šiuo metu naudojami ginčų įrodymų failai; atsiradus
-                  kitoms įkėlimo funkcijoms, jų failai taip pat pateks čia.
-                </div>
-              </div>
-              <b>{files.length}</b>
-            </div>
-
-            {files.length ? (
-              <div className="admin-list">
-                {adminPageSlice(files).map((file) => (
-                  <div className="admin-row" key={file.object_id}>
-                    <div className="admin-row-title">
-                      <b>{file.file_name || file.storage_path}</b>
-                      <span>
-                        {file.bucket_id} · {file.owner_name || "Savininkas nenustatytas"}
-                      </span>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Įkelta</span>
-                      <b>{formatAdminDate(file.uploaded_at)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Dydis</span>
-                      <b>{bytesLabel(file.size_bytes)}</b>
-                    </div>
-                    <div className="admin-cell">
-                      <span>Susijęs darbas</span>
-                      <b>{file.job_title ? formatJobTitle(file.job_title) : "—"}</b>
-                    </div>
-                    {file.signedUrl ? (
-                      <a
-                        className="admin-small-btn"
-                        href={file.signedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ textDecoration: "none" }}
-                      >
-                        Atidaryti
-                      </a>
-                    ) : (
-                      <span className="admin-pill gray">Peržiūra negalima</span>
-                    )}
-                  </div>
-                ))}
-                {renderAdminPagination(files.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Įkeltų failų šiuo metu nėra.</div>
-            )}
-          </section>
+          <AdminFilesList files={files} />
         )}
         {activeTab === "bugs" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Svetainės klaidos</h2>
-                <div className="admin-muted">
-                  Aktyvūs pranešimai lieka pažymėti, kol administratorius paspaudžia „Sutvarkiau“.
-                </div>
-              </div>
-              <span className={`admin-pill ${activeSiteBugCount ? "red" : "green"}`}>
-                {activeSiteBugCount} aktyvių
-              </span>
-            </div>
-
-            {siteBugReports.length ? (
-              <>
-                <div className="admin-bug-list">
-                  {adminPageSlice(siteBugReports).map((report) => {
-                    const resolved = report.status === "resolved";
-                    const irrelevant = report.status === "irrelevant";
-                    const statusLabel = resolved
-                      ? "Sutvarkyta"
-                      : irrelevant
-                      ? "Neaktualu"
-                      : "Aktyvi";
-                    return (
-                      <div
-                        className={`admin-bug-row ${
-                          resolved ? "resolved" : irrelevant ? "irrelevant" : "active"
-                        }`}
-                        key={report.id}
-                      >
-                        <div className="admin-bug-person">
-                          <b>{report.reporter_name || "Vartotojas"}</b>
-                          <span>{report.reporter_email || "El. paštas nepasiekiamas"}</span>
-                        </div>
-
-                        <div className="admin-bug-meta">
-                          <span>{resolved ? "Sutvarkyta" : irrelevant ? "Neaktualu" : "Pateikta"}</span>
-                          <b>
-                            {formatAdminDate(
-                              resolved || irrelevant ? report.resolved_at : report.created_at
-                            )}
-                          </b>
-                        </div>
-
-                        <span
-                          className={`admin-pill ${
-                            resolved ? "green" : irrelevant ? "gray" : "red"
-                          }`}
-                        >
-                          {statusLabel}
-                        </span>
-
-                        <div className="admin-bug-actions">
-                          <button
-                            className="admin-small-btn"
-                            type="button"
-                            onClick={() => setSelectedBugReport(report)}
-                          >
-                            Atidaryti
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {renderAdminPagination(siteBugReports.length)}
-              </>
-            ) : (
-              <div className="admin-empty">Svetainės klaidų pranešimų nėra.</div>
-            )}
-          </section>
+          <AdminBugsList
+            reports={siteBugReports}
+            onReply={(report) => setAdminMessageTarget({ userId: report.reporter_id, name: report.reporter_name || report.reporter_email || "Vartotojas" })}
+            onResolve={resolveSiteBug}
+            onIrrelevant={markSiteBugIrrelevant}
+            onOpen={setSelectedBugReport}
+          />
         )}
 
         {activeTab === "audit" && (
-          <section className="admin-section">
-            <div className="admin-section-head">
-              <div>
-                <h2>Administratoriaus veiksmų istorija</h2>
-                <div className="admin-muted">
-                  Suspendavimai, suspendavimo panaikinimai ir negrįžtami
-                  trynimai registruojami audito istorijoje.
-                </div>
-              </div>
-              <b>{auditLog.length}</b>
-            </div>
-
-            {auditLog.length ? (
-              <div className="admin-list">
-                {adminPageSlice(auditLog).map((item) => (
-                  <div className="admin-row" key={item.audit_id}>
-                    <div className="admin-row-title">
-                      <b>
-                        {item.action === "suspend_user"
-                          ? "Paskyra suspenduota"
-                          : item.action === "unsuspend_user"
-                          ? "Suspendavimas panaikintas"
-                          : item.action === "suspend_worker_mode"
-                          ? "Darbuotojo režimas suspenduotas"
-                          : item.action === "unsuspend_worker_mode"
-                          ? "Darbuotojo režimo suspendavimas panaikintas"
-                          : item.action === "delete_user_account"
-                          ? "Paskyra ištrinta"
-                          : item.action === "delete_job"
-                          ? "Darbas ištrintas"
-                          : item.action}
-                      </b>
-                      <span>
-                        {item.target_email || item.target_user_id || "—"}
-                        {item.target_role ? ` · ${item.target_role}` : ""}
-                      </span>
-                      {item.reason && (
-                        <span style={{ color: "#405264", marginTop: 6 }}>
-                          {item.reason}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Administratorius</span>
-                      <b>{item.admin_name || item.admin_email || "—"}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Data</span>
-                      <b>{formatAdminDate(item.created_at)}</b>
-                    </div>
-
-                    <div className="admin-cell">
-                      <span>Veiksmas</span>
-                      <b>{item.action}</b>
-                    </div>
-
-                    <span className="admin-pill gray">Auditas</span>
-                  </div>
-                ))}
-                {renderAdminPagination(auditLog.length)}
-              </div>
-            ) : (
-              <div className="admin-empty">Administratoriaus veiksmų dar nėra.</div>
-            )}
-          </section>
+          <AdminAuditList items={auditLog} actionLabel={adminAuditActionLabel} />
         )}
 
       </main>
