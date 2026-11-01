@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/config.js";
+import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { Svg } from "../Shell.jsx";
 import { Pill } from "../ui.jsx";
 import { activeMonthlyAwards, monthlyAwardMeta, monthlyAwardMetricText, monthlyAwardMonthLabel } from "../../awards/monthlyAwards.jsx";
@@ -89,19 +90,27 @@ function DocsSection({ userId }) {
   async function save() {
     setErr("");
     if (!file) { setErr("Įkelkite nuotrauką arba PDF."); return; }
-    if (file.size > 10 * 1024 * 1024) { setErr("Failas per didelis – iki 10 MB."); return; }
-    if (!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(file.type)) { setErr("Tinka PDF, JPG, PNG arba WEBP."); return; }
     setBusy(true);
+    let path = "";
     try {
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "pdf";
-      const path = `${userId}/${Date.now()}.${ext}`;
-      const up = await supabase.storage.from("worker-documents").upload(path, file, { contentType: file.type, upsert: false });
-      if (up.error) throw up.error;
+      const ready = await prepareUpload(file, {
+        types: ["application/pdf", "image/jpeg", "image/png", "image/webp", ".pdf"],
+        maxBytes: 10 * MB, maxSide: 2000,
+        badType: "Tinka PDF, JPG, PNG arba WEBP.", tooBig: "Failas per didelis – iki 10 MB.",
+      });
+      const contentType = ready.type || "application/pdf";
+      path = `${userId}/${Date.now()}.${safeExt(ready, "pdf")}`;
+      const up = await supabase.storage.from("worker-documents").upload(path, ready, { contentType, upsert: false });
+      if (up.error) { path = ""; throw up.error; }
       const ins = await supabase.from("worker_documents").insert({ worker_id: userId, doc_type: type, valid_until: until || null, file_path: path, file_name: file.name.slice(0, 160) });
-      if (ins.error) { await supabase.storage.from("worker-documents").remove([path]); throw ins.error; }
+      if (ins.error) throw ins.error;
+      path = "";
       setOpen(false); setFile(null); setUntil(""); setType(DOC_TYPES[0]);
       await load();
-    } catch (e) { setErr(e?.message || "Nepavyko išsaugoti dokumento."); }
+    } catch (e) {
+      if (path) await supabase.storage.from("worker-documents").remove([path]);
+      setErr(e?.message || "Nepavyko išsaugoti dokumento.");
+    }
     finally { setBusy(false); }
   }
   async function toggle(d) {

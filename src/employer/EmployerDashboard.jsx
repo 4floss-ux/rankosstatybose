@@ -14,12 +14,13 @@ import { EMPLOYER_PLANS, companyTeamInviteLink, companyTeamRoleLabel, edgeFuncti
 import { MonthlyAwardMiniList, MonthlyAwardsPanel, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { companyAvatarUrl, workerAvatarUrl, workerInitials } from "../ui/avatars.jsx";
 import { EmployerWorkCalendar } from "./EmployerWorkCalendar.jsx";
-import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
+import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { EmployerJobCard, EmployerOverview } from "../p24/employer/EmployerOverview.jsx";
 import { Empty, ListGroup, PageHead, Paged, Pill } from "../p24/ui.jsx";
 import { EmployerAds, confirmAdPayment, useEmployerAds } from "../p24/employer/EmployerAds.jsx";
+import { shrinkImage } from "../lib/imageUpload.js";
 
 export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
   const { dialog: confirmDialog, askConfirm, resolveConfirm } = useStyledConfirm();
@@ -1882,18 +1883,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null }) {
     setCompanyForm((current) => ({ ...current, [key]: value }));
   }
 
-  function chooseCompanyAvatarFile(file) {
+  async function chooseCompanyAvatarFile(original) {
     if (companyMemberRole !== "owner") {
       setError("Įmonės logotipą gali keisti tik įmonės savininkas.");
       return;
     }
-    if (!file) return;
+    if (!original) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
+    if (!allowed.includes(original.type)) {
       setError("Įmonės logotipas turi būti JPG, PNG arba WEBP formato.");
       return;
     }
+
+    // Logotipui pakanka 800 px; permatomas PNG lieka permatomas (WEBP).
+    const file = await shrinkImage(original, { maxSide: 800 });
 
     if (file.size > 5 * 1024 * 1024) {
       setError("Įmonės logotipas negali būti didesnis nei 5 MB.");

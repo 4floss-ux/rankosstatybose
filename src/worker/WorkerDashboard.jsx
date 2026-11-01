@@ -11,13 +11,14 @@ import { BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagi
 import { formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, reliabilityScoreColor, workerReliabilityPenaltyMeta } from "../employer/plans.js";
 import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
 import { CompanyBadge, companyAvatarUrl, workerAvatarUrl } from "../ui/avatars.jsx";
-import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
+import { AdminPrivateInboxButton } from "../admin/AdminPrivateInbox.jsx";
 import { AbroadSetting } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
 import { WorkerProfileEditor } from "../p24/worker/WorkerProfileEditor.jsx";
+import { shrinkImage } from "../lib/imageUpload.js";
 import { WorkerAds, useWorkerAds } from "../p24/worker/WorkerAds.jsx";
 import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
@@ -990,15 +991,17 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     }
   }
 
-  function chooseAvatarFile(file) {
-    if (!file) return;
+  async function chooseAvatarFile(original) {
+    if (!original) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
+    if (!allowed.includes(original.type)) {
       setError("Profilio nuotrauka turi būti JPG, PNG arba WEBP formato.");
       return;
     }
 
+    // Profilio nuotraukai pakanka 800 px – mažiau duomenų ir greitesnis įkėlimas.
+    const file = await shrinkImage(original, { maxSide: 800 });
     if (file.size > 5 * 1024 * 1024) {
       setError("Profilio nuotrauka negali būti didesnė nei 5 MB.");
       return;
@@ -1934,11 +1937,13 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           );
         }
 
-        if (workerEvidenceFile.size > 8 * 1024 * 1024) {
+        // Telefono nuotraukos sumažinamos iki 2000 px prieš įkeliant.
+        const evidenceFile = await shrinkImage(workerEvidenceFile, { maxSide: 2000 });
+        if (evidenceFile.size > 8 * 1024 * 1024) {
           throw new Error("Įrodymo failas negali būti didesnis nei 8 MB.");
         }
 
-        const safeName = workerEvidenceFile.name
+        const safeName = evidenceFile.name
           .replace(/[^a-zA-Z0-9._-]+/g, "-")
           .slice(-100);
 
@@ -1946,10 +1951,10 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         const uploadResult = await supabase.storage
           .from("attendance-evidence")
-          .upload(uploadedPath, workerEvidenceFile, {
+          .upload(uploadedPath, evidenceFile, {
             cacheControl: "3600",
             upsert: false,
-            contentType: workerEvidenceFile.type,
+            contentType: evidenceFile.type,
           });
 
         if (uploadResult.error) throw uploadResult.error;

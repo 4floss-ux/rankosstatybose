@@ -75,6 +75,16 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
   Esamos Stripe prenumeratų funkcijos nekeistos. Apmokėjimas tikrinamas serveryje (grįžus `?adpay=success…` arba mygtuku „Apmokėti“ – pakartotinai naudoja sesiją).
 - Telefono paraštės be dvigubo atitraukimo (`.wd-shell`, `.ed-shell`), pilkas fonas iki ekrano apačios.
 
+**Tvarkymas (2026-11-01):**
+- Kodo skaidymas: darbuotojo, darbdavio, admin, /hire ir teisiniai puslapiai kraunami tik prireikus (`src/lib/lazyPage.js`,
+  vienkartinis perkrovimas jei po diegimo senas failas dingo). Pradinis JS ~376 KB vietoj ~1,7 MB (min.).
+  `AdminPrivateInboxButton` perkeltas į `src/admin/AdminPrivateInbox.jsx` (kad darbuotojo kodas netemptų admin kodo).
+- Nuotraukos mažinamos naršyklėje prieš įkeliant (`src/lib/imageUpload.js`): avatarai/logotipai 800 px, pažymėjimai/CV/įrodymai 2000 px.
+- `worker.js`: saugumo antraštės (nosniff, SAMEORIGIN, HSTS, permissions-policy), ilgas talpinimas versijuotiems JS/CSS, 404 trūkstamiems `/assets/*`.
+- DB: indeksai, pasikartojančių politikų sutvarkymas (tik redizaino lentelės) – `20261101170000_redesign_hardening.sql`.
+- `brand-logo.png` sumažintas 2048→960 px (220→68 KB).
+- Testavimo `bundle.sh` naudoja `--splitting`.
+
 ## 5. Kas liko (eilės tvarka)
 
 1. Skelbimų smulkmenos: „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo dar nėra); pažymėjimų rodymas darbdavio darbuotojo profilio lange.

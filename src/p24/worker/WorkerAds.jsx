@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
+import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { companyAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
 import { Empty, Paged, Pill, initialsOf, up } from "../ui.jsx";
@@ -143,17 +144,28 @@ function AdPage({ ad, me, isFavorite, toggleFavorite, onBack, onToggleSave, onCh
   }
   async function uploadCv(file) {
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setErr("Failas per didelis – iki 10 MB."); return; }
     setBusy(true); setErr("");
+    let path = "";
     try {
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "pdf";
-      const path = `${x.id}/cv-${Date.now()}.${ext}`;
-      const up1 = await supabase.storage.from("job-ad-cv").upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
-      if (up1.error) throw up1.error;
+      const ready = await prepareUpload(file, {
+        types: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "image/jpeg", "image/png", "image/webp", ".pdf", ".doc", ".docx"],
+        maxBytes: 10 * MB, maxSide: 2000,
+        badType: "Tinka PDF, Word arba nuotrauka.", tooBig: "Failas per didelis – iki 10 MB.",
+      });
+      const ext = safeExt(ready, "pdf");
+      const contentType = ready.type || { doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }[ext] || "application/pdf";
+      path = `${x.id}/cv-${Date.now()}.${ext}`;
+      const up1 = await supabase.storage.from("job-ad-cv").upload(path, ready, { contentType, upsert: false });
+      if (up1.error) { path = ""; throw up1.error; }
       const r = await supabase.rpc("job_ad_attach_cv", { p_application_id: x.id, p_path: path, p_name: file.name.slice(0, 160) });
       if (r.error) throw r.error;
+      path = "";
       onChanged();
-    } catch (e) { setErr(e?.message || "Nepavyko įkelti CV."); }
+    } catch (e) {
+      if (path) await supabase.storage.from("job-ad-cv").remove([path]);
+      setErr(e?.message || "Nepavyko įkelti CV.");
+    }
     finally { setBusy(false); }
   }
 
