@@ -14,6 +14,7 @@ import { CompanyBadge, workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { WorkAbroadPreference } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
+import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextFourteenDays();
@@ -2576,6 +2577,10 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       return aKey.localeCompare(bKey);
     })[0];
 
+  const workerHeroItem = nextConfirmedWorkday && [workerDashboardToday, addPlatformDays(workerDashboardToday, 1)].includes(nextConfirmedWorkday.job?.work_date)
+    ? nextConfirmedWorkday
+    : null;
+
   const workerRequiredActionCount =
     workerActionWorkdays.length + (needsAvailabilityConfirm ? 1 : 0);
 
@@ -2860,7 +2865,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
-        .wd-shell{width:min(1320px,100%);margin:8px auto 0}
+        .wd-shell{width:min(1320px,100%);margin:0 auto}
+        .p24 .wd-shell{display:flex;flex-direction:column;gap:18px}
+        .p24 .wd-shell > .alert{order:-1}
         @media(max-width:899px){.wd-shell{width:calc(100% - 32px);margin-top:16px}}
         .wd-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
         .wd-heading h1{margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
@@ -3000,7 +3007,26 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       <main className="wd-shell" data-view={workerView}>
         {showProfileEditor && <div data-wv="profile"><WorkAbroadPreference user={user}/></div>}
 
-        <div className="wd-heading" data-wv="overview">
+        <div data-wv="overview" style={{ display: "contents" }}>
+          <WorkerOverview
+            todayItem={workerHeroItem}
+            todayIsToday={workerHeroItem?.job?.work_date === workerDashboardToday}
+            canCheckIn={Boolean(workerHeroItem && workerCheckInWindowOpen(workerHeroItem.job) && !workerHeroItem.attendance?.worker_check_in_at)}
+            onArrive={openWorkerCheckIn}
+            onDetails={openWorkdayDetails}
+            onChat={openWorkerGroupConversation}
+            pendingInvites={invitations.length}
+            actionCount={workerRequiredActionCount}
+            unreadMessages={workerUnreadMessages.length}
+            metrics={metrics}
+            workdays={workdays}
+            recentRatings={recentEmployerRatings}
+            onGo={goWorkerView}
+            onOpenMessages={() => goWorkerView("jobs")}
+            onReliabilityRules={() => setShowWorkerReliabilityInfo(true)}
+          />
+        </div>
+        <div className="wd-heading" data-wv="legacy">
           <div>
             <div className="eyebrow">DARBUOTOJO PASKYRA</div>
             <h1>Mano darbai ir statistika</h1>
@@ -3108,17 +3134,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           )}
 
         {showWorkTimeLoginReminder && (
-          <div className="wd-worktime-login-reminder" role="status" data-wv="overview">
-            <div className="wd-worktime-login-reminder-copy">
+          <div className="alert" role="status" data-wv="overview">
+            <div>
               <b>Būtinai atnaujinkite darbo laikus</b>
-              <span>
-                Patikrinkite, ar jūsų prieinamumas vis dar tikslus, kad darbdaviai
-                matytų realų laiką, kada galite dirbti.
-              </span>
+              <p>Patikrinkite, ar jūsų prieinamumas vis dar tikslus, kad darbdaviai matytų realų laiką, kada galite dirbti.</p>
             </div>
-            <button type="button" onClick={openWorkerWorkTimeEditor}>
-              Atnaujinti
-            </button>
+            <div className="row"><button className="btn primary" type="button" onClick={openWorkerWorkTimeEditor}>Atnaujinti</button></div>
           </div>
         )}
 
@@ -3126,28 +3147,22 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           (!form.displayName.trim() ||
             !form.phone.trim() ||
             availableCount === 0) && (
-            <section className="wd-onboarding-card" data-wv="overview">
-              <div className="wd-onboarding-top">
-                <div>
-                  <div className="eyebrow">PIRMIEJI ŽINGSNIAI</div>
-                  <h3 style={{ margin: "5px 0 4px", color: "#222631" }}>Paruoškite profilį kvietimams į darbą</h3>
-                  <div style={{ color: "#607180", fontSize: 12 }}>Užpildytas profilis ir grafikas padeda sistemai siųsti tik tinkamus pasiūlymus.</div>
-                </div>
-                <div className="wd-onboarding-actions">
-                  <button className="wd-onboarding-btn secondary" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
-                  <button className="wd-onboarding-btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
-                </div>
+            <div className="alert blue" data-wv="overview">
+              <div>
+                <b>Paruoškite profilį kvietimams į darbą</b>
+                <p>
+                  {form.displayName.trim() && form.phone.trim() ? "✓" : "1."} Profilis ir telefonas · {availableCount > 0 ? "✓" : "2."} Bent viena laisva diena · 3. Priimkite tinkamą kvietimą
+                </p>
               </div>
-              <div className="wd-onboarding-steps">
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{form.displayName.trim() && form.phone.trim() ? "✓" : "1"}</b> Profilis ir telefonas</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>{availableCount > 0 ? "✓" : "2"}</b> Bent viena laisva diena</div>
-                <div style={{ padding: 11, borderRadius: 11, background: "#f7f9fb", fontSize: 12 }}><b>3</b> Priimkite tinkamą kvietimą</div>
+              <div className="row">
+                <button className="btn" type="button" onClick={() => openWorkerProfileEditor("profile")}>Profilis</button>
+                <button className="btn primary" type="button" onClick={() => openWorkerProfileEditor("availability")}>Nustatyti grafiką</button>
               </div>
-            </section>
+            </div>
           )}
-        <div className="wd-overview-heading eyebrow" data-wv="overview">DABAR SVARBIAUSIA</div>
+        <div className="wd-overview-heading eyebrow" data-wv="legacy">DABAR SVARBIAUSIA</div>
 
-        <div className="wd-overview" data-wv="overview">
+        <div className="wd-overview" data-wv="legacy">
           <div className={`wd-overview-card ${invitations.length ? "action" : ""}`}>
             <div className="wd-overview-card-top">
               <span>Nauji kvietimai</span>
@@ -3809,35 +3824,15 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         )}
 
         {needsAvailabilityConfirm && (
-          <div id="worker-availability-alert" className="wd-availability-alert" style={{ scrollMarginTop: 88 }} data-wv="overview schedule">
+          <div id="worker-availability-alert" className="alert" style={{ scrollMarginTop: 88 }} data-wv="overview schedule">
             <div>
               <b>Patvirtinkite, kad jūsų grafikas vis dar galioja</b>
-              <span>
-                Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų
-                darbuotojų paieškoje. Tai padeda rodyti tik realiai aktyvius
-                žmones.
-              </span>
+              <p>Kol grafikas nepatvirtintas, darbdaviai jūsų nemato naujų darbuotojų paieškoje. Tai padeda rodyti tik realiai aktyvius žmones.</p>
             </div>
-
-            <div className="wd-availability-alert-actions">
-              <button
-                className="wd-profile-editor-cancel"
-                type="button"
-                disabled={confirmingAvailability}
-                onClick={() => openWorkerProfileEditor("availability")}
-              >
-                Keisti grafiką
-              </button>
-
-              <button
-                className="wd-save"
-                type="button"
-                disabled={confirmingAvailability}
-                onClick={confirmCurrentAvailability}
-              >
-                {confirmingAvailability
-                  ? "Patvirtinama..."
-                  : "Patvirtinti grafiką"}
+            <div className="row">
+              <button className="btn" type="button" disabled={confirmingAvailability} onClick={() => openWorkerProfileEditor("availability")}>Keisti grafiką</button>
+              <button className="btn primary" type="button" disabled={confirmingAvailability} onClick={confirmCurrentAvailability}>
+                {confirmingAvailability ? "Patvirtinama..." : "Patvirtinti grafiką"}
               </button>
             </div>
           </div>
@@ -3845,7 +3840,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
         <BugResolutionNotice userId={user.id} />
 
-        <section className="wd-stats-section" data-wv="overview">
+        <section className="wd-stats-section" data-wv="legacy">
           <div className="wd-stats-head">
             <button
               className={`wd-stats-toggle ${showWorkerStats ? "open" : ""}`}
