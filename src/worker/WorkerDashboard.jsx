@@ -17,6 +17,7 @@ import { P24Shell } from "../p24/Shell.jsx";
 import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
+import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
 
@@ -57,10 +58,11 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [messengerOpen, setMessengerOpen] = useState(false);
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
+  const { favoriteIds, favoriteCompanies, toggleFavorite, isFavorite } = useFavoriteCompanies(user.id);
   const [workerView, setWorkerView] = useState(() => {
     try {
       const saved = window.sessionStorage.getItem("s24-worker-view");
-      return ["overview", "invites", "jobs", "history", "ads", "schedule", "profile"].includes(saved) ? saved : "overview";
+      return ["overview", "invites", "jobs", "history", "favco", "ads", "schedule", "profile"].includes(saved) ? saved : "overview";
     } catch {
       return "overview";
     }
@@ -2903,7 +2905,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return list;
   }
 
-  const workerPendingInvites = invitations.filter((item) => item.status === "pending");
+  const workerPendingInvites = invitations.filter((item) => item.status === "pending").sort((a, b) => Number(isFavorite(b.job?.company_id)) - Number(isFavorite(a.job?.company_id)));
   const workerNeedWorkdays = activeWorkerWorkdays.filter((item) => workerWorkdayState(item).need);
   const workerRestWorkdays = activeWorkerWorkdays.filter((item) => !workerWorkdayState(item).need);
   const workerJobPageItem = workdayDetailsTarget;
@@ -2944,6 +2946,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           { key: "invites", label: "Kvietimai į darbą", icon: "mail", badge: invitations.length },
           { key: "jobs", label: "Mano darbai", icon: "jobs", badge: activeWorkerWorkdays.length },
           { key: "history", label: "Darbų istorija", icon: "history" },
+          { key: "favco", label: "Mėgstamos įmonės", icon: "heart" },
         ]],
         ["Prieinamumas", [
           { key: "schedule", label: "Darbo grafikas", icon: "cal", badge: needsAvailabilityConfirm ? "Atnaujinti" : 0 },
@@ -2979,7 +2982,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
         .wd-page{min-height:0;background:transparent;color:#222631;padding-bottom:24px}
-        .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}.wd-shell[data-view="wjob"] [data-wv]:not([data-wv~="wjob"]){display:none!important}
+        .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}.wd-shell[data-view="wjob"] [data-wv]:not([data-wv~="wjob"]){display:none!important}.wd-shell[data-view="favco"] [data-wv]:not([data-wv~="favco"]){display:none!important}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
         .wd-shell{width:min(1320px,100%);margin:0 auto}
@@ -4303,6 +4306,29 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         </div>
 
+        <div data-wv="favco" style={{ display: "contents" }}>
+          <PageHead title="Mėgstamos įmonės" lead="Šių įmonių kvietimai sąraše rodomi pirmiausia." />
+          <section className="card setsec">
+            {favoriteIds.length ? (
+              <div className="setlist">
+                {favoriteIds.map((companyId) => {
+                  const info = favoriteCompanies[companyId] || {};
+                  return (
+                    <div className="setrow fcrow" key={companyId}>
+                      <button type="button" className="favbtn on" aria-pressed="true" title="Pašalinti iš mėgstamų" onClick={() => toggleFavorite(companyId)}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
+                      </button>
+                      <span className="av co sm" style={{ border: "1px solid var(--line)", overflow: "hidden" }}>{info.avatar_path ? <img src={companyAvatarUrl(info.avatar_path)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(info.name)}</span>
+                      <div className="settx"><b>{info.name || "Įmonė"}</b></div>
+                      <button type="button" className="btn sm" onClick={() => openWorkerCompanyProfile({ job: { company_id: companyId } })}>Profilis</button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <Empty title="Mėgstamų įmonių dar nėra" sub="Atidarę darbą paspauskite širdelę – tos įmonės kvietimai bus rodomi pirmiausia." icon="heart" />}
+          </section>
+        </div>
+
         <div data-wv="wjob" style={{ display: "contents" }}>
           {workerJobPageItem ? (
             <JobDetail
@@ -4312,7 +4338,15 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
               pills={workerJobPageIsInvite
                 ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
                 : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
-              metaExtra={workerJobPageIsInvite && workerJobPageItem.status === "pending" && invitationHasConflict(workerJobPageItem) ? <span className="jd-warn"><Svg name="clock" size={14} width={2.4} />Sutampa su jau priimtu darbu</span> : null}
+              metaExtra={<>
+                {workerJobPageItem.job?.company_id ? (
+                  <button type="button" className={`favbtn lab${isFavorite(workerJobPageItem.job.company_id) ? " on" : ""}`} aria-pressed={isFavorite(workerJobPageItem.job.company_id)} onClick={() => toggleFavorite(workerJobPageItem.job.company_id, { name: workerJobPageItem.companyName, avatar_path: workerJobPageItem.companyAvatarPath })}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorite(workerJobPageItem.job.company_id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.4-7.5 10.4z" /></svg>
+                    {isFavorite(workerJobPageItem.job.company_id) ? "Mėgstama įmonė" : "Pridėti prie mėgstamų"}
+                  </button>
+                ) : null}
+                {workerJobPageIsInvite && workerJobPageItem.status === "pending" && invitationHasConflict(workerJobPageItem) ? <span className="jd-warn"><Svg name="clock" size={14} width={2.4} />Sutampa su jau priimtu darbu</span> : null}
+              </>}
               alert={workerJobPageItem.job?.status === "cancelled" ? (
                 <div className="alert"><div><b>Darbdavys atšaukė šį darbą</b><p>Priežastis: {workerJobPageItem.job.cancellation_reason || "nenurodyta."}</p></div></div>
               ) : workerJobPageState?.need ? (
