@@ -3170,3 +3170,10 @@
 .p24 .wd-danger{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:5px!important;border:1px solid #f0c9c1!important;background:var(--white)!important;color:var(--red)!important;font-size:13px!important;font-weight:700!important}
 .p24 .wd-profile-editor-close{border-radius:5px!important;background:var(--soft)!important}
 .p24 .eyebrow{color:var(--orange-text)}
+.p24 .rs-modal-overlay,.p24 .admin-modal-overlay,.p24 .wd-job-info-overlay,.p24 .reliability-modal-overlay,.p24 .ed-saved-overlay,.p24 .lt-end-notice-overlay,.p24 .edcal-chat-overlay{background:rgba(34,38,49,.55)!important;backdrop-filter:none!important}
+.p24 .rs-modal-card,.p24 .admin-modal,.p24 .wd-job-info-modal,.p24 .reliability-modal,.p24 .ed-saved-modal{border-radius:8px!important;border:0!important;box-shadow:0 30px 80px rgba(34,38,49,.35)!important;padding:24px!important;font-family:var(--body)}
+.p24 .rs-modal-head h2,.p24 .admin-modal-head h2,.p24 .reliability-modal-head h2{font-family:var(--display);font-size:20px;letter-spacing:-.2px}
+.p24 .rs-modal-card button:not([class]),.p24 .admin-modal button:not([class]){border-radius:5px}
+.p24 .admin-btn,.p24 .admin-primary{border-radius:5px!important}
+.p24 .admin-primary{background:var(--orange)!important;border-color:var(--orange)!important;color:#fff!important}
+.p24 .admin-head h1{font-family:var(--display);letter-spacing:-.2px}
