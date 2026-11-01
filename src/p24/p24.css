@@ -3232,3 +3232,4 @@
 .p24 .docrow .docopen{font:inherit;color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;text-align:left}
 .p24 .wd-shell{width:100%!important;margin-left:0!important;margin-right:0!important}@media(max-width:899px){.p24 .wd-shell{margin-top:0}}
 .p24 .rs-modal-overlay.p24-ov{z-index:9000}
+.p24 .co-line .cofav{display:inline-flex;color:var(--red)}

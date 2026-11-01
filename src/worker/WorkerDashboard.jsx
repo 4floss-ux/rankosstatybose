@@ -18,6 +18,7 @@ import { Messenger, useChatHidden, visibleConversations } from "../p24/Messenger
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
 import { WorkerSchedule } from "../p24/worker/WorkerSchedule.jsx";
 import { WorkerProfileEditor } from "../p24/worker/WorkerProfileEditor.jsx";
+import { WorkerAds, useWorkerAds } from "../p24/worker/WorkerAds.jsx";
 import { useFavoriteCompanies } from "../p24/worker/useFavoriteCompanies.js";
 import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
 import { Svg } from "../p24/Shell.jsx";
@@ -60,6 +61,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [messengerOpen, setMessengerOpen] = useState(false);
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const { favoriteIds, favoriteCompanies, toggleFavorite, isFavorite } = useFavoriteCompanies(user.id);
+  const workerAds = useWorkerAds(!onAdminReturn);
   const [workerView, setWorkerView] = useState(() => {
     try {
       const saved = window.sessionStorage.getItem("s24-worker-view");
@@ -2973,7 +2975,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           { key: "schedule", label: "Darbo grafikas", icon: "cal", badge: needsAvailabilityConfirm ? "Atnaujinti" : 0 },
         ]],
         ["Ilgalaikis darbas", [
-          { key: "ads", label: "Ilgalaikiai pasiūlymai", icon: "briefcase", badge: pendingLongTermOffers.length },
+          { key: "ads", label: "Darbo skelbimai", icon: "briefcase", badge: workerAds.actionCount },
         ]],
       ]}
       tabs={[
@@ -3811,7 +3813,26 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
           </section>
         )}
 
-        <section className="wd-card" data-wv="ads" style={{ marginBottom: 18 }}>
+        <div data-wv="ads" style={{ display: "contents" }}>
+          <WorkerAds
+            data={workerAds}
+            me={{
+              name: form.displayName || "Darbuotojas",
+              city: form.city,
+              license: form.hasDrivingLicenseB,
+              avatarUrl: profileAvatarUrl,
+              initials,
+              reliability: metrics.attendanceRate === null || metrics.attendanceRate === undefined ? null : formatReliabilityScore(metrics.attendanceRate),
+              rating: metrics.ratingAverage,
+              completed: metrics.completedJobs,
+            }}
+            isFavorite={isFavorite}
+            toggleFavorite={toggleFavorite}
+            onCompany={(ad) => openWorkerCompanyProfile({ job: { company_id: ad.company_id }, companyName: ad.company_name, companyAvatarPath: ad.company_avatar_path })}
+          />
+        </div>
+
+        <section className="wd-card" data-wv="legacy" style={{ marginBottom: 18 }}>
           <div className="eyebrow">ILGALAIKIS DARBAS</div>
           <h2 style={{ marginTop: 6 }}>Ilgalaikio darbo pasiūlymai</h2>
           <p className="wd-card-sub">
@@ -3839,7 +3860,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </section>
 
         {pendingLongTermOffers.length > 0 && (
-        <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }} data-wv="ads overview">
+        <section className="wd-card" id="worker-long-term-offers" style={{ marginBottom: 18 }} data-wv="legacy">
           <div
             style={{
               display: "flex",
