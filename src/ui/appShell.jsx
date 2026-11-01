@@ -63,6 +63,8 @@ export const appShellStyles = `
   .s24-who small{display:block;font-size:11px;color:rgba(255,255,255,.65)}
   .s24-who > div:not(.s24-who-av){min-width:0;flex:1}
   .s24-main{padding:14px 24px 48px calc(14px + var(--s24-sw) + 24px);min-width:0}
+  .s24-side-foot .s24-item{min-height:32px;font-size:12.5px}
+  @media (min-width:900px) and (max-height:940px){.s24-item{min-height:33px}.s24-nav{gap:8px}.s24-glabel{padding-bottom:2px}.s24-side{gap:8px}.s24-side-foot{gap:2px;padding-top:8px}.s24-who-av{width:32px;height:32px}}
   .s24-utility{display:flex;justify-content:flex-end;align-items:center;gap:8px;min-height:44px;max-width:1320px;margin:0 auto}
   .s24-utility:empty{display:none}
   .s24-topbar-logo,.s24-burger,.s24-tabbar,.s24-scrim{display:none}

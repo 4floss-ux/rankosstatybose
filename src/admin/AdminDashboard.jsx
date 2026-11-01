@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
-import { BrandLogo, CloseMark, SilentLoader } from "../ui/brand.jsx";
+import { CloseMark, SilentLoader } from "../ui/brand.jsx";
 import { RoundedDateSelect, RoundedSelect, RoundedTimeSelect, StyledConfirmDialog, useStyledConfirm } from "../ui/common.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { addPlatformDays, attendanceOutcomeLabel, formatJobTitle, formatNetPay, localDateISO, platformDateTime } from "../lib/jobs.js";
@@ -13,6 +13,7 @@ import { MonthlyAwardBadgeVisual, monthlyAwardMeta, monthlyAwardMetricText, mont
 import { workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminCompanyTeamChatModal, AdminJobChatModal, AdminPrivateMessageComposer } from "./adminParts.jsx";
 import { AdminWorkAbroadInterests } from "../worker/workAbroad.jsx";
+import { AppShell } from "../ui/appShell.jsx";
 
 export function AdminDashboard({
   user,
@@ -2372,17 +2373,65 @@ export function AdminDashboard({
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const adminEmploymentActive = longTermPlacements.filter((item) => item.status === "active").length;
+  const adminGoTab = (key) => {
+    if (key === "__delete") { setDeleteAccountOpen(true); return; }
+    setActiveTab(key);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+  };
   return (
+    <AppShell
+      current={activeTab}
+      onGo={adminGoTab}
+      groups={[
+        ["Apžvalga", [{ key: "overview", label: "Suvestinė", icon: "overview" }]],
+        ["Naudotojai", [
+          { key: "workers", label: "Darbuotojai", icon: "team" },
+          { key: "employers", label: "Darbdaviai", icon: "home" },
+          { key: "workAbroadInterest", label: "Domisi darbu užsienyje", icon: "briefcase" },
+        ]],
+        ["Darbai", [
+          { key: "jobs", label: "Visi darbai", icon: "jobs" },
+          { key: "employment", label: "Įdarbinti darbuotojai", icon: "briefcase", badge: adminEmploymentActive },
+          { key: "foreignHire", label: "Tarptautinė atranka", icon: "user", badge: foreignHireAlertCount },
+        ]],
+        ["Priežiūra", [
+          { key: "disputes", label: "Ginčai", icon: "bell", badge: activeDisputeCount },
+          { key: "bugs", label: "Svetainės klaidos", icon: "bell", badge: activeSiteBugCount },
+          { key: "ratings", label: "Atsiliepimai", icon: "heart" },
+          { key: "teamChats", label: "Vadovų pokalbiai", icon: "chat" },
+          { key: "files", label: "Failai", icon: "card" },
+        ]],
+        ["Sistema", [
+          { key: "monthlyAwards", label: "Mėnesio geriausi", icon: "heart" },
+          { key: "audit", label: "Veiksmų istorija", icon: "history" },
+        ]],
+      ]}
+      tabs={[
+        { key: "overview", label: "Suvestinė", icon: "overview" },
+        { key: "workers", label: "Žmonės", icon: "team" },
+        { key: "disputes", label: "Ginčai", icon: "bell", badge: activeDisputeCount },
+        { key: "bugs", label: "Klaidos", icon: "bell", badge: activeSiteBugCount },
+      ]}
+      who={{ name: "Administratorius", sub: "statybos24.lt", initials: "AD" }}
+      footer={[
+        { key: "worker", label: "Darbuotojo režimas", icon: "user", onClick: onOpenWorker },
+        { key: "employer", label: "Darbdavio režimas", icon: "home", onClick: onOpenEmployer },
+        { key: "delete", label: "Ištrinti paskyrą", icon: "x", onClick: () => setDeleteAccountOpen(true) },
+        { key: "logout", label: "Atsijungti", icon: "out", onClick: onLogout },
+      ]}
+    >
     <div className="admin-page">
       <style>{`
-        .admin-page{min-height:100vh;background:#f6f8fa;color:#222631}
+        .admin-page{min-height:0;background:transparent;color:#222631}
         .admin-topbar{min-height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:100}
         .admin-topbar-inner{width:min(1280px,calc(100% - 40px));margin:auto;display:flex;justify-content:space-between;align-items:center;gap:18px}
         .admin-top-actions{display:grid;grid-template-columns:repeat(4,160px);align-items:stretch;gap:8px;justify-content:flex-end}
         .admin-top-actions>*{width:160px;min-height:46px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center}
         .admin-mode{border:1px solid #dbe4ea;background:#fff;color:#222631;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
         .admin-mode.primary{border-color:#6b5b95;background:#6b5b95;color:#fff}
-        .admin-shell{width:min(1280px,calc(100% - 40px));margin:28px auto 70px}
+        .admin-shell{width:min(1280px,100%);margin:8px auto 40px}
+        @media(max-width:899px){.admin-shell{width:calc(100% - 32px)!important;margin-top:16px}}
         .admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
         .admin-head h1{font-family:Manrope,Inter,sans-serif;margin:3px 0 0;font-size:34px;letter-spacing:-.035em}
         .admin-head p{margin:8px 0 0;color:#6c7a88;max-width:800px;line-height:1.5}
@@ -2478,39 +2527,7 @@ export function AdminDashboard({
         @media(max-width:620px){.admin-modal-overlay{padding:10px}.admin-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:17px;border-radius:16px}.admin-tabs{grid-template-columns:1fr}.admin-topbar-inner,.admin-shell{width:min(100% - 24px,1280px)}.admin-topbar-inner,.admin-head{align-items:flex-start;flex-direction:column}.admin-topbar-inner{padding:14px 0 16px;gap:14px}.admin-top-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px;width:100%}.admin-top-actions>*{width:100%;min-height:46px;box-sizing:border-box}.admin-grid-2,.admin-facts,.admin-row,.admin-bug-row,.admin-kpis,.admin-employment-stats,.admin-employment-row,.admin-traffic-top{grid-template-columns:1fr}.admin-wide,.admin-row>:last-child,.admin-employment-row>:last-child{grid-column:auto}.admin-bug-actions{grid-column:auto}.admin-head h1{font-size:28px}.admin-toast-stack{width:100%}.admin-traffic-chart{gap:3px;padding-left:3px;padding-right:3px}.admin-traffic-day-label{font-size:8px}.admin-traffic-value{font-size:8px}}
       `}</style>
 
-      <header className="admin-topbar">
-        <div className="admin-topbar-inner">
-          <BrandLogo className="brand" href="#" height={46} />
 
-          <div className="admin-top-actions">
-            <button
-              className="admin-mode"
-              type="button"
-              onClick={onOpenWorker}
-            >
-              Darbuotojo režimas
-            </button>
-            <button
-              className="admin-mode"
-              type="button"
-              onClick={onOpenEmployer}
-            >
-              Darbdavio režimas
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              style={{ color: "#b64d2a", borderColor: "#efc7bb" }}
-              onClick={() => setDeleteAccountOpen(true)}
-            >
-              Ištrinti paskyrą
-            </button>
-            <button className="btn ghost" onClick={onLogout}>
-              Atsijungti
-            </button>
-          </div>
-        </div>
-      </header>
 
       <main className="admin-shell">
         {(notice || error) && (
@@ -2543,57 +2560,7 @@ export function AdminDashboard({
           </div>
         )}
 
-        <nav className="admin-tabs" aria-label="Administravimo skyriai">
-          {tabs.filter(([key]) => mainAdminTabs.includes(key)).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`admin-tab ${activeTab === key ? "active" : ""}`}
-              aria-current={activeTab === key ? "page" : undefined}
-              onClick={() => setActiveTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-          <div className="admin-extra-wrap" ref={extraMenuRef} onKeyDown={handleExtraMenuKeyDown}>
-            <button
-              type="button"
-              ref={extraMenuTriggerRef}
-              className={`admin-tab admin-extra-trigger ${extraSectionActive ? "active" : ""}`}
-              aria-label="Kiti administravimo skyriai"
-              aria-expanded={extraMenuOpen}
-              aria-haspopup="menu"
-              aria-controls="admin-extra-sections"
-              onClick={() => setExtraMenuOpen((value) => !value)}
-            >
-              <span>Kiti skyriai</span>
-              <svg className="admin-extra-chevron" viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            {extraMenuOpen && (
-              <div id="admin-extra-sections" className="admin-extra-panel" role="menu" aria-label="Pasirinkti administravimo skyrių">
-                <div className="admin-extra-heading">PASIRINKITE SKYRIŲ</div>
-                {extraAdminTabs.map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="menuitem"
-                    className={`admin-extra-item ${activeTab === key ? "selected" : ""}`}
-                    aria-current={activeTab === key ? "page" : undefined}
-                    onClick={() => {
-                      setActiveTab(key);
-                      setExtraMenuOpen(false);
-                    }}
-                  >
-                    <span>{label}</span>
-                    {activeTab === key && <span className="admin-extra-check" aria-hidden="true">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
+
 
 
         {activeTab === "workAbroadInterest" && <AdminWorkAbroadInterests onOpenProfile={openAbroadWorkerProfile}/>}
@@ -5125,5 +5092,6 @@ export function AdminDashboard({
       />
       <StyledConfirmDialog dialog={confirmDialog} onResolve={resolveConfirm} />
     </div>
+    </AppShell>
   );
 }
