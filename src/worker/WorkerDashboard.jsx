@@ -10,11 +10,13 @@ import { LongTermConversationModal, LongTermOfferDetails, longTermContractLabel,
 import { AccountBugReportZone, AccountDeleteZone, BugReportModal, BugResolutionNotice, DASHBOARD_PAGE_SIZE, DashboardPagination, DeleteAccountModal, MainSiteInPageAlerts, RELIABILITY_MODAL_STYLES, WebPushSettings } from "../dashboard/shared.jsx";
 import { formatReliabilityChange, formatReliabilityPenaltyDate, formatReliabilityScore, reliabilityScoreColor, workerReliabilityPenaltyMeta } from "../employer/plans.js";
 import { MonthlyAwardMiniList, monthlyAwardPreviousMonthISO } from "../awards/monthlyAwards.jsx";
-import { CompanyBadge, workerAvatarUrl } from "../ui/avatars.jsx";
+import { CompanyBadge, companyAvatarUrl, workerAvatarUrl } from "../ui/avatars.jsx";
 import { AdminPrivateInboxButton } from "../admin/adminParts.jsx";
 import { WorkAbroadPreference } from "./workAbroad.jsx";
 import { P24Shell } from "../p24/Shell.jsx";
 import { WorkerOverview } from "../p24/worker/WorkerOverview.jsx";
+import { ActionButtons, Empty, JobCard, JobDetail, ListGroup, PageHead, Paged, Pill, dateText, initialsOf } from "../p24/ui.jsx";
+import { Svg } from "../p24/Shell.jsx";
 
 export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const days = nextFourteenDays();
@@ -174,8 +176,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   }, [longTermOffers, longTermOfferTarget?.id]);
 
   useEffect(() => {
-    try { window.sessionStorage.setItem("s24-worker-view", workerView); } catch {}
+    try { if (workerView !== "wjob") window.sessionStorage.setItem("s24-worker-view", workerView); } catch {}
   }, [workerView]);
+
 
   useEffect(() => {
     if (showProfileEditor) return;
@@ -221,6 +224,18 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
   const [workerCheckInTarget, setWorkerCheckInTarget] = useState(null);
   const [workerCheckInTime, setWorkerCheckInTime] = useState("");
   const [workdayDetailsTarget, setWorkdayDetailsTarget] = useState(null);
+  const workerJobReturnView = useRef("overview");
+  useEffect(() => {
+    if (workdayDetailsTarget) {
+      setWorkerView((current) => {
+        if (current !== "wjob") workerJobReturnView.current = current;
+        return "wjob";
+      });
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+    } else {
+      setWorkerView((current) => (current === "wjob" ? workerJobReturnView.current || "overview" : current));
+    }
+  }, [workdayDetailsTarget]);
   const [workerCompanyProfileTarget, setWorkerCompanyProfileTarget] = useState(null);
   const [workerCompanyProfileLoading, setWorkerCompanyProfileLoading] = useState(false);
   const [employerReviewOpportunities, setEmployerReviewOpportunities] = useState([]);
@@ -2745,6 +2760,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       return;
     }
     setShowProfileEditor(false);
+    setWorkdayDetailsTarget(null);
     setWorkerView(view);
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
@@ -2812,6 +2828,81 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
     return <SilentLoader fullscreen size={28} />;
   }
 
+  const isInvitationItem = (item) => Boolean(item) && Object.prototype.hasOwnProperty.call(item, "invited_at");
+
+  function workerWorkdayState(item) {
+    const job = item?.job || {};
+    const attendance = item?.attendance || {};
+    const confirmed = item?.status === "confirmed";
+    const ended = jobHasEnded(job);
+    const pendingNegative = !attendance.finalized_at && ["no_show", "left_early_agreed", "left_early_unexcused"].includes(attendance.employer_outcome);
+    const disputed = attendance.dispute_status === "disputed";
+    const canCheckIn = confirmed && workerCheckInWindowOpen(job) && !attendance.worker_check_in_at;
+    const needsClose = confirmed && ended && !attendance.finalized_at && !pendingNegative && attendance.worker_workday_claim !== "worked";
+    if (item?.status === "cancelled_by_employer" || job.status === "cancelled") return { label: "Darbas atšauktas", tone: "red", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+    if (attendance.finalized_at) return { label: "Darbo diena uždaryta", tone: "green", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+    if (disputed) return { label: "Vyksta ginčas", tone: "red", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+    if (pendingNegative) return { label: "Reikia jūsų atsakymo", tone: "orange", need: true, pendingNegative, disputed, canCheckIn, needsClose };
+    if (canCheckIn) return { label: "Vyksta šiandien", tone: "green", need: true, pendingNegative, disputed, canCheckIn, needsClose };
+    if (needsClose) return { label: "Pasibaigė · reikia uždaryti", tone: "orange", need: true, pendingNegative, disputed, canCheckIn, needsClose };
+    if (attendance.worker_workday_claim === "worked" || (ended && !attendance.finalized_at)) return { label: "Laukiama darbdavio patvirtinimo", tone: "blue", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+    if (attendance.worker_check_in_at) return { label: "Atvykimas užfiksuotas", tone: "green", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+    return { label: `${dateText(job.work_date).split(" · ")[1] || job.work_date || ""} · ${job.start_time?.slice(0, 5) || ""}`, tone: "blue", need: false, pendingNegative, disputed, canCheckIn, needsClose };
+  }
+
+  function workerJobActions(item) {
+    const job = item?.job || {};
+    const attendance = item?.attendance || {};
+    const companyProfile = { label: "Įmonės profilis", icon: "home", onClick: () => openWorkerCompanyProfile(item) };
+    if (isInvitationItem(item)) {
+      if (item.status !== "pending") return [companyProfile];
+      const conflict = invitationHasConflict(item);
+      const restricted = Boolean(metrics.restrictedUntil && new Date(metrics.restrictedUntil) > new Date());
+      const busy = respondingInvitation === item.id;
+      return [
+        { label: busy ? "Prašome..." : conflict ? "Laikas užimtas" : "Priimti darbą", kind: "primary", disabled: busy || conflict || restricted, onClick: () => { setCommitmentChecked(false); setConfirmInvitation(item); } },
+        { label: "Atmesti", disabled: busy, onClick: () => respondToInvitation(item.id, "declined") },
+        { label: "Privati žinutė darbdaviui", icon: "chat", count: unreadWorkerNotifications(item.id).filter((n) => n.event_type === "message").length, onClick: () => setConversation({ invitationId: item.id, title: `${item.companyName} · ${formatJobTitle(job.title)}` }) },
+        companyProfile,
+      ];
+    }
+    const state = workerWorkdayState(item);
+    const list = [];
+    if (state.canCheckIn) {
+      list.push({ label: "Atvykau", kind: "green", icon: "check", disabled: attendanceBusy, onClick: () => openWorkerCheckIn(item) });
+      list.push({ label: "Atvykau, bet nerandu", onClick: () => openArrivalHelp(item) });
+    }
+    if (state.pendingNegative && !state.disputed) {
+      list.push({ label: "Patvirtinti", kind: "primary", disabled: attendanceBusy, onClick: () => workerRespondAttendance(attendance.id, "confirmed") });
+      list.push({ label: "Ginčyti", kind: "danger", disabled: attendanceBusy, onClick: () => { setWorkerAttendanceTarget(item); setWorkerAttendanceMode("dispute"); setWorkerAttendanceNote(""); setWorkerEvidenceFile(null); } });
+    }
+    if (state.disputed && attendance.id) {
+      list.push({ label: "Papildyti ginčą", disabled: attendanceBusy, onClick: () => { setWorkerAttendanceTarget(item); setWorkerAttendanceMode("dispute"); setWorkerAttendanceNote(attendance.worker_response_note?.startsWith("Automatinis ginčas:") ? "" : attendance.worker_response_note || ""); setWorkerEvidenceFile(null); } });
+      if (attendance.employer_note?.trim() && attendance.worker_response_note?.trim()) {
+        list.push({ label: "Ginčo pokalbis", icon: "chat", onClick: () => setDisputeConversation({ attendanceId: attendance.id, title: `${formatJobTitle(job.title)} · Ginčo aptarimas`, workerName: form.displayName || "Darbuotojas", companyName: item.companyName || "Darbdavys" }) });
+      }
+    }
+    if (state.needsClose) {
+      list.push({ label: "Dirbau šiame darbe", kind: "primary", disabled: attendanceBusy, onClick: () => workerClaimWorkday(item.id, "worked") });
+      list.push({ label: "Neatvykau", disabled: attendanceBusy, onClick: () => { setWorkerAttendanceTarget(item); setWorkerAttendanceMode("self_no_show"); setWorkerAttendanceNote(""); setWorkerEvidenceFile(null); } });
+    }
+    if (!workerWorkdayChatIsClosed(item)) {
+      list.push({ label: "Darbo pokalbis", icon: "chat", count: unreadWorkerJobNotifications(job.id).filter((n) => n.event_type === "message").length, onClick: () => openWorkerGroupConversation(job) });
+    }
+    if (item.invitation_id) {
+      list.push({ label: "Privati žinutė", icon: "chat", count: unreadWorkerNotifications(item.invitation_id).filter((n) => n.event_type === "message").length, onClick: () => setConversation({ invitationId: item.invitation_id, title: `${item.companyName} · ${formatJobTitle(job.title)}` }) });
+    }
+    list.push(companyProfile);
+    return list;
+  }
+
+  const workerPendingInvites = invitations.filter((item) => item.status === "pending");
+  const workerNeedWorkdays = activeWorkerWorkdays.filter((item) => workerWorkdayState(item).need);
+  const workerRestWorkdays = activeWorkerWorkdays.filter((item) => !workerWorkdayState(item).need);
+  const workerJobPageItem = workdayDetailsTarget;
+  const workerJobPageIsInvite = isInvitationItem(workerJobPageItem);
+  const workerJobPageState = workerJobPageItem && !workerJobPageIsInvite ? workerWorkdayState(workerJobPageItem) : null;
+
   const workerInitials = (form.displayName || "D")
     .split(/\s+/)
     .filter(Boolean)
@@ -2821,7 +2912,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
 
   return (
     <P24Shell
-      current={workerView}
+      current={workerView === "wjob" ? (isInvitationItem(workdayDetailsTarget) ? "invites" : workerJobReturnView.current) : workerView}
       onGo={goWorkerView}
       groups={[
         ["Darbai", [
@@ -2862,7 +2953,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
       {!onAdminReturn && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
         .wd-page{min-height:0;background:transparent;color:#222631;padding-bottom:24px}
-        .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}
+        .wd-shell[data-view="overview"] [data-wv]:not([data-wv~="overview"]){display:none!important}.wd-shell[data-view="invites"] [data-wv]:not([data-wv~="invites"]){display:none!important}.wd-shell[data-view="jobs"] [data-wv]:not([data-wv~="jobs"]){display:none!important}.wd-shell[data-view="history"] [data-wv]:not([data-wv~="history"]){display:none!important}.wd-shell[data-view="ads"] [data-wv]:not([data-wv~="ads"]){display:none!important}.wd-shell[data-view="schedule"] [data-wv]:not([data-wv~="schedule"]){display:none!important}.wd-shell[data-view="profile"] [data-wv]:not([data-wv~="profile"]){display:none!important}.wd-shell[data-view="wjob"] [data-wv]:not([data-wv~="wjob"]){display:none!important}
         .wd-topbar{height:72px;background:#fff;border-bottom:1px solid #e4ebf0;display:flex;align-items:center;position:sticky;top:0;z-index:30}
         .wd-topbar-inner{width:min(1320px,calc(100% - 40px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px}
         .wd-shell{width:min(1320px,100%);margin:0 auto}
@@ -4111,8 +4202,109 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </section>
         )}
 
+        <div data-wv="invites" style={{ display: "contents" }}>
+          <PageHead title="Kvietimai į darbą" lead="Darbo vieta, laikas ir atlygis matomi prieš sutinkant." />
+          {workerPendingInvites.length ? (
+            <ListGroup title="Laukia jūsų atsakymo" count={workerPendingInvites.filter((item) => !invitationHasConflict(item)).length} hot>
+              <Paged items={workerPendingInvites} render={(item) => {
+                const conflict = invitationHasConflict(item);
+                const unread = unreadWorkerNotifications(item.id).filter((n) => n.event_type === "message").length;
+                return (
+                  <JobCard key={item.id} title={item.job?.title} company={item.companyName} companyAvatar={companyAvatarUrl(item.companyAvatarPath)}
+                    sub={`${dateText(item.job?.work_date)} · ${item.job?.start_time?.slice(0, 5) || ""}–${item.job?.end_time?.slice(0, 5) || ""} · ${item.job?.pay_amount ? formatNetPay(item.job.pay_amount, item.job.pay_unit) : "Atlygis nenurodytas"}`}
+                    locked={conflict} lockTip="Šiuo laiku jau dirbate. Kvietimo priimti negalima."
+                    pills={<>{unread ? <Pill tone="blue">Nauja žinutė</Pill> : null}</>}
+                    onOpen={() => openWorkdayDetails(item)} />
+                );
+              }} />
+            </ListGroup>
+          ) : (
+            <section className="card"><Empty title="Naujų kvietimų į darbą nėra" sub="Kai darbdavys atsiųs jums tinkamą pasiūlymą, jis atsiras čia." /></section>
+          )}
+        </div>
+
+        <div data-wv="jobs" style={{ display: "contents" }}>
+          <PageHead title="Mano darbai" lead="Priimti darbai, atvykimo žymėjimas ir darbo dienos uždarymas." />
+          {activeWorkerWorkdays.length ? (
+            <>
+              {workerNeedWorkdays.length ? (
+                <ListGroup title="Reikia jūsų veiksmo" count={workerNeedWorkdays.length} hot>
+                  <Paged items={workerNeedWorkdays} render={(item) => {
+                    const state = workerWorkdayState(item);
+                    return <JobCard key={item.id} title={item.job?.title} company={item.companyName} companyAvatar={companyAvatarUrl(item.companyAvatarPath)} sub={`${dateText(item.job?.work_date)} · ${item.job?.start_time?.slice(0, 5) || ""}–${item.job?.end_time?.slice(0, 5) || ""}`} pills={<Pill tone={state.tone}>{state.label}</Pill>} onOpen={() => openWorkdayDetails(item)} />;
+                  }} />
+                </ListGroup>
+              ) : null}
+              {workerRestWorkdays.length ? (
+                <ListGroup title="Suplanuoti ir laukiantys" count={workerRestWorkdays.length}>
+                  <Paged items={workerRestWorkdays} render={(item) => {
+                    const state = workerWorkdayState(item);
+                    return <JobCard key={item.id} title={item.job?.title} company={item.companyName} companyAvatar={companyAvatarUrl(item.companyAvatarPath)} sub={`${dateText(item.job?.work_date)} · ${item.job?.start_time?.slice(0, 5) || ""}–${item.job?.end_time?.slice(0, 5) || ""}`} pills={<Pill tone={state.tone}>{state.label}</Pill>} onOpen={() => openWorkdayDetails(item)} />;
+                  }} />
+                </ListGroup>
+              ) : null}
+            </>
+          ) : (
+            <section className="card"><Empty title="Aktyvių darbų nėra" sub="Kai priimsite darbo kvietimą arba turėsite artėjantį darbą, jis bus rodomas čia." /></section>
+          )}
+        </div>
+
+        <div data-wv="history" style={{ display: "contents" }}>
+          <PageHead title="Darbų istorija" lead="Užbaigti ir atšaukti darbai su darbdavių įvertinimais." />
+          <section className="card">
+            {workerWorkHistory.length ? (
+              <Paged items={workerWorkHistory} render={(item) => {
+                const cancelled = item.status === "cancelled_by_employer" || item.job?.status === "cancelled" || item.attendance?.final_outcome === "no_show";
+                return <JobCard key={item.id} title={item.job?.title} company={item.companyName} companyAvatar={companyAvatarUrl(item.companyAvatarPath)} sub={`${item.job?.work_date || ""} · ${item.job?.start_time?.slice(0, 5) || ""}–${item.job?.end_time?.slice(0, 5) || ""}`} pills={cancelled ? <Pill tone="red">{item.attendance?.final_outcome === "no_show" ? "Neatvyko" : "Atšauktas"}</Pill> : <Pill tone="green">Užbaigtas</Pill>} onOpen={() => openWorkdayDetails(item)} />;
+              }} />
+            ) : (
+              <Empty title="Darbų istorija tuščia" sub="Užbaigti ir atšaukti darbai bus saugomi čia." />
+            )}
+          </section>
+        </div>
+
+        <div data-wv="wjob" style={{ display: "contents" }}>
+          {workerJobPageItem ? (
+            <JobDetail
+              job={workerJobPageItem.job}
+              company={workerJobPageItem.companyName}
+              companyAvatar={companyAvatarUrl(workerJobPageItem.companyAvatarPath)}
+              pills={workerJobPageIsInvite
+                ? (workerJobPageItem.status === "pending" ? null : <Pill tone={workerJobPageItem.status === "accepted" ? "green" : ""}>{workerJobPageItem.status === "accepted" ? "Priimta" : workerJobPageItem.status === "expired" ? "Nebegalioja" : "Atmesta"}</Pill>)
+                : <Pill tone={workerJobPageState?.tone}>{workerJobPageState?.label}</Pill>}
+              metaExtra={workerJobPageIsInvite && workerJobPageItem.status === "pending" && invitationHasConflict(workerJobPageItem) ? <span className="jd-warn"><Svg name="clock" size={14} width={2.4} />Sutampa su jau priimtu darbu</span> : null}
+              alert={workerJobPageItem.job?.status === "cancelled" ? (
+                <div className="alert"><div><b>Darbdavys atšaukė šį darbą</b><p>Priežastis: {workerJobPageItem.job.cancellation_reason || "nenurodyta."}</p></div></div>
+              ) : workerJobPageState?.need ? (
+                <div className="alert"><div><b>{workerJobPageState.label}</b><p>{workerJobPageState.canCheckIn ? "Atvykę paspauskite „Atvykau“. Jei nerandate objekto ar atsakingo žmogaus – „Atvykau, bet nerandu“." : workerJobPageState.needsClose ? "Pažymėkite, ar dirbote šiame darbe, kad darbo diena būtų uždaryta." : "Darbdavys pažymėjo darbo dienos rezultatą. Patvirtinkite arba ginčykite."}</p></div></div>
+              ) : null}
+              mainExtra={!workerJobPageIsInvite ? (
+                <div className="infobox"><span className="infoic"><Svg name="camera" size={22} /></span><div><b>Išsaugokite atvykimo ir darbo pabaigos įrodymus</b><p>Atvykę ir baigę darbą, jei objekte leidžiama fotografuoti, padarykite po nuotrauką ir išsaugokite originalą telefone. Tai gali padėti kilus ginčui dėl atvykimo ar darbo laiko.</p><small>Venkite fotografuoti žmones, dokumentus ar kitą jautrią informaciją.</small></div></div>
+              ) : null}
+              actions={<ActionButtons items={workerJobActions(workerJobPageItem)} />}
+              side={workerJobPageIsInvite && workerJobPageItem.status === "pending" ? (
+                <section className="card jd-co jd-lock"><h2>Kontaktas objekte</h2><p className="small muted" style={{ margin: 0 }}><Svg name="shield" size={15} /> Darbdavio telefono numeris bus matomas, kai priimsite darbą.</p></section>
+              ) : (
+                <section className="card jd-co">
+                  <h2>Kontaktai</h2>
+                  <div className="ctrow">
+                    <small>Kontaktas objekte</small>
+                    <div className="co-line"><div className="av lt sm">{initialsOf(workerJobPageItem.companyName)}</div><div><b>{workerJobPageItem.companyName}</b><small>Atsakingas už darbą</small></div></div>
+                    {workerJobPageItem.companyPhone ? (
+                      <>
+                        <span className="jd-phone">{workerJobPageItem.companyPhone}</span>
+                        <div className="jd-two"><a className="btn dark sm" href={`tel:${String(workerJobPageItem.companyPhone).replace(/\s/g, "")}`}><Svg name="phone" size={14} />Skambinti</a><button className="btn sm" type="button" onClick={() => navigator.clipboard?.writeText(workerJobPageItem.companyPhone)}>Kopijuoti</button></div>
+                      </>
+                    ) : <p className="small muted" style={{ margin: 0 }}>Telefono numeris nenurodytas.</p>}
+                  </div>
+                </section>
+              )}
+            />
+          ) : null}
+        </div>
+
         <div className="wd-form">
-          <section className="wd-card wd-invitations-section" id="worker-invitations" data-wv="invites">
+          <section className="wd-card wd-invitations-section" id="worker-invitations" data-wv="legacy">
             <h2>Kvietimai į darbą</h2>
 
             {invitations.length ? (
@@ -4326,7 +4518,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card wd-active-jobs-section" id="worker-workdays" data-wv="jobs">
+          <section className="wd-card wd-active-jobs-section" id="worker-workdays" data-wv="legacy">
             <h2>Mano darbai</h2>
 
             {activeWorkerWorkdays.length > 0 && (
@@ -4851,7 +5043,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
             )}
           </section>
 
-          <section className="wd-card" id="worker-job-history" data-wv="history">
+          <section className="wd-card" id="worker-job-history" data-wv="legacy">
             <div className="wd-history-section-head">
               <h2>Darbų istorija</h2>
               {isPhoneLayout && workerWorkHistory.length > 0 && (
@@ -4927,7 +5119,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null }) {
         </div>
       </main>
 
-      {workdayDetailsTarget && (
+      {false && workdayDetailsTarget && (
         <div
           className="wd-job-info-overlay"
           onMouseDown={(e) => {
