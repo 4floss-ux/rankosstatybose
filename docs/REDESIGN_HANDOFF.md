@@ -85,17 +85,23 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
 - `brand-logo.png` sumažintas 2048→960 px (220→68 KB).
 - Testavimo `bundle.sh` naudoja `--splitting`.
 
-## 5. Kas liko (eilės tvarka)
+### Padaryta 2026-11-01 (3 sesija) – „1:1 su prototipu“
+- Darbdavys: Komanda, Planai, Įmonės profilis (`EmployerCompany.jsx`: Mano duomenys – kiekvienas narys saugo vardą/pavardę/telefoną;
+  Informacija – tik savininkas), Darbų kalendorius (`EmployerCalendar.jsx`, mėnesio tinklelis; senas `EmployerWorkCalendar.jsx` su demo režimu ištrintas).
+- Slaptažodžio keitimas kaip prototipe (`src/p24/account/PasswordModal.jsx`): tikrina dabartinį slaptažodį, taisyklės, atkūrimo nuoroda.
+- Pašalinta, ko nėra prototipe: darbuotojo „Patirtis statybose (metais)“, įmonės apdovanojimų blokas profilyje, darbdavio pranešimų jungiklis profilyje
+  (naršyklės pranešimų pasiūlymas lieka automatinis), skelbimų „Visi skelbimai“ mygtukai (grįžtama paspaudus meniu), skelbimo adreso laukas (DB reikšmė lieka).
+- Admin (`src/p24/admin/AdminLists.jsx`): Darbuotojai, Darbdaviai (+ patvirtinimas vienu mygtuku), Visi darbai, Domisi užsienyje, Įdarbinti, Ginčai,
+  Klaidos, Atsiliepimai, Vadovų pokalbiai, Failai, Mėnesio geriausi, Veiksmų istorija – prototipo lentelės ir „Valdyti“ langas, veiksmai – esami.
+- /hire – vieno ekrano įmonės užklausos forma; /hire/login – prototipo kortelė (`src/p24/hire.css` – prototipo hire stiliai, apriboti `.p24`).
+- p24 modalai turi savo `position:fixed` stilių (nepriklauso nuo puslapio).
 
-1. Skelbimų smulkmenos: „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo dar nėra); pažymėjimų rodymas darbdavio darbuotojo profilio lange.
-2. Darbdavys: mėgstami, skubūs, komanda, planai, įmonės profilis, kalendorius, statistika – iš senų langų į prototipo ekranus.
-3. Admin: visi skyriai, išskyrus suvestinę (dabar seni su skin) → prototipo `admin.js`.
-4. Verslo pristatymo SVG ekrano nuotraukos (rodo seną UI).
-5. **Hire (paskutinis):** prototipas `docs/redesign/prototype/hire.js` (`hireTop`, `hireLanding`), tekstai `hire_copy.json`
-   (kalbos en, de, nl, no, sv, da, lt + `_login`), `hire.css`. Balta viršutinė juosta su kalbos pasirinkimu, mėlynas hero su įmonės forma.
-   Forma → esamas RPC `submit_foreign_hire_request` (įmonė, šalis, kontaktinis asmuo, pareigos, el. paštas, telefonas, sutikimas, `language_code`)
-   – žr. `src/hire/HirePage.jsx`. Taip pat portalo prisijungimas.
-6. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis.
+## 5. Kas liko
+
+1. Admin „Tarptautinė atranka“ ir /hire/portal – palikti esami (labai daug realios logikos: kandidatai, sutartys, sąskaitos); išvaizda – sena su p24 skin.
+2. Verslo pristatymo puslapio ekrano nuotraukos (`public/assets/screens/bp-*.svg`) vis dar rodo seną UI.
+3. Skelbimų „Rašyti įmonei / kandidatui“ pokalbis (prototipe yra, kanalo nėra) – nedaryta, kad nebūtų netikros funkcijos.
+4. Pabaigoje: pilnas testas peržiūroje su testinėmis paskyromis (žr. `docs/LAUNCH.md`).
 
 ## 6. Kaip tikrinti (prieš kiekvieną commit)
 
