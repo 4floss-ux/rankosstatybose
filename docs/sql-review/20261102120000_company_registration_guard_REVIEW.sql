@@ -42,6 +42,13 @@ begin
     new.company_code := null;
     return new;
   end if;
+  -- Esamas admin_register_employer_mode kuria admino testinę įmonę be kodo
+  -- (employer_type pagal nutylėjimą 'company'). Jo nelaužome; įvestas kodas
+  -- vis tiek tikrinamas žemiau.
+  if c = '' and public.is_admin() is true then
+    new.company_code := null;
+    return new;
+  end if;
   if not public.lt_company_code_valid(c) then
     raise exception 'Neteisingas juridinio asmens kodas. Reikia 9 skaitmenų kodo su teisingu kontroliniu skaitmeniu arba 7 skaitmenų istorinio kodo.' using errcode = '23514';
   end if;
