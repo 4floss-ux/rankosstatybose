@@ -15,3 +15,18 @@ export function companyCodeError(value) {
   }
   return checksum === digits[8] ? "" : "Neteisingas įmonės kodo kontrolinis skaitmuo.";
 }
+
+
+// Administratoriaus redaktorius neturi sugadinti senų įrašų:
+// nepakitusio istorinio kodo neblokuojame, tačiau naują ar pakeistą tikriname.
+export function companyCodeEditError(value, originalValue) {
+  const next = typeof value === "string" ? value.trim() : "";
+  const original = typeof originalValue === "string" ? originalValue.trim() : "";
+  if (next === original) return "";
+  if (!next) {
+    return original
+      ? "Juridinio asmens kodo pašalinti negalima. Jei tai privatus darbdavys, pirmiausia patikrinkite jo tipą."
+      : "";
+  }
+  return companyCodeError(next);
+}
