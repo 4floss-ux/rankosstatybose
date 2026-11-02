@@ -54,7 +54,7 @@ Visiems:
 - [x] Abi SQL apsaugos ir audito migracijos pritaikytos; tikras įrašų/trigerių bandymas vykdytas su ROLLBACK.
 - [ ] Prijungtoje naršyklėje su trimis savininko testinėmis paskyromis išbandyti login, darbdavio skelbimą/kvietimą, darbuotojo atsakymą, žinutes, admin impersonaciją ir grįžimą.
 - [ ] Patikrinti Stripe test-mode mokėjimo kelią be realių lėšų.
-- [ ] Patikrinti / nuspręsti dėl 12/24 val. kvietimo termino serverinės kontrolės: trigeris ir cron tebėra neįjungti. Neaktyvuoti aklai.
+- [x] Kvietimų terminų trigeris ir cron įjungti migracija `activate_job_invitation_deadlines_20261102`; iki įjungimo nebuvo nė vieno kvietimo. Realus pakvietimo/atsakymo E2E lieka nepatikrintas.
 - [ ] Tik po GO Cloudflare keisti MAINTENANCE_MODE=off ir patikrinti viešą svetainę.
 
 ## Jei kas nors negerai
