@@ -17,6 +17,7 @@ create table public.companies (
   company_code text,
   employer_type text not null default 'company',
   is_verified boolean not null default false,
+  plan_key text,
   updated_at timestamptz not null default now()
 );
 create table public.admin_audit_log (

@@ -159,4 +159,44 @@ do $t$ begin
 end $t$;
 drop trigger test_reject_audit on public.admin_audit_log;
 drop function public.test_reject_audit();
+
+-- Regression: existing admin_register_employer_mode inserts an admin test company
+-- without a code (employer_type default 'company'). It must keep working, while a
+-- typed invalid code from an admin is still rejected.
+begin;
+select set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+insert into public.companies(owner_id,name,company_code)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Admin employer mode',null);
+do $t$ begin
+  begin
+    insert into public.companies(owner_id,name,company_code)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Admin bad code','123');
+    raise exception 'ADMIN_INVALID_CODE_ALLOWED';
+  exception when check_violation then null; end;
+end $t$;
+rollback;
+
+-- Non-admin blank company code is still rejected (no bypass via the admin branch).
+begin;
+select set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',true);
+do $t$ begin
+  begin
+    insert into public.companies(owner_id,name,company_code,employer_type)
+    values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','No code company',null,'company');
+    raise exception 'BLANK_COMPANY_CODE_ALLOWED';
+  exception when check_violation then null; end;
+end $t$;
+rollback;
+
+-- Regression: admin plan/system updates are not logged as company profile edits.
+begin;
+select set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+do $t$ declare before_count integer; begin
+  select count(*) into before_count from public.admin_audit_log where action='company_updated';
+  update public.companies set plan_key='business' where name='Employer edit';
+  if (select count(*) from public.admin_audit_log where action='company_updated') <> before_count then
+    raise exception 'System field change was logged as company edit';
+  end if;
+end $t$;
+rollback;
 select 'ALL SYNTHETIC SQL REVIEW TESTS PASSED' as result;
