@@ -56,10 +56,34 @@ Kvietimų termino trigeris išjungtas ir cron nesuplanuotas.
 
 ## 24 anonimiškai vykdomos SECURITY DEFINER funkcijos
 
-Savininko nurodytų 24 funkcijų tikslūs vardai, overload parašai, apibrėžimai ir
-faktinės teisės šiai peržiūrai dar nepateikti. Todėl jų negalima pažymėti
-patikrintomis, saugiomis arba pažeidžiamomis vien pagal skaičių.
+Savininko papildoma tik skaitymo patikra: 24 SECURITY DEFINER funkcijos turi
+EXECUTE anon ir authenticated rolėms; 9 grąžina trigger ir nėra tiesioginiai
+įprasti PostgREST RPC, likusios 15 yra iškviečiamos funkcijos.
+`app_private.foreign_employer_session_account` tikrina SHA-256 sesijos rakto
+maišą, galiojimą, atšaukimą ir paskyros aktyvumą; tiesioginės anon/authenticated
+EXECUTE prieigos neturi. Tai savininko patikros rezultatas, ne mūsų SQL analizė.
+
+**Saugumo auditas neužbaigtas.** Tikslių 15 RPC vardų, overload parašų,
+apibrėžimų ir faktinių teisių negavome. Paskirtys (statistika, registracija,
+kvietimų peržiūra) ir vien funkcijų skaičius nepatvirtina saugumo.
 Jokių funkcijų produkcijoje nekvietėme ir leidimų nekeitėme.
+
+Pirmiausia reikia tikslaus 15 funkcijų sąrašo. Jei žemiau esantys kode matomi
+RPC patenka į jį, pilnus apibrėžimus tikrinti tokia tvarka:
+1. `foreign_employer_admin_test_login`, `foreign_employer_login` – ar nėra
+   admin patikros apėjimo, klaidingo sesijos išdavimo ar credential nutekėjimo.
+2. `foreign_employer_change_password`, `foreign_employer_candidate_response`,
+   `foreign_employer_submit_need`, `foreign_employer_logout` – ar sesijos
+   paskyra susiejama su kiekvienu keičiamu įrašu, ne vien patikrinamas tokenas.
+3. `foreign_employer_portal_data`, `get_company_team_invite_public` – ar
+   neatveriami kitos įmonės, kandidato ar kvietimo privatūs duomenys.
+4. `submit_foreign_hire_request`, `record_site_visit` ir kiti likę registracijos /
+   statistikos RPC – įvesties ribos, neleistini šalutiniai pakeitimai, duomenų
+   grąžinimas bei piktnaudžiavimo ribojimas. Paskirtis savaime nereiškia mažos rizikos.
+
+Šis prioritetų sąrašas nėra patvirtintas 15 anonimiškai vykdomų funkcijų sąrašas.
+Reikia ir saugumui svarbių helper apibrėžimų; 9 trigerių prieigos kelius galima
+vertinti vėliau pagal juos aktyvuojančių lentelių INSERT/UPDATE/DELETE leidimus.
 
 Reikalingas tik metaduomenų eksportas: `pg_get_function_identity_arguments`,
 `pg_get_functiondef`, savininkas, `proconfig`, efektyvus EXECUTE prieinamumas
