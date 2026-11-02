@@ -1,4 +1,5 @@
--- PARUOŠTA PERŽIŪRAI. NETAIKYTA. Patikrinti admin_audit_log DDL (action
+-- TAIKYTA produkcinėje Supabase 2026-11-02, migracija 20261102193537 – launch_admin_company_audit_20261102.
+-- ISTORINĖ PERŽIŪROS KOPIJA: NEKARTOTI, NES TRIGERIAI/FUNKCIJOS JAU YRA.
 -- apribojimus, default ir NULL taisykles) bei esamą get_admin_audit_log grąžą.
 -- Esamas admin_update_company neperrašomas, istoriniai įvykiai nekuriami.
 begin;
