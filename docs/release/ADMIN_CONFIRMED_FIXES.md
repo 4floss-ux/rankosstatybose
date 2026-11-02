@@ -1,3 +1,5 @@
+> **ISTORINĖ 2026-11-02 PR #16 ataskaita.** PR #14/#16–#22 jau sujungti; nauja versija įdiegta Cloudflare, priežiūros režimas veikia. Abu `docs/sql-review/` SQL projektai **pritaikyti tikroje Supabase** migracijomis `launch_company_registration_guard_20261102` ir `launch_admin_company_audit_20261102`. Vėlesnę būseną žr. `docs/release/PRODUCTION_STATUS_2026-11-02.md`. Toliau esantis „NETAIKYTI“ aprašymas – senas, NE dabartinė būsena.
+
 # Patvirtintų administratoriaus problemų pataisymai
 
 Šaka: `fix/admin-prelaunch-confirmed`, iš `redesign` pagrindo su išsaugotais
