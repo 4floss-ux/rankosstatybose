@@ -1,0 +1,35 @@
+name: Redesign safe checks
+
+on:
+  push:
+    branches: [redesign]
+  pull_request:
+    branches: [redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check company-code validation
+        run: node tests/company-code.test.mjs
+      - name: Check administrator session handling
+        run: node --experimental-vm-modules tests/impersonation.test.mjs
+      - name: Production bundle with no live credentials
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_PUBLISHABLE_KEY: ""
+          VITE_SUPABASE_ANON_KEY: ""
+        run: npm run build

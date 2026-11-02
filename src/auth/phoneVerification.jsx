@@ -209,8 +209,8 @@ export function PhoneAvailabilityHint({ verification: v }) {
 
 export function PhoneVerificationFields({ verification: v }) {
   if (!v.active) return null;
-  const style = { gridColumn: "1 / -1", padding: 16, border: "1px solid #e2e8ee", borderRadius: 12,
-    background: "#fff", fontSize: 14, lineHeight: 1.5 };
+  const style = { gridColumn: "1 / -1", padding: 14, border: "1px solid var(--line, #e2e8ee)", borderRadius: 5,
+    background: "var(--soft, #f6f8fa)", fontSize: 13, lineHeight: 1.5 };
   const signup = v.purpose === "signup";
   if (v.configError) return <div style={style} role="alert">{v.configError} Atnaujinkite puslapį ir bandykite dar kartą.</div>;
   if (!v.config) return <div style={style} role="status">Ruošiamas patvirtinimas...</div>;
@@ -226,7 +226,7 @@ export function PhoneVerificationFields({ verification: v }) {
   const canRequest = !v.checkingNumber && !v.availabilityError && !v.busy && v.retrySeconds === 0 && (!signup || Boolean(v.captchaToken));
   return (
     <div style={style}>
-      <b style={{ color: "#252935", fontSize: 15 }}>{v.challenge
+      <b style={{ color: "var(--navy, #252935)", fontSize: 14 }}>{v.challenge
         ? signup ? "Registracijai patvirtinti įveskite kodą" : "Telefono numeriui patvirtinti įveskite kodą"
         : signup ? "Registracijos patvirtinimas" : "Naujo telefono numerio patvirtinimas"}</b>
       <p style={{ margin: "5px 0 12px", color: "#526374" }}>{v.challenge
@@ -238,7 +238,7 @@ export function PhoneVerificationFields({ verification: v }) {
           <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
             aria-label="6 skaitmenų SMS kodas" placeholder="000000" value={v.code} disabled={v.busy} autoFocus
             onChange={(event) => v.setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-            style={{ width: "100%", boxSizing: "border-box", marginTop: 5, padding: "11px 12px", border: "1px solid #cad6df", borderRadius: 8,
+            style={{ width: "100%", boxSizing: "border-box", marginTop: 5, padding: "11px 12px", border: "1px solid var(--line, #cad6df)", borderRadius: 4, background: "#fff",
               fontFamily: "inherit", fontSize: 20, lineHeight: 1.2, letterSpacing: "0.2em" }} />
         </label>
         <button type="button" className="btn primary" disabled={v.busy || v.code.length !== 6} onClick={v.verify}>

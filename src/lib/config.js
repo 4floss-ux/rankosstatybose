@@ -65,13 +65,13 @@ if (!isHireProjectPath && typeof document !== "undefined") {
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifest = document.createElement("link");
     manifest.rel = "manifest";
-    manifest.href = "/statybos24.webmanifest?v=2";
+    manifest.href = "/statybos24.webmanifest?v=4";
     document.head.appendChild(manifest);
   }
   if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     const touchIcon = document.createElement("link");
     touchIcon.rel = "apple-touch-icon";
-    touchIcon.href = "/statybos24-touch-icon-v2.png";
+    touchIcon.href = "/statybos24-touch-icon-v3.png";
     document.head.appendChild(touchIcon);
   }
 }

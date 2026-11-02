@@ -1,18 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazyPage } from "./lib/lazyPage.js";
 import { initialPasswordRecovery, isHireProjectPath, statybos24IsStandalone, supabase } from "./lib/config.js";
 import { PasswordRecoveryPage, clearPasswordRecoveryUrl, rememberPasswordRecoveryUser, rememberedPasswordRecoveryUser } from "./auth/passwordRecovery.jsx";
 import { AuthModal } from "./auth/AuthModal.jsx";
+import { endImpersonation, getImpersonation, leaveImpersonation, watchImpersonation } from "./admin/impersonation.js";
 import { TeamInvitePage } from "./team/TeamInvitePage.jsx";
 import { localDateISO } from "./lib/jobs.js";
-import { WorkerDashboard } from "./worker/WorkerDashboard.jsx";
 import { BUSINESS_PRESENTATION_TOKEN } from "./employer/plans.js";
-import { EmployerDashboard } from "./employer/EmployerDashboard.jsx";
-import { AdminEmployerGateway, AdminWorkerGateway } from "./admin/adminParts.jsx";
-import { AdminDashboard } from "./admin/AdminDashboard.jsx";
 import { SuspendedAccount } from "./public/SuspendedAccount.jsx";
-import { PublicLandingPage } from "./public/PublicLandingPage.jsx";
-import { BusinessPresentationPage } from "./public/BusinessPresentationPage.jsx";
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
+import { PublicLandingP24 } from "./p24/public/PublicLandingP24.jsx";
+
+// Kodo dalys kraunamos pagal rolę – pradinis puslapis lieka lengvas.
+const WorkerDashboard = lazyPage(() => import("./worker/WorkerDashboard.jsx"), "WorkerDashboard");
+const EmployerDashboard = lazyPage(() => import("./employer/EmployerDashboard.jsx"), "EmployerDashboard");
+const AdminDashboard = lazyPage(() => import("./admin/AdminDashboard.jsx"), "AdminDashboard");
+const AdminWorkerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminWorkerGateway");
+const AdminEmployerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminEmployerGateway");
+const BusinessPresentationPage = lazyPage(() => import("./public/BusinessPresentationPage.jsx"), "BusinessPresentationPage");
 
 export function App() {
   const [user, setUser] = useState(null);
@@ -20,7 +25,7 @@ export function App() {
     if(!user?.id || !supabase) return;
     let stopped=false, busy=false, recordedDay="";
     async function recordDay() {
-      if(stopped || busy || document.visibilityState !== "visible") return;
+      if(stopped || busy || document.visibilityState !== "visible" || getImpersonation(user.id)?.expired) return;
       const date=localDateISO(new Date());
       if(recordedDay===date) return;
       busy=true;
@@ -47,6 +52,24 @@ export function App() {
     suspendedUntil: null,
     suspensionReason: null,
   });
+  const [impersonationReturning, setImpersonationReturning] = useState(false);
+  const [impersonationError, setImpersonationError] = useState("");
+  const impersonated = user && accountRole !== "admin" ? getImpersonation(user.id) : null;
+  const finishImpersonation = useCallback(async () => {
+    setImpersonationReturning(true);
+    setImpersonationError("");
+    try { await endImpersonation(); }
+    catch { setImpersonationError("Nepavyko atkurti administratoriaus sesijos. Bandykite dar kartą arba prisijunkite iš naujo."); }
+  }, []);
+  const signInAgain = async () => {
+    setImpersonationError("");
+    try { await leaveImpersonation(); }
+    catch { setImpersonationError("Nepavyko atsijungti. Bandykite dar kartą."); }
+  };
+  useEffect(() => {
+    if (!user?.id || !supabase) return;
+    return watchImpersonation(user.id, finishImpersonation);
+  }, [user?.id, finishImpersonation]);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [authRole, setAuthRole] = useState("worker");
@@ -283,6 +306,19 @@ export function App() {
     setPasswordRecovery(false);
   };
 
+  // Pasibaigus peržiūrai ar grįžtant naudotojo dashboard neberodomas.
+  if (impersonationReturning || impersonated?.expired) {
+    if (!impersonationError) return <AppBootLoader />;
+    return (
+      <div className="p24">
+        <div className="rolebar adm"><span role="alert">{impersonationError}</span>
+          <button type="button" onClick={finishImpersonation}>Grįžti į administratorių</button>
+          <button type="button" onClick={signInAgain}>Prisijungti</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!authSessionChecked || (user && !accountStatusChecked)) {
     // Standalone PWA already displays the OS-generated launch screen.
     // Keep login initialization visually quiet; do not show a second logo/spinner.
@@ -334,7 +370,7 @@ export function App() {
   ) {
     return (
       <SuspendedAccount
-        onLogout={logout}
+        onLogout={impersonated ? finishImpersonation : logout}
         disabled={!accountStatus.isActive}
         suspendedUntil={accountStatus.suspendedUntil}
         reason={accountStatus.suspensionReason}
@@ -372,15 +408,17 @@ export function App() {
     );
   }
 
+  const impersonation = impersonated ? { name: impersonated.name, onEnd: finishImpersonation } : null;
+
   if (user && accountRole === "worker") {
     return (
-      <WorkerDashboard user={user} onLogout={logout} />
+      <WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <EmployerDashboard user={user} onLogout={logout} />
+      <EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />
     );
   }
 
@@ -418,12 +456,10 @@ export function App() {
 
   return (
     <>
-      <PublicLandingPage
+      <PublicLandingP24
         onLogin={openLogin}
         onEmployerSignup={openEmployerSignup}
         onWorkerSignup={openWorkerSignup}
-        pricingBillingCycle={pricingBillingCycle}
-        setPricingBillingCycle={setPricingBillingCycle}
       />
 
       <AuthModal

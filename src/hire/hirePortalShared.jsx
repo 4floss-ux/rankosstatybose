@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { BrandLogo } from "../ui/brand.jsx";
-import { AppBootLoader } from "../ui/AppBootLoader.jsx";
 import { HIRE_COPY, HIRE_LANGUAGES } from "./hireShared.jsx";
+import "../p24/p24.css";
+import "../p24/hire.css";
 
 export const FOREIGN_HIRE_PORTAL_SESSION_KEY = "s24_foreign_hire_portal_session";
 
@@ -149,34 +150,26 @@ export function HireEmployerLoginPage() {
   }
 
   return (
-    <div className="hire-login-page">
-      <style>{`
-        .hire-login-page{min-height:100vh;background:#f5f8fa;color:#222631;font-family:Inter,system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr) minmax(430px,.82fr)}
-        .hire-login-brand{position:relative;overflow:hidden;background:#222631;color:#fff;padding:54px clamp(32px,6vw,90px);display:flex;flex-direction:column;justify-content:space-between;isolation:isolate}.hire-login-brand:before{content:"EUROPE";position:absolute;left:-3%;bottom:5%;font:950 clamp(90px,14vw,220px)/.8 Manrope,Inter,sans-serif;letter-spacing:-.08em;color:rgba(255,255,255,.035);z-index:-1}.hire-login-brand-logo{background:#fff;border-radius:14px;padding:13px 18px;width:max-content}.hire-login-brand-copy{max-width:650px}.hire-login-brand-copy small{display:block;color:#8778b0;font-size:9px;font-weight:950;letter-spacing:.16em;text-transform:uppercase}.hire-login-brand-copy h1{margin:12px 0 18px;font:900 clamp(42px,5.3vw,76px)/.96 Manrope,Inter,sans-serif;letter-spacing:-.055em}.hire-login-brand-copy p{max-width:570px;margin:0;color:#c4d1da;font-size:14px;line-height:1.7}.hire-login-brand-foot{color:#8296a6;font-size:10px}
-        .hire-login-side{display:grid;place-items:center;padding:34px}.hire-login-card{width:min(100%,470px);background:#fff;border:1px solid #e2e9ee;border-radius:20px;padding:34px;box-shadow:0 24px 65px rgba(34,38,49,.08)}.hire-login-card .mobile-logo{display:none;text-align:center;margin-bottom:24px}.hire-login-card small{color:#56487b;font-size:8px;font-weight:950;letter-spacing:.15em;text-transform:uppercase}.hire-login-card h2{margin:8px 0 7px;font:900 30px/1.08 Manrope,Inter,sans-serif;letter-spacing:-.035em}.hire-login-card>p{margin:0 0 25px;color:#72818d;font-size:12px;line-height:1.55}.hire-login-card-top{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-4px 0 12px}.hire-login-back{height:40px;padding:0 13px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#222631;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font:850 10px Inter,sans-serif}.hire-login-back:hover{background:#f7f9fa}.hire-portal-lang-switch{position:relative;display:inline-block}.hire-portal-lang-trigger{min-width:72px;height:40px;padding:0 10px;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#222631;display:flex;align-items:center;justify-content:space-between;gap:10px;font:900 9px Inter,sans-serif;cursor:pointer}.hire-portal-lang-trigger svg{width:16px;height:16px}.hire-portal-lang-menu{position:absolute;right:0;top:calc(100% + 7px);z-index:50;width:190px;padding:6px;border:1px solid #dce5eb;border-radius:11px;background:#fff;box-shadow:0 18px 45px rgba(34,38,49,.14)}.hire-portal-lang-menu button{width:100%;min-height:36px;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#526575;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:800 10px Inter,sans-serif;cursor:pointer}.hire-portal-lang-menu button:hover{background:#f5f8fa}.hire-portal-lang-menu button.active{background:#222631;color:#fff}.hire-portal-lang-menu button b{font-size:8px;letter-spacing:.08em}.hire-login-form{display:grid;gap:15px}.hire-login-field{display:grid;gap:7px}.hire-login-field span{font-size:9px;font-weight:900;color:#526575;letter-spacing:.03em}.hire-login-input{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #dce5eb;border-radius:10px;background:#fff;color:#222631;padding:11px 13px;font:750 13px Inter,sans-serif;outline:0}.hire-login-input:focus{border-color:#7e6eaa;box-shadow:0 0 0 3px rgba(107,91,149,.11)}.hire-login-error{padding:11px 12px;border:1px solid #efc2b7;border-radius:10px;background:#fff2ee;color:#a5452d;font-size:10px;line-height:1.45}.hire-login-submit{min-height:48px;border:0;border-radius:10px;background:#6b5b95;color:#fff;font:900 11px Inter,sans-serif;cursor:pointer}.hire-login-submit:disabled{opacity:.6;cursor:wait}.hire-login-help{margin-top:18px;padding-top:17px;border-top:1px solid #edf1f4;color:#7b8994;font-size:9.5px;line-height:1.55}.hire-login-help a{color:#493e69;font-weight:850;text-decoration:none}
-        @media(max-width:860px){.hire-login-page{grid-template-columns:1fr}.hire-login-brand{display:none}.hire-login-side{padding:22px 14px}.hire-login-card{padding:26px 20px}.hire-login-card .mobile-logo{display:block}.hire-login-card h2{font-size:27px}}
-      `}</style>
-      <section className="hire-login-brand">
-        <div className="hire-login-brand-logo"><HirePortalLogo /></div>
-        <div className="hire-login-brand-copy"><small>{copy.eyebrow}</small><h1>{copy.heroTitle}</h1><p>{copy.heroCopy}</p></div>
-        <div className="hire-login-brand-foot">{copy.heroFoot}</div>
-      </section>
-      <section className="hire-login-side">
-        <form className="hire-login-card" onSubmit={submit}>
-          <div className="mobile-logo"><HirePortalLogo /></div>
-          <div className="hire-login-card-top"><HirePortalLanguageSwitch lang={lang} onChange={changeLanguage}/><a className="hire-login-back" href="/hire"><span aria-hidden="true">←</span>{HIRE_COPY[lang]?.form?.common?.back || "Back"}</a></div>
-          <small>{copy.portal}</small>
+    <div className="p24">
+      <div className="hp-login">
+        <form className="hp-card" onSubmit={submit} noValidate>
+          <div className="h-lsel"><select aria-label="Language" value={lang} onChange={(e) => changeLanguage(e.target.value)}>
+            {HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
+          </select></div>
+          <img src="/brand-logo-tight.png" alt="statybos24.lt" className="hp-logo" />
+          <span className="h-k">{copy.portal}</span>
           <h2>{copy.signIn}</h2>
-          <p>{copy.intro}</p>
-          <div className="hire-login-form">
-            <label className="hire-login-field"><span>{copy.companyId}</span><input className="hire-login-input" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder={copy.companyPlaceholder} /></label>
-            <label className="hire-login-field"><span>{copy.password}</span><input className="hire-login-input" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} /></label>
-            {error ? <div className="hire-login-error">{error}</div> : null}
-            <button className="hire-login-submit" type="submit" disabled={busy}>{busy ? <AppBootLoader compact label={copy.busy} /> : copy.submit}</button>
+          <p className="small muted" style={{ margin: 0 }}>{copy.intro}</p>
+          <div className="form">
+            <label className="field" htmlFor="hl-e">{copy.companyId}<input id="hl-e" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder={copy.companyPlaceholder} /></label>
+            <label className="field" htmlFor="hl-p">{copy.password}<input id="hl-p" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} /></label>
+            {error ? <p className="ferr" role="alert">{error}</p> : null}
+            <button className="btn primary" type="submit" disabled={busy}>{busy ? copy.busy : copy.submit}</button>
           </div>
-          <div className="hire-login-help">{copy.help} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a>.</div>
+          <p className="small muted" style={{ margin: 0 }}>{copy.help} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a></p>
+          <a className="linkbtn" href={`/hire?lang=${lang}`}>← statybos24.lt/hire</a>
         </form>
-      </section>
+      </div>
     </div>
   );
 }

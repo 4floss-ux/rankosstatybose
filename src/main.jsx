@@ -1,14 +1,19 @@
+import { Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import "./styles.css";
 import { unifiedCloseStyles } from "./ui/common.jsx";
-import { PlatformLegalDocumentPage } from "./legal/LegalDialogs.jsx";
-import { HirePage } from "./hire/HirePage.jsx";
-import { HireEmployerLoginPage } from "./hire/hirePortalShared.jsx";
-import { HireEmployerPortalPage } from "./hire/HireEmployerPortalPage.jsx";
 import { App } from "./App.jsx";
 import { mobileModalSafetyStyles, mobileResponsiveFixStyles } from "./styles/mobileStyles.js";
 import { BackToTopButton, FatalAppError, MobilePopupBackGuard, SiteAnalyticsTracker } from "./app/siteChrome.jsx";
+import { AppBootLoader } from "./ui/AppBootLoader.jsx";
+import { lazyPage } from "./lib/lazyPage.js";
+
+// /hire ir teisiniai puslapiai – atskiros kodo dalys.
+const HirePage = lazyPage(() => import("./hire/HirePage.jsx"), "HirePage");
+const HireEmployerLoginPage = lazyPage(() => import("./hire/hirePortalShared.jsx"), "HireEmployerLoginPage");
+const HireEmployerPortalPage = lazyPage(() => import("./hire/HireEmployerPortalPage.jsx"), "HireEmployerPortalPage");
+const PlatformLegalDocumentPage = lazyPage(() => import("./legal/LegalDialogs.jsx"), "PlatformLegalDocumentPage");
 
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 const isHireRoute = currentPath === "/hire";
@@ -33,6 +38,7 @@ async function mountSiteWhenFontsReady() {
   }
   createRoot(rootElement).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
+    <Suspense fallback={<AppBootLoader />}>
     {isHireLoginRoute ? (
       <HireEmployerLoginPage />
     ) : isHirePortalRoute ? (
@@ -50,12 +56,15 @@ async function mountSiteWhenFontsReady() {
         <style>{unifiedCloseStyles}</style>
         <style>{mobileResponsiveFixStyles}</style>
         <style>{mobileModalSafetyStyles}</style>
-        <App />
+        <Suspense fallback={<AppBootLoader />}>
+          <App />
+        </Suspense>
         <SiteAnalyticsTracker />
         <MobilePopupBackGuard />
         <BackToTopButton />
       </>
     )}
+    </Suspense>
   </Sentry.ErrorBoundary>
   );
 }

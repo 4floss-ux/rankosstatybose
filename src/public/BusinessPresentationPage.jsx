@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { BrandImage } from "../ui/brand.jsx";
 
-export const BP_SCREEN_JOB_FORM = "/assets/screens/bp-screen-job-form.svg";
-export const BP_SCREEN_WORKER_MATCH = "/assets/screens/bp-screen-worker-match.svg";
-export const BP_SCREEN_HISTORY = "/assets/screens/bp-screen-history.svg";
-export const BP_SCREEN_RATING = "/assets/screens/bp-screen-rating.svg";
-export const BP_SCREEN_PRO_TOOLS = "/assets/screens/bp-screen-pro-tools.svg";
-export const BP_SCREEN_TRIAL = "/assets/screens/bp-screen-trial.svg";
+export const BP_SCREEN_JOB_FORM = "/assets/screens/bp-screen-job-form.webp";
+export const BP_SCREEN_WORKER_MATCH = "/assets/screens/bp-screen-worker-match.webp";
+export const BP_SCREEN_HISTORY = "/assets/screens/bp-screen-history.webp";
+export const BP_SCREEN_RATING = "/assets/screens/bp-screen-rating.webp";
+export const BP_SCREEN_PRO_TOOLS = "/assets/screens/bp-screen-pro-tools.webp";
+export const BP_SCREEN_TRIAL = "/assets/screens/bp-screen-trial.webp";
 
-export const BP_SCREEN_STATS = "/assets/screens/bp-screen-stats.svg";
+export const BP_SCREEN_STATS = "/assets/screens/bp-screen-stats.webp";
 
 export function BusinessPresentationScreenshot({ src, alt, className = "", eager = false }) {
   return (
@@ -97,10 +97,10 @@ export function BusinessPresentationPage({ onSignup }) {
         .bp-real-row.reverse{grid-template-columns:minmax(0,1.42fr) minmax(0,.78fr)}.bp-real-copy{padding:4px 4px}.bp-real-no{display:inline-flex;align-items:center;gap:8px;color:#483c67;font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.bp-real-no:before{content:"";width:22px;height:2px;background:#6b5b95;border-radius:99px}
         .bp-real-copy h3{font:850 25px/1.2 Manrope,Inter,sans-serif;margin:11px 0 9px}.bp-real-copy p{margin:0;color:#607180;font-size:14px;line-height:1.67}.bp-real-points{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px}.bp-real-points li{position:relative;padding-left:21px;color:#405264;font-size:12.5px;line-height:1.5}.bp-real-points li:before{content:"✓";position:absolute;left:0;color:#16845b;font-weight:900}
         .bp-screen{overflow:hidden;border:1px solid #d9e3e9;border-radius:16px;background:#eef3f6;box-shadow:0 18px 45px rgba(34,38,49,.11)}.bp-screen-bar{height:32px;display:flex;align-items:center;gap:6px;padding:0 11px;background:#eef3f6;border-bottom:1px solid #dae3e9}.bp-screen-bar span{width:8px;height:8px;border-radius:50%;background:#c8d3da}.bp-screen-bar b{margin-left:5px;color:#7c8994;font-size:9px;letter-spacing:.02em}.bp-screen-view{position:relative;overflow:hidden;background:#fff}.bp-screen-view img{display:block;width:100%;height:auto}
-        .bp-screen.history .bp-screen-view{aspect-ratio:1153/214}.bp-screen.history .bp-screen-view img{position:absolute;left:0;top:0;width:100%;height:auto}.bp-screen.rating .bp-screen-view{aspect-ratio:1128/362}.bp-screen.rating .bp-screen-view img{width:100%;height:auto;transform:translateY(-48.65%)}.bp-screen.trial .bp-screen-view{aspect-ratio:1342/326}.bp-screen.trial .bp-screen-view img{width:100%;height:auto}.bp-screen.tools{max-width:520px;margin:0 auto}.bp-screen-caption{margin-top:9px;color:#7a8995;font-size:10.5px;text-align:center}
+        .bp-screen.tools{max-width:520px;margin:0 auto}.bp-screen-caption{margin-top:9px;color:#7a8995;font-size:10.5px;text-align:center}
         .bp-trust{display:grid;grid-template-columns:1fr 1fr;gap:14px}.bp-card{background:#fff;border:1px solid #dfe7ec;border-radius:17px;padding:23px}.bp-card h3{margin:0 0 9px;font-size:20px}.bp-card p{margin:0;color:#627381;font-size:13px;line-height:1.62}
         .bp-feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.bp-feature{background:#fff;border:1px solid #dfe7ec;border-radius:15px;padding:18px;min-height:145px}.bp-feature b{display:block;margin-bottom:7px;font-size:15px}.bp-feature span{color:#637482;font-size:12px;line-height:1.5}
-        .bp-stats-panel{padding:26px;border:1px solid #dfe7ec;border-radius:22px;background:#fff;box-shadow:0 12px 36px rgba(34,38,49,.05)}.bp-stats-copy{max-width:820px;margin-bottom:20px}.bp-stats-copy h3{margin:8px 0 8px;font:850 27px/1.2 Manrope,Inter,sans-serif}.bp-stats-copy p{margin:0;color:#607180;font-size:14px;line-height:1.65}.bp-screen.stats .bp-screen-view{aspect-ratio:1536/242}.bp-screen.stats .bp-screen-view img{width:100%;height:100%;object-fit:cover}
+        .bp-stats-panel{padding:26px;border:1px solid #dfe7ec;border-radius:22px;background:#fff;box-shadow:0 12px 36px rgba(34,38,49,.05)}.bp-stats-copy{max-width:820px;margin-bottom:20px}.bp-stats-copy h3{margin:8px 0 8px;font:850 27px/1.2 Manrope,Inter,sans-serif}.bp-stats-copy p{margin:0;color:#607180;font-size:14px;line-height:1.65}
         .bp-tools-layout{display:grid;grid-template-columns:1fr .95fr;gap:22px;align-items:center;padding:26px;border-radius:22px;background:#222631;color:#fff}.bp-tools-layout h3{margin:7px 0 9px;font:850 28px/1.18 Manrope,Inter,sans-serif}.bp-tools-layout p{margin:0;color:#c7d2da;font-size:14px;line-height:1.65}.bp-tools-list{list-style:none;margin:17px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:9px 14px}.bp-tools-list li{position:relative;padding-left:20px;color:#d9e1e6;font-size:12px;line-height:1.45}.bp-tools-list li:before{content:"✓";position:absolute;left:0;color:#5fd3a4;font-weight:900}
         .bp-long{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:28px;border-radius:20px;background:#222631;color:#fff}.bp-long h3{margin:0;font-size:26px;line-height:1.2}.bp-long p{margin:0;color:#c7d2da;font-size:14px;line-height:1.65}
         .bp-plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.bp-plan{display:flex;flex-direction:column;background:#fff;border:1px solid #dfe6eb;border-radius:19px;padding:21px;min-height:405px}.bp-plan.featured{border:2px solid #6b5b95}.bp-plan.pro{background:#222631;color:#fff;border-color:#222631}
@@ -111,7 +111,7 @@ export function BusinessPresentationPage({ onSignup }) {
         .bp-final{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:30px;border-radius:22px;background:#222631;color:#fff}.bp-final h2{margin:7px 0 8px;font:850 31px/1.15 Manrope,Inter,sans-serif}.bp-final p{margin:0;color:#c6d2da;font-size:14px;line-height:1.62;max-width:760px}
         .bp-footer{padding:22px 0 30px;border-top:1px solid #dfe6ea;color:#74828d;font-size:12px}.bp-footer-inner{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
         @media(max-width:960px){.bp-proof-grid,.bp-flow,.bp-feature-grid,.bp-plans{grid-template-columns:repeat(2,1fr)}.bp-head{grid-template-columns:1fr;gap:9px}.bp-plans .bp-plan:last-child{grid-column:1/-1}.bp-real-row,.bp-real-row.reverse,.bp-tools-layout,.bp-trial-demo{grid-template-columns:1fr}.bp-real-row.reverse .bp-real-copy{order:0}.bp-real-row.reverse .bp-screen-wrap{order:1}.bp-tools-layout .bp-screen{max-width:620px}}
-        @media(max-width:650px){.bp-wrap{width:calc(100% - 24px)}.bp-hero{padding:20px 0 52px}.bp-kicker{margin-top:30px}.bp-hero h1{font-size:38px}.bp-hero-lead{font-size:16px}.bp-proof-grid,.bp-flow,.bp-feature-grid,.bp-plans,.bp-trust,.bp-long,.bp-faq{grid-template-columns:1fr}.bp-plans .bp-plan:last-child,.bp-faq-item:last-child:nth-child(odd){grid-column:auto}.bp-main{padding:42px 0 52px}.bp-section{margin-bottom:46px}.bp-step{min-height:0}.bp-real-row{padding:16px;gap:18px}.bp-real-copy h3{font-size:22px}.bp-stats-panel{padding:16px}.bp-stats-copy h3{font-size:22px}.bp-tools-layout{padding:20px}.bp-tools-list{grid-template-columns:1fr}.bp-trial-demo{padding:20px}.bp-final{grid-template-columns:1fr;padding:22px}.bp-primary{width:100%}.bp-screen-bar{height:28px}.bp-screen.history .bp-screen-view{aspect-ratio:1153/218}}
+        @media(max-width:650px){.bp-wrap{width:calc(100% - 24px)}.bp-hero{padding:20px 0 52px}.bp-kicker{margin-top:30px}.bp-hero h1{font-size:38px}.bp-hero-lead{font-size:16px}.bp-proof-grid,.bp-flow,.bp-feature-grid,.bp-plans,.bp-trust,.bp-long,.bp-faq{grid-template-columns:1fr}.bp-plans .bp-plan:last-child,.bp-faq-item:last-child:nth-child(odd){grid-column:auto}.bp-main{padding:42px 0 52px}.bp-section{margin-bottom:46px}.bp-step{min-height:0}.bp-real-row{padding:16px;gap:18px}.bp-real-copy h3{font-size:22px}.bp-stats-panel{padding:16px}.bp-stats-copy h3{font-size:22px}.bp-tools-layout{padding:20px}.bp-tools-list{grid-template-columns:1fr}.bp-trial-demo{padding:20px}.bp-final{grid-template-columns:1fr;padding:22px}.bp-primary{width:100%}.bp-screen-bar{height:28px}}
       `}</style>
 
       <header className="bp-hero">
@@ -359,7 +359,7 @@ export function BusinessPresentationPage({ onSignup }) {
               </div>
               <div className="bp-screen-wrap">
                 <BusinessPresentationScreenshot src={BP_SCREEN_TRIAL} className="trial" alt="Statybos24.lt 30 dienų nemokamo Business išbandymo ekranas" />
-                <div className="bp-screen-caption">Business bandomojo laikotarpio vaizdas įmonės paskyroje</div>
+                <div className="bp-screen-caption">Planų pasirinkimas įmonės paskyroje</div>
               </div>
             </div>
           </section>
