@@ -1,4 +1,5 @@
--- PARUOŠTA PERŽIŪRAI. NETAIKYTA. Prieš taikant būtina patikrinti esamus Auth
+-- TAIKYTA produkcinėje Supabase 2026-11-02, migracija 20261102193520 – launch_company_registration_guard_20261102.
+-- ISTORINĖ PERŽIŪROS KOPIJA: NEKARTOTI, NES TRIGERIAI/FUNKCIJOS JAU YRA.
 -- kūrimo trigerius, companies schemą ir istorinių kodų taisykles. Jokio backfill.
 begin;
 
