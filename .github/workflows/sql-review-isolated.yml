@@ -1,0 +1,50 @@
+name: SQL review tests (isolated Postgres)
+
+on:
+  pull_request:
+    branches: [redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sql-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGDATABASE: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SQL client if missing
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Create disposable synthetic schema
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql-review/schema.sql
+      - name: Apply UNDEPLOYED reviewed SQL to disposable DB ONLY
+        run: |
+          psql -v ON_ERROR_STOP=1 -f docs/sql-review/20261102120000_company_registration_guard_REVIEW.sql
+          psql -v ON_ERROR_STOP=1 -f docs/sql-review/20261102121000_admin_company_audit_REVIEW.sql
+      - name: Assert registration, duplicate prevention, admin audit and rollback
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql-review/assertions.sql

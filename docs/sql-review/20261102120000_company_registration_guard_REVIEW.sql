@@ -33,13 +33,12 @@ revoke all on public.company_registration_claims from public, anon, authenticate
 
 create function public.guard_new_company_registration()
 returns trigger language plpgsql security definer set search_path = '' as $$
-declare c text := btrim(coalesce(new.company_code, '')); employer_type text;
+declare c text := btrim(coalesce(new.company_code, ''));
 begin
-  select u.raw_user_meta_data ->> 'employer_type' into employer_type
-    from auth.users u where u.id = new.owner_id;
-  -- Neleidžiame klientui per naują registraciją patvirtinti įmonės.
+  -- Remiamės pačiu INSERT new.employer_type, ne kliento Auth metaduomenimis.
+  -- Kitaip savininko metaduomenų ir įrašomos įmonės tipo neatitiktis apeitų vartus.
   new.is_verified := false;
-  if employer_type = 'individual' and c = '' then
+  if new.employer_type = 'individual' and c = '' then
     new.company_code := null;
     return new;
   end if;
@@ -62,6 +61,48 @@ $$;
 revoke all on function public.guard_new_company_registration() from public, anon, authenticated;
 create trigger s24_guard_new_company_registration before insert on public.companies
   for each row execute function public.guard_new_company_registration();
+
+-- Kodo pakeitimas per admin_update_company ir darbdavio profilį taip pat
+-- tikrinamas serveryje. Nepakitę istoriniai įrašai nekliudomi.
+create function public.guard_company_code_change()
+returns trigger language plpgsql security definer set search_path = '' as $company_edit$
+declare c text := btrim(coalesce(new.company_code, ''));
+        previous text := btrim(coalesce(old.company_code, ''));
+begin
+  if c = previous and new.employer_type = old.employer_type then return new; end if;
+
+  if new.employer_type = 'individual' and c = '' then
+    delete from public.company_registration_claims where company_id = old.id;
+    new.company_code := null;
+    return new;
+  end if;
+
+  if not public.lt_company_code_valid(c) then
+    raise exception 'Neteisingas juridinio asmens kodas.' using errcode = '23514';
+  end if;
+
+  if exists (
+    select 1 from public.companies x
+    where x.id <> old.id and btrim(x.company_code) = c
+  ) then
+    raise exception 'Įmonė su šiuo kodu jau registruota.' using errcode = '23505';
+  end if;
+
+  delete from public.company_registration_claims where company_id = old.id;
+  begin
+    insert into public.company_registration_claims(company_code, company_id)
+      values (c, new.id);
+  exception when unique_violation then
+    raise exception 'Įmonė su šiuo kodu jau registruota.' using errcode = '23505';
+  end;
+  new.company_code := c;
+  return new;
+end;
+$company_edit$;
+revoke all on function public.guard_company_code_change() from public, anon, authenticated;
+create trigger s24_guard_company_code_change
+  before update of company_code, employer_type on public.companies
+  for each row execute function public.guard_company_code_change();
 
 -- Auth metaduomenų vartai stabdo netaisyklingą juridinio asmens signup dar prieš
 -- esamus profilio/įmonės kūrimo trigerius. Komandos kvietimai ir privatūs asmenys
