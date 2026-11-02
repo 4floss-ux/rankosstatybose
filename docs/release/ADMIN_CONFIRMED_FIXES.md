@@ -30,9 +30,9 @@ ir Cloudflare nekviestos.
 - Joks checksum neįrodo įmonės egzistavimo, statuso ar kodo priklausymo tam
   registruotojui. Tai atskira administratoriaus patikra oficialiame registre.
 
-## Paruoštos SQL migracijos – NETAIKYTOS
+## SQL peržiūros projektai – NETAIKYTI (ne aktyvios migracijos)
 
-`20261102120000_company_registration_guard_REVIEW.sql`:
+`docs/sql-review/20261102120000_company_registration_guard_REVIEW.sql`:
 - naujų companies INSERT ir juridinio asmens Auth signup metaduomenų vartai;
 - tokia pati 7/9 skaitmenų formato ir 9 skaitmenų checksum patikra kaip frontend;
 - naujos įmonės nepradeda su is_verified=true;
@@ -46,7 +46,7 @@ pačiam juridiniam asmeniui patikimai nenustatome be registro atitikties taisykl
 Dublikatų prevencija pagal kodą nėra įmonės tapatybės patvirtinimas registre.
 Prieš patvirtinant 7 skaitmenų istorinį kodą būtina oficiali registro patikra.
 
-`20261102121000_admin_company_audit_REVIEW.sql`:
+`docs/sql-review/20261102121000_admin_company_audit_REVIEW.sql`:
 - esamas admin_update_company neperrašomas;
 - companies AFTER UPDATE trigeris aktyvaus admino pakeitimą įrašo į
   admin_audit_log toje pačioje transakcijoje; audito klaida neatmetama tyliai;
@@ -75,8 +75,8 @@ esamus Auth įmonės kūrimo trigerius. Reikia patvirtinti:
 
 Kol tai nepatvirtinta, migracijos nėra parengtos aklam taikymui. SQL parseris
 netikrina tikros schemos, leidimų, trigerių vykdymo ar konkurentinių transakcijų.
-Migracijų failai yra supabase/migrations – neleistina paleisti automatinio
-push/reset, kol jie neperžiūrėti ir atskirai neautorizuoti.
+SQL projektai perkelti į docs/sql-review/, už vykdomų supabase/migrations/ ribų.
+Jie nebus automatiškai taikomi įprastu db push, kol nebus peržiūrėti, patvirtinti ir sąmoningai paruošti vykdymui. Nekelti jų atgal į migracijų katalogą be atskiro leidimo.
 
 ## Patikros
 
