@@ -5,7 +5,7 @@ import { companyAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
 import { AdChat } from "../AdChat.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
-import { Empty, Paged, Pill, initialsOf, up } from "../ui.jsx";
+import { Empty, Paged, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 
 /* Darbo skelbimai darbuotojui (prototipo wAds / wAd / adApply). Duomenys – RPC job_ads_worker_list ir kt. */
 
@@ -84,15 +84,7 @@ function AdCard({ ad, fav, mutual, onOpen, onToggleSave }) {
 }
 
 function Modal({ title, eyebrow, sub, onClose, children }) {
-  return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="mhead"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{sub}</div>
-          <button type="button" className="iconb" onClick={onClose} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
-        {children}
-      </div>
-    </div>
-  );
+  return <P24Modal eyebrow={eyebrow} title={title} sub={sub} onClose={onClose}>{children}</P24Modal>;
 }
 
 function ApplyModal({ ad, me, onClose, onSent }) {

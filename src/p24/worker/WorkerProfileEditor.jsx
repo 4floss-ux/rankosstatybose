@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { Svg } from "../Shell.jsx";
-import { Pill } from "../ui.jsx";
+import { Pill, P24Modal } from "../ui.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { PasswordModal } from "../account/PasswordModal.jsx";
 import { activeMonthlyAwards, monthlyAwardMeta, monthlyAwardMetricText, monthlyAwardMonthLabel } from "../../awards/monthlyAwards.jsx";
@@ -61,16 +61,8 @@ function Field({ label, error, fieldRef, wide, hint, children }) {
   );
 }
 
-function Modal({ title, eyebrow, onClose, children }) {
-  return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="mhead"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2></div>
-          <button type="button" className="iconb" onClick={onClose} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
-        {children}
-      </div>
-    </div>
-  );
+function Modal({ title, eyebrow, sub, onClose, children }) {
+  return <P24Modal eyebrow={eyebrow} title={title} sub={sub} onClose={onClose}>{children}</P24Modal>;
 }
 
 /* ---------- Pažymėjimai ir dokumentai ---------- */

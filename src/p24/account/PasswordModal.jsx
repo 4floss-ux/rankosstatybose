@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { P24Modal } from "../ui.jsx";
 import { supabase } from "../../lib/config.js";
 import { passwordRecoveryErrorMessage, sendPasswordRecoveryEmail } from "../../auth/passwordRecovery.jsx";
 import { Svg } from "../Shell.jsx";
@@ -55,10 +56,7 @@ export function PasswordModal({ email, onClose }) {
 
   const close = () => { if (!busy) onClose(); };
   return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label="Keisti slaptažodį">
-        <div className="mhead"><div><span className="eyebrow">Paskyra</span><h2>Keisti slaptažodį</h2></div>
-          <button type="button" className="iconb" onClick={close} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
+    <P24Modal eyebrow="Paskyra" title="Keisti slaptažodį" busy={busy} onClose={onClose}>
         {ok ? <div className="pwm">
           <p className="small" style={{ margin: 0 }}>Slaptažodis pakeistas. Kitą kartą junkitės nauju slaptažodžiu.</p>
           <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" type="button" onClick={onClose}>Gerai</button></div>
@@ -75,7 +73,6 @@ export function PasswordModal({ email, onClose }) {
             <button className="btn primary" type="button" disabled={busy} onClick={save}>{busy ? "Saugoma..." : "Išsaugoti"}</button>
           </div>
         </div>}
-      </div>
-    </div>
+    </P24Modal>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
-import { Pill, up } from "../ui.jsx";
+import { Pill, up, P24Modal } from "../ui.jsx";
 import { salKind, salTxt } from "../worker/WorkerAds.jsx";
 
 /* Administratorius: darbo skelbimai (prototipo aAds). */
@@ -58,10 +58,7 @@ export function AdminJobAds() {
           )) : <p className="small muted" style={{ padding: "14px 4px", margin: 0 }}>Skelbimų nėra.</p>}
       </div></section>
       {open && (
-        <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setOpen(null); }}>
-          <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label={open.title}>
-            <div className="mhead"><div><span className="eyebrow">Skelbimas</span><h2>{up(open.title)}</h2><span className="muted small">{open.company_name} · {open.city}</span></div>
-              <button type="button" className="iconb" onClick={() => setOpen(null)} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
+        <P24Modal eyebrow="Skelbimas" title={up(open.title)} sub={`${open.company_name} · ${open.city}`} onClose={() => setOpen(null)}>
             <dl className="jd-dl">
               <div><dt><Svg name="euro" size={17} />Atlyginimas</dt><dd>{salTxt(open)} {salKind(open)} / mėn.</dd></div>
               <div><dt><Svg name="file" size={17} />Sutartis</dt><dd>{open.contract_type || "Nenurodyta"}</dd></div>
@@ -73,8 +70,7 @@ export function AdminJobAds() {
               <button className="btn" type="button" onClick={() => setOpen(null)}>Uždaryti</button>
               <button className="btn danger" type="button" disabled={busy === open.id} onClick={() => remove(open)}>Pašalinti skelbimą</button>
             </div>
-          </div>
-        </div>
+        </P24Modal>
       )}
     </>
   );

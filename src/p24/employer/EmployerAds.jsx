@@ -4,7 +4,7 @@ import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
 import { AdChat } from "../AdChat.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
-import { Empty, Pill, initialsOf, up } from "../ui.jsx";
+import { Empty, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 import { salKind, salTxt } from "../worker/WorkerAds.jsx";
 
 /* Darbo skelbimai įmonei (prototipo eAds / eAd / eAdNewPage / interview / adExt). */
@@ -28,15 +28,7 @@ function Av({ w, cls = "" }) {
   return <div className={`av lt ${cls}`} style={{ overflow: "hidden" }}>{url ? <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(w.name || "D")}</div>;
 }
 function Modal({ title, eyebrow, sub, onClose, children }) {
-  return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="mhead"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{sub}</div>
-          <button type="button" className="iconb" onClick={onClose} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
-        {children}
-      </div>
-    </div>
-  );
+  return <P24Modal eyebrow={eyebrow} title={title} sub={sub} onClose={onClose}>{children}</P24Modal>;
 }
 function statusPill(a) {
   if (a.status === "pending_payment") return <Pill tone="orange">{a.payment_pending ? "Laukia apmokėjimo" : "Neapmokėtas"}</Pill>;

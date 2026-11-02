@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
-import { Pill, up } from "../ui.jsx";
+import { Pill, up, P24Modal } from "../ui.jsx";
 import { shortWorkerName } from "../../employer/plans.js";
 
 /* Prototipo eStats. Duomenys – RPC employer_stats_v1 (tik skaitymas). */
@@ -210,19 +210,16 @@ export function EmployerStats({ company, planKey, onPlans, onGo, onWorkerProfile
       </div>{det}</section>
       {tables}
       {report && (
-        <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setReport(null); }}>
-          <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label="Ataskaita" style={{ width: "min(640px,100%)" }}>
-            <div className="mhead"><div><span className="eyebrow">Ataskaita</span><h2>{report.title}</h2><span className="muted small">Pagal uždarytas darbo dienas · sumos į rankas</span></div><button type="button" className="iconb" onClick={() => setReport(null)} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
+        <P24Modal eyebrow="Ataskaita" title={report.title} sub="Pagal uždarytas darbo dienas · sumos į rankas" onClose={() => setReport(null)}>
             <div className="reptbl"><div className="rr rh"><span>Darbuotojas</span><span>Dienos</span><span>Valandos</span><span>Suma</span></div>
               {report.rows.length ? report.rows.map((r) => <div className="rr" key={r.worker_id}><span>{r.name}</span><span>{r.days}</span><span>{hrs(r.minutes)}</span><span>{eur(r.spend)}</span></div>) : <div className="rr"><span className="muted">Šį mėnesį uždarytų darbo dienų nėra.</span></div>}
               <div className="rr rt"><span>Iš viso</span><span>{report.total.days}</span><span>{hrs(report.total.minutes)}</span><span>{eur(report.total.spend)}</span></div></div>
-            <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
               <button className="btn" type="button" onClick={() => setReport(null)}>Uždaryti</button>
               {has("business_pro") ? <button className="btn" type="button" onClick={() => openReport("excel")}><Svg name="download" size={15} width={2.2} />Excel</button> : null}
               <button className="btn primary" type="button" onClick={() => openReport("pdf")}><Svg name="download" size={15} width={2.2} />Atsisiųsti PDF</button>
             </div>
-          </div>
-        </div>
+        </P24Modal>
       )}
     </>
   );

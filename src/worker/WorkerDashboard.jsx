@@ -291,6 +291,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
   const [searchLocationBusy, setSearchLocationBusy] = useState(false);
   const [mutualCompanies, setMutualCompanies] = useState(() => new Set());
   const [inviteDeadlines, setInviteDeadlines] = useState(() => new Map());
+  // Prototipe grafikas išsaugomas automatiškai. Jei profilis dar neužpildytas – lieka mygtukas.
+  const [scheduleAutosaveTick, setScheduleAutosaveTick] = useState(0);
   useEffect(() => {
     let off = false;
     supabase.rpc("get_worker_mutual_companies").then(({ data, error }) => { if (!off && !error) setMutualCompanies(new Set((data || []).map((r) => r.company_id))); });
@@ -2898,6 +2900,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
       ? activeLongTermEmployment
       : null;
 
+  const scheduleAutosaveReady = Boolean(form.firstName?.trim() && form.lastName?.trim() && form.phone?.trim() && form.shortBio?.trim() && !workerBirthDateError(form.birthDate));
+  useEffect(() => {
+    if (!scheduleAutosaveTick) return undefined;
+    const timer = window.setTimeout(() => { saveEverything(); }, 900);
+    return () => window.clearTimeout(timer);
+  }, [scheduleAutosaveTick]);
   if (loading) {
     return <SilentLoader fullscreen size={28} />;
   }
@@ -3000,6 +3008,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("") || "D";
+
 
   return (
     <P24Shell
@@ -3466,7 +3475,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
           <WorkerSchedule
             days={days}
             availability={availability}
-            onUpdate={updateAvailability}
+            onUpdate={(date, patch) => { updateAvailability(date, patch); if (scheduleAutosaveReady) setScheduleAutosaveTick((value) => value + 1); }}
+            autosave={scheduleAutosaveReady}
             occupiedOn={confirmedJobsOnDate}
             validation={availabilityValidationMessages}
             onSave={saveEverything}

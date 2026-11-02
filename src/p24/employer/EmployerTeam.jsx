@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
-import { Empty, Pill, initialsOf } from "../ui.jsx";
+import { Empty, Pill, initialsOf, P24Modal } from "../ui.jsx";
 import { PlanLock } from "./EmployerPeople.jsx";
 
 /* Prototipo eTeam. Tikroje sistemoje rolės: savininkas, vadovas, vadybininkas. */
@@ -17,20 +17,16 @@ const MAX_SEATS = 5;
 function RoleModal({ member, busy, onClose, onRole, onRemove }) {
   const [role, setRole] = useState(member.member_role);
   return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label="Teisės">
-        <div className="mhead"><div><span className="eyebrow">Teisės</span><h2>{member.display_name || member.email}</h2><span className="muted small">{member.email}</span></div>
-          <button type="button" className="iconb" onClick={onClose} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
+    <P24Modal eyebrow="Teisės" title={member.display_name || member.email} sub={member.email} busy={busy} onClose={onClose}>
         <div className="field"><span>Rolė</span><div className="segs rolesel" role="radiogroup" aria-label="Rolė">
           {["manager", "recruiter"].map((r) => <label key={r}><input type="radio" name="mrole" checked={role === r} onChange={() => setRole(r)} /><span>{ROLE_LT[r]}</span></label>)}
         </div></div>
-        <div className="row" style={{ justifyContent: "space-between", marginTop: 16 }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
           <button className="btn danger" type="button" disabled={busy} onClick={() => onRemove(member)}>Pašalinti iš komandos</button>
           <div className="row"><button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
             <button className="btn primary" type="button" disabled={busy || role === member.member_role} onClick={() => onRole(member, role)}>Išsaugoti</button></div>
         </div>
-      </div>
-    </div>
+    </P24Modal>
   );
 }
 

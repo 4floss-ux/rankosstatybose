@@ -16,7 +16,7 @@ function TimeSelect({ id, value, onChange, label }) {
   );
 }
 
-export function WorkerSchedule({ days, availability, onUpdate, occupiedOn, validation, onSave, saving, saved, needsConfirm, onConfirm, confirming }) {
+export function WorkerSchedule({ days, availability, onUpdate, occupiedOn, validation, onSave, saving, saved, needsConfirm, onConfirm, confirming, autosave }) {
   const [quickFrom, setQuickFrom] = useState("07:00");
   const [quickTo, setQuickTo] = useState("18:00");
   const [repeat, setRepeat] = useState(false);
@@ -106,7 +106,8 @@ export function WorkerSchedule({ days, availability, onUpdate, occupiedOn, valid
         <div className="row" style={{ justifyContent: "flex-end" }}>
           {saved ? <span className="small" style={{ color: "var(--green)", fontWeight: 700 }}>Grafikas išsaugotas</span> : null}
           {needsConfirm ? <button className="btn" type="button" disabled={confirming} onClick={onConfirm}>{confirming ? "Patvirtinama..." : "Grafikas teisingas – patvirtinti"}</button> : null}
-          <button className="btn primary" type="button" disabled={saving} onClick={onSave}>{saving ? "Saugoma..." : "Išsaugoti grafiką"}</button>
+          {autosave ? (saving ? <span className="small muted">Saugoma...</span> : null)
+            : <button className="btn primary" type="button" disabled={saving} onClick={onSave}>{saving ? "Saugoma..." : "Išsaugoti grafiką"}</button>}
         </div>
       </section>
 

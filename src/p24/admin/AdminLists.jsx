@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Svg } from "../Shell.jsx";
-import { Empty, Paged, Pill, initialsOf, up } from "../ui.jsx";
+import { Empty, Paged, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 import { AwardSvg } from "../worker/WorkerProfileEditor.jsx";
 
 /* Administratoriaus sąrašų ekranai pagal prototipą (admin.js). Duomenys ir veiksmai – iš AdminDashboard. */
@@ -32,16 +32,8 @@ function Table({ cls, head, rows, render, empty = "Nieko nerasta." }) {
     </div></section>
   );
 }
-function Modal({ eyebrow, title, sub, onClose, children }) {
-  return (
-    <div className="rs-modal-overlay p24-ov" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rs-modal-card p24-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="mhead"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2>{sub ? <span className="muted small">{sub}</span> : null}</div>
-          <button type="button" className="iconb" onClick={onClose} aria-label="Uždaryti"><Svg name="x" size={16} width={2.2} /></button></div>
-        {children}
-      </div>
-    </div>
-  );
+function Modal({ title, eyebrow, sub, onClose, children }) {
+  return <P24Modal eyebrow={eyebrow} title={title} sub={sub} onClose={onClose}>{children}</P24Modal>;
 }
 
 /* ---------- Darbuotojai ---------- */
