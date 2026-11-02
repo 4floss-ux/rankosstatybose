@@ -315,6 +315,7 @@ export function AdminDashboard({
         siteBugReportsResult,
         foreignHireRequestsResult,
         monthlyAwardsResult,
+        companyAuditResult,
       ] = await Promise.all([
         supabase.rpc("get_admin_dashboard_stats"),
         supabase.rpc("get_admin_visitor_analytics", { p_days: 14 }),
@@ -330,6 +331,7 @@ export function AdminDashboard({
         supabase.rpc("get_admin_site_bug_reports"),
         supabase.rpc("get_admin_foreign_hire_requests"),
         supabase.rpc("get_admin_monthly_awards"),
+        supabase.rpc("get_admin_company_change_log"),
       ]);
 
       const failed = [
@@ -403,7 +405,14 @@ export function AdminDashboard({
       setFiles(fileRows);
       setTeamChats(teamChatsResult.data || []);
       setLongTermPlacements(longTermPlacementsResult.data || []);
-      setAuditLog(auditResult.data || []);
+      // Iki peržiūrėtos migracijos pritaikymo naujo RPC dar gali nebūti.
+      if (companyAuditResult.error && !["PGRST202", "42883"].includes(companyAuditResult.error.code)) {
+        throw companyAuditResult.error;
+      }
+      const changes = companyAuditResult.data || [];
+      const combinedAudit = new Map((auditResult.data || []).map((item) => [String(item.audit_id), item]));
+      for (const item of changes) combinedAudit.set(String(item.audit_id), item);
+      setAuditLog([...combinedAudit.values()].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
       setSiteBugReports(siteBugReportsResult.data || []);
       setForeignHireRequests(foreignHireRows);
       setMonthlyAwardLeaders(monthlyAwardsResult.data || []);
@@ -1557,6 +1566,7 @@ export function AdminDashboard({
       type: "employer",
       id: employer.company_id,
       ownerId: employer.owner_id,
+      originalIsVerified: Boolean(employer.is_verified),
       originalPlanKey: employer.plan_key || "basic",
       originalSubscriptionStatus: employer.subscription_status || "active",
       originalPlanPeriodEnd: employer.plan_current_period_end
@@ -1695,6 +1705,14 @@ export function AdminDashboard({
       }
 
       if (editor.type === "employer") {
+        if (editorForm.isVerified && !editor.originalIsVerified) {
+          const confirmed = await askConfirm({
+            eyebrow: "ĮMONĖS PATVIRTINIMAS", title: "Patvirtinti įmonę?",
+            message: "Patvirtinate administratoriaus atliktą įmonės duomenų peržiūrą. Sistema netikrina registracijos Registrų centre; ją patikrinkite oficialiame registre.",
+            confirmLabel: "Patvirtinti",
+          });
+          if (!confirmed) return;
+        }
         const city = await canonicalCityName(editorForm.city);
         if (!city) throw new Error("Pasirinkite miestą iš sąrašo.");
 
@@ -1781,6 +1799,13 @@ export function AdminDashboard({
   // Greitas įmonės patvirtinimas iš sąrašo – kiti duomenys siunčiami nepakeisti.
   async function verifyEmployer(employer) {
     if (!employer?.company_id || employer.is_verified) return;
+    const confirmed = await askConfirm({
+      eyebrow: "ĮMONĖS PATVIRTINIMAS",
+      title: "Patvirtinti įmonę?",
+      message: "Patvirtinate, kad administratorius peržiūrėjo įmonės duomenis. Sistema netikrina registracijos Registrų centre; prieš patvirtindami ją patikrinkite oficialiame registre. Šis veiksmas tik pažymi įmonę patvirtinta platformoje.",
+      confirmLabel: "Patvirtinti",
+    });
+    if (!confirmed) return;
     setVerifyingCompanyId(employer.company_id);
     setError("");
     setNotice("");
@@ -1844,6 +1869,7 @@ export function AdminDashboard({
       delete_user_account: "Paskyra ištrinta",
       delete_job: "Darbas ištrintas",
       impersonate_start: "Prisijungta kaip naudotojas",
+      company_updated: "Įmonės duomenys pakeisti",
     }[action] || action;
   }
 
@@ -2628,7 +2654,7 @@ export function AdminDashboard({
       />
 
       {editor && (
-        <P24Modal wide eyebrow="Administratoriaus redagavimas" title={editor.type === "worker" ? "Darbuotojo informacija" : editor.type === "employer" ? "Darbdavio informacija" : "Darbo pasiūlymas"} onClose={() => setEditor(null)} busy={editorSaving}>
+        <P24Modal className="p24-admin-editor" wide eyebrow="Administratoriaus redagavimas" title={editor.type === "worker" ? "Darbuotojo informacija" : editor.type === "employer" ? "Darbdavio informacija" : "Darbo pasiūlymas"} onClose={() => setEditor(null)} busy={editorSaving}>
             {editor.type === "worker" && (
               <div className="form">
                 <label className="field">
@@ -2722,7 +2748,7 @@ export function AdminDashboard({
                     Paskyra aktyvi
                   </span>
                 </label>
-                <label className="admin-label admin-wide">
+                <label className="field wide">
                   Aprašymas
                   <textarea
                    
@@ -2804,6 +2830,7 @@ export function AdminDashboard({
                     />{" "}
                     Darbdavys patvirtintas
                   </span>
+                  <small className="hint">Administratoriaus atlikta duomenų peržiūra. Tai nėra automatinė Registrų centro patikra.</small>
                 </label>
                 <label className="field">
                   <span>
@@ -2819,7 +2846,7 @@ export function AdminDashboard({
                 </label>
                 <div className="field">
                   Planas
-                  <RoundedSelect
+                  <RoundedSelect className="input"
                    
                     ariaLabel="Įmonės planas"
                     value={editorForm.planKey}
@@ -2830,7 +2857,7 @@ export function AdminDashboard({
 
                 <div className="field">
                   Prenumeratos būsena
-                  <RoundedSelect
+                  <RoundedSelect className="input"
                    
                     ariaLabel="Prenumeratos būsena"
                     value={editorForm.subscriptionStatus}
@@ -2855,14 +2882,14 @@ export function AdminDashboard({
                 <div className="field">
                   Apmokėta iki / laikotarpio pabaiga
                   <RoundedDateSelect
-                    className="admin-input wd-date-trigger"
+                    className="input wd-date-trigger"
                     ariaLabel="Apmokėta iki / laikotarpio pabaiga"
                     value={editorForm.planPeriodEnd}
                     onChange={(value) => updateEditorField("planPeriodEnd", value)}
                   />
                 </div>
 
-                <div className="admin-label admin-wide" style={{ border: "1px solid #ccc4df", background: "#fff8f1", borderRadius: 12, padding: 13 }}>
+                <div className="field wide" style={{ border: "1px solid #ccc4df", background: "#fff8f1", borderRadius: 12, padding: 13 }}>
                   <b>30 dienų Business išbandymas</b>
                   <span style={{ color: "#6c7a88", fontSize: 12, lineHeight: 1.45 }}>
                     {editor?.trialEligibilityLoading
@@ -2903,7 +2930,7 @@ export function AdminDashboard({
                   </button>
                 </div>
 
-                <label className="admin-label admin-wide">
+                <label className="field wide">
                   Įmonės aprašymas
                   <textarea
                    
@@ -2918,7 +2945,7 @@ export function AdminDashboard({
 
             {editor.type === "job" && (
               <div className="form">
-                <label className="admin-label admin-wide">
+                <label className="field wide">
                   Pavadinimas
                   <input
                    
@@ -2947,7 +2974,7 @@ export function AdminDashboard({
                 <div className="field">
                   Data
                   <RoundedDateSelect
-                    className="admin-input wd-date-trigger"
+                    className="input wd-date-trigger"
                     ariaLabel="Darbo data"
                     value={editorForm.workDate}
                     onChange={(value) => updateEditorField("workDate", value)}
@@ -2970,7 +2997,7 @@ export function AdminDashboard({
                   Pradžia
                   <RoundedTimeSelect
                     ariaLabel="Darbo pradžios laikas"
-                    className="admin-input wd-time-trigger"
+                    className="input wd-time-trigger"
                     value={editorForm.startTime}
                     onChange={(value) => updateEditorField("startTime", value)}
                   />
@@ -2979,7 +3006,7 @@ export function AdminDashboard({
                   Pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Darbo pabaigos laikas"
-                    className="admin-input wd-time-trigger"
+                    className="input wd-time-trigger"
                     value={editorForm.endTime}
                     onChange={(value) => updateEditorField("endTime", value)}
                     align="right"
@@ -2989,7 +3016,7 @@ export function AdminDashboard({
                   Pietų pradžia
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pradžia"
-                    className="admin-input wd-time-trigger"
+                    className="input wd-time-trigger"
                     value={editorForm.breakStartTime}
                     placeholder="Nėra"
                     onChange={(value) => updateEditorField("breakStartTime", value)}
@@ -2999,7 +3026,7 @@ export function AdminDashboard({
                   Pietų pabaiga
                   <RoundedTimeSelect
                     ariaLabel="Pietų pertraukos pabaiga"
-                    className="admin-input wd-time-trigger"
+                    className="input wd-time-trigger"
                     value={editorForm.breakEndTime}
                     placeholder="Nėra"
                     onChange={(value) => updateEditorField("breakEndTime", value)}
@@ -3021,7 +3048,7 @@ export function AdminDashboard({
                 </label>
                 <div className="field">
                   Atlygio vienetas
-                  <RoundedSelect
+                  <RoundedSelect className="input"
                    
                     ariaLabel="Atlygio vienetas"
                     value={editorForm.payUnit}
@@ -3029,9 +3056,9 @@ export function AdminDashboard({
                     options={[{ value: "hour", label: "Už valandą" }, { value: "day", label: "Už dieną" }]}
                   />
                 </div>
-                <div className="admin-label admin-wide">
+                <div className="field wide">
                   Atvykimas
-                  <RoundedSelect
+                  <RoundedSelect className="input"
                    
                     ariaLabel="Atvykimas"
                     value={editorForm.transportMode}
@@ -3039,7 +3066,7 @@ export function AdminDashboard({
                     options={[{ value: "self_arrival", label: "Darbuotojas atvyksta pats" }, { value: "employer_pickup", label: "Darbdavys paima darbuotoją" }]}
                   />
                 </div>
-                <label className="admin-label admin-wide">
+                <label className="field wide">
                   Aprašymas
                   <textarea
                    

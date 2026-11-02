@@ -2951,15 +2951,15 @@
 
 .p24 .lp-burger{display:none;flex:none;width:42px;height:42px;border:1px solid var(--line);border-radius:5px;background:var(--white);cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .p24 .lp-burger i{display:block;width:18px;height:2px;border-radius:1px;background:var(--navy);transition:transform .25s,opacity .2s}
-.p24 .lpm .lp-burger i:nth-child(1){transform:translateY(6px) rotate(45deg)}
-.p24 .lpm .lp-burger i:nth-child(2){opacity:0}
-.p24 .lpm .lp-burger i:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.p24.lpm .lp-burger i:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.p24.lpm .lp-burger i:nth-child(2){opacity:0}
+.p24.lpm .lp-burger i:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 .p24 .lp-mmenu{display:none}
 @media (max-width:899px){
   .p24 .lp-hacts{display:none!important}
   .p24 .lp-burger{display:flex}
   .p24 .lp-mmenu{display:block;position:absolute;left:0;right:0;top:100%;background:var(--white);border-bottom:1px solid var(--line);box-shadow:0 18px 30px rgba(34,38,49,.12);padding:8px 16px 16px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .2s}
-  .p24 .lpm .lp-mmenu{opacity:1;transform:none;pointer-events:auto}
+  .p24.lpm .lp-mmenu{opacity:1;transform:none;pointer-events:auto}
   .p24 .lp-mmenu nav{display:flex;flex-direction:column}
   .p24 .lp-mmenu nav a{padding:14px 4px;border-bottom:1px solid var(--line);font-weight:600;font-size:15px;color:var(--navy);text-decoration:none}
   .p24 .lp-mbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
@@ -2987,7 +2987,7 @@
 .p24 .lp-top .pub-in{position:relative}
 .p24 .lp-burger{display:flex}
 .p24 .lp-mmenu{display:block;position:absolute;top:100%;right:max(16px,calc((100% - 1180px)/2));width:300px;background:var(--white);border:1px solid var(--line);border-radius:8px;box-shadow:0 18px 40px rgba(34,38,49,.14);padding:8px 18px 18px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .2s}
-.p24 .lpm .lp-mmenu{opacity:1;transform:none;pointer-events:auto}
+.p24.lpm .lp-mmenu{opacity:1;transform:none;pointer-events:auto}
 .p24 .lp-mmenu nav{display:flex;flex-direction:column}
 .p24 .lp-mmenu nav a{padding:13px 4px;border-bottom:1px solid var(--line);font-weight:600;font-size:15px;color:var(--navy);text-decoration:none}
 .p24 .lp-mmenu nav a:hover{color:#6b5b95}
@@ -2996,7 +2996,7 @@
 @media (max-width:899px){.p24 .lp-mmenu{left:0;right:0;width:auto;border-radius:0;border-width:0 0 1px;padding:8px 16px 16px}}
 @media (min-width:900px){.p24 .lp-mmenu{right:max(16px,calc((100% - 1180px) / 2 + 16px))}}
 .p24 .lp-mmenu{top:calc(100% + 10px)}@media (max-width:899px){.p24 .lp-mmenu{top:100%}}
-.p24 .lp-burger{gap:6px}.p24 .lp-burger i{width:20px}.p24 .lpm .lp-burger i:nth-child(1){transform:translateY(8px) rotate(45deg)}.p24 .lpm .lp-burger i:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+.p24 .lp-burger{gap:6px}.p24 .lp-burger i{width:20px}.p24.lpm .lp-burger i:nth-child(1){transform:translateY(8px) rotate(45deg)}.p24.lpm .lp-burger i:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
 .p24 .lp-hero{padding-block:clamp(40px,4.5vw,64px) clamp(48px,5vw,72px)!important}
 .p24 .lp-vid{padding-top:clamp(40px,5vw,72px)}
 .p24 .lp-hero{padding-block:clamp(48px,6vw,88px) clamp(52px,6vw,88px)!important}.p24 .lp-hero h1{line-height:1.12}.p24 .lp-hero h1 span{display:inline-block;padding:.06em 0 .08em;margin:-.06em 0 -.08em}
@@ -3054,8 +3054,8 @@
 
 @media (min-width:1081px){.p24 .lp-hero-in{gap:80px}.p24 .lp-hero h1{font-size:clamp(42px,3.9vw,58px)}.p24 .lp-hero-tx > p{max-width:500px}.p24 .lp-hv-ph{left:-18px}}
 @media (max-width:1199px){.p24 .lp-hero-in{grid-template-columns:1fr!important}.p24 .lp-hero-vis{display:none}}
-@media (min-width:900px){.p24 .lp-burger{width:34px;height:34px;gap:5px;padding:0}.p24 .lp-burger i{width:16px;height:2px}.p24 .lpm .lp-burger i:nth-child(1){transform:translateY(7px) rotate(45deg)}.p24 .lpm .lp-burger i:nth-child(3){transform:translateY(-7px) rotate(-45deg)}}
-@media (min-width:900px){.p24 .lp-burger{gap:6px}.p24 .lpm .lp-burger i:nth-child(1){transform:translateY(8px) rotate(45deg)}.p24 .lpm .lp-burger i:nth-child(3){transform:translateY(-8px) rotate(-45deg)}}
+@media (min-width:900px){.p24 .lp-burger{width:34px;height:34px;gap:5px;padding:0}.p24 .lp-burger i{width:16px;height:2px}.p24.lpm .lp-burger i:nth-child(1){transform:translateY(7px) rotate(45deg)}.p24.lpm .lp-burger i:nth-child(3){transform:translateY(-7px) rotate(-45deg)}}
+@media (min-width:900px){.p24 .lp-burger{gap:6px}.p24.lpm .lp-burger i:nth-child(1){transform:translateY(8px) rotate(45deg)}.p24.lpm .lp-burger i:nth-child(3){transform:translateY(-8px) rotate(-45deg)}}
 
 .p24 .acv{display:grid;grid-template-columns:340px minmax(0,1fr);padding:0!important;gap:0!important;min-height:560px;overflow:hidden}
 .p24 .acv-list{border-right:1px solid var(--line);overflow-y:auto;max-height:640px}
@@ -3170,6 +3170,9 @@
 .p24 .wd-danger{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:5px!important;border:1px solid #f0c9c1!important;background:var(--white)!important;color:var(--red)!important;font-size:13px!important;font-weight:700!important}
 .p24 .wd-profile-editor-close{border-radius:5px!important;background:var(--soft)!important}
 .p24 .eyebrow{color:var(--orange-text)}
+/* Pradinio puslapio ir autentifikacijos prototipo stiliai be seno CSS įtakos. */
+.p24.lp-js button,.p24.p24-auth button{letter-spacing:normal}
+.p24.p24-auth .eyebrow{color:var(--muted)}
 .p24 .rs-modal-overlay,.p24 .admin-modal-overlay,.p24 .wd-job-info-overlay,.p24 .reliability-modal-overlay,.p24 .ed-saved-overlay,.p24 .lt-end-notice-overlay,.p24 .edcal-chat-overlay{background:rgba(34,38,49,.55)!important;backdrop-filter:none!important}
 .p24 .rs-modal-card,.p24 .admin-modal,.p24 .wd-job-info-modal,.p24 .reliability-modal,.p24 .ed-saved-modal{border-radius:8px!important;border:0!important;box-shadow:0 30px 80px rgba(34,38,49,.35)!important;padding:24px!important;font-family:var(--body)}
 .p24 .rs-modal-head h2,.p24 .admin-modal-head h2,.p24 .reliability-modal-head h2{font-family:var(--display);font-size:20px;letter-spacing:-.2px}
@@ -3239,3 +3242,23 @@
 .p24 .notebox.warn{background:#fff5f2;border:1px solid #efc7bb;color:#a74428}.p24 .notebox b{color:var(--navy)}.p24 .notebox.warn b{color:#a74428}
 .p24 .ed-shell{grid-template-columns:minmax(0,1fr)}
 @media (min-width:1201px){.p24 .rolegrid.r3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Bendri stulpeliai antraštei ir visoms vadovų pokalbių eilutėms. */
+@media (min-width:761px){
+  .p24 .at.atbl{display:grid;grid-template-columns:minmax(0,2.4fr) 1fr .6fr .6fr auto;column-gap:14px}
+  .p24 .at.atbl > .list{display:grid;grid-column:1/-1;grid-template-columns:subgrid;gap:0}
+  .p24 .at.atbl .atr{grid-column:1/-1;grid-template-columns:subgrid}
+  .p24 .at.atbl > .pager{grid-column:1/-1}
+}
+/* Administratoriaus redaktoriai naudoja prototipo .field ir .input matmenis. */
+.p24.p24-admin-editor .field button.input{display:flex;align-items:center;justify-content:space-between;text-align:left;height:38px;font-size:13px;font-weight:500;min-height:0;border:1px solid var(--line-2);border-radius:4px;padding:0 12px;background:var(--white);color:var(--navy)}
+.p24.p24-admin-editor .field textarea{height:auto;min-height:84px;padding:12px 14px}
+/* Senas bendras laiko valdiklis turi !important; perrašome tik admino redaktoriuje. */
+.p24.p24-admin-editor .field button.input.wd-time-trigger{height:38px!important;min-height:0!important;font-size:13px!important;font-weight:500!important;border:1px solid var(--line-2)!important;border-radius:4px!important;padding:0 12px!important;background:var(--white)!important;color:var(--navy)!important;box-shadow:none!important}
+.p24.p24-admin-editor .field button.input.wd-time-trigger > span:first-child{font-weight:500!important}
+@media (max-width:899px){
+  .p24.p24-admin-editor .field button.input,.p24.p24-admin-editor .field button.input.wd-time-trigger{font-size:15px!important}
+}
+.p24.p24-admin-editor .field button.input.wd-time-trigger:focus-visible{outline:2px solid var(--orange)!important;outline-offset:0!important;box-shadow:none!important}
+
+.p24 .company-change-target,.p24 .company-change-meta{overflow-wrap:anywhere}

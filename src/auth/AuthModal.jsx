@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { companyCodeError } from "../lib/companyCode.js";
 import { TERMS_VERSION, getVilniusTodayISO, supabase, workerBirthDateError } from "../lib/config.js";
 import { SilentLoader } from "../ui/brand.jsx";
 import { P24Modal } from "../p24/ui.jsx";
@@ -143,6 +144,10 @@ export function AuthModal({
           throw new Error("Įveskite įmonės pavadinimą.");
         }
 
+        if (role === "employer" && !teamInvite && form.employerType === "company") {
+          const codeError = companyCodeError(form.companyCode);
+          if (codeError) throw new Error(codeError);
+        }
         const phoneProof = phoneVerification.requireProof();
         const canonicalCity = await canonicalCityName(form.city);
         if (!canonicalCity) {
@@ -254,7 +259,7 @@ export function AuthModal({
   const msgBox = message ? <div className={success ? "notebox" : "alert"} role={success ? "status" : "alert"}><div>{message}</div></div> : null;
 
   return (
-    <P24Modal eyebrow={eyebrow} title={title} onClose={onClose} busy={loading} wide={mode === "signup"}>
+    <P24Modal className="p24-auth" eyebrow={eyebrow} title={title} onClose={onClose} busy={loading} wide={mode === "signup"}>
       {mode === "signup" && success ? (
         <>
           <div className="notebox" role="status"><b>Paskyra sukurta!</b> SMS kodas patvirtintas. Patvirtinkite ir el. paštą paspausdami nuorodą iš laiško. Jeigu el. paštą jau patvirtinote, spauskite žemiau ir atsidarys jūsų paskyra.</div>
@@ -320,7 +325,7 @@ export function AuthModal({
                     {form.employerType === "company" ? (
                       <>
                         <label className="field wide" htmlFor="r-co">Įmonės pavadinimas *<input id="r-co" value={form.companyName} onChange={setField("companyName")} placeholder="UAB ..." required /></label>
-                        <label className="field" htmlFor="r-code">Įmonės kodas<input id="r-code" inputMode="numeric" maxLength={9} value={form.companyCode} onChange={setField("companyCode")} placeholder="9 skaitmenys" /></label>
+                        <label className="field" htmlFor="r-code">Įmonės kodas *<input id="r-code" inputMode="numeric" minLength={7} maxLength={9} pattern="([1-9][0-9]{6}|[1-9][0-9]{8})" required value={form.companyCode} onChange={setField("companyCode")} placeholder="9 arba 7 skaitmenys" /><span className="hint">Tikrinamas formatas ir 9 skaitmenų kodo kontrolinis skaitmuo. Registracijos faktas tikrinamas oficialiame registre.</span></label>
                       </>
                     ) : null}
                   </>
