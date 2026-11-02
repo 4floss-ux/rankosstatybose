@@ -65,7 +65,7 @@ create trigger s24_guard_new_company_registration before insert on public.compan
 -- Kodo pakeitimas per admin_update_company ir darbdavio profilį taip pat
 -- tikrinamas serveryje. Nepakitę istoriniai įrašai nekliudomi.
 create function public.guard_company_code_change()
-returns trigger language plpgsql security definer set search_path = '' as $
+returns trigger language plpgsql security definer set search_path = '' as $company_edit$
 declare c text := btrim(coalesce(new.company_code, ''));
         previous text := btrim(coalesce(old.company_code, ''));
 begin
@@ -98,7 +98,7 @@ begin
   new.company_code := c;
   return new;
 end;
-$;
+$company_edit$;
 revoke all on function public.guard_company_code_change() from public, anon, authenticated;
 create trigger s24_guard_company_code_change
   before update of company_code, employer_type on public.companies
