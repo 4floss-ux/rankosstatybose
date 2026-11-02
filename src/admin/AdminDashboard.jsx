@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
+import { companyCodeEditError } from "../lib/companyCode.js";
 import { CloseMark, SilentLoader } from "../ui/brand.jsx";
 import { RoundedDateSelect, RoundedSelect, RoundedTimeSelect, StyledConfirmDialog, useStyledConfirm } from "../ui/common.jsx";
 import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
@@ -1567,6 +1568,7 @@ export function AdminDashboard({
       id: employer.company_id,
       ownerId: employer.owner_id,
       originalIsVerified: Boolean(employer.is_verified),
+      originalCompanyCode: employer.company_code || "",
       originalPlanKey: employer.plan_key || "basic",
       originalSubscriptionStatus: employer.subscription_status || "active",
       originalPlanPeriodEnd: employer.plan_current_period_end
@@ -1705,6 +1707,8 @@ export function AdminDashboard({
       }
 
       if (editor.type === "employer") {
+        const codeError = companyCodeEditError(editorForm.companyCode, editor.originalCompanyCode);
+        if (codeError) throw new Error(codeError);
         if (editorForm.isVerified && !editor.originalIsVerified) {
           const confirmed = await askConfirm({
             eyebrow: "ĮMONĖS PATVIRTINIMAS", title: "Patvirtinti įmonę?",
