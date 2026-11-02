@@ -1,0 +1,56 @@
+name: Read-only preview connectivity
+
+on:
+  pull_request:
+    branches: [redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Read-only preview status and home page
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+
+          base = "https://redesign-rankosstatybose.4floss.workers.dev"
+          headers = {"User-Agent": "statybos24-status-check/1.0", "Accept": "application/json, text/html"}
+
+          def get(path):
+              req = urllib.request.Request(base + path, headers=headers, method="GET")
+              try:
+                  with urllib.request.urlopen(req, timeout=16) as response:
+                      return response.status, response.read(10000).decode("utf-8", "replace")
+              except urllib.error.HTTPError as exc:
+                  return exc.code, exc.read(10000).decode("utf-8", "replace")
+
+          try:
+              status_code, body = get("/api/status")
+              root_code, root_body = get("/")
+              print(f"Preview status endpoint HTTP: {status_code}")
+              print(f"Preview root HTTP: {root_code}")
+              if status_code != 200:
+                  raise RuntimeError("Status endpoint not reachable")
+              info = json.loads(body)
+              maintenance = info.get("maintenance")
+              print(f"Maintenance active for unauthenticated requests: {maintenance}")
+              if maintenance is True and root_code == 503:
+                  print("PASS: Preview reachable and correctly protected by maintenance.")
+                  print("NOTE: This does NOT verify deployed commit, UI or authenticated sessions.")
+              elif maintenance is False and root_code == 200 and "<html" in root_body.lower():
+                  print("PASS: Preview reachable without maintenance.")
+                  print("NOTE: This does NOT verify deployed commit, UI or authenticated sessions.")
+              else:
+                  raise RuntimeError("Unexpected mismatch between status and main page")
+          except Exception as exc:
+              print(f"::error::Read-only preview probe failed: {type(exc).__name__}: {exc}")
+              raise SystemExit(1)
+          PY
