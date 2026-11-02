@@ -183,6 +183,7 @@ export function RoundedSelect({ value, options, disabled, onChange, className = 
         type="button"
         className={className}
         disabled={disabled}
+        aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}

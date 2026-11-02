@@ -182,10 +182,10 @@ export function ActionButtons({ items }) {
 }
 
 // Prototipo modalas („modal-bg“ + „modal“): eyebrow, pavadinimas, paantraštė ir uždarymo mygtukas.
-export function P24Modal({ eyebrow, title, sub, onClose, wide, children, busy, label }) {
+export function P24Modal({ eyebrow, title, sub, onClose, wide, children, busy, label, className = "" }) {
   const close = () => { if (!busy && onClose) onClose(); };
   return (
-    <div className="p24 p24-portal">
+    <div className={`p24 p24-portal${className ? ` ${className}` : ""}`}>
       <div className="modal-bg" style={{ zIndex: 9000 }} role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
         <div className={`modal${wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-label={label || (typeof title === "string" ? title : eyebrow)}>
           {title || eyebrow ? (

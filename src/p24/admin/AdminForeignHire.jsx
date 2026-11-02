@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../hire.css";
 import { Svg } from "../Shell.jsx";
 import { Paged, Pill, P24Modal, initialsOf } from "../ui.jsx";
 

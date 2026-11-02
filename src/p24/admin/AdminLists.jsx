@@ -374,8 +374,11 @@ export function AdminAuditList({ items, actionLabel }) {
       <Head title="Veiksmų istorija" lead="Visi administratoriaus veiksmai" />
       <section className="card">{items.length ? <div className="loglist"><Paged items={items} render={(x) => (
         <div className="logrow" key={x.audit_id}><span className="av lt sm">AD</span>
-          <div><b>{actionLabel(x.action)}</b> <span className="logobj">{x.target_email || ""}{x.reason ? ` · ${x.reason}` : ""}</span></div>
-          <small>{ago(x.created_at)}</small></div>
+          <div><b>{actionLabel(x.action)}</b> <span className={`logobj${x.action === "company_updated" ? " company-change-target" : ""}`}>{x.action === "company_updated" ? `Įmonė ${x.metadata?.company_id || ""}` : x.target_email || ""}{x.reason ? ` · ${x.reason}` : ""}</span>
+            {x.action === "company_updated" && Array.isArray(x.metadata?.changed_fields) ? <div className="small muted company-change-meta">Pakeisti laukai: {x.metadata.changed_fields.join(", ")} · Administratorius: {x.admin_id || "—"}</div> : null}
+          </div>
+          <small title={new Date(x.created_at).toLocaleString("lt-LT")}>{ago(x.created_at)}</small>
+        </div>
       )} /></div> : <Empty title="Veiksmų dar nėra" sub="" icon="history" />}</section>
     </>
   );
