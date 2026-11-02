@@ -1,0 +1,50 @@
+name: Verify live redesign deployment (read-only)
+
+on:
+  pull_request:
+    branches: [redesign]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify new release marker and maintenance from public site
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, time, urllib.error, urllib.request
+          base = "https://statybos24.lt"
+          expected = "s24-redesign-20261102"
+          def get(path):
+              req = urllib.request.Request(base+path, method="GET",
+                  headers={"User-Agent":"s24-release-verifier/1.0",
+                           "Accept":"application/json, text/html",
+                           "Cache-Control":"no-cache"})
+              try:
+                  with urllib.request.urlopen(req, timeout=18) as r:
+                      return r.status, r.read(10000).decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read(10000).decode("utf-8","replace")
+          for attempt in range(1,13):
+              try:
+                  status, raw = get("/api/status?release_probe=1")
+                  body = json.loads(raw) if status == 200 else {}
+                  root, _ = get("/?release_probe=1")
+                  print(f"Try {attempt}: status={status} root={root} maintenance={body.get('maintenance')} release={body.get('release')}", flush=True)
+                  if status == 200 and body.get("release") == expected and body.get("maintenance") is True and root == 503:
+                      print("PASS: NEW RELEASE IS LIVE AND PRODUCTION MAINTENANCE IS ON")
+                      raise SystemExit(0)
+                  if body.get("maintenance") is not True or root != 503:
+                      print("::error::Production maintenance is disabled or failing")
+                      raise SystemExit(2)
+              except (OSError, ValueError) as e:
+                  print(f"Temporary network/parse error: {type(e).__name__}: {e}",flush=True)
+              time.sleep(15)
+          print("::error::Live version marker not seen; Cloudflare deployment unconfirmed.")
+          raise SystemExit(1)
+          PY
