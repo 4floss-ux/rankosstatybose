@@ -1,7 +1,6 @@
 # statybos24.lt – naujo dizaino paleidimas
 
-Viskas paruošta šakoje `redesign` (PR #14). DB pakeitimai jau pritaikyti ir yra tik pridedantys –
-dabartinė svetainė su jais veikia kaip anksčiau, todėl paleisti galima bet kada.
+**BŪSENA 2026-11-02: VIEŠAM ATIDARYMUI DAR NO-GO.** PR #14 jau sujungtas į `main`; Cloudflare /api/status patvirtino `s24-redesign-20261102` ir `MAINTENANCE_MODE=on` (neprisijungus / grąžina HTTP 503). Registracijos apsauga ir įmonės auditas pritaikyti per Supabase migracijas `launch_company_registration_guard_20261102` ir `launch_admin_company_audit_20261102`, abiejų bandymai su ROLLBACK patikrinti ir jokių testinių įrašų neišsaugota. Liko realūs Auth/srauto testai, kvietimų termino sprendimas ir mokėjimų testinė patikra. Neišjungti maintenance be GO.
 
 ## Patikrinta automatiškai (2026-11-01)
 
@@ -47,26 +46,20 @@ Administratorius:
 Visiems:
 - [ ] Prisijungimo / registracijos langas (Prisijungti, Registruotis, Ieškau darbo / darbuotojų, Pamiršau slaptažodį)
 
-Pastaba: 9,99 € apmokėjimas naudoja tikrą (live) Stripe raktą – testuojant bus tikras mokėjimas.
-Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (Refund).
+**SVARBU:** 9,99 € apmokėjimo kelyje yra live Stripe – realių mokėjimų testui nevykdyti. Reikalingas atskiras Stripe test-mode E2E be klientų apmokestinimo.
 
-## 3. Paleidimas
+## 3. Paleidimo būsena ir likę vartai
 
-1. GitHub → PR #14 → „Ready for review“ → „Merge pull request“.
-2. Palaukti ~2 min., kol Cloudflare įdiegs (GitHub prie commit'o – žalia varnelė).
-3. Atsidaryti statybos24.lt kaip administratorius (priežiūros režimas vis dar įjungtas) – greitai peržiūrėti.
-4. Cloudflare → `MAINTENANCE_MODE` = `off` → svetainė atvira visiems.
-5. Įjungti kvietimų atsakymo terminą (12 val., nuolatinei komandai 24 val.) – Supabase → SQL editor, paleisti:
-   ```sql
-   alter table public.job_invitations enable trigger job_invitations_enforce_deadline;
-   select cron.schedule('expire-overdue-invitations', '*/5 * * * *', 'select public.expire_overdue_job_invitations()');
-   ```
-   (Iki šio žingsnio sena svetainė veikia kaip anksčiau – terminas tik rodomas naujame dizaine.)
+- [x] PR #14 sujungtas į main, gyvoje Cloudflare versijos žyma matoma, maintenance ON.
+- [x] Abi SQL apsaugos ir audito migracijos pritaikytos; tikras įrašų/trigerių bandymas vykdytas su ROLLBACK.
+- [ ] Prijungtoje naršyklėje su trimis savininko testinėmis paskyromis išbandyti login, darbdavio skelbimą/kvietimą, darbuotojo atsakymą, žinutes, admin impersonaciją ir grįžimą.
+- [ ] Patikrinti Stripe test-mode mokėjimo kelią be realių lėšų.
+- [ ] Patikrinti / nuspręsti dėl 12/24 val. kvietimo termino serverinės kontrolės: trigeris ir cron tebėra neįjungti. Neaktyvuoti aklai.
+- [ ] Tik po GO Cloudflare keisti MAINTENANCE_MODE=off ir patikrinti viešą svetainę.
 
 ## Jei kas nors negerai
 
-- GitHub → sujungtas PR #14 → „Revert“ → sujungti. Cloudflare grąžins seną versiją per ~2 min.
-- DB grąžinti nereikia: nauji objektai seno kodo netrukdo.
+Pirma palikti / grąžinti MAINTENANCE_MODE=on ir užfiksuoti klaidą. Paskutinis senos `main` versijos commit prieš PR #14 buvo `0a24b048`, tačiau **vien kodo rollback nepakanka**: naujos serverinės registracijos taisyklės dabar yra aktyvios ir su sena neprivalomo kodo forma būtų nesuderinamos. Rollback planuoti kartu su DB pakeitimų laikinu išjungimu, nepanaikinant klientų duomenų ir nespaudžiant Stripe veiksmų.
 
 ## Kas sąmoningai atidėta (paleidimui netrukdo)
 
