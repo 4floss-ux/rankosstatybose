@@ -70,5 +70,5 @@ Jei norite išbandyti – sumokėkite ir grąžinkite pinigus Stripe skydelyje (
 
 ## Kas sąmoningai atidėta (paleidimui netrukdo)
 
-- Komandos „Veiksmų istorija“ – migracija paruošta (`docs/redesign/pending-migrations/`), bet nepritaikyta.
+- Automatinis kvietimas, objekto vadovo rolė, moderatoriai su teisėmis (planas `docs/redesign/ADMIN_MODERATORS_PLAN.md`).
 - Skelbimuose nėra „Rašyti įmonei / kandidatui“ pokalbio.

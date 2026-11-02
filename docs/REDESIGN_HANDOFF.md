@@ -114,7 +114,8 @@ Meniu punktai (mėgstami, skubūs, ilgalaikiai, vadovų pokalbis, komanda, plana
 
 ### 5 sesija
 - Pritaikyta DB: komandos veiksmų istorija, skelbimo pokalbis, „Nuolatinė komanda“, kvietimų terminas (12/24 val.; priėmimo trigeris IŠJUNGTAS iki paleidimo – žr. LAUNCH.md).
-- Objektai ir šablonai – UI padarytas, migracija `20261101233000_redesign_sites_templates.sql` DAR NEPRITAIKYTA (Supabase patvirtinimas atšauktas automatiškai).
+- Objektai ir šablonai – padaryta ir pritaikyta DB (`20261101233000_redesign_sites_templates.sql`).
+- Visi likę langai – P24Modal; darbo grafikas išsaugomas automatiškai (jei profilis užpildytas).
 - Likę: automatinis kvietimas, objekto vadovo rolė, moderatoriai (planas `docs/redesign/ADMIN_MODERATORS_PLAN.md`).
 
 ## 5. Kas liko
