@@ -4,12 +4,12 @@ import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { companyAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
 import { AdChat } from "../AdChat.jsx";
-import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
+import { ShareJobAdButton } from "../ShareJobAdButton.jsx";
 import { Empty, Paged, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 
 /* Darbo skelbimai darbuotojui (prototipo wAds / wAd / adApply). Duomenys – RPC job_ads_worker_list ir kt. */
 
-const AD_ST = { sent: ["Išsiųsta", "blue"], viewed: ["Peržiūrėta", "blue"], interview: ["Kviečia pokalbiui", "green"], rejected: ["Atmesta", ""] };
+const AD_ST = { sent: ["Išsiųsta", "blue"], viewed: ["Peržiūrėta", "blue"], interview: ["Kviečia pokalbiui", "green"], rejected: ["Atmesta", ""], withdrawn: ["Atšaukta", ""] };
 const AD_CITIES = ["Vilnius", "Kaunas", "Klaipėda", "Šiauliai", "Panevėžys", "Alytus", "Marijampolė", "Utena"];
 const IV_HOW = { live: "Gyvai", phone: "Telefonu" };
 const chevron = '<path d="m9 18 6-6-6-6"/>';
@@ -28,7 +28,7 @@ function Heart({ size, on }) {
 export function needsAction(a) {
   const x = a.application;
   if (!x) return Boolean(a.nudged && a.live);
-  return (x.status === "interview" && !x.interview_confirmed_at) || (x.cv_requested_at && !x.cv_sent_at && x.status !== "rejected");
+  return (x.status === "interview" && !x.interview_confirmed_at) || (x.cv_requested_at && !x.cv_sent_at && !["rejected", "withdrawn"].includes(x.status));
 }
 
 /* Bendras duomenų „kabliukas“ – naudojamas ir meniu ženkliukui. */
@@ -56,11 +56,12 @@ function SaveBtn({ ad, label, onToggle }) {
   );
 }
 
-function AdCard({ ad, fav, mutual, onOpen, onToggleSave }) {
+export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref }) {
   const x = ad.application;
   const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
+  const Tag = publicHref ? "a" : "article";
   return (
-    <article className="job" tabIndex={0} role="link" aria-label={up(ad.title)} onClick={() => onOpen(ad)} onKeyDown={(e) => { if (e.key === "Enter") onOpen(ad); }}>
+    <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter") onOpen(ad); }}>
       <div className="jm">
         <div className="jtop"><h3>{up(ad.title)}</h3>
           <div className="row jpills">
@@ -77,9 +78,9 @@ function AdCard({ ad, fav, mutual, onOpen, onToggleSave }) {
         <div className="adsal-m"><b>{salTxt(ad)}</b> {salKind(ad)} / mėn.</div>
       </div>
       <div className="adsal"><b>{salTxt(ad)}</b><span>{salKind(ad)} / mėn.</span></div>
-      {x || !ad.live ? null : <SaveBtn ad={ad} onToggle={onToggleSave} />}
+      {publicHref || x || !ad.live ? null : <SaveBtn ad={ad} onToggle={onToggleSave} />}
       <span className="jgo" aria-hidden="true"><Svg size={18} paths={chevron} /></span>
-    </article>
+    </Tag>
   );
 }
 
@@ -122,8 +123,7 @@ function ApplyModal({ ad, me, onClose, onSent }) {
   );
 }
 
-function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggleSave, onChanged, onCompany }) {
-  const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
+export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavorite, onBack, onToggleSave, onChanged, onCompany, publicView = false, onPublicApply }) {
   const [chat, setChat] = useState(false);
   const x = ad.application;
   const st = x?.status;
@@ -131,7 +131,7 @@ function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggle
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
-  useEffect(() => { if (ad.live) supabase.rpc("job_ad_mark_viewed", { p_ad_id: ad.id }); }, [ad.id]);
+  useEffect(() => { if (!publicView && ad.live) supabase.rpc("job_ad_mark_viewed", { p_ad_id: ad.id }); }, [ad.id, publicView]);
 
   async function run(fn, args) {
     setBusy(true); setErr("");
@@ -170,7 +170,8 @@ function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggle
   const si = st === "rejected" ? -1 : steps.findIndex((s) => s[0] === st);
   const fav = isFavorite(ad.company_id);
 
-  const act = x ? (
+  const act = publicView ? <><button className="btn primary jd-wide" type="button" onClick={onPublicApply}>Kandidatuoti</button><p className="small muted" style={{ margin: 0 }}>Norėdami kandidatuoti, prisijunkite arba susikurkite darbuotojo paskyrą.</p></>
+    : st === "withdrawn" ? <p className="small muted">Kandidatūra atšaukta. Į šį skelbimą jau kandidatavote; pakartotinai kandidatuoti negalima.</p> : x ? (
     <>
       <div className="adtrack">{st === "rejected"
         ? <p className="small muted" style={{ margin: 0 }}>Įmonė pasirinko kitą kandidatą.</p>
@@ -188,7 +189,6 @@ function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggle
             : <button className="btn primary jd-wide" type="button" disabled={busy} onClick={() => run("job_ad_confirm_interview", { p_application_id: x.id })}>Patvirtinti pokalbį</button>}
         </div>) : null}
       {st === "interview" ? <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />Rašyti įmonei</button> : null}
-      {st !== "rejected" ? <button className="btn jd-wide" type="button" disabled={busy} onClick={async () => { if (await askConfirm({ title: "Atšaukti kandidatūrą?", message: "Įmonė nebematys jūsų kandidatūros šiam skelbimui.", confirmLabel: "Atšaukti kandidatūrą", cancelLabel: "Ne", danger: true })) run("job_ad_withdraw", { p_application_id: x.id }); }}>Atšaukti kandidatūrą</button> : null}
     </>
   ) : ad.live ? (
     <>
@@ -204,8 +204,8 @@ function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggle
       <header className="jd-hero">
         <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={AD_ST[st]?.[1]}>{AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
         <div className="jd-meta">
-          <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"} aria-label={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"}
-            onClick={() => toggleFavorite(ad.company_id, { name: ad.company_name, avatar_path: ad.company_avatar_path })}><Heart size={17} on={fav} /></button>
+          {!publicView ? <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"} aria-label={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"}
+            onClick={() => toggleFavorite(ad.company_id, { name: ad.company_name, avatar_path: ad.company_avatar_path })}><Heart size={17} on={fav} /></button> : null}
           <span className="jd-co-chip"><span className="av co sm" style={{ overflow: "hidden" }}>{avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(String(ad.company_name || "").replace(/^(UAB|MB)\s+/, ""))}</span>{ad.company_name}</span>
           <span><Svg name="pin" size={16} />{ad.city}</span>
           {ad.published_at ? <span><Svg name="cal" size={16} />Įkelta prieš {daysAgo(ad.published_at)} d.</span> : null}
@@ -231,23 +231,30 @@ function AdPage({ ad, me, isFavorite, isMutual, toggleFavorite, onBack, onToggle
           <section className="card jd-act">
             {act}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
-            <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button>
+            {!publicView ? <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button> : null}
+            {ad.live ? <ShareJobAdButton ad={ad} /> : null}
           </section>
           {ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}
       {chat && x ? <AdChat applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} closed={st === "rejected"} onClose={() => setChat(false)} /> : null}
-      <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
 }
 
-export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCompany }) {
+export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCompany, initialAdId, onInitialAdHandled }) {
   const { ads, setAds, loaded, error, reload } = data;
   const [tab, setTab] = useState("all");
   const [city, setCity] = useState("Visi");
-  const [openId, setOpenId] = useState(null);
+  const [openId, setOpenId] = useState(initialAdId || null);
+  const [initialMissing, setInitialMissing] = useState(false);
+  useEffect(() => {
+    if (!initialAdId || !loaded || error) return;
+    setOpenId(initialAdId);
+    setInitialMissing(!ads.some(ad => ad.id === initialAdId));
+    onInitialAdHandled?.();
+  }, [initialAdId, loaded, error, ads, onInitialAdHandled]);
   const open = ads.find((a) => a.id === openId);
 
   async function toggleSave(ad) {
@@ -272,6 +279,7 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
   const list = tab === "mine" ? lists.mine : tab === "saved" ? lists.savedInCity : lists.all;
   return (
     <>
+      {initialMissing ? <p className="ferr" role="alert">Pasirinktas skelbimas nepasiekiamas arba jo galiojimas pasibaigęs.</p> : null}
       <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Nuolatinis darbas statybose. Kandidatuokite su savo statybos24 profiliu – CV nereikia.</p></div></div>
       <div className="adbar">
         <div className="toggle2 sm adtabs" role="group" aria-label="Skelbimai">

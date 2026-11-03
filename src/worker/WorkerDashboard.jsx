@@ -41,7 +41,7 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function WorkerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null }) {
+export function WorkerDashboard({ user, onLogout, onAdminReturn = null, impersonation = null, initialAdId = null }) {
   const days = nextFourteenDays();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,7 +80,9 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const { favoriteIds, favoriteCompanies, toggleFavorite, isFavorite } = useFavoriteCompanies(user.id);
   const workerAds = useWorkerAds(!onAdminReturn);
+  const [linkedAdId, setLinkedAdId] = useState(initialAdId);
   const [workerView, setWorkerView] = useState(() => {
+    if (initialAdId) return "ads";
     try {
       const saved = window.sessionStorage.getItem("s24-worker-view");
       return ["overview", "invites", "jobs", "history", "favco", "ads", "schedule", "profile"].includes(saved) ? saved : "overview";
@@ -3841,6 +3843,8 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
           <WorkerAds
             key={workerAdsNavKey}
             data={workerAds}
+            initialAdId={linkedAdId}
+            onInitialAdHandled={() => setLinkedAdId(null)}
             me={{
               name: form.displayName || "Darbuotojas",
               city: form.city,

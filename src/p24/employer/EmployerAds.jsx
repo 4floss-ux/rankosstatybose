@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
+import { ShareJobAdButton } from "../ShareJobAdButton.jsx";
 import { AdChat } from "../AdChat.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { Empty, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
@@ -345,7 +346,7 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
   const savers = ad.savers || [];
   return (
     <>
-      <header className="jd-hero"><div className="jd-titlerow"><h1>{up(ad.title)}</h1>{statusPill(ad)}</div>
+      <header className="jd-hero"><div className="jd-titlerow"><h1>{up(ad.title)}</h1>{statusPill(ad)}{ad.live ? <ShareJobAdButton ad={ad} /> : null}</div>
         <div className="jd-meta"><span><Svg name="pin" size={16} />{ad.city}</span><span><Svg name="euro" size={16} />{salTxt(ad)} {salKind(ad)} / mėn.</span>{ad.contract_type ? <span><Svg name="file" size={16} />{ad.contract_type}</span> : null}{ad.schedule ? <span><Svg name="clock" size={16} />{ad.schedule}</span> : null}</div></header>
       {err && <p className="ferr" role="alert">{err}</p>}
       {ad.status === "pending_payment" ? (
