@@ -10,6 +10,7 @@ import { BUSINESS_PRESENTATION_TOKEN } from "./employer/plans.js";
 import { SuspendedAccount } from "./public/SuspendedAccount.jsx";
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
 import { PublicLandingP24 } from "./p24/public/PublicLandingP24.jsx";
+import { publicJobRoute } from "./lib/publicJobAds.js";
 
 // Kodo dalys kraunamos pagal rolę – pradinis puslapis lieka lengvas.
 const WorkerDashboard = lazyPage(() => import("./worker/WorkerDashboard.jsx"), "WorkerDashboard");
@@ -18,8 +19,10 @@ const AdminDashboard = lazyPage(() => import("./admin/AdminDashboard.jsx"), "Adm
 const AdminWorkerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminWorkerGateway");
 const AdminEmployerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminEmployerGateway");
 const BusinessPresentationPage = lazyPage(() => import("./public/BusinessPresentationPage.jsx"), "BusinessPresentationPage");
+const PublicJobAdsPage = lazyPage(() => import("./public/PublicJobAdsPage.jsx"), "PublicJobAdsPage");
 
 export function App() {
+  const publicJobs = publicJobRoute(window.location.pathname);
   const [user, setUser] = useState(null);
   useEffect(() => {
     if(!user?.id || !supabase) return;
@@ -410,9 +413,15 @@ export function App() {
 
   const impersonation = impersonated ? { name: impersonated.name, onEnd: finishImpersonation } : null;
 
+  if (publicJobs && !(publicJobs.adId && user && accountRole === "worker")) {
+    return <><PublicJobAdsPage route={publicJobs} user={user} onLogin={() => { setAuthMode("login"); setAuthRole("worker"); setAuthOpen(true); }} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} initialMode={authMode} initialRole="worker" returnPath={window.location.pathname} />
+    </>;
+  }
+
   if (user && accountRole === "worker") {
     return (
-      <WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />
+      <WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />
     );
   }
 

@@ -8,6 +8,7 @@ import { CityAutocomplete, canonicalCityName } from "../ui/location.jsx";
 import { sendPasswordRecoveryEmail } from "./passwordRecovery.jsx";
 import { PhoneAvailabilityHint, PhoneVerificationFields, usePhoneVerification } from "./phoneVerification.jsx";
 import { companyTeamInviteLink } from "../employer/plans.js";
+import { publicJobAuthReturnUrl } from "../lib/publicJobAds.js";
 
 export function AuthModal({
   open,
@@ -15,6 +16,7 @@ export function AuthModal({
   initialMode = "login",
   initialRole = "worker",
   teamInvite = null,
+  returnPath = null,
 }) {
   const [mode, setMode] = useState(initialMode);
   const [role, setRole] = useState(initialRole);
@@ -160,7 +162,7 @@ export function AuthModal({
           options: {
             emailRedirectTo: teamInvite?.token
               ? companyTeamInviteLink(teamInvite.token)
-              : window.location.origin,
+              : publicJobAuthReturnUrl(returnPath, window.location.origin),
             data: {
               terms_accepted: true,
               terms_version: TERMS_VERSION,

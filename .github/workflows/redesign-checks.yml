@@ -53,3 +53,7 @@ jobs:
           VITE_SUPABASE_URL: ""
           VITE_SUPABASE_PUBLISHABLE_KEY: ""
         run: npm run build:hire
+      - name: Check public job links and safe authentication return paths
+        run: node tests/public-job-ads.test.mjs
+      - name: Check public job access and application rules in synthetic PostgreSQL
+        run: node tests/public-job-ads-sql.test.mjs
