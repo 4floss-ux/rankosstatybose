@@ -4,8 +4,8 @@ const id=n=>`30000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const source=await readFile(new URL('../supabase/migrations/20261101150000_redesign_job_ads.sql',import.meta.url),'utf8');
 test('permanent advert deletion proposal in synthetic PostgreSQL',async t=>{
  const db=new PGlite();try{
-  await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE SCHEMA app_private;
-  CREATE TABLE auth.users(id uuid PRIMARY KEY);INSERT INTO auth.users VALUES('${id(1)}'),('${id(2)}'),('${id(3)}');
+  await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE SCHEMA app_private;CREATE SCHEMA storage;CREATE TABLE storage.objects(bucket_id text,name text);
+  CREATE TABLE auth.users(id uuid PRIMARY KEY);INSERT INTO auth.users VALUES('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}');
   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
   CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$SELECT 'authenticated'::text$$;
   CREATE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql AS $$SELECT false$$;
@@ -76,10 +76,14 @@ test('permanent advert deletion proposal in synthetic PostgreSQL',async t=>{
    const receiptStart=quotaSource.indexOf('CREATE TABLE app_private.job_ad_pro_extension_receipts');
    await db.exec(quotaSource.slice(receiptStart,quotaSource.indexOf(');',receiptStart)+2));
    await db.query("INSERT INTO app_private.job_ad_pro_extension_receipts VALUES($1,$2,$3,$4)",[id(10),id(555),id(100),{description:'PRIVATE CACHED AD'}]);
+   await db.query('INSERT INTO storage.objects VALUES($1,$2),($1,$3)', ['job-ad-cv',id(200)+'/old/nested.pdf',id(200)+'/synthetic.pdf']);
+   await db.query("INSERT INTO public.job_ad_applications(id,ad_id,worker_id,cv_path) VALUES($1,$2,$3,$4)",['abcdefab-abcd-4abc-8abc-abcdefabcdef',id(100),id(4),'ABCDEFAB-ABCD-4ABC-8ABC-ABCDEFABCDEF/legacy.pdf']);
+   await db.query('INSERT INTO storage.objects VALUES($1,$2)',['job-ad-cv','ABCDEFAB-ABCD-4ABC-8ABC-ABCDEFABCDEF/legacy.pdf']);
    await actor(3);assert.equal((await db.query('SELECT public.job_ad_cv_access($1,true) AS x',[id(200)+'/new.pdf'])).rows[0].x,true);
    await actor(1);job=await del(100);assert.equal(job.deleted,true);assert.equal(job.cleanup_pending,true);
    for(const table of ['job_ads','job_ad_applications','job_ad_messages','job_ad_message_reads','job_ad_saves','job_ad_views','job_ad_nudges','job_ad_payments'])assert.equal(await count('public.'+table),0,table);
    assert.equal(await count('app_private.job_ad_first_free_claims'),1);
+   assert.equal(await count('storage.objects'),3); // Metadata is not deleted in SQL; Storage API owns object removal.
    assert.equal(await count('app_private.job_ad_retained_payments'),1);
    assert.equal((await db.query('SELECT result FROM app_private.job_ad_pro_extension_receipts')).rows[0].result,null);
    const receipt=(await db.query('SELECT * FROM app_private.job_ad_retained_payments')).rows[0];assert.equal(receipt.amount_cents,999);assert.equal(Object.hasOwn(receipt,'description'),false);
@@ -90,7 +94,7 @@ test('permanent advert deletion proposal in synthetic PostgreSQL',async t=>{
   await t.test('cleanup service claims, retries and completes without stale leases or browser access',async()=>{
    await db.exec('SET ROLE authenticated');await assert.rejects(db.query('SELECT public.job_ad_delete_claim_jobs()'),/permission denied/);
    await assert.rejects(db.query('SELECT * FROM app_private.job_ad_retained_payments'),/permission denied/);await db.exec('RESET ROLE; SET ROLE service_role');
-   const first=(await db.query('SELECT * FROM public.job_ad_delete_claim_jobs()')).rows[0];assert.deepEqual(first.application_folders,[id(200)]);
+   const first=(await db.query('SELECT * FROM public.job_ad_delete_claim_jobs()')).rows[0];assert.deepEqual([...first.application_folders].sort(),[id(200),'ABCDEFAB-ABCD-4ABC-8ABC-ABCDEFABCDEF','abcdefab-abcd-4abc-8abc-abcdefabcdef'].sort());
    assert.equal((await db.query('SELECT * FROM public.job_ad_delete_claim_jobs()')).rows.length,0);
    assert.equal((await db.query('SELECT public.job_ad_delete_finish_job($1,$2,false) AS x',[job.job_id,first.lease_id])).rows[0].x,true);
    await db.exec('RESET ROLE');await db.exec("UPDATE app_private.job_ad_deletion_jobs SET next_attempt_at=now()-interval '1 minute'");await db.exec('SET ROLE service_role');
@@ -119,6 +123,11 @@ test('permanent advert deletion proposal in synthetic PostgreSQL',async t=>{
    assert.equal((await del(101)).cleanup_pending,false);
    await db.exec("UPDATE app_private.job_ad_deletion_jobs SET completed_at=now()-interval '2 days';SELECT public.job_ad_delete_prune_jobs()");
    assert.equal(await count('app_private.job_ad_deletion_jobs'),0);assert.equal(await count('app_private.job_ad_retained_payments'),1);assert.equal(await count('app_private.job_ad_first_free_claims'),1);
+  });
+  await t.test('owner cannot purge administrator-removed review evidence',async()=>{
+   await create(103);await db.query("UPDATE public.job_ads SET status='removed' WHERE id=$1",[id(103)]);
+   await assert.rejects(del(103),/administratori/);
+   assert.equal(await count('public.job_ads'),1);
   });
  }finally{await db.close();}
 });

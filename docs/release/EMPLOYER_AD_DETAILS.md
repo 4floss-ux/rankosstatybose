@@ -2,6 +2,9 @@
 
 Šaka `fix/employer-ad-details`. Serverio SQL ir Edge pakeitimai paruošti vietoje, bet šioje sesijoje netaikyti Supabase. Archyvo nėra.
 
+Frontend įdiegtas į statybos24.lt atskiru įrašu [`66d1c4f`](https://github.com/4floss-ux/rankosstatybose/commit/66d1c4f), šakoje `release/employer-ad-details-maintenance`. Aktyvi Cloudflare versija `7ce52ecc-f407-4368-8a1e-3ce5ee51f74e`, 100 %, Maintenance ON. Patvirtinta API `2026-11-03T21:33:38.954776+00:00`. Main ir redesign nesujungti; main turinys savaime šio diegimo neparodo. Kol serverio schema / Edge / cleanup neįdiegti ir neaktyvuoti, trynimo mygtukas sąmoningai neaktyvus. Jokių realių įrašų nepašalinta.
+
+
 ## Paruošta sąsaja
 
 - Darbdaviui rodoma visa įvesta informacija tuo pačiu `JobAdContent` komponentu, kurį naudoja darbuotojas ir vieša peržiūra: aprašymas, sutartis, grafikas, pradžia, adresas, reikalavimai ir pasiūlymai.
@@ -12,15 +15,15 @@
 
 ## Paruoštas serveris
 
-1. `20261103220000_job_ad_delete_REVIEW.sql`: pradinė būsena OFF, teisių patikros, transakcinis skelbimo DELETE ir susiję CASCADE įrašai. Prieš diegimą patikrinamos būtinos CASCADE sąsajos; jos aklai nekeičiamos.
-2. `job-ad-delete` Edge: tikras `auth.getUser`, veiksmas prisijungusio vartotojo kontekste, Storage objektų trynimas tik iš serverio patvirtintų `job-ad-cv/<application UUID>/` aplankų. Kliento pateikti failų keliai ignoruojami. Bendri profilio dokumentai ir kiti bucket neliečiami.
+1. `20261103220000_job_ad_delete_REVIEW.sql`: pradinė būsena OFF, teisių patikros, transakcinis skelbimo DELETE ir susiję CASCADE įrašai. Prieš diegimą patikrinamos būtinos CASCADE sąsajos; jos aklai nekeičiamos. Administratoriaus pašalintų (`removed`) skelbimų savininkas ištrinti negali: išsaugoma esama administracinės peržiūros riba.
+2. `job-ad-delete` Edge: tikras `auth.getUser`, veiksmas prisijungusio vartotojo kontekste, Storage objektų trynimas tik iš serverio patvirtintų `job-ad-cv/<application UUID>/` aplankų. Kliento pateikti failų keliai ignoruojami. Eilėje išsaugomi ir tikslūs senų UUID aplankų raidžių dydžiai iš Storage metaduomenų; saugiai išvalomi ir seni vidiniai poaplankiai. Bendri profilio dokumentai ir kiti bucket neliečiami.
 3. Nuolatinė privati pakartojimų eilė, tarnybinis cleanup kas penkias minutes, lease žetonai apsaugo nuo pavėlavusių užbaigimų. Nesėkmingi darbai neprarandami; sėkmingų darbų aplankų sąrašai išvalomi iškart, techniniai pakartojimo kvitai pašalinami po paros. Tai nėra skelbimo turinio ar kandidatūrų archyvas.
 4. CV Storage metaduomenų įrašai ir trynimas naudoja sutampančius transakcinius advisory lock. Upload patikra užrakina ir kandidatūros eilutę. Tai būtina, kad įkėlimas neatsirastų po aplanko išvalymo; tikras kelių DB jungčių ir tikro Storage elgesys dar nepatikrintas.
 5. Išsaugomi tik minimalūs mokėjimų apskaitos duomenys (mokėjimo identifikatorius, ad/įmonės UUID, suma, valiuta, aplinka, data) privačioje lentelėje. Skelbimo tekstai, kandidatų ir jų žinučių duomenys ten nekopijuojami.
 6. Vienkartinės dovanos claim lieka. Ankstesniam leidėjui be dovanos claim sukuriama tik ankstesnės publikacijos tinkamumo žyma, o ne išgalvotas dovanos panaudojimo įvykis. Todėl ištrynimas dovanos neatkuria ir senoms paskyroms.
 7. Jei vėliau įdiegiama Pro kvota, jos panaudojimas negrąžinamas. Pasirenkamoje pratęsimų receipt lentelėje išvalomas ištrinto skelbimo JSON, paliekant tik idempotency identifikatorius.
 8. Esamos `job-ad-checkout` Edge funkcijos papildymas: lease prieš išorines užklausas, pakartotinis ad perskaitymas po lease, patikrintas sesijos įrašymas tik egzistuojančiam nepašalintam skelbimui, lease atleidimas `finally`. Naujos mokėjimo operacijos šiame darbe nevykdytos.
-9. Pradėtas mokėjimas arba gyvas checkout lease blokuoja ištrynimą. Neužbaigto / pasibaigusio checkout negalima aklai išvalyti nepatikrinus jo būsenos. Tai sąmoninga apsauga nuo mokėjimo už ištrintą skelbimą; Stripe atsiskaitymų integracija turi būti išbandyta tik test-mode.
+9. Pradėtas mokėjimas arba gyvas checkout lease blokuoja ištrynimą. Neužbaigto / pasibaigusio checkout negalima aklai išvalyti nepatikrinus jo būsenos. Tai sąmoninga apsauga nuo mokėjimo už ištrintą skelbimą. Automatinis pasibaigusios, bet vis dar įrašytos pending checkout sesijos atlaisvinimas šiame pakeitime neįgyvendintas; tokiam skelbimui ištrynimas lieka užblokuotas iki serverinio būsenos sutvarkymo. Tai likęs mokamų skelbimų trynimo blokatorius, o ne įrodytas pilnas mokėjimų veikimas. Stripe atsiskaitymų integracija turi būti išbandyta tik test-mode.
 
 ## Diegimo tvarka tikrintojui su tikra prieiga
 

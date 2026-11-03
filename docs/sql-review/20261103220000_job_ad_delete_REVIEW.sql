@@ -5,7 +5,7 @@ BEGIN;
 DO $check$
 DECLARE dep record;
 BEGIN
- IF to_regprocedure('public.job_ad_cv_access(text,boolean)') IS NULL
+ IF to_regclass('storage.objects') IS NULL OR to_regprocedure('public.job_ad_cv_access(text,boolean)') IS NULL
     OR to_regprocedure('app_private.job_ad_first_free_available(uuid)') IS NULL THEN
   RAISE EXCEPTION 'Existing reviewed CV and first-free definitions are required; preserve their ACLs';
  END IF;
@@ -57,7 +57,7 @@ $f$;
 CREATE TABLE app_private.job_ad_deletion_jobs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ad_id uuid NOT NULL UNIQUE,
   company_id uuid NOT NULL, requested_by uuid NOT NULL,
-  application_folders uuid[] NOT NULL DEFAULT '{}',
+  application_folders text[] NOT NULL DEFAULT '{}',
   attempts integer NOT NULL DEFAULT 0, next_attempt_at timestamptz NOT NULL DEFAULT now(),
   lease_id uuid, lease_until timestamptz, completed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -130,7 +130,7 @@ END;$f$;
 
 CREATE FUNCTION public.job_ad_delete(p_ad_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $f$
-DECLARE a public.job_ads; j app_private.job_ad_deletion_jobs; folders uuid[]; app uuid;
+DECLARE a public.job_ads; j app_private.job_ad_deletion_jobs; apps uuid[]; folders text[]; app uuid;
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Nėra teisių.' USING ERRCODE='42501'; END IF;
  SELECT * INTO a FROM public.job_ads WHERE id=p_ad_id FOR UPDATE;
@@ -142,16 +142,26 @@ BEGIN
   RETURN jsonb_build_object('deleted',true,'job_id',j.id,'cleanup_pending',j.completed_at IS NULL);
  END IF;
  IF public.job_ad_can_manage(a.company_id) IS DISTINCT FROM TRUE THEN RAISE EXCEPTION 'Nėra teisių.' USING ERRCODE='42501'; END IF;
+ -- Preserve the existing moderation boundary: company list/detail already hide
+ -- administrator-removed ads. Owners must not purge that review evidence.
+ IF a.status='removed' THEN RAISE EXCEPTION 'Šį skelbimą pašalino administratorius. Kreipkitės į administratorių.' USING ERRCODE='42501'; END IF;
  IF (SELECT enabled FROM app_private.job_ad_deletion_policy WHERE singleton) IS DISTINCT FROM TRUE THEN
   RAISE EXCEPTION 'Skelbimo ištrynimas dar neįjungtas.' USING ERRCODE='55000';
  END IF;
  IF a.pending_session_id IS NOT NULL OR EXISTS(SELECT 1 FROM app_private.job_ad_checkout_leases WHERE ad_id=a.id AND expires_at>clock_timestamp()) THEN
   RAISE EXCEPTION 'Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas.' USING ERRCODE='55000';
  END IF;
- SELECT coalesce(array_agg(id ORDER BY id),'{}'::uuid[]) INTO folders FROM public.job_ad_applications WHERE ad_id=a.id;
- FOREACH app IN ARRAY folders LOOP
+ SELECT coalesce(array_agg(id ORDER BY id),'{}'::uuid[]) INTO apps FROM public.job_ad_applications WHERE ad_id=a.id;
+ FOREACH app IN ARRAY apps LOOP
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('job-ad-cv:'||app::text,0));
  END LOOP;
+ -- Read metadata only; actual objects are removed through the Storage API.
+ -- Preserve exact folder spelling, including legacy upper-case UUID prefixes.
+ SELECT coalesce(array_agg(root ORDER BY root),'{}'::text[]) INTO folders FROM (
+  SELECT x::text AS root FROM unnest(apps) x
+  UNION SELECT DISTINCT split_part(o.name,'/',1) FROM storage.objects o
+   WHERE o.bucket_id='job-ad-cv' AND lower(split_part(o.name,'/',1))=ANY(apps::text[])
+ ) roots;
  IF EXISTS(SELECT 1 FROM public.job_ad_payments p WHERE p.ad_id=a.id AND p.company_id<>a.company_id) THEN
   RAISE EXCEPTION 'Mokėjimo įrašo neatitikimas. Skelbimas nepakeistas.';
  END IF;
@@ -180,7 +190,7 @@ BEGIN
 END;$f$;
 
 CREATE FUNCTION public.job_ad_delete_claim_jobs(p_job_id uuid DEFAULT NULL,p_limit integer DEFAULT 10)
-RETURNS TABLE(job_id uuid,lease_id uuid,application_folders uuid[])
+RETURNS TABLE(job_id uuid,lease_id uuid,application_folders text[])
 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $f$
  WITH candidates AS (
   SELECT id FROM app_private.job_ad_deletion_jobs
@@ -197,7 +207,7 @@ RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $f$
 BEGIN
  UPDATE app_private.job_ad_deletion_jobs SET
   completed_at=CASE WHEN p_success THEN clock_timestamp() END,
-  application_folders=CASE WHEN p_success THEN '{}'::uuid[] ELSE application_folders END,
+  application_folders=CASE WHEN p_success THEN '{}'::text[] ELSE application_folders END,
   attempts=attempts+1,next_attempt_at=clock_timestamp()+least(30,power(2,least(attempts,5)))::integer*interval '1 minute',
   lease_id=NULL,lease_until=NULL
  WHERE id=p_job_id AND lease_id=p_lease_id AND completed_at IS NULL;

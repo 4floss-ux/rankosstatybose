@@ -7,7 +7,7 @@ test('purges all CV pages at offset zero and cannot escape application folders',
  await cleanJob(bucket,{application_folders:[folder]});assert.equal(removed.length,205);assert.equal(objects.length,0);
  await cleanJob(bucket,{application_folders:[folder]});assert.equal(removed.length,205);
  await assert.rejects(cleanJob(bucket,{application_folders:['../worker-documents']}),/Invalid/);
- await assert.rejects(cleanJob({list:async()=>({data:[{id:null,name:'nested'}]})},{application_folders:[folder]}),/Unexpected/);
+ await assert.rejects(cleanJob({list:async()=>({data:[{id:null,name:'../nested'}]})},{application_folders:[folder]}),/Unexpected/);
 });
 test('failed Storage cleanup remains queued and stale completion never claims success',async()=>{
  const calls=[];let fails=true;
@@ -17,4 +17,13 @@ test('failed Storage cleanup remains queued and stale completion never claims su
  fails=false;assert.equal(await runCleanup(admin,'job'),true);
  const stale={...admin,rpc:async(name,args)=>name==='job_ad_delete_finish_job'?{data:false}:admin.rpc(name,args)};
  assert.equal(await runCleanup(stale,'job'),false);
+});
+
+test('legacy nested files stay within their server-authorized root',async()=>{
+ const objects=new Set([folder+'/old/nested.pdf',folder+'/direct.pdf']);
+ const bucket={list:async prefix=>{
+  const children=new Map();for(const path of objects){if(!path.startsWith(prefix+'/'))continue;const tail=path.slice(prefix.length+1);const name=tail.split('/')[0];children.set(name,{id:tail.includes('/')?null:'file',name});}
+  return {data:[...children.values()]};
+ },remove:async paths=>{for(const path of paths){assert.ok(path.startsWith(folder+'/'));objects.delete(path);}return {};}};
+ await cleanJob(bucket,{application_folders:[folder]});assert.equal(objects.size,0);
 });
