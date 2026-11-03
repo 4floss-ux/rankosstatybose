@@ -1,0 +1,21 @@
+.s24-select{display:inline-block;position:relative;width:100%;min-width:0;vertical-align:middle}
+.s24-select .s24-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0;min-height:42px;padding:10px 12px;border:1px solid var(--line-2,#d7dbea);border-radius:5px;background:var(--white,#fff);color:var(--navy,#222631);font:inherit;font-size:14px;font-weight:500;text-align:left;cursor:pointer;box-sizing:border-box}
+.s24-select .s24-select-trigger:focus-visible{outline:2px solid #6b5b95;outline-offset:1px;border-color:#6b5b95}
+.s24-select .s24-select-trigger[aria-invalid=true]{border-color:#dc3545}
+.s24-select .s24-select-trigger:disabled{cursor:not-allowed;opacity:.55}
+.s24-select-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s24-select-trigger>svg{display:block;width:16px;height:16px;flex:none;overflow:visible;transform-origin:center;transform-box:view-box;color:inherit;transition:transform .15s}
+.s24-select-trigger[aria-expanded=true]>svg{transform:rotate(180deg)}
+select.s24-select-native{position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;pointer-events:none!important;border:0!important}
+.s24-select-menu{z-index:20000;box-sizing:border-box;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#bdb1d4 transparent;padding:5px;background:#fff;color:#222631;border:1px solid #d7dbea;border-radius:6px;box-shadow:0 12px 32px #22263124;font-size:14px;font-weight:500;line-height:1.45}
+.s24-select-option{box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:4px;cursor:pointer;overflow-wrap:anywhere}
+.s24-select-option[aria-selected=true]{background:#f0edf7;color:#58457f;font-weight:600}
+.s24-select-option.active{background:#f0edf7;outline:1px solid #bdb1d4;outline-offset:-1px}
+.s24-select-option[aria-disabled=true]{opacity:.45;cursor:not-allowed}
+.s24-select-group{padding:7px 12px;color:#687186;font-size:12px;font-weight:700}
+.p24 .h-lsel .s24-select-trigger{height:34px;min-height:34px;padding:0 2px;border:0;background:transparent;font-size:13px;font-weight:600;box-shadow:none}
+.p24 .h-lsel .s24-select{min-width:112px}
+@media(max-width:600px){.s24-select .s24-select-trigger{min-height:44px}.p24 .h-lsel .s24-select-trigger{min-height:34px}.s24-select-option{min-height:40px}}
+.p24 .field .s24-select-trigger{height:38px;min-height:38px;padding:0 12px;font-size:13px}
+@media(max-width:899px){.p24 .field .s24-select-trigger{font-size:15px}}
+.s24-select-menu > button.s24-select-option:hover{background:#f0edf7!important}

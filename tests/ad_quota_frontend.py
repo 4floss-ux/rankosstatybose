@@ -39,7 +39,7 @@ with sync_playwright() as p:
   page.on('pageerror',lambda error:errors.append(str(error)))
   page.route('**/*',lambda r:r.fulfill(status=200,content_type='text/html',body='<html></html>') if r.request.resource_type=='document' else r.abort())
   page.goto('http://localhost');page.set_content('<main class="p24" style="padding:16px"><div id="root"></div></main>')
-  page.add_style_tag(path=str(repo/'src/p24/p24.css'));page.add_script_tag(content=bundle)
+  page.add_style_tag(path=str(repo/'src/p24/p24.css'));page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
   page.get_by_role('button',name='Paskelbti skelbimą',exact=True).wait_for()
   assert '1 iš 10' in page.locator('.notebox').inner_text()
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')

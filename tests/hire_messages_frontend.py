@@ -49,7 +49,7 @@ with sync_playwright() as p:
         page.set_content('<div class="p24" style="max-width:700px;margin:auto"><div id="root"></div></div>')
         page.add_style_tag(path=str(repo / 'src/p24/p24.css'))
         page.add_style_tag(path=str(repo / 'src/hire/hireMessages.css'))
-        page.add_script_tag(content=bundle)
+        page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
         launcher = page.get_by_role('button', name='Žinutės', exact=True)
         launcher.wait_for()
         assert page.get_by_role('dialog').count() == 0

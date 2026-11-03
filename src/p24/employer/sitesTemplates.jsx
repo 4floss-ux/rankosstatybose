@@ -1,3 +1,4 @@
+import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
@@ -70,7 +71,7 @@ export function SitesSection({ companyId, locked, canEdit, onPlans }) {
             <label className="field">Adresas *<AddressAutocomplete value={form.address} city={form.city} selectedAddress={picked}
               onChange={(value) => setForm((cur) => ({ ...cur, address: value }))}
               onSelect={(address) => { setPicked(address); setForm((cur) => ({ ...cur, address: address.label })); }} placeholder="Gatvė, namo nr." /></label>
-            <label className="field wide">Atvykimas<select value={form.transport} onChange={(e) => setForm({ ...form, transport: e.target.value })}><option value="self">{TRANSPORT.self}</option><option value="employer_pickup">{TRANSPORT.employer_pickup}</option></select></label>
+            <label className="field wide">Atvykimas<SiteSelect value={form.transport} onChange={(e) => setForm({ ...form, transport: e.target.value })}><option value="self">{TRANSPORT.self}</option><option value="employer_pickup">{TRANSPORT.employer_pickup}</option></SiteSelect></label>
             <label className="field wide">Pastaba darbuotojams<input value={form.note} maxLength={300} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Pvz. Įvažiavimas iš kiemo pusės" /></label>
           </div>
           {err ? <p className="ferr" role="alert">{err}</p> : null}

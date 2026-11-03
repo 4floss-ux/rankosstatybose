@@ -38,7 +38,7 @@ export const EMPLOYER_PLANS = [
     description:
       "Nemokamas planas darbdaviui, kuris nori pradėti darbuotojų paiešką.",
     features: [
-      "Iki 5 darbo pasiūlymų per mėnesį",
+      "Iki 5 trumpalaikių darbo pasiūlymų per mėnesį",
       "Darbuotojų paieška ir kvietimai",
       "1 paskyros naudotojas",
     ],
@@ -51,7 +51,7 @@ export const EMPLOYER_PLANS = [
       "Darbdaviui, kuris darbuotojų ieško reguliariai ir nori daugiau atrankos bei valdymo galimybių.",
     features: [
       "Viskas, kas yra Basic plane",
-      "Iki 25 darbo pasiūlymų per mėnesį",
+      "Iki 25 trumpalaikių darbo pasiūlymų per mėnesį",
       "Darbuotojų patikimumas ir įvertinimai",
       "„Darbuotojai favoritai“ – išsaugoti gerai pasirodžiusius darbuotojus",
       "Privatūs ir bendri darbo pokalbiai",
@@ -67,7 +67,7 @@ export const EMPLOYER_PLANS = [
       "Darbdaviui ar komandai, kuriai reikia neribotų darbų, atsakomybių paskirstymo ir pilno valdymo vienoje sistemoje.",
     features: [
       "Viskas, kas yra Business plane",
-      "Neribotas darbo pasiūlymų skaičius",
+      "Neribotas trumpalaikių darbo pasiūlymų skaičius",
       "Iki 5 paskyros komandos narių",
       "Savininko, vadovo ir vadybininko rolės",
       "„Mano darbai“ ir „Visi darbdavio darbai“",

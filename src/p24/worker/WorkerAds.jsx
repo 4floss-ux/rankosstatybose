@@ -1,3 +1,4 @@
+import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
@@ -277,7 +278,7 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
         </div>
         {tab !== "mine" ? (
           <label className="field adcity"><span className="sr">Miestas</span>
-            <select value={city} onChange={(e) => setCity(e.target.value)}>{lists.cities.map((c) => <option key={c} value={c}>{c === "Visi" ? "Visi miestai" : `${c} (${lists.live.filter((a) => a.city === c).length})`}</option>)}</select>
+            <SiteSelect value={city} onChange={(e) => setCity(e.target.value)}>{lists.cities.map((c) => <option key={c} value={c}>{c === "Visi" ? "Visi miestai" : `${c} (${lists.live.filter((a) => a.city === c).length})`}</option>)}</SiteSelect>
           </label>) : null}
       </div>
       <section className="card">

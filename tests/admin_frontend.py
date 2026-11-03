@@ -80,9 +80,9 @@ with sync_playwright() as p:
         go('Visi darbai')
         page.get_by_role('button',name='Redaguoti darbą',exact=True).first.click()
         field_styles();screenshot('job-editor')
-        editor.get_by_role('button',name='Atlygio vienetas',exact=True).click()
-        editor.get_by_role('option',name='Už dieną',exact=True).click()
-        assert editor.get_by_role('button',name='Atlygio vienetas',exact=True).locator('span').first.inner_text()=='Už dieną'
+        editor.get_by_role('combobox',name='Atlygio vienetas',exact=True).click()
+        page.get_by_role('option',name='Už dieną',exact=True).click()
+        assert editor.get_by_role('combobox',name='Atlygio vienetas',exact=True).locator('span').first.inner_text()=='Už dieną'
         editor.get_by_role('button',name='Darbo data',exact=True).click()
         assert editor.get_by_role('dialog',name='Darbo data',exact=True).is_visible()
         page.keyboard.press('Escape')

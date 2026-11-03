@@ -13,7 +13,7 @@ window.mount=(remaining,options={})=>{
  window.ad={id:'10000000-0000-4000-8000-000000000100',title:'Sintetinis skelbimas',address:'Bandymų g. 1',contract_type:'Neterminuota darbo sutartis',schedule:'08:00–17:00',start_text:'Nuo pirmadienio',requirements:['Punktualumas'],offers:['Darbo įrankiai'],city:'Vilnius',salary_min:1000,description:'Pilnas darbo aprašymas\\nAntra aprašymo eilutė',status:'active',live:true,expires_at:'2099-01-01T00:00:00Z',candidates:[],savers:[]};
  const data=window.adData={ads:options.detail?[window.ad]:[],loaded:true,reload:()=>{},error:null};
  root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={!options.basic} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
-};window.mount(1,{detail:true});
+};window.mount(1,{detail:true,basic:true});
 '''
 mock='''export const supabase={rpc:async(name,args)=>{
  window.calls.push({name,args});
@@ -40,7 +40,7 @@ with sync_playwright() as p:
   page.on('pageerror',lambda error:errors.append(str(error)))
   page.route('**/*',lambda r:r.fulfill(status=200,content_type='text/html',body='<html></html>') if r.request.resource_type=='document' else r.abort())
   page.goto('http://localhost');page.set_content('<main class="p24" style="padding:16px;display:flex;flex-direction:column;gap:18px"><div id="root" style="display:contents"></div></main>')
-  page.add_style_tag(path=str(repo/'src/p24/p24.css'));page.add_style_tag(path=str(repo/'src/p24/employer/EmployerAds.css'));page.add_script_tag(content=bundle)
+  page.add_style_tag(path=str(repo/'src/p24/p24.css'));page.add_style_tag(path=str(repo/'src/p24/employer/EmployerAds.css'));page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
   page.locator('article.job').click()
   page.get_by_role('heading',name='Apie darbą',exact=True).wait_for()
   for value in ['Pilnas darbo aprašymas','Antra aprašymo eilutė','Bandymų g. 1','08:00–17:00','Nuo pirmadienio','Punktualumas','Darbo įrankiai']:
@@ -51,6 +51,17 @@ with sync_playwright() as p:
   candidates=page.locator('section.card').filter(has=page.get_by_role('heading',name='Kandidatai',exact=False)).first
   assert candidates.get_by_role('button',name='Redaguoti skelbimą').count()==0
   assert page.get_by_role('button',name='Uždaryti',exact=True).count()==0
+  assert controls.get_by_role('button',name='Dalintis',exact=True).count()==1
+  assert page.locator('.jd-hero').get_by_role('button',name='Dalintis',exact=True).count()==0
+  assert page.locator('.ead-detail > .jd-side').evaluate("e=>getComputedStyle(e).position")=='static'
+  main=page.locator('.ead-detail > .jd-main')
+  assert main.locator('section.card').filter(has=page.get_by_role('heading',name='Kandidatai',exact=False)).count()==1
+  content=page.get_by_role('heading',name='Siūlome',exact=True).locator('..').bounding_box()
+  for name in ['Kandidatai','Pakviesti pokalbiui','Įsiminė skelbimą']:
+   card=main.locator('section.card').filter(has=page.get_by_role('heading',name=name,exact=False)).first.bounding_box()
+   assert abs(card['width']-main.bounding_box()['width'])<2,(name,width,card)
+   assert card['y']>content['y']+content['height']-1
+
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.screenshot(path=f'/tmp/s24-employer-ad-details-{width}.png',full_page=True)
   controls.get_by_role('button',name='Ištrinti skelbimą',exact=True).click()

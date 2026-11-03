@@ -1,3 +1,4 @@
+import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useState } from "react";
 
 // Darbuotojo darbo grafikas – prototipo „wSchedule“ su tikru prieinamumu.
@@ -10,9 +11,9 @@ const TIMES = Array.from({ length: 48 }, (_, index) => `${String(Math.floor(inde
 function TimeSelect({ id, value, onChange, label }) {
   const options = TIMES.includes(value) ? TIMES : [value, ...TIMES];
   return (
-    <select id={id} aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+    <SiteSelect id={id} aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
       {options.map((time) => <option key={time} value={time}>{time}</option>)}
-    </select>
+    </SiteSelect>
   );
 }
 

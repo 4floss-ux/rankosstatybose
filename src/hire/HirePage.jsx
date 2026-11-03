@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { Svg } from "../p24/Shell.jsx";
@@ -163,9 +164,9 @@ export function HirePage() {
         <header className="pub-top h-top2"><div className="h-in">
           <span className="h-brand"><img src="/brand-logo-tight.png" alt="statybos24.lt" /><i className="h-sep" aria-hidden="true" /><span className="h-blab">{t.sidebarLabel}</span></span>
           <div className="h-tright">
-            <div className="h-lsel"><select aria-label={t.language || "Language"} value={lang} onChange={(e) => changeLanguage(e.target.value)}>
+            <div className="h-lsel"><SiteSelect aria-label={t.language || "Language"} value={lang} onChange={(e) => changeLanguage(e.target.value)}>
               {HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-            </select></div>
+            </SiteSelect></div>
             <a className="btn" href={`/login?lang=${lang}`}>{(HIRE_PORTAL_LOGIN_COPY[lang] || HIRE_PORTAL_LOGIN_COPY.en).signIn}</a>
           </div>
         </div></header>
@@ -184,9 +185,9 @@ export function HirePage() {
               <div className="h-grid">
                 {field("companyName", ir.companyName, "text", "", "organization")}
                 <label className="field" htmlFor="hf-country">{ir.companyCountry} *
-                  <select id="hf-country" value={form.companyCountry} onChange={(e) => setField("companyCountry", e.target.value)} aria-invalid={Boolean(errors.companyCountry)}>
+                  <SiteSelect id="hf-country" value={form.companyCountry} onChange={(e) => setField("companyCountry", e.target.value)} aria-invalid={Boolean(errors.companyCountry)}>
                     <option value="">—</option>{countryValues.map((x) => <option key={x} value={x}>{optionLabel(x)}</option>)}
-                  </select>{err("companyCountry")}</label>
+                  </SiteSelect>{err("companyCountry")}</label>
                 {field("contactName", ir.contactName, "text", "", "name")}
                 {field("jobTitle", ir.jobTitle, "text", "", "organization-title")}
               </div>

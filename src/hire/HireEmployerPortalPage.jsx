@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { HireMessages } from "./HireMessages.jsx";
 import { supabase } from "../lib/config.js";
@@ -521,7 +522,7 @@ export function HireEmployerPortalPage() {
 };
     const copy = loadErrorCopy[lang] || loadErrorCopy.en;
     return <div className="p24 hire-p24"><div className="hp-login"><section className="hp-card">
-      <div className="h-lsel"><select aria-label="Language" value={lang} onChange={(event) => changeLanguage(event.target.value)}>{HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></div>
+      <div className="h-lsel"><SiteSelect aria-label="Language" value={lang} onChange={(event) => changeLanguage(event.target.value)}>{HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</SiteSelect></div>
       <img src="/brand-logo-tight.png" alt="statybos24.lt" style={{ height:26, alignSelf:"flex-start" }} />
       <span className="h-k">{tr("EMPLOYER PORTAL", "DARBDAVIO PORTALAS")}</span>
       <h2>{copy.title}</h2>
@@ -566,7 +567,7 @@ export function HireEmployerPortalPage() {
     window.scrollTo(0, 0);
   }
 
-  const langSelect = <div className="h-lsel"><select aria-label="Language" value={lang} onChange={(event) => changeLanguage(event.target.value)}>{HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select></div>;
+  const langSelect = <div className="h-lsel"><SiteSelect aria-label="Language" value={lang} onChange={(event) => changeLanguage(event.target.value)}>{HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</SiteSelect></div>;
 
   const agreementCard = (
     <section className="card hp-agr">
@@ -668,7 +669,7 @@ export function HireEmployerPortalPage() {
         </div>
         {needForm.roles.map((role, index) => <div className="h-grid" key={`need-role-${index}`} style={{ marginTop:14, paddingTop: index ? 14 : 0, borderTop: index ? "1px solid var(--line)" : 0 }}>
           {needForm.roles.length > 1 ? <div className="hp-wide row" style={{ justifyContent:"space-between" }}><b className="small">{tr("ROLE", "POZICIJA")} {index + 1}</b><button className="btn sm ghost" type="button" onClick={() => removeNeedRole(index)}>{tr("Remove", "Pašalinti")}</button></div> : null}
-          {field(tr("PROFESSION / TRADE *", "PROFESIJA / SPECIALYBĖ *"), <select value={role.profession} onChange={(e) => setNeedRole(index, "profession", e.target.value)}><option value="">—</option>{[...HIRE_PROFESSIONS, ...(role.profession && !HIRE_PROFESSIONS.includes(role.profession) ? [role.profession] : [])].map((item) => <option key={item} value={item}>{profLabel(item)}</option>)}</select>)}
+          {field(tr("PROFESSION / TRADE *", "PROFESIJA / SPECIALYBĖ *"), <SiteSelect value={role.profession} onChange={(e) => setNeedRole(index, "profession", e.target.value)}><option value="">—</option>{[...HIRE_PROFESSIONS, ...(role.profession && !HIRE_PROFESSIONS.includes(role.profession) ? [role.profession] : [])].map((item) => <option key={item} value={item}>{profLabel(item)}</option>)}</SiteSelect>)}
           {field(tr("WORKERS NEEDED *", "DARBUOTOJŲ SKAIČIUS *"), <input type="number" min="1" max="100" inputMode="numeric" value={role.count} onChange={(e) => setNeedRole(index, "count", Math.max(1, Math.min(100, Number(e.target.value) || 1)))} />)}
           {field(tr("MINIMUM EXPERIENCE", "MINIMALI PATIRTIS"), <input value={role.experience} onChange={(e) => setNeedRole(index, "experience", e.target.value)} placeholder={tr("e.g. 3+ years", "pvz. 3+ metai")} />)}
           {field(tr("LANGUAGE / LEVEL", "KALBA / LYGIS"), <input value={role.language} onChange={(e) => setNeedRole(index, "language", e.target.value)} placeholder={tr("e.g. English B1", "pvz. anglų B1")} />)}
@@ -677,7 +678,7 @@ export function HireEmployerPortalPage() {
         </div>)}
         <button className="btn sm" type="button" style={{ marginTop:12, alignSelf:"flex-start" }} onClick={addNeedRole}><Svg name="plus" size={14} width={2.4} />{tr("Add another trade", "Pridėti kitą profesiją")}</button>
         <div className="h-grid" style={{ marginTop:14 }}>
-          {field(tr("PROJECT COUNTRY *", "PROJEKTO ŠALIS *"), <select value={needForm.projectCountry} onChange={(e) => setNeedField("projectCountry", e.target.value)}><option value="">—</option>{[...HIRE_COUNTRIES, ...(needForm.projectCountry && !HIRE_COUNTRIES.includes(needForm.projectCountry) ? [needForm.projectCountry] : [])].map((item) => <option key={item} value={item}>{countryLabel(item)}</option>)}</select>)}
+          {field(tr("PROJECT COUNTRY *", "PROJEKTO ŠALIS *"), <SiteSelect value={needForm.projectCountry} onChange={(e) => setNeedField("projectCountry", e.target.value)}><option value="">—</option>{[...HIRE_COUNTRIES, ...(needForm.projectCountry && !HIRE_COUNTRIES.includes(needForm.projectCountry) ? [needForm.projectCountry] : [])].map((item) => <option key={item} value={item}>{countryLabel(item)}</option>)}</SiteSelect>)}
           {field(tr("PROJECT ADDRESS *", "PROJEKTO ADRESAS *"), <input value={needForm.projectLocation} onChange={(e) => setNeedField("projectLocation", e.target.value)} placeholder={tr("Street, city", "Gatvė, miestas")} />)}
           {field(tr("START DATE *", "DARBO PRADŽIA *"), <input type="date" value={needForm.startDate} onChange={(e) => setNeedField("startDate", e.target.value)} />)}
           {field(tr("WORKERS REQUIRED BY *", "DARBUOTOJUS REIKIA TURĖTI IKI *"), <input type="date" value={needForm.neededBy} onChange={(e) => setNeedField("neededBy", e.target.value)} />)}

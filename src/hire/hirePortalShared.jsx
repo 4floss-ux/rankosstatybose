@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { BrandLogo } from "../ui/brand.jsx";
@@ -153,9 +154,9 @@ export function HireEmployerLoginPage() {
     <div className="p24">
       <div className="hp-login">
         <form className="hp-card" onSubmit={submit} noValidate>
-          <div className="h-lsel"><select aria-label="Language" value={lang} onChange={(e) => changeLanguage(e.target.value)}>
+          <div className="h-lsel"><SiteSelect aria-label="Language" value={lang} onChange={(e) => changeLanguage(e.target.value)}>
             {HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
-          </select></div>
+          </SiteSelect></div>
           <img src="/brand-logo-tight.png" alt="statybos24.lt" className="hp-logo" />
           <span className="h-k">{copy.portal}</span>
           <p className="small muted" style={{ margin: 0 }}>{copy.intro}</p>

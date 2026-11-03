@@ -2,7 +2,7 @@ import { useState } from "react";
 import { publicJobAdPath } from "../lib/publicJobAds.js";
 import { Svg } from "./Shell.jsx";
 
-export function ShareJobAdButton({ ad }) {
+export function ShareJobAdButton({ ad, className = "btn sm" }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [manual, setManual] = useState(false);
@@ -18,7 +18,7 @@ export function ShareJobAdButton({ ad }) {
       if (error?.name !== "AbortError") setManual(true);
     } finally { setBusy(false); }
   }
-  return <div><button className="btn sm" type="button" disabled={busy} onClick={share}><Svg name="clip" size={16} />Dalintis</button>
+  return <div><button className={className} type="button" disabled={busy} onClick={share}><Svg name="clip" size={16} />Dalintis</button>
     {status ? <span className="small muted" role="status" style={{ marginLeft: 8 }}>{status}</span> : null}
     {manual ? <label className="field small">Skelbimo nuoroda<input readOnly value={url} onFocus={event => event.target.select()} /></label> : null}
   </div>;

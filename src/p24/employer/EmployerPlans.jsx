@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { jobAdOfferValid } from "../../employer/adQuota.js";
+import { supabase } from "../../lib/config.js";
 import { Svg } from "../Shell.jsx";
 import { EMPLOYER_PLANS, employerPlanAnnualPrice, employerPlanAnnualSavings, formatPlanPrice } from "../../employer/plans.js";
 import { employerPlanValidity } from "../../employer/planValidity.js";
@@ -11,14 +13,24 @@ const chevron = '<path d="m9 18 6-6-6-6"/>';
 const CARD = {
   basic: { eb: "Pradžia", d: "Pradėti darbuotojų paiešką.", extra: ["Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos", "Kiti darbo skelbimai – 9,99 € / 30 d."] },
   business: { eb: "Reguliariai ieškantiems", d: "Daugiau atrankos ir valdymo galimybių.", extra: ["Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos", "Kiti darbo skelbimai – 9,99 € / 30 d.", "Mėnesio darbo ataskaita (PDF)"] },
-  business_pro: { eb: "Komandai", d: "Neriboti darbai, komanda ir pilnas valdymas.", extra: ["Pirmas jūsų skelbimas – nemokamas papildomai vieną kartą po registracijos", "10 nemokamų darbo skelbimų arba pratęsimų per mėnesį", "Papildomas paskelbimas – 9,99 € / 30 d.", "Darbų kalendorius"] },
+  business_pro: { eb: "Komandai", d: "Trumpalaikiai darbai be ribų, komanda ir pilnas valdymas.", extra: ["Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos", "Ilgalaikio darbo skelbimai – įskaičiuoti į planą", "Darbų kalendorius"] },
 };
 const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width:981px)").matches;
 
-export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy, isOwner, adminMode, onRequest, onPortal, onAdminActivate, notes }) {
+export function EmployerPlans({ planKey, billing, summary, companyId, adOffer, cycle, setCycle, busy, isOwner, adminMode, onRequest, onPortal, onAdminActivate, notes }) {
   const [open, setOpen] = useState(() => (isDesktop() ? "" : "business_pro"));
   const leaveT = useRef(null);
   useEffect(() => () => clearTimeout(leaveT.current), []);
+  const [serverOffer, setServerOffer] = useState(null);
+  useEffect(() => {
+    let active = true; setServerOffer(null);
+    if (adOffer !== undefined || !companyId || !supabase) return;
+    supabase.rpc("job_ad_offer", { p_company_id: companyId }).then(({data,error}) => {
+      if (active && !error && jobAdOfferValid(data)) setServerOffer(data);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [companyId, adOffer]);
+  const quotaEnabled = (adOffer === undefined ? serverOffer : adOffer)?.enabled === true;
   const yr = cycle === "yearly";
   const currentBilling = billing?.billing_interval === "yearly" ? "yearly" : "monthly";
   const ord = { basic: 0, business: 1, business_pro: 2 };
@@ -62,7 +74,8 @@ export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy
       {notes}
       <div className={`pcards${open ? " any" : ""}`} onMouseLeave={() => { if (isDesktop()) { clearTimeout(leaveT.current); leaveT.current = setTimeout(() => setOpen(""), 200); } }}>
         {EMPLOYER_PLANS.map((plan) => {
-          const C = CARD[plan.key] || { eb: "", d: plan.description, extra: [] };
+          const baseCard = CARD[plan.key] || { eb: "", d: plan.description, extra: [] };
+          const C = plan.key === "business_pro" && quotaEnabled ? { ...baseCard, extra: ["Pirmas jūsų skelbimas – nemokamas papildomai vieną kartą po registracijos", "10 nemokamų ilgalaikio darbo skelbimų arba pratęsimų per prenumeratos mėnesį visai įmonei", "Nuo 11-o paskelbimo ar pratęsimo – 9,99 € / 30 d.", "Darbų kalendorius"] } : baseCard;
           const best = plan.key === "business_pro", on = plan.key === planKey, paid = plan.price > 0;
           const y = paid && yr;
           const year = employerPlanAnnualPrice(plan), save = employerPlanAnnualSavings(plan);
@@ -80,12 +93,12 @@ export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy
                   : <div className="pc-sub"><span>Už metus – {formatPlanPrice(year)} €</span><span className="pc-save soft">sutaupytumėte {formatPlanPrice(save)} €</span></div>}
                 {best ? <div className="pc-day"><Svg name="check" size={14} width={2.8} /><span>Visas mėnuo kainuoja <b>mažiau nei vieno darbuotojo darbo diena</b></span></div> : null}
                 {button(plan)}
-                <ul className="pc-mini">{plan.features.filter((x) => !/^Viskas/.test(x)).slice(0, 3).map((x) => <li key={x}><Svg name="check" size={14} width={2.6} /><span>{x}</span></li>)}</ul>
+                <ul className="pc-mini">{[C.extra[0], ...plan.features.filter((x) => !/^Viskas/.test(x))].filter(Boolean).slice(0, 3).map((x) => <li key={x}><Svg name="check" size={14} width={2.6} /><span>{x}</span></li>)}</ul>
                 <span className="pc-more">Visos galimybės <Svg size={14} width={2.4} paths={chevron} /></span>
               </div>
               <div className="pc-feat"><div className="pc-fin"><b className="pc-fh">Kas įeina</b>
                 <ul>{feats.map((x) => <li key={x}><Svg name="check" size={15} width={2.6} /><span>{x}</span></li>)}</ul>
-                {best ? <div className="pc-value"><Svg name="bolt" size={16} width={2.2} /><span>Su Business Pro – <b>10 nemokamų skelbimų arba pratęsimų per prenumeratos mėnesį</b> visai įmonei. Papildomas paskelbimas – <b>9,99 € / 30 d.</b></span></div> : null}
+                {best ? <div className="pc-value"><Svg name="bolt" size={16} width={2.2} /><span>{quotaEnabled ? <>Įmonei ir visai komandai – <b>10 nemokamų paskelbimų arba pratęsimų per prenumeratos mėnesį</b>. Kvota atsinaujina kas mėnesį nuo prenumeratos pradžios. Papildomai – <b>9,99 € / 30 d.</b></> : <>Ilgalaikio darbo skelbimai <b>įskaičiuoti į Business Pro</b>. Komandos nariai skelbia įmonės vardu.</>}</span></div> : null}
               </div></div>
             </article>
           );
