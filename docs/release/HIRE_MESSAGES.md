@@ -11,7 +11,11 @@ unapplied by this agent; live two-way messaging remains unverified and NO-GO for
 release until that test passes after separately approved database/deployment work.
 
 The administrator's company request and the employer portal share a text-only
-conversation section using existing card, field and button styles. No attachments,
+conversation opened from the prototype's floating Messenger bubble. Both reuse
+the existing `ChatThreadView` component from the main website, including the
+message bubbles, composer and send arrow; there is no inline message card.
+On mobile the admin launcher sits above the bottom navigation and the open
+conversation uses the existing full-screen Messenger layout. No attachments,
 email notifications, read receipts or changes to existing recruitment workflows.
 Latest 100 messages, manual refresh and refresh every 30 seconds while visible.
 Failed sends retain the draft and retry ID. Text is rendered as React text, not HTML.

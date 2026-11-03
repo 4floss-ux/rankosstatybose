@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Svg } from "../p24/Shell.jsx";
+import { ChatThreadView } from "../chat/conversations.jsx";
 import { supabase } from "../lib/config.js";
 import { hireMessageCall, HIRE_MESSAGE_LIMIT } from "./hireMessages.js";
+import "./hireMessages.css";
 
 // A request ID is never an employer credential. The server authorizes every call.
-export function HireMessages({ requestId, sessionToken, lang = "lt" }) {
+export function HireMessages({ requestId, sessionToken, companyName, lang = "lt" }) {
   const lt = lang === "lt";
   const t = (a, b) => lt ? a : b;
   const [messages, setMessages] = useState([]);
@@ -12,10 +16,33 @@ export function HireMessages({ requestId, sessionToken, lang = "lt" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const launcher = useRef(null);
+  const input = useRef(null);
+  const list = useRef(null);
   const pending = useRef(null);
   const sending = useRef(false);
   const generation = useRef(0);
   const refresh = useRef(() => {});
+
+  function close() {
+    setOpen(false);
+    launcher.current?.focus();
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    input.current?.focus();
+    refresh.current();
+    const escape = event => { if (event.key === "Escape") { event.stopPropagation(); close(); } };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && list.current) list.current.scrollTop = list.current.scrollHeight;
+  }, [open, messages]);
 
   useEffect(() => {
     let active = true;
@@ -69,28 +96,24 @@ export function HireMessages({ requestId, sessionToken, lang = "lt" }) {
     }
   }
 
-  return <section className="card" aria-label={t("Žinutės", "Messages")}>
-    <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-      <h2>{t("Žinutės", "Messages")}</h2>
-      <button className="btn sm" type="button" disabled={loading || busy} onClick={() => refresh.current()}>{t("Atnaujinti", "Refresh")}</button>
-    </div>
-    <p className="small muted">{requestId ? "Bendras susirašinėjimas su šia įmone dėl visų jos darbuotojų poreikių." : t("Bendras susirašinėjimas su Statybos24 dėl visų jūsų darbuotojų poreikių.", "Your conversation with Statybos24 for all your workforce needs.")}</p>
-    {error ? <p className="ferr" role="alert">{error}</p> : null}
-    {loading ? <p role="status">{t("Kraunama...", "Loading...")}</p> : !messages.length && !error ? <p className="small muted">{t("Žinučių dar nėra.", "No messages yet.")}</p> : null}
-    <ol style={{ listStyle: "none", padding: 0, maxHeight: 360, overflowY: "auto" }}>
-      {messages.map(message => <li key={message.id} style={{ borderBottom: "1px solid var(--line)", padding: "12px 0" }}>
-        <b>{message.sender_kind === "admin" ? "Statybos24" : t("Įmonė", "Company")}</b>{" "}
-        <time className="small muted" dateTime={message.created_at}>{new Date(message.created_at).toLocaleString(lt ? "lt-LT" : "en-GB")}</time>
-        <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", margin: "6px 0" }}>{message.body}</p>
-      </li>)}
-    </ol>
-    {messages.length >= 100 ? <p className="small muted">{t("Rodoma 100 naujausių žinučių.", "Showing the latest 100 messages.")}</p> : null}
-    <form onSubmit={send}>
-      <label className="field">{t("Jūsų žinutė", "Your message")}
-        <textarea value={body} disabled={busy} maxLength={HIRE_MESSAGE_LIMIT} rows={3} onChange={event => { setBody(event.target.value); setSent(false); }} required />
-      </label>
-      <button className="btn primary" type="submit" disabled={busy || loading || !body.trim()}>{busy ? t("Siunčiama...", "Sending...") : t("Siųsti žinutę", "Send message")}</button>
-      {sent ? <p role="status">{t("Žinutė išsiųsta.", "Message sent.")}</p> : null}
-    </form>
-  </section>;
+  return createPortal(<div className={`p24 hire-chat-widget${requestId ? " hire-chat-admin" : ""}`}>
+    <button ref={launcher} className="chatfab hire-chat-launcher" type="button" aria-label={t("Žinutės", "Messages")} aria-expanded={open} aria-controls={panelId} onClick={() => open ? close() : setOpen(true)}>
+      <Svg name={open ? "x" : "chat"} size={24} />
+    </button>
+    {open ? <ChatThreadView
+      panelId={panelId} panelClassName="hire-chat-panel"
+      title={requestId ? companyName || t("Įmonė", "Company") : "Statybos24"}
+      sub={t("Tarptautinė atranka · visi darbuotojų poreikiai", "International hire · all workforce needs")}
+      messages={messages} messagesRef={list}
+      isMine={message => message.sender_kind === (requestId ? "admin" : "employer")}
+      senderOf={message => message.sender_kind === "admin" ? "Statybos24" : companyName || t("Įmonė", "Company")}
+      loading={loading} error={error} value={body}
+      setValue={value => { if (!busy) { setBody(value); setSent(false); } }}
+      onSend={send} sending={busy || loading} onClose={close}
+      placeholder={t("Rašykite žinutę...", "Write a message...")}
+      inputRef={input} maxLength={HIRE_MESSAGE_LIMIT}
+      labels={{ back: t("Atgal", "Back"), close: t("Uždaryti", "Close"), send: t("Siųsti žinutę", "Send message"), loading: t("Įkeliama...", "Loading..."), empty: t("Žinučių dar nėra. Galite parašyti pirmą.", "No messages yet. You can write the first one.") }}
+      footer={sent ? <p className="small muted hire-chat-feedback" role="status">{t("Žinutė išsiųsta.", "Message sent.")}</p> : null}
+    /> : null}
+  </div>, document.body);
 }

@@ -9,9 +9,11 @@ entry = '''
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {HireMessages} from './src/hire/HireMessages.jsx';
+import {ChatThreadView} from './src/chat/conversations.jsx';
 window.calls=[]; window.failSend=false; window.failLoad=false;
 window.rows=[{id:'synthetic-1',sender_kind:'admin',body:'<img src=x onerror=alert(1)>',created_at:'2026-11-03T10:00:00Z'}];
 window.renderMessages=(props)=>root.render(<HireMessages {...props}/>);
+window.renderExisting=()=>root.render(<ChatThreadView title="Esamas pokalbis" messages={[]} isMine={()=>false} senderOf={()=>'Testas'} value="Originalus" setValue={()=>{}} onSend={event=>{event.preventDefault();window.originalSent=true;}} onClose={()=>{}} placeholder="Įprastas pokalbis"/>);
 const root=createRoot(document.getElementById('root'));
 window.renderMessages({requestId:'synthetic-request'});
 '''
@@ -27,7 +29,7 @@ return window.failLoad ? {error:{message:'synthetic unavailable'}} : {data:[...w
 build = '''
 import {build} from 'esbuild';
 const result=await build({stdin:{contents:ENTRY,resolveDir:process.cwd(),loader:'jsx'},
-bundle:true,write:false,format:'iife',jsx:'automatic',plugins:[{name:'synthetic-config',setup(b){
+bundle:true,write:false,format:'iife',jsx:'automatic',loader:{'.css':'empty'},plugins:[{name:'synthetic-config',setup(b){
 b.onResolve({filter:/lib\\/config\\.js$/},()=>({path:'mock-config',namespace:'test'}));
 b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:MOCK,loader:'js'}));
 }}]});process.stdout.write(result.outputFiles[0].text);
@@ -44,12 +46,34 @@ with sync_playwright() as p:
         page.goto('http://localhost')
         page.set_content('<div class="p24" style="max-width:700px;margin:auto"><div id="root"></div></div>')
         page.add_style_tag(path=str(repo / 'src/p24/p24.css'))
+        page.add_style_tag(path=str(repo / 'src/hire/hireMessages.css'))
         page.add_script_tag(content=bundle)
+        launcher = page.get_by_role('button', name='Žinutės', exact=True)
+        launcher.wait_for()
+        assert page.get_by_role('dialog').count() == 0
+        assert launcher.is_visible()
+        bubble = launcher.bounding_box()
+        assert bubble['x'] + bubble['width'] <= width
+        assert bubble['y'] + bubble['height'] <= (820 if width == 390 else 900)
+        launcher.click()
+        page.get_by_role('dialog').wait_for()
         field = page.get_by_role('textbox')
         send = page.get_by_role('button', name='Siųsti žinutę')
         page.get_by_text('<img src=x onerror=alert(1)>', exact=True).wait_for()
-        assert page.locator('#root img').count() == 0
+        assert page.locator('.hire-chat-widget .bub img').count() == 0
         assert send.is_disabled()
+        dialog = page.get_by_role('dialog').bounding_box()
+        button = send.bounding_box()
+        field_box = field.bounding_box()
+        assert button['x'] >= field_box['x'] + field_box['width']
+        assert button['y'] + button['height'] <= dialog['y'] + dialog['height']
+        assert dialog['x'] >= 0 and dialog['x'] + dialog['width'] <= width + 1
+        field.fill('Išsaugotas juodraštis')
+        page.keyboard.press('Escape')
+        assert page.get_by_role('dialog').count() == 0
+        assert launcher.evaluate('(e)=>document.activeElement===e')
+        launcher.click()
+        assert field.input_value() == 'Išsaugotas juodraštis'
         field.fill('Sintetinė žinutė')
         page.evaluate('window.failSend=true')
         send.click()
@@ -67,6 +91,13 @@ with sync_playwright() as p:
         employer = page.evaluate("window.calls.filter(c=>c.name==='hire_employer_messages').at(-1)")
         assert employer['args'] == {'p_session_token': 'synthetic-token'}
         assert not errors, errors
-        print(f'{width}px PASS: safe text, empty-send prevention, retained draft, retry ID, employer context, no overflow')
+        page.screenshot(path=f'/tmp/s24-messenger-{width}.png')
+        page.evaluate('window.renderExisting()')
+        original = page.get_by_role('textbox', name='Įprastas pokalbis')
+        original.wait_for()
+        assert original.get_attribute('maxlength') == '2000'
+        page.get_by_role('button', name='Siųsti', exact=True).click()
+        assert page.evaluate('window.originalSent') is True
+        print(f'{width}px PASS: existing Messenger opens from bubble, compose aligned, Escape/focus, retained draft, retry ID, employer context, safe text, no overflow')
         page.close()
     browser.close()
