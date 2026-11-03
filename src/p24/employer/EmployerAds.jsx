@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
@@ -93,7 +94,7 @@ function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay }) {
 }
 
 /* ---------- Naujas / redaguoti ---------- */
-function AdForm({ company, isPro, ad, onCancel, onSaved }) {
+function AdForm({ company, isPro, firstFree, quotaEnabled, pricingBusy, ad, onCancel, onSaved }) {
   const [f, setF] = useState(() => ({
     title: ad?.title || "", city: ad?.city || company?.city || "Vilnius", address: ad?.address || "",
     contract: ad?.contract_type || CONTRACTS[0], s1: ad ? String(Number(ad.salary_min)) : "", s2: ad?.salary_max ? String(Number(ad.salary_max)) : "",
@@ -109,6 +110,7 @@ function AdForm({ company, isPro, ad, onCancel, onSaved }) {
   const contracts = [...new Set([...CONTRACTS, f.contract].filter(Boolean))];
 
   async function save() {
+    if (pricingBusy) return;
     setErr("");
     const s1 = num(f.s1), s2 = f.s2 ? num(f.s2) : null;
     if (f.title.trim().length < 2) return setErr("Įrašykite pareigas.");
@@ -124,6 +126,9 @@ function AdForm({ company, isPro, ad, onCancel, onSaved }) {
       });
       if (error) throw error;
       if (!ad && data?.status === "pending_payment") {
+        // Another team member may have used the final credit in the meantime.
+        // Show the existing unpaid-ad screen; do not start checkout unexpectedly.
+        if (isPro) { onSaved(data); return; }
         const r = await startPayment(data.id);
         if (r.redirect) return;
       }
@@ -171,9 +176,9 @@ function AdForm({ company, isPro, ad, onCancel, onSaved }) {
             </div>
           </section>
           <section className="card jd-act">
-            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>Business Pro plane – nemokamai</small></>}</div> : null}
+            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Įskaičiuota į Business Pro"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div> : null}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
-            <button className="btn primary jd-wide" type="button" disabled={busy} onClick={save}>{busy ? "Saugoma..." : ad ? "Išsaugoti pakeitimus" : isPro ? "Paskelbti skelbimą" : `Apmokėti ${FEE} ir paskelbti`}</button>
+            <button className="btn primary jd-wide" type="button" disabled={busy || pricingBusy} onClick={save}>{busy ? "Saugoma..." : ad ? "Išsaugoti pakeitimus" : isPro ? "Paskelbti skelbimą" : `Apmokėti ${FEE} ir paskelbti`}</button>
             <button className="btn jd-wide" type="button" disabled={busy} onClick={onCancel}>Atšaukti</button>
             {!ad && !isPro ? <p className="small muted" style={{ margin: 0, textAlign: "center" }}>Apmokėsite kortele per Stripe. Sąskaita – el. paštu.</p> : null}
           </section>
@@ -227,38 +232,48 @@ function InterviewModal({ ad, cand, onClose, onDone }) {
   );
 }
 
-function ExtendModal({ ad, isPro, onClose, onDone }) {
+function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onClose, onDone }) {
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const [exhausted, setExhausted] = useState(false);
+  const requestId = useRef(null);
+  const isPro = freeAvailable && !exhausted;
   const left = ad.live ? daysLeft(ad.expires_at) : 0;
   async function go() {
+    if (pricingBusy) return;
     setBusy(true); setErr("");
     try {
       if (isPro) {
-        const { error } = await supabase.rpc("job_ad_extend_plan", { p_ad_id: ad.id });
+        if (!requestId.current) requestId.current = crypto.randomUUID();
+        const { error } = await supabase.rpc(quotaEnabled ? "job_ad_extend_plan_with_quota" : "job_ad_extend_plan", {
+          p_ad_id: ad.id, ...(quotaEnabled ? { p_request_id: requestId.current } : {}),
+        });
         if (error) throw error;
         onDone();
       } else {
         const r = await startPayment(ad.id);
         if (r.paid) onDone();
       }
-    } catch (e) { setErr(e?.message || "Nepavyko pratęsti."); }
+    } catch (e) {
+      if (e?.details === "JOB_AD_FREE_QUOTA_EXHAUSTED") setExhausted(true);
+      setErr(e?.message || "Nepavyko pratęsti.");
+    }
     finally { setBusy(false); }
   }
   return (
     <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>Business Pro plane – nemokamai</small></>}</div>
+      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div>
       <p className="small muted" style={{ margin: "12px 0 0" }}>Po pratęsimo skelbimas galios dar {left + 30} d. Kandidatai ir įsiminimai išlieka.</p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
         <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
-        <button className="btn primary" type="button" disabled={busy} onClick={go}>{busy ? "Vykdoma..." : isPro ? "Pratęsti" : `Pratęsti už ${FEE}`}</button>
+        <button className="btn primary" type="button" disabled={busy || pricingBusy} onClick={go}>{busy ? "Vykdoma..." : isPro ? "Pratęsti" : `Pratęsti už ${FEE}`}</button>
       </div>
     </Modal>
   );
 }
 
 /* ---------- Skelbimo puslapis su kandidatais ---------- */
-function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
+function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWorkerProfile, onChanged }) {
   const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [chat, setChat] = useState(null);
   const [ad, setAd] = useState(null);
@@ -372,7 +387,7 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
               <button className="btn sm" type="button" onClick={() => onWorkerProfile(w)}><Svg name="user" size={15} />Profilis</button></div>
           </div>)) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Kol kas niekas neįsiminė.</p>}</div></section>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
-      {ext && <ExtendModal ad={ad} isPro={isPro} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
+      {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
       {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
       <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
@@ -400,24 +415,58 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   const [current, setCurrent] = useState(null);
   const [busyPay, setBusyPay] = useState("");
   const [payErr, setPayErr] = useState("");
+  const [quota, setQuota] = useState(null);
+  const [quotaLoading, setQuotaLoading] = useState(true);
+  const [quotaError, setQuotaError] = useState("");
+  const [quotaRetry, setQuotaRetry] = useState(0);
+  const [quotaReady, setQuotaReady] = useState(false);
+  useEffect(() => { setQuotaReady(false); setQuota(null); }, [company?.id, isPro]);
+  useEffect(() => {
+    let active = true;
+    setQuotaError("");
+    if (!company?.id) { setQuotaLoading(false); return; }
+    setQuotaLoading(true);
+    (async () => {
+      try {
+        let result = await supabase.rpc("job_ad_offer", { p_company_id: company.id });
+        let requireFirstFree = true;
+        if (jobAdQuotaUnsupported(result.error)) {
+          requireFirstFree = false;
+          result = isPro ? await supabase.rpc("job_ad_pro_quota", { p_company_id: company.id }) : { data: null };
+        }
+        if (result.error && !jobAdQuotaUnsupported(result.error)) throw result.error;
+        if (!result.error && (requireFirstFree || result.data != null) && !jobAdOfferValid(result.data, requireFirstFree)) throw new Error("Invalid offer");
+        if (active) setQuota(result.data || null);
+      } catch {
+        if (active) setQuotaError("Nepavyko patikrinti nemokamų paskelbimų likučio. Bandykite dar kartą.");
+      } finally { if (active) { setQuotaReady(true); setQuotaLoading(false); } }
+    })();
+    return () => { active = false; };
+  }, [company?.id, isPro, data.ads, quotaRetry]);
   useEffect(() => { if (startNew) { setCurrent(null); setMode("new"); onStartNewHandled?.(); } }, [startNew]);
   const top = () => window.scrollTo(0, 0);
+  const freeAvailable = jobAdFreeAvailable(isPro, quota);
+  const firstFree = jobAdFirstFreeAvailable(quota);
+  const pricingBusy = quotaLoading || Boolean(quotaError);
+  const banner = <>{quotaError ? <div className="notebox"><p className="ferr" role="alert">{quotaError}</p><button type="button" className="btn" onClick={() => setQuotaRetry(value => value + 1)}>Bandyti dar kartą</button></div> : null}{quota?.enabled ? <div className="notebox" role="status">Šį prenumeratos mėnesį liko <b>{quota.remaining} iš 10</b> nemokamų paskelbimų visai įmonei. Naujas skelbimas arba pratęsimas dar 30 dienų naudoja vieną paskelbimą. Papildomai – <b>{FEE} / 30 d.</b>{quota.resets_at && Number.isFinite(Date.parse(quota.resets_at)) ? ` Kvota atsinaujins ${new Intl.DateTimeFormat("lt-LT", { timeZone: "Europe/Vilnius", year: "numeric", month: "long", day: "numeric" }).format(new Date(quota.resets_at))}.` : ""}</div> : null}</>;
+  if (quotaLoading && !quotaReady) return <p className="small muted" role="status">Tikrinamas nemokamų paskelbimų likutis...</p>;
 
   if (mode === "new" || mode === "edit") {
-    return <AdForm company={company} isPro={isPro} ad={mode === "edit" ? current : null}
+    return <>{banner}<AdForm company={company} isPro={firstFree || freeAvailable} firstFree={firstFree} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} ad={mode === "edit" ? current : null}
       onCancel={() => { setMode(current ? "detail" : "list"); top(); }}
-      onSaved={(ad) => { data.reload(); setCurrent(ad); setMode("detail"); top(); }} />;
+      onSaved={(ad) => { data.reload(); setQuotaRetry(value => value + 1); setCurrent(ad); setMode("detail"); top(); }} /></>;
   }
   if (mode === "detail" && current) {
-    return <AdDetail adId={current.id} isPro={isPro} onBack={() => { setMode("list"); setCurrent(null); top(); }}
-      onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={data.reload} />;
+    return <>{banner}<AdDetail adId={current.id} isPro={freeAvailable} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} onBack={() => { setMode("list"); setCurrent(null); top(); }}
+      onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={() => { data.reload(); setQuotaRetry(value => value + 1); }} /></>;
   }
   return (
     <>
+      {banner}
       {payErr && <p className="ferr" role="alert">{payErr}</p>}
       <AdsList ads={data.ads} loaded={data.loaded} error={data.error} busyPay={busyPay}
         onOpen={(a) => { setCurrent(a); setMode("detail"); top(); }}
-        onNew={() => { setCurrent(null); setMode("new"); top(); }}
+        onNew={() => { setCurrent(null); setMode("new"); setQuotaRetry(value => value + 1); top(); }}
         onPay={async (a) => { setBusyPay(a.id); setPayErr(""); try { const r = await startPayment(a.id); if (r.paid) data.reload(); } catch (e) { setPayErr(e?.message || "Nepavyko pradėti apmokėjimo."); } finally { setBusyPay(""); } }} />
     </>
   );
