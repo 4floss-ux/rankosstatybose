@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { effectivePlanKey } from "../../lib/effectivePlan.js";
 import { Svg } from "../Shell.jsx";
 import { Empty, Paged, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 import { AwardSvg } from "../worker/WorkerProfileEditor.jsx";
@@ -11,6 +12,7 @@ const ago = (iso) => { const d = daysAgo(iso); return d == null ? "—" : d <= 0
 const dt = (iso) => (iso ? new Date(iso).toLocaleDateString("lt-LT") : "—");
 const num = (v, d = 1) => (v == null ? "—" : Number(v).toFixed(d).replace(".", ","));
 const PLAN = { basic: "Basic", business: "Business", business_pro: "Business Pro" };
+const planLabel = (c) => PLAN[effectivePlanKey(c)] || "Basic";
 
 function Head({ title, lead, extra }) {
   return <div className="head"><div><h1>{title}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>{extra}</div>;
@@ -105,7 +107,7 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
       <Table cls="ae" head={["Darbdavys", "Planas", "Darbų", "Patikimumas", "Būsena", ""]} rows={rows} render={(x) => (
         <div className="atr" key={key(x)}>
           <span className="acell-nm"><Av name={x.company_name} co /><span><b>{x.company_name || "Įmonė"}</b><small>{x.company_code ? `Įmonė · ${x.company_code}` : "Darbdavys"} · {x.city || "Miestas nenurodytas"}</small></span></span>
-          <span data-l="Planas">{PLAN[x.plan_key] || "Basic"}</span>
+          <span data-l="Planas">{planLabel(x)}</span>
           <span data-l="Darbų">{Number(x.jobs_count || 0)}</span>
           <span data-l="Patikimumas"><b>{Number(x.reliability_rate ?? 100).toFixed(0)}</b>/100</span>
           <span>{status(x)}</span>
@@ -116,7 +118,7 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
         <Modal eyebrow="Įmonė" title={c.company_name || "Įmonė"} sub={`${c.company_code ? `Įmonės kodas ${c.company_code} · ` : ""}${c.city || "Miestas nenurodytas"} · registr. ${dt(c.account_created_at)}`} onClose={close}>
           <div className="kv">
             <div><small>Savininkas</small><b>{c.display_name || "—"}</b></div>
-            <div><small>Planas</small><b>{PLAN[c.plan_key] || "Basic"}</b></div>
+            <div><small>Planas</small><b>{planLabel(c)}</b></div>
             <div><small>El. paštas</small><b>{c.email || "—"}</b></div>
             <div><small>Telefonas</small><b>{c.phone || "—"}</b></div>
             <div><small>Darbų</small><b>{Number(c.jobs_count || 0)}</b></div>
