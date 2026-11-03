@@ -21,7 +21,7 @@ bundle=subprocess.run(['node','--input-type=module','-e',build],cwd=repo,capture
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--disable-dev-shm-usage'])
  for width in [1440,390]:
-  page=b.new_page(viewport={'width':width,'height':900});page.set_default_timeout(8000);errors=[]
+  page=b.new_page(viewport={'width':width,'height':900},has_touch=width==390);page.set_default_timeout(8000);errors=[]
   page.on('pageerror',lambda error:errors.append(str(error)))
   page.route('**/*',lambda r:r.fulfill(status=200,content_type='text/html',body='<div id="root"></div>') if r.request.resource_type=='document' else r.abort())
   page.goto('http://localhost');page.add_style_tag(path=str(repo/'src/p24/p24.css'));page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
@@ -35,6 +35,11 @@ with sync_playwright() as p:
   city.press('v');page.get_by_role('listbox',name='Miestas',exact=True).wait_for();city.press('Escape');assert city.inner_text().strip()=='Klaipėda'
   city.press('Home');city.press('End');city.press('Enter');assert city.inner_text().strip()=='Šiauliai'
   city.click();page.get_by_role('option',name='Vilnius',exact=True).click();assert city.inner_text().strip()=='Vilnius'
+  if width==390:
+   page.evaluate("document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.target.closest('.s24-select-menu'))queueMicrotask(()=>window.touchPrevented=e.defaultPrevented);})")
+   city.tap();page.get_by_role('option',name='Klaipėda',exact=True).tap();assert city.inner_text().strip()=='Klaipėda'
+   assert page.evaluate('window.touchPrevented')==False
+
   assert city.get_attribute('aria-expanded')=='false'
   city.click();page.get_by_role('button',name='Kitas mygtukas',exact=True).click();assert city.get_attribute('aria-expanded')=='false'
   assert page.get_by_role('combobox',name='Neaktyvus',exact=True).is_disabled()
@@ -45,6 +50,16 @@ with sync_playwright() as p:
   bounds=box.bounding_box();assert bounds['x']>=0 and bounds['x']+bounds['width']<=width+1
   assert bounds['y']>=0 and bounds['y']+bounds['height']<=901
   assert box.evaluate('e=>e.scrollTop')>0
+  if width==390:
+   before=box.evaluate('e=>e.scrollTop');client=page.context.new_cdp_session(page)
+   x=bounds['x']+bounds['width']/2;y=bounds['y']+45
+   client.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
+   for dy in [20,40,70,100]:
+    client.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y+dy}]});page.wait_for_timeout(40)
+   client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]});page.wait_for_timeout(150)
+   assert box.evaluate('e=>e.scrollTop')<before,'finger scroll was blocked'
+   client.detach()
+
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.screenshot(path=f'/tmp/s24-site-select-{width}.png')
   long.press('Enter');assert '79' in long.inner_text()

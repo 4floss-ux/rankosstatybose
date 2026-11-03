@@ -103,11 +103,11 @@ export const SiteSelect = forwardRef(function SiteSelect({ children, value, defa
       {children}
     </select>
     {open && !disabled && position ? createPortal(<div ref={menu} id={listId} role="listbox" aria-label={accessibleLabel} className="s24-select-menu" style={position}
-      onPointerDown={event => event.preventDefault()}>
+      onMouseDown={event => event.preventDefault()}>
       {options.map((option,index) => <React.Fragment key={`${index}-${option.value}`}>
         {option.group && option.group !== options[index - 1]?.group ? <div className="s24-select-group" role="presentation">{option.group}</div> : null}
         <div id={`${listId}-${index}`} role="option" aria-selected={option.value === selected?.value} aria-disabled={option.disabled || undefined}
-          className={`s24-select-option${index === active ? " active" : ""}`} onPointerMove={() => { if (!option.disabled) setActive(index); }} onClick={() => choose(index)}>
+          className={`s24-select-option${index === active ? " active" : ""}`} onPointerMove={event => { if (event.pointerType !== "touch" && !option.disabled) setActive(index); }} onClick={() => choose(index)}>
           <span>{option.label}</span>{option.value === selected?.value ? <span aria-hidden="true">✓</span> : null}
         </div>
       </React.Fragment>)}
