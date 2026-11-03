@@ -23,7 +23,12 @@ test('public listings and once-only application SQL',async t=>{
   await db.exec(fn('job_ad_require_worker'));
   const rowStart=source.indexOf('create or replace function public.job_ad_row_json(');
   await db.exec(source.slice(rowStart,source.indexOf('$$;',source.indexOf('as $$',rowStart))+3));
-  await db.exec(fn('job_ads_worker_list'));await db.exec(fn('job_ad_apply'));await db.exec(fn('job_ad_withdraw'));
+  const interviewMigration=await readFile(new URL('../supabase/migrations/20261101163000_redesign_job_ad_interview_note.sql',import.meta.url),'utf8');
+  const columnStart=interviewMigration.indexOf('alter table');
+  await db.exec(interviewMigration.slice(columnStart,interviewMigration.indexOf(';',columnStart)+1));
+  const latestListStart=interviewMigration.indexOf('create or replace function public.job_ads_worker_list(');
+  await db.exec(interviewMigration.slice(latestListStart,interviewMigration.indexOf('end $$;',latestListStart)+8));
+  await db.exec(fn('job_ad_apply'));await db.exec(fn('job_ad_withdraw'));
   await db.exec('REVOKE ALL ON FUNCTION public.job_ad_withdraw(uuid) FROM PUBLIC,anon;GRANT EXECUTE ON FUNCTION public.job_ad_withdraw(uuid) TO authenticated;');
   await db.exec('REVOKE ALL ON FUNCTION public.job_ad_apply(uuid,text) FROM PUBLIC,anon;GRANT EXECUTE ON FUNCTION public.job_ad_apply(uuid,text) TO authenticated;REVOKE ALL ON FUNCTION public.job_ads_worker_list() FROM PUBLIC,anon;GRANT EXECUTE ON FUNCTION public.job_ads_worker_list() TO authenticated;');
   for(const [n,status,expiry,company,city] of [[100,'active','1 day',10,'Vilnius'],[101,'pending_payment','1 day',10,'Private city'],[102,'closed','1 day',10,'Private city'],[103,'removed','1 day',10,'Private city'],[104,'active','-1 day',10,'Private city'],[105,'active','1 day',20,'Private city'],[106,'active','1 day',10,'Kaunas']]){
@@ -44,7 +49,7 @@ test('public listings and once-only application SQL',async t=>{
   });
   await t.test('public projection omits candidates, owner IDs, billing and session data',async()=>{
    const value=await detail(100);
-   for(const key of ['owner_id','created_by','billing_secret','application','candidates','pending_session_id','cv_path'])assert.equal(Object.hasOwn(value,key),false);
+   for(const key of ['owner_id','created_by','billing_secret','application','candidates','pending_session_id','cv_path','interview_note'])assert.equal(Object.hasOwn(value,key),false);
    assert.doesNotMatch(JSON.stringify(value),/PRIVATE/);
    assert.equal((await db.query('SELECT count(*)::integer AS n FROM public.job_ad_views')).rows[0].n,0);
   });
@@ -75,6 +80,21 @@ test('public listings and once-only application SQL',async t=>{
    await assert.rejects(db.query('DELETE FROM public.job_ad_applications WHERE id=$1',[before[0].id]),/permission denied/);
    await db.exec('RESET ROLE');
    assert.deepEqual((await db.query('SELECT id,status FROM public.job_ad_applications WHERE worker_id=$1',[id(4)])).rows,before);
+  });
+  await t.test('existing private interview notes survive replacement and never become public',async()=>{
+   await actor(4);
+   await db.query("UPDATE public.job_ad_applications SET status='interview',interview_note=$1 WHERE worker_id=$2",['PRIVATE INTERVIEW NOTE',id(4)]);
+   const mine=(await db.query('SELECT public.job_ads_worker_list() AS x')).rows[0].x;
+   const application=mine.find(ad=>ad.id===id(100)).application;
+   assert.equal(application.interview_note,'PRIVATE INTERVIEW NOTE');
+   assert.equal(application.status,'interview');
+   await actor(2);
+   const other=(await db.query('SELECT public.job_ads_worker_list() AS x')).rows[0].x;
+   assert.notEqual(other.find(ad=>ad.id===id(100)).application.interview_note,'PRIVATE INTERVIEW NOTE');
+   await db.exec('SET ROLE anon');await actor(null);
+   assert.doesNotMatch(JSON.stringify(await list()),/PRIVATE INTERVIEW NOTE|interview_note/);
+   assert.doesNotMatch(JSON.stringify(await detail(100)),/PRIVATE INTERVIEW NOTE|interview_note/);
+   await db.exec('RESET ROLE');
   });
   await t.test('anonymous, employer, inactive worker and unavailable-ad applications are rejected',async()=>{
    for(const n of [null,1,5]){await actor(n);await assert.rejects(apply(106),/darbuotojams/);}

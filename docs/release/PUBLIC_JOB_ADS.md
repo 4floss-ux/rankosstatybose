@@ -36,3 +36,7 @@ Bendri saugūs testai bei abu production build (`npm run build`, `npm run build:
 Esamos skelbimų kainodaros pasiūlymai ankstesniuose `20261103190000_business_pro_ad_quota_REVIEW.sql` ir `20261103200000_first_job_ad_free_REVIEW.sql` dar nėra įdiegti. Business Pro mėnesio kvotai reikia serverinio prenumeratos laikotarpio integravimo; vien UI ar šie imitaciniai testai to neįrodo. Šis viešų skelbimų pakeitimas pats mokėjimų ar kvotų nekeičia.
 
 Neįrodyta: tikra Supabase integracija, el. laiško grįžimas, tikra Stripe testinio režimo eiga, serverio socialinių tinklų peržiūros metaduomenys konkrečiam skelbimui (nuoroda veikia kaip SPA). Bendras viešas paleidimas dar NO-GO iki tikros integracijos patikros.
+
+## Peržiūros pataisa: pokalbio pastaba
+
+Po nepriklausomos peržiūros darbuotojo sąrašo SQL suderintas su esama `20261101163000_redesign_job_ad_interview_note.sql` migracija: išsaugotas `application.interview_note`. Regresijos testas naudoja šią naujesnę bazinę schemą ir tikrina, kad pastabą mato tik atitinkamas darbuotojas, o vieši RPC jos negrąžina. Prenumeratos webhook kodo saugykloje nėra (yra tik `job-ad-checkout` ir `admin-impersonate` Edge funkcijos), todėl tikros Business Pro kvotos jungties šiame pakeitime nėra. Vienkartinė dovana lieka išjungta iki atskiros istorijos patikros ir patvirtinimo.

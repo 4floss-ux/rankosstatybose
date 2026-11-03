@@ -88,6 +88,7 @@ BEGIN
   RETURN r;
 END;
 $fn$;
+-- Based on 20261101163000_redesign_job_ad_interview_note.sql; preserve its fields.
 -- Existing job_ads_worker_list is appended below with one narrow change:
 -- include the caller's withdrawn application in its own public/live ad row,
 -- so historical withdrawn applications cannot be submitted again. No new withdrawal is allowed.
@@ -103,7 +104,7 @@ begin
       'application', (select jsonb_build_object('id', x.id, 'status', x.status, 'message', x.message,
           'cv_requested_at', x.cv_requested_at, 'cv_sent_at', x.cv_sent_at, 'cv_name', x.cv_name,
           'interview_at', x.interview_at, 'interview_how', x.interview_how, 'interview_address', x.interview_address,
-          'interview_confirmed_at', x.interview_confirmed_at, 'created_at', x.created_at)
+          'interview_note', x.interview_note, 'interview_confirmed_at', x.interview_confirmed_at, 'created_at', x.created_at)
         from public.job_ad_applications x where x.ad_id = a.id and x.worker_id = v))
       order by a.published_at desc)
     from public.job_ads a
