@@ -8,7 +8,13 @@
 .p24 .plan-validity-detail{grid-column:1/-1;display:flex;align-items:flex-start;gap:8px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;line-height:1.5;color:var(--muted)}
 .p24 .plan-validity-detail svg{flex:none;margin-top:1px}
 @media(max-width:600px){
-  .p24 .card.plan-validity{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}
-  .p24 .plan-validity-until{padding:14px 0 0;border-left:0;border-top:1px solid var(--line)}
-  .p24 .plan-validity-detail{padding-top:12px}
+  .p24 .card.plan-validity{grid-template-columns:minmax(0,1fr);gap:10px;padding:12px;margin-bottom:12px}
+  .p24 .plan-validity-current{gap:10px}
+  .p24 .plan-validity-icon{width:34px;height:34px;border-radius:6px}
+  .p24 .plan-validity-icon svg{width:18px;height:18px}
+  .p24 .plan-validity-label{font-size:10px;letter-spacing:.04em;margin-bottom:2px}
+  .p24 .plan-validity h2{font-size:17px}
+  .p24 .plan-validity-until{padding:9px 0 0;border-left:0;border-top:1px solid var(--line)}
+  .p24 .plan-validity-until b{font-size:15px}
+  .p24 .plan-validity-detail{padding-top:9px;font-size:11px;gap:6px}
 }
