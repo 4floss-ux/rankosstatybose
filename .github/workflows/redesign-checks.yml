@@ -35,3 +35,15 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ""
           VITE_SUPABASE_ANON_KEY: ""
         run: npm run build
+
+      - name: Check hire host and legacy routes
+        run: node tests/hire-routes.test.mjs
+      - name: Check hire message requests and validation
+        run: node tests/hire-messages.test.mjs
+      - name: Check hire message SQL with synthetic local PostgreSQL fixtures
+        run: node tests/hire-messages-sql.test.mjs
+      - name: Independent hire bundle with no live credentials
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_PUBLISHABLE_KEY: ""
+        run: npm run build:hire

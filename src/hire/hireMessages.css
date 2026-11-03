@@ -1,0 +1,9 @@
+/* Keep the existing Statybos24 Messenger design; only adapt its floating entry. */
+.p24.hire-chat-widget .hire-chat-launcher{cursor:pointer}
+.p24.hire-chat-widget .hire-chat-feedback{margin:0;padding:0 12px 10px;overflow-wrap:anywhere}
+.p24.hire-chat-widget .hire-chat-panel .who-n{max-width:calc(100% - 40px);overflow-wrap:anywhere}
+@media(max-width:899px){
+  .p24.hire-chat-widget .hire-chat-launcher{display:flex;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .p24.hire-chat-widget.hire-chat-admin .hire-chat-launcher{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .p24.hire-chat-widget .hire-chat-panel{height:100dvh;max-height:100dvh}
+}

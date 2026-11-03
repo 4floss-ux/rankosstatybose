@@ -166,7 +166,7 @@ export function HirePage() {
             <div className="h-lsel"><select aria-label={t.language || "Language"} value={lang} onChange={(e) => changeLanguage(e.target.value)}>
               {HIRE_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
             </select></div>
-            <a className="btn" href={`/hire/login?lang=${lang}`}>{(HIRE_PORTAL_LOGIN_COPY[lang] || HIRE_PORTAL_LOGIN_COPY.en).signIn}</a>
+            <a className="btn" href={`/login?lang=${lang}`}>{(HIRE_PORTAL_LOGIN_COPY[lang] || HIRE_PORTAL_LOGIN_COPY.en).signIn}</a>
           </div>
         </div></header>
         <main className="h-hero"><div className="lp-glow" aria-hidden="true" /><div className="h-in h-hero-in">

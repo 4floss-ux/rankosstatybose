@@ -1,3 +1,4 @@
+import { HIRE_ORIGIN } from "../lib/hireRoutes.js";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { companyCodeEditError } from "../lib/companyCode.js";
@@ -1212,7 +1213,7 @@ export function AdminDashboard({
       "Statybos24 employer portal",
       `Login: ${credentials.loginId}`,
       `Temporary password: ${credentials.password}`,
-      `Portal: ${window.location.origin}/hire/login`,
+      `Portal: ${HIRE_ORIGIN}/login`,
       "",
       "Please use these private credentials to access your company portal. You will find the recruitment agreement and the full workforce requirements form there. If anything is unclear, reply to the email that contained these credentials.",
     ].join("\n");
@@ -2484,6 +2485,7 @@ export function AdminDashboard({
 
         {activeTab === "foreignHire" && (
           <AdminForeignHire requests={foreignHireRequests} h={{
+            viewerId: user?.id,
             expandedId: foreignHireExpandedId,
             open: (request) => {
               setForeignHireExpandedId(request.request_id);
