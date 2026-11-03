@@ -42,6 +42,10 @@ jobs:
         run: node tests/hire-messages.test.mjs
       - name: Check current-plan validity display
         run: node tests/plan-validity.test.mjs
+      - name: Check Business Pro ad quota display
+        run: node tests/ad-quota.test.mjs
+      - name: Check proposed Business Pro quota in synthetic local PostgreSQL
+        run: node tests/ad-quota-sql.test.mjs
       - name: Check hire message SQL with synthetic local PostgreSQL fixtures
         run: node tests/hire-messages-sql.test.mjs
       - name: Independent hire bundle with no live credentials

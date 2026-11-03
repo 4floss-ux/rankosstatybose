@@ -11,7 +11,7 @@ const chevron = '<path d="m9 18 6-6-6-6"/>';
 const CARD = {
   basic: { eb: "Pradžia", d: "Pradėti darbuotojų paiešką.", extra: ["Darbo skelbimai – 9,99 € / 30 d."] },
   business: { eb: "Reguliariai ieškantiems", d: "Daugiau atrankos ir valdymo galimybių.", extra: ["Darbo skelbimai – 9,99 € / 30 d.", "Mėnesio darbo ataskaita (PDF)"] },
-  business_pro: { eb: "Komandai", d: "Neriboti darbai, komanda ir pilnas valdymas.", extra: ["Neriboti darbo skelbimai – nemokamai", "Darbų kalendorius"] },
+  business_pro: { eb: "Komandai", d: "Neriboti darbai, komanda ir pilnas valdymas.", extra: ["10 nemokamų darbo skelbimų arba pratęsimų per mėnesį", "Papildomas paskelbimas – 9,99 € / 30 d.", "Darbų kalendorius"] },
 };
 const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width:981px)").matches;
 
@@ -85,7 +85,7 @@ export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy
               </div>
               <div className="pc-feat"><div className="pc-fin"><b className="pc-fh">Kas įeina</b>
                 <ul>{feats.map((x) => <li key={x}><Svg name="check" size={15} width={2.6} /><span>{x}</span></li>)}</ul>
-                {best ? <div className="pc-value"><Svg name="bolt" size={16} width={2.2} /><span>Basic ir Business planuose už kiekvieną darbo skelbimą mokate <b>9,99 € / 30 d.</b> Su Business Pro skelbimai <b>neriboti ir nemokami</b>.</span></div> : null}
+                {best ? <div className="pc-value"><Svg name="bolt" size={16} width={2.2} /><span>Su Business Pro – <b>10 nemokamų skelbimų arba pratęsimų per prenumeratos mėnesį</b> visai įmonei. Papildomas paskelbimas – <b>9,99 € / 30 d.</b></span></div> : null}
               </div></div>
             </article>
           );
