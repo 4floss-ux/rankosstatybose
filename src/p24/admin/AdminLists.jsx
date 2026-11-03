@@ -99,12 +99,12 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
   const [q, setQ] = useState(""); const [f, setF] = useState("all"); const [open, setOpen] = useState(null);
   const [planRows, setPlanRows] = useState(null);
   const [planError, setPlanError] = useState(false);
-  const companyIdSignature = employers.map((c) => c.company_id).filter(Boolean).join(",");
+
   useEffect(() => {
     let cancelled = false;
     setPlanRows(null);
     setPlanError(false);
-    const ids = companyIdSignature.split(",").filter(Boolean);
+    const ids = employers.map((c) => c.company_id).filter(Boolean);
     if (!ids.length) { setPlanRows({}); return () => { cancelled = true; }; }
     // Tik administratoriaus sąraše esančios įmonės; READ-ONLY, be DB migracijų.
     (async () => {
@@ -119,7 +119,7 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
       }
     })();
     return () => { cancelled = true; };
-  }, [companyIdSignature]);
+  }, [employers]);
   const key = (c) => c.company_id || c.owner_id;
   const rows = employers.filter((c) => (f === "all" || (f === "unver" && !c.is_verified) || (f === "susp" && isSuspended(c))) && (!q.trim() || lc(`${c.company_name} ${c.company_code} ${c.city} ${c.display_name} ${c.email}`).includes(lc(q.trim()))));
   const status = (c) => isSuspended(c) ? <Pill tone="red">Suspenduotas</Pill> : !c.is_verified ? <Pill tone="orange">Nepatvirtinta</Pill> : <Pill tone="green">Patvirtinta</Pill>;
