@@ -16,6 +16,18 @@ test('admin plan: active and valid trial keep their plan, expired trial falls ba
   assert.equal(effectivePlanKey(null, NOW), 'basic');
 });
 
+test('admin plan: past_due only stays paid within payment grace', () => {
+  assert.equal(effectivePlanKey({ plan_key: 'business_pro', subscription_status: 'past_due' }, NOW), 'basic');
+  assert.equal(effectivePlanKey({ plan_key: 'business_pro', subscription_status: 'past_due', payment_grace_until: '2026-11-04T00:00:00Z' }, NOW), 'business_pro');
+  assert.equal(effectivePlanKey({ plan_key: 'business_pro', subscription_status: 'past_due', payment_grace_until: '2026-11-01T00:00:00Z' }, NOW), 'basic');
+});
+test('admin plan: pending switch takes effect at the planned time only', () => {
+  const base = { plan_key: 'business_pro', subscription_status: 'active', pending_plan_key: 'business' };
+  assert.equal(effectivePlanKey({ ...base, pending_plan_effective_at: '2026-11-04T00:00:00Z' }, NOW), 'business_pro');
+  assert.equal(effectivePlanKey({ ...base, pending_plan_effective_at: '2026-11-02T00:00:00Z' }, NOW), 'business');
+  assert.equal(effectivePlanKey({ ...base, pending_plan_effective_at: null }, NOW), 'business_pro');
+});
+
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 test('employer: opening a job (incl. the one just created) switches to the job page', () => {
@@ -36,4 +48,12 @@ test('worker overview: availability-only action points to the schedule', () => {
   const src = read('src/p24/worker/WorkerOverview.jsx');
   assert.match(src, /actionOnlyAvailability \? "Patvirtinkite darbo grafiką"/);
   assert.match(src, /onGo\(actionOnlyAvailability \? "schedule" : "jobs"\)/);
+});
+
+test('admin plan: labels query all billing fields instead of guessing from admin summary', () => {
+  const src = read('src/p24/admin/AdminLists.jsx');
+  assert.match(src, /\.from\("companies"\)/);
+  assert.match(src, /payment_grace_until,pending_plan_key,pending_plan_effective_at/);
+  assert.match(src, /planLabel\(x, planRows\)/);
+  assert.match(src, /planLabel\(c, planRows\)/);
 });
