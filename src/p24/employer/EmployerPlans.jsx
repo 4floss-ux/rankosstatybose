@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Svg } from "../Shell.jsx";
 import { EMPLOYER_PLANS, employerPlanAnnualPrice, employerPlanAnnualSavings, formatPlanPrice } from "../../employer/plans.js";
 import { employerPlanValidity } from "../../employer/planValidity.js";
+import "./EmployerPlans.css";
 
 /* Prototipo ePlans. Kainos ir mygtukų logika – iš esamos Stripe sistemos (EmployerDashboard). */
 
@@ -47,10 +48,16 @@ export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy
           <button type="button" aria-pressed={!yr} onClick={() => setCycle("monthly")}>Kas mėnesį</button>
           <button type="button" aria-pressed={yr} onClick={() => setCycle("yearly")}>Už metus <em>−20 %</em></button>
         </div></div>
-      {validity ? <section className="notebox" aria-label="Dabartinio plano informacija">
-        <div><b>Dabartinis planas: {EMPLOYER_PLANS.find(plan => plan.key === validity.key)?.name || validity.key}</b></div>
-        <div>{validity.label}: <strong>{validity.value}</strong></div>
-        <div className="small muted">{validity.detail}</div>
+      {validity ? <section className="card plan-validity" aria-label="Dabartinio plano informacija">
+        <div className="plan-validity-current">
+          <span className="plan-validity-icon"><Svg name="card" size={22} /></span>
+          <div><span className="plan-validity-label">Dabartinis planas</span><h2>{EMPLOYER_PLANS.find(plan => plan.key === validity.key)?.name || validity.key}</h2></div>
+        </div>
+        <div className="plan-validity-until">
+          <span className="plan-validity-label">{validity.label}</span>
+          <b>{validity.value}</b>
+        </div>
+        <div className="plan-validity-detail"><Svg name="clock" size={16} /><span>{validity.detail}</span></div>
       </section> : null}
       {notes}
       <div className={`pcards${open ? " any" : ""}`} onMouseLeave={() => { if (isDesktop()) { clearTimeout(leaveT.current); leaveT.current = setTimeout(() => setOpen(""), 200); } }}>

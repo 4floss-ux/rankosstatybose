@@ -37,6 +37,7 @@ with sync_playwright() as p:
         page.goto('http://localhost')
         page.set_content('<main class="p24" style="padding:16px"><div id="root"></div></main>')
         page.add_style_tag(path=str(repo/'src/p24/p24.css'))
+        page.add_style_tag(path=str(repo/'src/p24/employer/EmployerPlans.css'))
         page.add_script_tag(content=bundle)
         section=page.get_by_role('region',name='Dabartinio plano informacija')
         section.wait_for()
@@ -45,6 +46,13 @@ with sync_playwright() as p:
         assert 'pratęsiama automatiškai' in section.inner_text()
         assert page.evaluate('window.actions')==[]
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
+        current=page.locator('.plan-validity-current').bounding_box()
+        until=page.locator('.plan-validity-until').bounding_box()
+        if width==1440:
+            assert until['x'] >= current['x']+current['width']
+        else:
+            assert until['y'] >= current['y']+current['height']
+        assert page.locator('.plan-validity-detail svg path').count()>0
         page.screenshot(path=f'/tmp/s24-plan-validity-{width}.png')
         page.get_by_role('button',name='Valdyti prenumeratą',exact=True).click()
         assert page.evaluate('window.actions')==['portal']
