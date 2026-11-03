@@ -1,4 +1,5 @@
--- PROPOSAL ONLY. Apply only after the reviewed Business Pro quota proposal.
+-- PROPOSAL ONLY. May be reviewed/applied independently of the Business Pro quota.
+-- Also compatible with the separate quota proposal when that is later approved.
 -- First NEW publication per authenticated user, all plans, including team members.
 -- Additional to Pro monthly credits; never usable for an extension.
 -- Disabled until an explicitly approved campaign activation. No existing rows edited.
@@ -71,8 +72,16 @@ CREATE FUNCTION public.job_ad_offer(p_company_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $fn$
 DECLARE q jsonb;
 BEGIN
-  -- Existing quota RPC performs the company/member permission check first.
-  q:=public.job_ad_pro_quota(p_company_id);
+  -- Authorize even when the separate monthly quota has not been installed.
+  IF auth.uid() IS NULL OR NOT public.job_ad_can_manage(p_company_id) THEN
+    RAISE EXCEPTION 'Nėra teisių.' USING ERRCODE='42501';
+  END IF;
+  IF pg_catalog.to_regprocedure('public.job_ad_pro_quota(uuid)') IS NOT NULL THEN
+    q:=public.job_ad_pro_quota(p_company_id);
+  ELSE
+    -- Preserve existing plan behavior; this does not enable a monthly quota.
+    q:=jsonb_build_object('enabled',false);
+  END IF;
   RETURN q||jsonb_build_object('first_free_available',app_private.job_ad_first_free_available(auth.uid()));
 END;
 $fn$;

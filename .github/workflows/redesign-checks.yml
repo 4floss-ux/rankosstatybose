@@ -57,3 +57,5 @@ jobs:
         run: node tests/public-job-ads.test.mjs
       - name: Check public job access and application rules in synthetic PostgreSQL
         run: node tests/public-job-ads-sql.test.mjs
+      - name: Check standalone first-free job ad in synthetic PostgreSQL
+        run: node tests/first-job-ad-sql.test.mjs

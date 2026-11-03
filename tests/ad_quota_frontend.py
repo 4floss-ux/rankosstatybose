@@ -10,7 +10,7 @@ import {EmployerAds} from './src/p24/employer/EmployerAds.jsx';
 const root=createRoot(document.getElementById('root'));let seq=0;
 window.mount=(remaining,options={})=>{
  window.remaining=remaining;window.options=options;window.calls=[];window.payments=0;
- window.ad={id:'synthetic-ad',title:'Sintetinis skelbimas',city:'Vilnius',salary_min:1000,description:'Sintetinis darbo aprašymas',status:'active',live:true,expires_at:'2099-01-01T00:00:00Z',candidates:[],savers:[]};
+ window.ad={id:'10000000-0000-4000-8000-000000000100',title:'Sintetinis skelbimas',city:'Vilnius',salary_min:1000,description:'Sintetinis darbo aprašymas',status:'active',live:true,expires_at:'2099-01-01T00:00:00Z',candidates:[],savers:[]};
  const data={ads:options.detail?[window.ad]:[],loaded:true,reload:()=>{},error:null};
  root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={!options.basic} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
 };window.mount(1);
@@ -19,7 +19,7 @@ mock='''export const supabase={rpc:async(name,args)=>{
  window.calls.push({name,args});
  if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:window.options.malformed?[]:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,used:10-window.remaining,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
  if(name==='job_ad_upsert'){
-  window.ad={...window.ad,...{status:window.options.race?'pending_payment':'active'}};window.remaining=0;return {data:window.ad};
+  window.ad={...window.ad,...{status:window.options.race?'pending_payment':'active',live:!window.options.race}};window.remaining=0;return {data:window.ad};
  }
  if(name==='job_ad_company_detail')return {data:window.ad};
  if(name==='job_ad_extend_plan_with_quota'){
@@ -77,6 +77,12 @@ with sync_playwright() as p:
   page.evaluate('window.mount(0,{basic:true,firstFree:true})')
   page.get_by_role('button',name='Paskelbti skelbimą',exact=True).wait_for()
   page.get_by_text('Pirmas jūsų skelbimas – nemokamas',exact=True).wait_for()
+  page.get_by_placeholder('Pvz. Statybų darbininkas').fill('Pirmas sintetinis skelbimas')
+  page.get_by_placeholder('1600',exact=True).fill('1600')
+  page.locator('textarea').first.fill('Sintetinis pirmojo skelbimo aprašymas')
+  page.get_by_role('button',name='Paskelbti skelbimą',exact=True).click()
+  page.get_by_role('button',name='Redaguoti',exact=True).wait_for()
+  assert len(page.evaluate("window.calls.filter(c=>c.name==='job_ad_upsert')"))==1
   assert page.evaluate('window.payments')==0
   page.evaluate('window.mount(0,{basic:true,firstFree:false})')
   page.get_by_role('button',name='Apmokėti 9,99 € ir paskelbti',exact=True).wait_for()

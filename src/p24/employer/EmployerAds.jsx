@@ -94,7 +94,7 @@ function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay }) {
 }
 
 /* ---------- Naujas / redaguoti ---------- */
-function AdForm({ company, isPro, firstFree, pricingBusy, ad, onCancel, onSaved }) {
+function AdForm({ company, isPro, firstFree, quotaEnabled, pricingBusy, ad, onCancel, onSaved }) {
   const [f, setF] = useState(() => ({
     title: ad?.title || "", city: ad?.city || company?.city || "Vilnius", address: ad?.address || "",
     contract: ad?.contract_type || CONTRACTS[0], s1: ad ? String(Number(ad.salary_min)) : "", s2: ad?.salary_max ? String(Number(ad.salary_max)) : "",
@@ -176,7 +176,7 @@ function AdForm({ company, isPro, firstFree, pricingBusy, ad, onCancel, onSaved 
             </div>
           </section>
           <section className="card jd-act">
-            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Įskaičiuota į Business Pro"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>Business Pro: 10 nemokamų paskelbimų per mėnesį</small></>}</div> : null}
+            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Įskaičiuota į Business Pro"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div> : null}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
             <button className="btn primary jd-wide" type="button" disabled={busy || pricingBusy} onClick={save}>{busy ? "Saugoma..." : ad ? "Išsaugoti pakeitimus" : isPro ? "Paskelbti skelbimą" : `Apmokėti ${FEE} ir paskelbti`}</button>
             <button className="btn jd-wide" type="button" disabled={busy} onClick={onCancel}>Atšaukti</button>
@@ -261,7 +261,7 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
   }
   return (
     <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>Business Pro: 10 nemokamų paskelbimų per mėnesį</small></>}</div>
+      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div>
       <p className="small muted" style={{ margin: "12px 0 0" }}>Po pratęsimo skelbimas galios dar {left + 30} d. Kandidatai ir įsiminimai išlieka.</p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
@@ -452,7 +452,7 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   if (quotaLoading && !quotaReady) return <p className="small muted" role="status">Tikrinamas nemokamų paskelbimų likutis...</p>;
 
   if (mode === "new" || mode === "edit") {
-    return <>{banner}<AdForm company={company} isPro={firstFree || freeAvailable} firstFree={firstFree} pricingBusy={pricingBusy} ad={mode === "edit" ? current : null}
+    return <>{banner}<AdForm company={company} isPro={firstFree || freeAvailable} firstFree={firstFree} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} ad={mode === "edit" ? current : null}
       onCancel={() => { setMode(current ? "detail" : "list"); top(); }}
       onSaved={(ad) => { data.reload(); setQuotaRetry(value => value + 1); setCurrent(ad); setMode("detail"); top(); }} /></>;
   }
