@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:hire": "vite --config vite.hire.config.js --mode hire",
+    "build:hire": "vite build --config vite.hire.config.js --mode hire",
+    "preview:hire": "vite preview --config vite.hire.config.js --mode hire"
   },
   "dependencies": {
     "@sentry/react": "^10.75.3",

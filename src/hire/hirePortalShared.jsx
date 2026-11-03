@@ -73,7 +73,7 @@ export function HirePortalLanguageSwitch({ lang, onChange }) {
 }
 
 export function HirePortalLogo() {
-  return <BrandLogo href="/hire" height={48} style={{display:"inline-flex",justifyContent:"center"}} imgStyle={{maxWidth:210}} />;
+  return <BrandLogo href="/" height={48} style={{display:"inline-flex",justifyContent:"center"}} imgStyle={{maxWidth:210}} />;
 }
 
 export function HireEmployerLoginPage() {
@@ -126,7 +126,7 @@ export function HireEmployerLoginPage() {
           const portalToken = (Array.isArray(data) ? data[0]?.session_token : data?.session_token) || "";
           if (!portalToken) throw new Error(copy.sessionError);
           setForeignHirePortalToken(portalToken);
-          window.location.assign("/hire/portal");
+          window.location.assign("/portal");
           return;
         } catch (accessError) {
           await supabase.auth.signOut({ scope: "local" });
@@ -141,7 +141,7 @@ export function HireEmployerLoginPage() {
       const row = data?.[0];
       if (!row?.session_token) throw new Error(copy.signInError);
       setForeignHirePortalToken(row.session_token);
-      window.location.assign("/hire/portal");
+      window.location.assign("/portal");
     } catch (err) {
       setError(err?.message || copy.signInError);
     } finally {
@@ -158,16 +158,15 @@ export function HireEmployerLoginPage() {
           </select></div>
           <img src="/brand-logo-tight.png" alt="statybos24.lt" className="hp-logo" />
           <span className="h-k">{copy.portal}</span>
-          <h2>{copy.signIn}</h2>
           <p className="small muted" style={{ margin: 0 }}>{copy.intro}</p>
           <div className="form">
             <label className="field" htmlFor="hl-e">{copy.companyId}<input id="hl-e" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder={copy.companyPlaceholder} /></label>
             <label className="field" htmlFor="hl-p">{copy.password}<input id="hl-p" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} /></label>
             {error ? <p className="ferr" role="alert">{error}</p> : null}
-            <button className="btn primary" type="submit" disabled={busy}>{busy ? copy.busy : copy.submit}</button>
+            <button className="btn primary" type="submit" disabled={busy}>{busy ? copy.busy : copy.signIn}</button>
           </div>
           <p className="small muted" style={{ margin: 0 }}>{copy.help} <a href="mailto:info@statybos24.lt">info@statybos24.lt</a></p>
-          <a className="linkbtn" href={`/hire?lang=${lang}`}>← statybos24.lt/hire</a>
+          <a className="linkbtn" href={`/?lang=${lang}`}>← hire.statybos24.lt</a>
         </form>
       </div>
     </div>

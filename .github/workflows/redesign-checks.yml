@@ -33,3 +33,11 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ""
           VITE_SUPABASE_ANON_KEY: ""
         run: npm run build
+
+      - name: Check hire host and legacy routes
+        run: node tests/hire-routes.test.mjs
+      - name: Independent hire bundle with no live credentials
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_PUBLISHABLE_KEY: ""
+        run: npm run build:hire

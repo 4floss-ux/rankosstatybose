@@ -1,3 +1,4 @@
+import { HIRE_ORIGIN } from "../../lib/hireRoutes.js";
 import { useState } from "react";
 import "../hire.css";
 import { Svg } from "../Shell.jsx";
@@ -11,7 +12,7 @@ const ago = (iso) => { if (!iso) return "—"; const d = Math.round((Date.now() 
 const DOC_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const HR_ST = { new: ["Nauja", "orange"], under_review: ["Peržiūrima", ""], access_preparing: ["Ruošiama prieiga", ""], waiting_employer: ["Laukiama sutarties ir informacijos", "orange"], employer_submitted: ["Darbdavys pateikė", "orange"], ready_for_sourcing: ["Paruošta paieškai", "green"], sourcing: ["Vyksta paieška", "green"], declined: ["Atmesta", "red"], closed: ["Uždaryta", ""] };
 const FLOW = ["new", "under_review", "access_preparing", "waiting_employer", "employer_submitted", "ready_for_sourcing", "sourcing"];
-const HIRE_STEPS = [["Užklausa", "Įmonė užpildo formą statybos24.lt/hire"], ["Prieiga", "Peržiūrite ir sukuriate privatų portalą"], ["Sutartis", "Įmonė pasirašo tarpininkavimo sutartį"], ["Poreikis", "Įmonė pateikia darbuotojų poreikį, jūs pradedate paiešką"], ["Kandidatai", "Ieškote Statybos24 bazėje arba pridedate išorinį kandidatą"], ["Įdarbinimas", "Įmonė patvirtina kandidatą, įkeliate darbo sutartį ir sąskaitą"]];
+const HIRE_STEPS = [["Užklausa", "Įmonė užpildo formą hire.statybos24.lt"], ["Prieiga", "Peržiūrite ir sukuriate privatų portalą"], ["Sutartis", "Įmonė pasirašo tarpininkavimo sutartį"], ["Poreikis", "Įmonė pateikia darbuotojų poreikį, jūs pradedate paiešką"], ["Kandidatai", "Ieškote Statybos24 bazėje arba pridedate išorinį kandidatą"], ["Įdarbinimas", "Įmonė patvirtina kandidatą, įkeliate darbo sutartį ir sąskaitą"]];
 const AGR = { not_prepared: ["Neparuošta", ""], waiting_signature: ["Laukiama kandidato parašo", "orange"], signed_uploaded: ["Pasirašyta įkelta", "green"], approved: ["Patvirtinta", "green"], rejected: ["Reikia pataisyti", "red"] };
 const ACC = { provided: "Suteikia darbdavys", not_provided: "Nesuteikiama", employee_contributes: "Moka / prisideda darbuotojas" };
 const LIC = { required: "Privalomas", advantage: "Privalumas", not_required: "Nereikalingas" };
@@ -47,8 +48,8 @@ export function AdminForeignHire({ requests, h }) {
 
   return (
     <>
-      <div className="head"><div><h1>Tarptautinė atranka</h1><p className="lead">Užsienio statybų įmonės ieško darbuotojų iš Lietuvos – statybos24.lt/hire</p></div>
-        <div className="row" style={{ gap: 8 }}><a className="btn sm" href="/hire" target="_blank" rel="noopener noreferrer"><Svg name="eye" size={14} />Atidaryti /hire puslapį</a></div></div>
+      <div className="head"><div><h1>Tarptautinė atranka</h1><p className="lead">Užsienio statybų įmonės ieško darbuotojų iš Lietuvos – hire.statybos24.lt</p></div>
+        <div className="row" style={{ gap: 8 }}><a className="btn sm" href={HIRE_ORIGIN} target="_blank" rel="noopener noreferrer"><Svg name="eye" size={14} />Atidaryti hire puslapį</a></div></div>
       <section className="card fh-how"><ol>{HIRE_STEPS.map(([t, p], i) => <li key={t}><span>{i + 1}</span><div><b>{t}</b><small>{p}</small></div></li>)}</ol></section>
       <div className="abar2">
         <label className="field asrch"><span className="sr">Ieškoti</span><span className="asrch-in"><Svg name="search" size={16} /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Įmonė, šalis ar kontaktas" autoComplete="off" /></span></label>

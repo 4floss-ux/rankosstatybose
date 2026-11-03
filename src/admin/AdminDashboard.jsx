@@ -1,3 +1,4 @@
+import { HIRE_ORIGIN } from "../lib/hireRoutes.js";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { CloseMark, SilentLoader } from "../ui/brand.jsx";
@@ -1211,7 +1212,7 @@ export function AdminDashboard({
       "Statybos24 employer portal",
       `Login: ${credentials.loginId}`,
       `Temporary password: ${credentials.password}`,
-      `Portal: ${window.location.origin}/hire/login`,
+      `Portal: ${HIRE_ORIGIN}/login`,
       "",
       "Please use these private credentials to access your company portal. You will find the recruitment agreement and the full workforce requirements form there. If anything is unclear, reply to the email that contained these credentials.",
     ].join("\n");

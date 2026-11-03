@@ -240,3 +240,8 @@
 /* Kalbos pasirinkimas – įprastas select */
 .p24 .h-lsel{height:36px;padding:0 10px;border:1px solid var(--line);border-radius:5px;background:var(--white);display:inline-flex;align-items:center;min-width:0}
 .p24 .h-lsel select{min-height:0;height:34px;border:0!important;box-shadow:none!important;padding:0 2px!important;background:transparent!important}
+
+/* Prisijungimo veiksmas ir klaida užima visą formos eilutę, ne vieno lauko plotį. */
+.p24 .hp-card .form > .ferr,.p24 .hp-card .form > button[type="submit"]{grid-column:1/-1;min-width:0}
+.p24 .hp-card .form > .ferr{overflow-wrap:anywhere}
+.p24 .hp-card .form > button[type="submit"]{width:100%;height:auto;min-height:38px;white-space:normal;padding:8px 12px;line-height:1.4}

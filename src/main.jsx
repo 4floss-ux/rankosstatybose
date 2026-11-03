@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { legacyHireRedirect } from "./lib/hireRoutes.js";
 import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import "./styles.css";
@@ -9,16 +10,10 @@ import { BackToTopButton, FatalAppError, MobilePopupBackGuard, SiteAnalyticsTrac
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
 import { lazyPage } from "./lib/lazyPage.js";
 
-// /hire ir teisiniai puslapiai – atskiros kodo dalys.
-const HirePage = lazyPage(() => import("./hire/HirePage.jsx"), "HirePage");
-const HireEmployerLoginPage = lazyPage(() => import("./hire/hirePortalShared.jsx"), "HireEmployerLoginPage");
-const HireEmployerPortalPage = lazyPage(() => import("./hire/HireEmployerPortalPage.jsx"), "HireEmployerPortalPage");
+// Tarptautinė atranka turi atskirą įėjimą src/hire/main.jsx.
 const PlatformLegalDocumentPage = lazyPage(() => import("./legal/LegalDialogs.jsx"), "PlatformLegalDocumentPage");
 
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
-const isHireRoute = currentPath === "/hire";
-const isHireLoginRoute = currentPath === "/hire/login";
-const isHirePortalRoute = currentPath === "/hire/portal";
 
 // Load the site's primary fonts before the initial React paint to avoid the
 // fallback-font -> webfont size/weight jump on hard refresh. Uses fonts already
@@ -39,13 +34,7 @@ async function mountSiteWhenFontsReady() {
   createRoot(rootElement).render(
   <Sentry.ErrorBoundary fallback={<FatalAppError />}>
     <Suspense fallback={<AppBootLoader />}>
-    {isHireLoginRoute ? (
-      <HireEmployerLoginPage />
-    ) : isHirePortalRoute ? (
-      <HireEmployerPortalPage />
-    ) : isHireRoute ? (
-      <HirePage />
-    ) : currentPath === "/naudojimosi-salygos" ? (
+    {currentPath === "/naudojimosi-salygos" ? (
       <PlatformLegalDocumentPage kind="terms" />
     ) : currentPath === "/privatumo-politika" ? (
       <PlatformLegalDocumentPage kind="privacy" />
@@ -69,4 +58,6 @@ async function mountSiteWhenFontsReady() {
   );
 }
 
-void mountSiteWhenFontsReady();
+const hireRedirect = legacyHireRedirect(window.location.href);
+if (hireRedirect) window.location.replace(hireRedirect);
+else void mountSiteWhenFontsReady();

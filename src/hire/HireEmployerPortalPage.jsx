@@ -224,7 +224,7 @@ export function HireEmployerPortalPage() {
     if (supabase) {
       try { await supabase.auth.signOut({ scope: "local" }); } catch {}
     }
-    window.location.assign("/hire/login");
+    window.location.assign("/login");
   }
 
   async function changePassword() {
@@ -527,8 +527,8 @@ export function HireEmployerPortalPage() {
       <p className="small muted" style={{ margin:0 }}>{copy.body}</p>
       {error ? <div className="alert" role="alert"><div>{error}</div></div> : null}
       <button className="btn primary" type="button" onClick={() => loadPortal()}>{copy.retry}</button>
-      <a className="btn" href={`/hire/login?lang=${encodeURIComponent(lang)}`}>{copy.signIn}</a>
-      <div className="row" style={{ gap:8, flexWrap:"wrap" }}><a className="btn sm ghost" href="mailto:info@statybos24.lt">{copy.contact}</a><a className="btn sm ghost" href={`/hire?lang=${encodeURIComponent(lang)}`}>{copy.request}</a></div>
+      <a className="btn" href={`/login?lang=${encodeURIComponent(lang)}`}>{copy.signIn}</a>
+      <div className="row" style={{ gap:8, flexWrap:"wrap" }}><a className="btn sm ghost" href="mailto:info@statybos24.lt">{copy.contact}</a><a className="btn sm ghost" href={`/?lang=${encodeURIComponent(lang)}`}>{copy.request}</a></div>
     </section></div></div>;
   }
 

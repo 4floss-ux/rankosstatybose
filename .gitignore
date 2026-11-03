@@ -5,3 +5,6 @@ docs/redesign/tools/wl/
 docs/redesign/tools/el/
 docs/redesign/tools/al/
 docs/redesign/tools/*.png
+
+# Atskiras hire projekto build
+/dist-hire/

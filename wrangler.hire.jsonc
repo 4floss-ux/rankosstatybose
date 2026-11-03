@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "statybos24-hire",
+  "main": "./worker.js",
+  "compatibility_date": "2026-09-25",
+  "keep_vars": true,
+  "vars": {
+    "MAINTENANCE_MODE": "off"
+  },
+  "assets": {
+    "directory": "./dist-hire",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "account_id": "9c0fe74ee8b31cb9e946d493c4796588",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "hire.statybos24.lt",
+      "custom_domain": true
+    }
+  ]
+}

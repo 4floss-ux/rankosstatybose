@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { isHireHostname } from "./hireRoutes.js";
 import { createClient } from "@supabase/supabase-js";
 import { getPasswordRecoveryLocation } from "../auth/passwordRecovery.jsx";
 
@@ -59,7 +60,7 @@ export const initialPasswordRecovery = getPasswordRecoveryLocation(window.locati
 // The /hire app uses its own memory-only Supabase Auth client for the private
 // test sign-in and keeps the issued employer portal token separately.
 // Do not load, persist, or broadcast main-site sessions when visiting /hire.
-export const isHireProjectPath = /^\/hire(?:\/|$)/.test(window.location.pathname);
+export const isHireProjectPath = import.meta.env?.MODE === "hire" || isHireHostname(window.location.hostname) || /^\/hire(?:\/|$)/.test(window.location.pathname);
 // PWA branding is registered only for the main statybos24.lt project, never /hire.
 if (!isHireProjectPath && typeof document !== "undefined") {
   if (!document.querySelector('link[rel="manifest"]')) {
