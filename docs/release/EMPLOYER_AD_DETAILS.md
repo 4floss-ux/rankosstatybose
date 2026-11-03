@@ -1,27 +1,45 @@
-# Darbdavio skelbimo puslapis – peržiūros juodraštis
+# Skelbimo informacija ir nuolatinis ištrynimas
 
-Savininko naujai patvirtintas išdėstymas: visa skelbimo informacija, atskiras skelbimo valdymas, aiškūs mygtukai. Archyvo savininkas atsisakė. Ši šaka dar nėra diegta.
+Šaka `fix/employer-ad-details`. Serverio SQL ir Edge pakeitimai paruošti vietoje, bet šioje sesijoje netaikyti Supabase. Archyvo nėra.
 
-## Paruošta ir vietoje patikrinta
+## Paruošta sąsaja
 
-- `JobAdContent` atvaizduoja tą patį esamo prototipo turinį darbdaviui, darbuotojui ir viešai: pilną aprašymą, sąlygas, adresą, pradžią, reikalavimus ir pasiūlymus. Darbuotojo / viešo turinio išvaizda išsaugota.
-- Darbdavio redagavimas ir pratęsimas perkelti iš kandidatų antraštės į „Skelbimo valdymas“, aiškiai įvardijant, kad veiksmai skirti skelbimui.
-- Suvienodintos tuščios pokalbių ir įsiminusiųjų kortelės, piktogramos ir skaitikliai. Telefonas – viena kolona.
-- Trynimo patvirtinimas ir saugus klaidos atvejis paruošti, bet tikro trynimo backend dar NĖRA. Mygtukas NEKVIETĖ ir NEKVIEČIA senos `job_ad_close` funkcijos kaip tariamo ištrynimo. Nesant naujos funkcijos aiškiai praneša, kad skelbimas nepakeistas.
-- 1440/390 px sintetiniai detalės, viešo skelbimo ir kainodaros / pratęsimo testai; production ir Hire build.
+- Darbdaviui rodoma visa įvesta informacija tuo pačiu `JobAdContent` komponentu, kurį naudoja darbuotojas ir vieša peržiūra: aprašymas, sutartis, grafikas, pradžia, adresas, reikalavimai ir pasiūlymai.
+- „Redaguoti skelbimą“, „Pratęsti skelbimą“ ir „Ištrinti skelbimą“ yra atskirame „Skelbimo valdymas“ bloke. Kandidatų skilties antraštėje skelbimo valdymo mygtukų nėra.
+- Tuščios pokalbių ir įsiminusiųjų kortelės, piktogramos bei skaitikliai naudoja esamus prototipo stilius.
+- Trynimas įjungiamas tik gavus `job_ad_deletion_available=true` iš serverio. Nesant naujo serverio arba nepavykus patikrai mygtukas neveiks; neveikia joks paslėptas `job_ad_close` pakaitalas.
+- Patvirtinus kviečiama `job-ad-delete` Edge funkcija. Rodoma tik patvirtinta sėkmė arba aiški klaida. Jei duomenys ištrinti, o failų šalinimas dar kartojamas, ši būsena aiškiai parodoma.
 
-## Tikras likęs blokatorius – nuolatinis trynimas
+## Paruoštas serveris
 
-Nediegti šakos kaip užbaigto ištrynimo. `job_ad_delete` dar neįgyvendinta ir netaikyta; šaka kol kas skirta išdėstymo peržiūrai. Tai nėra duomenų bazės prieigos ar migracijos įvykdymo įrodymas.
+1. `20261103220000_job_ad_delete_REVIEW.sql`: pradinė būsena OFF, teisių patikros, transakcinis skelbimo DELETE ir susiję CASCADE įrašai. Prieš diegimą patikrinamos būtinos CASCADE sąsajos; jos aklai nekeičiamos.
+2. `job-ad-delete` Edge: tikras `auth.getUser`, veiksmas prisijungusio vartotojo kontekste, Storage objektų trynimas tik iš serverio patvirtintų `job-ad-cv/<application UUID>/` aplankų. Kliento pateikti failų keliai ignoruojami. Bendri profilio dokumentai ir kiti bucket neliečiami.
+3. Nuolatinė privati pakartojimų eilė, tarnybinis cleanup kas penkias minutes, lease žetonai apsaugo nuo pavėlavusių užbaigimų. Nesėkmingi darbai neprarandami; sėkmingų darbų aplankų sąrašai išvalomi iškart, techniniai pakartojimo kvitai pašalinami po paros. Tai nėra skelbimo turinio ar kandidatūrų archyvas.
+4. CV Storage metaduomenų įrašai ir trynimas naudoja sutampančius transakcinius advisory lock. Upload patikra užrakina ir kandidatūros eilutę. Tai būtina, kad įkėlimas neatsirastų po aplanko išvalymo; tikras kelių DB jungčių ir tikro Storage elgesys dar nepatikrintas.
+5. Išsaugomi tik minimalūs mokėjimų apskaitos duomenys (mokėjimo identifikatorius, ad/įmonės UUID, suma, valiuta, aplinka, data) privačioje lentelėje. Skelbimo tekstai, kandidatų ir jų žinučių duomenys ten nekopijuojami.
+6. Vienkartinės dovanos claim lieka. Ankstesniam leidėjui be dovanos claim sukuriama tik ankstesnės publikacijos tinkamumo žyma, o ne išgalvotas dovanos panaudojimo įvykis. Todėl ištrynimas dovanos neatkuria ir senoms paskyroms.
+7. Jei vėliau įdiegiama Pro kvota, jos panaudojimas negrąžinamas. Pasirenkamoje pratęsimų receipt lentelėje išvalomas ištrinto skelbimo JSON, paliekant tik idempotency identifikatorius.
+8. Esamos `job-ad-checkout` Edge funkcijos papildymas: lease prieš išorines užklausas, pakartotinis ad perskaitymas po lease, patikrintas sesijos įrašymas tik egzistuojančiam nepašalintam skelbimui, lease atleidimas `finally`. Naujos mokėjimo operacijos šiame darbe nevykdytos.
+9. Pradėtas mokėjimas arba gyvas checkout lease blokuoja ištrynimą. Neužbaigto / pasibaigusio checkout negalima aklai išvalyti nepatikrinus jo būsenos. Tai sąmoninga apsauga nuo mokėjimo už ištrintą skelbimą; Stripe atsiskaitymų integracija turi būti išbandyta tik test-mode.
 
-Savininkas nori pašalinti skelbimo turinį, kandidatūras, pokalbius, įsimintus įrašus ir susijusius skelbimo CV priedus, o ne perkelti į archyvą. Kitų vartotojo profilio dokumentų trinti negalima. Vienkartinės dovanos panaudojimo žyma turi išlikti. Apmokėtų skelbimų atveju būtina atskirai išlaikyti minimalų mokėjimo apskaitos įrašą; dabartinė `job_ad_payments.ad_id` sąsaja turi `ON DELETE CASCADE`, todėl aklas DELETE šią apsaugą sunaikintų.
+## Diegimo tvarka tikrintojui su tikra prieiga
 
-Serverio sprendimui būtina:
+Savininkas jau leido tęsti šį darbą ir bandymus jo testinėmis paskyromis. Trūkstama prieiga nėra prašymas naujam leidimui. Šioje Codex sesijoje nėra Supabase valdymo įrankio / slaptažodžių / prisijungusios Work naršyklės.
 
-1. Tikra veikėjo tapatybė ir esamas `job_ad_can_manage` patikrinimas, apsauga nuo kitų įmonių / darbuotojų / anoniminio trynimo.
-2. Faktinių FK / trigerių patikra realioje schemoje, susijusių DB įrašų pašalinimas transakcijoje, dovanos išsaugojimas.
-3. CV objektų pašalinimas per Storage API, ne tiesiog ištrinant `storage.objects` metaduomenis. Saugus pakartojimas po laikino gedimo ir vienalaikio įkėlimo apsauga. Vien SQL cascade failų neištrina.
-4. Mokėjimo kvito išsaugojimas be skelbimo teksto / kandidatų; pradėto checkout ir trynimo lenktynių apsauga. Esamas checkout įrašo `pending_session_id` po išorinės užklausos be `status <> removed` sąlygos – vien ad eilutės užrakto nepakanka. Negalima pradėti mokėjimo už jau ištrintą skelbimą.
-5. Tik po serverio įdiegimo ir izoliuotų testų – tikras savininko testinis trynimas. Nevykdyti tikrų Stripe operacijų ir netrinti klientų duomenų testuojant.
+1. Palyginti SQL su tikra schema, ypač visais `job_ads` FK, papildomomis turinio kopijomis, tikra `job_ad_cv_access` ir mokėjimų / prenumeratos pataisomis. Išsaugoti naujesnius Claude / administratoriaus aktyvumo patikrinimus, jei tikroji apibrėžtis skiriasi. Patikrinti Storage transakcijų režimą ir advisory/row lock suderinamumą. Neužtenka vien anon funkcijų skaičiaus.
+2. Pritaikyti tik patikrintą deletion schemos SQL su OFF. Dovanos ir viešų skelbimų schemų pakartotinai netaikyti. Šis failas esamų skelbimų netrina.
+3. Sujungus mažą checkout diff su tikru naujausiu Edge kodu, įdiegti `job-ad-checkout` ir naują `job-ad-delete`. Neperrašyti naujesnių mokėjimo patikrų. Esamus Supabase/Stripe secret nustatymus palikti; nieko nesiųsti į pokalbį. Edge maksimalus vykdymo laikas turi būti trumpesnis už 15 min. checkout lease.
+4. Vault saugiai sukonfigūruoti to paties projekto `job_ad_cleanup_url` (šio projekto `/functions/v1/job-ad-delete`) ir `job_ad_cleanup_service_key` (serverio service-role JWT, ne browser raktas). Secret reikšmių netalpinti į GitHub ar chatą. Patikrinti, kad cron/pg_net žurnalai ir lentelės nepasiekiami anon/authenticated rolėms.
+5. Pritaikyti `20261103221000_job_ad_delete_cleanup_schedule_REVIEW.sql`. Patikrinti tikrą service cleanup kvietimą, HTTP sėkmę ir eilės būklę. Vien HTTP 200 neįrodo, kad visi failai ištrinti: nesėkmės lieka eilėje ir kartojamos.
+6. Tik įdiegus suderintą frontendą, patvirtinus Edge kodą ir cleanup vykdymą, pritaikyti `20261103222000_job_ad_delete_ACTIVATE_REVIEW.sql`. Maintenance palikti ON. SQL patikros pačios negali patvirtinti Edge diegimo ar tikro Storage veikimo.
+7. Savininko testiniu skelbimu patikrinti kandidatūrą / žinutes / sintetinį CV, tikrą ištrynimą, dingimą abiem pusėms ir iš Storage, dovanos neatkūrimą. Tikrų klientų duomenų netrinti; jokio live mokėjimo. Tikras mokamų įrašų išsaugojimas tik Stripe test-mode aplinkoje.
 
-Joks skelbimas, kandidatūra, failas ar mokėjimas šio darbo metu nebuvo ištrintas. Maintenance nekeistas. Archyvas nesukurtas.
+## Vietiniai testai
+
+- `job-ad-delete-sql.test.mjs`: tikras PGlite PostgreSQL variklis, sintetinės tapatybės, kaskados, aktyvavimo apsaugos, cron SQL su imituotais cron/pg_net/Vault, checkout lease, mokėjimo kvitas, dovana ir senas leidėjas, JSON kopijos pašalinimas, rollback, pasikartojimai, service-only cleanup, terminai.
+- `job-ad-delete-cleanup.test.mjs`: daugiau nei vienas Storage puslapis, ištuštinimas nuo nulio, kelio ribos, klaida / pakartojimas ir pavėlavęs užbaigimas.
+- `job-ad-delete-edge.test.mjs`: abi Edge funkcijos per sintetinį SDK ir fetch, tikras handler kodas, netinkama tapatybė, kitos įmonės draudimas, sėkmė ir dalinė failų nesėkmė, service-only cron, checkout lenktynių apsaugos. Nė vienas tinklo kvietimas neišeina į Stripe ar Supabase.
+- `employer_ad_detail_frontend.py`, `ad_quota_frontend.py`, `public_jobs_frontend.py`: 1440 ir 390 px, visa informacija, atskiras valdymas, patvirtinimas / atšaukimas, OFF būsena, klaida ir sėkmė bei failų pending pranešimas. Tik imituota integracija.
+- Abu produkciniai build.
+
+PGlite užklausas serializuoja. Tikras lygiagretumas, tikras Storage, cron/Vault leidimai ir tikra Supabase / Stripe test-mode integracija lieka nepatikrinta. Backend aktyvavimui NO-GO iki šių patikrų. Joks tikras skelbimas, kandidatas, failas ar mokėjimas šioje sesijoje nebuvo ištrintas.

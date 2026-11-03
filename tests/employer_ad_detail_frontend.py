@@ -9,14 +9,15 @@ import React from 'react';import {createRoot} from 'react-dom/client';
 import {EmployerAds} from './src/p24/employer/EmployerAds.jsx';
 const root=createRoot(document.getElementById('root'));let seq=0;
 window.mount=(remaining,options={})=>{
- window.remaining=remaining;window.options=options;window.calls=[];window.payments=0;
+ window.remaining=remaining;window.options=options;window.calls=[];window.payments=0;window.deletes=0;
  window.ad={id:'10000000-0000-4000-8000-000000000100',title:'Sintetinis skelbimas',address:'Bandymų g. 1',contract_type:'Neterminuota darbo sutartis',schedule:'08:00–17:00',start_text:'Nuo pirmadienio',requirements:['Punktualumas'],offers:['Darbo įrankiai'],city:'Vilnius',salary_min:1000,description:'Pilnas darbo aprašymas\\nAntra aprašymo eilutė',status:'active',live:true,expires_at:'2099-01-01T00:00:00Z',candidates:[],savers:[]};
- const data={ads:options.detail?[window.ad]:[],loaded:true,reload:()=>{},error:null};
+ const data=window.adData={ads:options.detail?[window.ad]:[],loaded:true,reload:()=>{},error:null};
  root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={!options.basic} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
 };window.mount(1,{detail:true});
 '''
 mock='''export const supabase={rpc:async(name,args)=>{
  window.calls.push({name,args});
+ if(name==='job_ad_deletion_available')return {data:!window.options.deleteOff};
  if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:window.options.malformed?[]:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,used:10-window.remaining,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
  if(name==='job_ad_upsert'){
   window.ad={...window.ad,...{status:window.options.race?'pending_payment':'active',live:!window.options.race}};window.remaining=0;return {data:window.ad};
@@ -27,7 +28,7 @@ mock='''export const supabase={rpc:async(name,args)=>{
   if(window.options.failOnce){window.options.failOnce=false;return {error:{message:'Synthetic network failure'}};}
   window.remaining=0;return {data:window.ad};
  }if(name==='job_ad_delete')return {error:{code:'PGRST202',message:'Not installed'}};return {data:null};
-},functions:{invoke:async()=>{window.payments++;return {error:new Error('Synthetic checkout only')};}}};'''
+},functions:{invoke:async(name)=>{if(name==='job-ad-delete'){window.deletes++;if(window.options.deleteSuccess){window.adData.ads=[];return {data:{deleted:true,cleanup_pending:!!window.options.pendingFiles}};}return {error:{context:new Response(JSON.stringify({error:'Simuliuota trynimo klaida.'}),{status:409,headers:{'Content-Type':'application/json'}})}};}window.payments++;return {error:new Error('Synthetic checkout only')};}}};'''
 build='''import {build} from 'esbuild';
 const r=await build({stdin:{contents:ENTRY,resolveDir:process.cwd(),loader:'jsx'},bundle:true,write:false,format:'iife',jsx:'automatic',loader:{'.css':'empty'},plugins:[{name:'offline',setup(b){
 b.onResolve({filter:/config\\.js$/},()=>({path:'mock',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:MOCK,loader:'js'}));}}]});process.stdout.write(r.outputFiles[0].text);'''.replace('ENTRY',json.dumps(entry)).replace('MOCK',json.dumps(mock))
@@ -59,7 +60,16 @@ with sync_playwright() as p:
   assert not page.evaluate("window.calls.some(c=>c.name==='job_ad_delete')")
   controls.get_by_role('button',name='Ištrinti skelbimą',exact=True).click()
   page.get_by_role('dialog').get_by_role('button',name='Ištrinti skelbimą',exact=True).click()
-  page.get_by_text('Skelbimo ištrynimas dar neįjungtas. Skelbimas nepakeistas.',exact=True).wait_for()
+  page.get_by_text('Simuliuota trynimo klaida.',exact=True).wait_for()
+  assert page.evaluate('window.deletes')==1
+  page.evaluate('window.mount(1,{detail:true,deleteOff:true})');page.locator('article.job').click()
+  assert page.get_by_role('button',name='Ištrinti skelbimą',exact=True).is_disabled()
+  page.evaluate('window.mount(1,{detail:true,deleteSuccess:true,pendingFiles:true})');page.locator('article.job').click()
+  page.get_by_role('button',name='Ištrinti skelbimą',exact=True).click()
+  page.get_by_role('dialog').get_by_role('button',name='Ištrinti skelbimą',exact=True).click()
+  page.get_by_text('Skelbimas ir kandidatūros ištrinti. Priedų trynimas dar baigiamas.',exact=True).wait_for()
+  assert page.locator('article.job').count()==0
+  assert page.evaluate('window.deletes')==1
   assert not page.evaluate("window.calls.some(c=>c.name==='job_ad_close')")
   assert page.evaluate('window.payments')==0
   assert not errors,errors

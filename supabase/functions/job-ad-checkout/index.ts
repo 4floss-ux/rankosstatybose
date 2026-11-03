@@ -48,7 +48,7 @@ async function loadAd(cfg: Cfg, req: Request, adId: string) {
   const can = await user.rpc("job_ad_can_manage", { p_company_id: ad.data.company_id });
   if (can.error || can.data !== true) throw new PayError("Nėra teisių.", 403);
   const who = await user.auth.getUser();
-  return { ad: ad.data, email: who.data?.user?.email || "" };
+  return { ad: ad.data, email: who.data?.user?.email || "", user };
 }
 
 async function activate(cfg: Cfg, adId: string, session: any) {
@@ -64,11 +64,19 @@ async function activate(cfg: Cfg, adId: string, session: any) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+  let releaseCheckout: (() => Promise<unknown>) | null = null;
   try {
     const cfg = config();
     let body: any; try { body = await req.json(); } catch { throw new PayError("Netinkama užklausa."); }
     const adId = String(body?.adId || "");
     if (!/^[0-9a-f-]{36}$/i.test(adId)) throw new PayError("Netinkamas skelbimas.");
+    const { user } = await loadAd(cfg, req, adId);
+    if (!["create", "confirm"].includes(body?.action)) throw new PayError("Netinkamas veiksmas.");
+    const acquired = await user.rpc("job_ad_checkout_acquire", { p_ad_id: adId });
+    if (acquired.error || !acquired.data) throw new PayError("Mokėjimo užklausa šiuo metu negalima. Bandykite vėliau.", 409);
+    releaseCheckout = async () => await user.rpc("job_ad_checkout_release", { p_ad_id: adId, p_lease_id: acquired.data });
+    // Reload after acquiring the lease; another completed request may have
+    // registered a pending session while this request waited for the lock.
     const { ad, email } = await loadAd(cfg, req, adId);
 
     if (body?.action === "confirm") {
@@ -116,11 +124,14 @@ Deno.serve(async (req) => {
     }
     const session = await stripe(cfg, "checkout/sessions", params, `statybos24-jobad-${adId}-${crypto.randomUUID()}`);
     if (!session.url || !session.id) throw new PayError("Stripe negrąžino apmokėjimo nuorodos.", 502);
-    const upd = await cfg.admin.from("job_ads").update({ pending_session_id: session.id }).eq("id", adId);
-    if (upd.error) throw upd.error;
+    const upd = await cfg.admin.from("job_ads").update({ pending_session_id: session.id }).eq("id", adId).neq("status", "removed").select("id").maybeSingle();
+    if (upd.error || !upd.data) throw new PayError("Skelbimas nebeprieinamas. Mokėjimas nepradėtas.", 409);
     return reply({ url: session.url });
   } catch (error) {
     console.error("job-ad-checkout failed", { name: (error as any)?.name, message: (error as any)?.message });
     return reply({ error: error instanceof PayError ? error.message : "Mokėjimo užklausa nepavyko. Bandykite dar kartą." }, error instanceof PayError ? error.status : 500);
+  } finally {
+    // No secrets/sessions are logged. A failed release expires after 15 minutes.
+    if (releaseCheckout) await releaseCheckout().catch(() => {});
   }
 });

@@ -59,3 +59,5 @@ jobs:
         run: node tests/public-job-ads-sql.test.mjs
       - name: Check standalone first-free job ad in synthetic PostgreSQL
         run: node tests/first-job-ad-sql.test.mjs
+      - name: Check permanent deletion, storage cleanup and payment race protection with synthetic fixtures
+        run: node --test tests/job-ad-delete-sql.test.mjs tests/job-ad-delete-cleanup.test.mjs tests/job-ad-delete-edge.test.mjs

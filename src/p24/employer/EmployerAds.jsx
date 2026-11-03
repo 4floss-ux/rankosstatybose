@@ -275,7 +275,7 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
 }
 
 /* ---------- Skelbimo puslapis su kandidatais ---------- */
-function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWorkerProfile, onChanged }) {
+function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDeleted, onBack, onEdit, onWorkerProfile, onChanged }) {
   const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [chat, setChat] = useState(null);
   const [ad, setAd] = useState(null);
@@ -312,8 +312,16 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWo
     if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
     setBusy("delete"); setErr("");
     try {
-      const { error } = await supabase.rpc("job_ad_delete", { p_ad_id: adId });
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke("job-ad-delete", { body: { adId } });
+      if (error || data?.error) {
+        let message = data?.error;
+        if (!message && error?.context?.clone) {
+          try { const payload = await error.context.clone().json(); if (typeof payload?.error === "string") message = payload.error; } catch { /* Keep a safe fallback. */ }
+        }
+        throw new Error(message || "Nepavyko patvirtinti skelbimo ištrynimo. Atnaujinkite sąrašą ir bandykite dar kartą.");
+      }
+      if (data?.deleted !== true) throw new Error("Nepavyko patvirtinti skelbimo ištrynimo.");
+      onDeleted?.(data.cleanup_pending === true);
       onChanged(); onBack();
     } catch (error) {
       setErr(jobAdQuotaUnsupported(error) ? "Skelbimo ištrynimas dar neįjungtas. Skelbimas nepakeistas." : error.message || "Nepavyko ištrinti skelbimo.");
@@ -385,8 +393,8 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWo
             <h2>Skelbimo valdymas</h2>
             <button className="btn jd-wide" type="button" disabled={busy === "delete"} onClick={() => onEdit(ad)}><Svg name="edit" size={16} />Redaguoti skelbimą</button>
             {ad.status !== "pending_payment" ? <button className="btn jd-wide" type="button" disabled={busy === "delete" || pricingBusy} onClick={() => setExt(true)}><Svg name="cal" size={16} />Pratęsti skelbimą</button> : null}
-            <button className="btn danger jd-wide" type="button" disabled={busy === "delete" || ad.payment_pending} onClick={removeAd}>{busy === "delete" ? "Trinama..." : "Ištrinti skelbimą"}</button>
-            <p className="small muted" style={{ margin: 0 }}>{ad.payment_pending ? "Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas." : "Ištrynus skelbimo ir kandidatūrų atkurti negalėsite. Nemokamo skelbimo dovana neatsinaujins."}</p>
+            <button className="btn danger jd-wide" type="button" disabled={!deleteReady || busy === "delete" || ad.payment_pending} onClick={removeAd}>{busy === "delete" ? "Trinama..." : "Ištrinti skelbimą"}</button>
+            <p className="small muted" style={{ margin: 0 }}>{!deleteReady ? "Skelbimo ištrynimas laikinai nepasiekiamas." : ad.payment_pending ? "Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas." : "Ištrynus skelbimo ir kandidatūrų atkurti negalėsite. Nemokamo skelbimo dovana neatsinaujins."}</p>
           </section>
         </aside>
       </div>
@@ -440,6 +448,15 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   const [quotaError, setQuotaError] = useState("");
   const [quotaRetry, setQuotaRetry] = useState(0);
   const [quotaReady, setQuotaReady] = useState(false);
+  const [deleteReady, setDeleteReady] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
+  useEffect(() => {
+    let active = true; setDeleteReady(false);
+    if (company?.id) supabase.rpc("job_ad_deletion_available", { p_company_id: company.id })
+      .then(({data,error}) => { if (active) setDeleteReady(!error && data === true); })
+      .catch(() => { if (active) setDeleteReady(false); });
+    return () => { active = false; };
+  }, [company?.id]);
   useEffect(() => { setQuotaReady(false); setQuota(null); }, [company?.id, isPro]);
   useEffect(() => {
     let active = true;
@@ -468,7 +485,7 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   const freeAvailable = jobAdFreeAvailable(isPro, quota);
   const firstFree = jobAdFirstFreeAvailable(quota);
   const pricingBusy = quotaLoading || Boolean(quotaError);
-  const banner = <>{quotaError ? <div className="notebox"><p className="ferr" role="alert">{quotaError}</p><button type="button" className="btn" onClick={() => setQuotaRetry(value => value + 1)}>Bandyti dar kartą</button></div> : null}{quota?.enabled ? <div className="notebox" role="status">Šį prenumeratos mėnesį liko <b>{quota.remaining} iš 10</b> nemokamų paskelbimų visai įmonei. Naujas skelbimas arba pratęsimas dar 30 dienų naudoja vieną paskelbimą. Papildomai – <b>{FEE} / 30 d.</b>{quota.resets_at && Number.isFinite(Date.parse(quota.resets_at)) ? ` Kvota atsinaujins ${new Intl.DateTimeFormat("lt-LT", { timeZone: "Europe/Vilnius", year: "numeric", month: "long", day: "numeric" }).format(new Date(quota.resets_at))}.` : ""}</div> : null}</>;
+  const banner = <>{deleteNotice ? <div className="notebox" role="status">{deleteNotice}</div> : null}{quotaError ? <div className="notebox"><p className="ferr" role="alert">{quotaError}</p><button type="button" className="btn" onClick={() => setQuotaRetry(value => value + 1)}>Bandyti dar kartą</button></div> : null}{quota?.enabled ? <div className="notebox" role="status">Šį prenumeratos mėnesį liko <b>{quota.remaining} iš 10</b> nemokamų paskelbimų visai įmonei. Naujas skelbimas arba pratęsimas dar 30 dienų naudoja vieną paskelbimą. Papildomai – <b>{FEE} / 30 d.</b>{quota.resets_at && Number.isFinite(Date.parse(quota.resets_at)) ? ` Kvota atsinaujins ${new Intl.DateTimeFormat("lt-LT", { timeZone: "Europe/Vilnius", year: "numeric", month: "long", day: "numeric" }).format(new Date(quota.resets_at))}.` : ""}</div> : null}</>;
   if (quotaLoading && !quotaReady) return <p className="small muted" role="status">Tikrinamas nemokamų paskelbimų likutis...</p>;
 
   if (mode === "new" || mode === "edit") {
@@ -477,7 +494,7 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
       onSaved={(ad) => { data.reload(); setQuotaRetry(value => value + 1); setCurrent(ad); setMode("detail"); top(); }} /></>;
   }
   if (mode === "detail" && current) {
-    return <>{banner}<AdDetail adId={current.id} isPro={freeAvailable} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} onBack={() => { setMode("list"); setCurrent(null); top(); }}
+    return <>{banner}<AdDetail adId={current.id} deleteReady={deleteReady} onDeleted={pending => setDeleteNotice(pending ? "Skelbimas ir kandidatūros ištrinti. Priedų trynimas dar baigiamas." : "Skelbimas ir su juo susiję duomenys ištrinti.")} isPro={freeAvailable} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} onBack={() => { setMode("list"); setCurrent(null); top(); }}
       onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={() => { data.reload(); setQuotaRetry(value => value + 1); }} /></>;
   }
   return (
