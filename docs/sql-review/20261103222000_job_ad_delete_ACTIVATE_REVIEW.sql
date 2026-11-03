@@ -8,6 +8,15 @@ BEGIN
  IF to_regclass('app_private.job_ad_deletion_policy') IS NULL OR to_regclass('cron.job') IS NULL THEN
   RAISE EXCEPTION 'Deletion schema or cleanup schedule missing';
  END IF;
+ IF to_regclass('net.http_request_queue') IS NULL OR to_regclass('vault.decrypted_secrets') IS NULL THEN
+  RAISE EXCEPTION 'Private cleanup configuration tables are required';
+ END IF;
+ IF has_table_privilege('anon','net.http_request_queue','SELECT')
+    OR has_table_privilege('authenticated','net.http_request_queue','SELECT')
+    OR has_table_privilege('anon','vault.decrypted_secrets','SELECT')
+    OR has_table_privilege('authenticated','vault.decrypted_secrets','SELECT') THEN
+  RAISE EXCEPTION 'Cleanup credentials could be readable by browser roles; review access without blindly changing permissions';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM cron.job WHERE jobname='s24-job-ad-file-cleanup' AND active) THEN
   RAISE EXCEPTION 'Deletion requires an active service cleanup schedule';
  END IF;

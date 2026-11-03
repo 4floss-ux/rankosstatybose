@@ -16,6 +16,7 @@ Deno.serve(async req=>{
    if(authorization!==`Bearer ${service}`)return reply({error:'Nėra teisių.'},403);
    await runCleanup(admin);return reply({ok:true});
   }
+  if(body?.action && body.action!=='delete')return reply({error:'Netinkamas veiksmas.'},400);
   if(!/^Bearer\s+\S+$/i.test(authorization))return reply({error:'Turite būti prisijungę.'},401);
   const adId=String(body?.adId||'');
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adId))return reply({error:'Netinkamas skelbimas.'},400);

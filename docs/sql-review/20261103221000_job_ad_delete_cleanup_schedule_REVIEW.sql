@@ -12,6 +12,15 @@ BEGIN
     OR to_regclass('vault.decrypted_secrets') IS NULL THEN
   RAISE EXCEPTION 'Supabase Cron, pg_net and Vault must be available; configure securely before enabling deletion';
  END IF;
+ IF to_regclass('net.http_request_queue') IS NULL OR to_regclass('vault.decrypted_secrets') IS NULL THEN
+  RAISE EXCEPTION 'Private cleanup configuration tables are required';
+ END IF;
+ IF has_table_privilege('anon','net.http_request_queue','SELECT')
+    OR has_table_privilege('authenticated','net.http_request_queue','SELECT')
+    OR has_table_privilege('anon','vault.decrypted_secrets','SELECT')
+    OR has_table_privilege('authenticated','vault.decrypted_secrets','SELECT') THEN
+  RAISE EXCEPTION 'Cleanup credentials could be readable by browser roles; review access without blindly changing permissions';
+ END IF;
  IF EXISTS(SELECT 1 FROM cron.job WHERE jobname='s24-job-ad-file-cleanup') THEN
   RAISE EXCEPTION 'Cleanup schedule already exists; inspect instead of overwriting';
  END IF;

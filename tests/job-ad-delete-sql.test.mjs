@@ -43,13 +43,16 @@ test('permanent advert deletion proposal in synthetic PostgreSQL',async t=>{
    await assert.rejects(attempt(activation),/schedule missing/);
    await db.exec(`CREATE SCHEMA cron;CREATE TABLE cron.job(jobname text,active boolean,command text);
     CREATE FUNCTION cron.schedule(n text,s text,c text) RETURNS bigint LANGUAGE plpgsql AS $$BEGIN INSERT INTO cron.job VALUES(n,true,c);RETURN 1;END$$;
-    CREATE SCHEMA net;CREATE FUNCTION net.http_post(text,jsonb,jsonb,jsonb,integer) RETURNS bigint LANGUAGE sql AS $$SELECT 1::bigint$$;
+    CREATE SCHEMA net;CREATE TABLE net.http_request_queue(headers jsonb);CREATE FUNCTION net.http_post(text,jsonb,jsonb,jsonb,integer) RETURNS bigint LANGUAGE sql AS $$SELECT 1::bigint$$;
     CREATE SCHEMA vault;CREATE TABLE vault.decrypted_secrets(name text,decrypted_secret text);
     INSERT INTO vault.decrypted_secrets VALUES('job_ad_cleanup_url','https://synthetic.supabase.co/functions/v1/job-ad-delete'),('job_ad_cleanup_service_key','synthetic-service-key-for-offline-test');`);
    const scheduler=await readFile(new URL('../docs/sql-review/20261103221000_job_ad_delete_cleanup_schedule_REVIEW.sql',import.meta.url),'utf8');
    await db.exec(scheduler);await assert.rejects(attempt(scheduler),/already exists/);
    const command=(await db.query('SELECT command FROM cron.job')).rows[0].command;
    assert.doesNotMatch(command,/synthetic-service-key-for-offline-test/);
+   await db.exec('GRANT SELECT ON net.http_request_queue TO authenticated');
+   await assert.rejects(attempt(activation),/readable by browser roles/);
+   await db.exec('REVOKE SELECT ON net.http_request_queue FROM authenticated');
    await db.exec(activation);
    assert.equal((await db.query('SELECT public.job_ad_deletion_available($1) AS x',[id(10)])).rows[0].x,true);
   });
