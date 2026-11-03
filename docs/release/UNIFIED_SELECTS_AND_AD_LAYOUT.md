@@ -21,12 +21,15 @@ Business Pro mėnesinės kvotos webhook integracija vis dar neįdiegta. Šis UI 
 
 Main / redesign nejungiamos; produkcijos Maintenance paliekamas ON. Atskirai atnaujinant esamą redesign peržiūrą išsaugomas jos atviras testavimo režimas, o ne perkeliamas į produkcinį deployment. Hire prieigos / sesijos ir duomenų bazė nekeičiamos.
 
+
+Tikro lietimo pataisa papildomai patikrinta 390 px touch režimu: pasirinkimas tap gestu ir sąrašo slinkimas pirštu per Chromium CDP, ne vien programinis scrollTop. Fokuso valdymas neblokuoja pointerdown lietimo įvykių.
+
 ## Įdiegimas
 
-Cloudflare valdymo API patvirtinta `2026-11-03T22:22:43.224847+00:00`:
+Cloudflare valdymo API patvirtinta `2026-11-03T22:33:35.775907+00:00`:
 
-- Statybos24.lt: įrašas `6187b5b`, šaka `release/unified-ui-maintenance`, versija `aeb6910e-fecb-4713-8685-241fbab7b3d6`, 100 %, Maintenance ON.
-- Redesign alias: `700764f`, versija `3083806a-6451-49eb-98fb-e9137cc919e5`, jo ankstesnis testavimo režimas OFF paliktas; ši versija neaktyvuota produkciniam srautui.
-- Hire: `700764f`, versija `7bd042e9-4e86-4669-aae3-3ffdd3fc5c80`, 100 %, ankstesnis režimas OFF paliktas. Worker/routing/sesijų kodas nekeistas nuo patvirtinto `bb27102`.
+- Statybos24.lt: `d0a6e9d`, šaka `release/unified-ui-maintenance`, versija `75983651-3a43-4491-b55f-f514f3e09924`, 100 %, Maintenance ON.
+- Redesign alias: `2829625`, versija `d4065f35-d5c5-4c6d-a574-eff07af99514`, ankstesnis testavimo režimas OFF išsaugotas; šis variantas neaktyvuotas produkciniam srautui.
+- Hire: `2829625`, versija `0b2fd960-732d-44ee-a5bd-971650f27eb4`, 100 %, ankstesnis režimas OFF išsaugotas. Worker/routing/sesijų kodas nekeistas nuo patvirtinto `bb27102`.
 
-Tiesioginis automatinis HTTP kreipimasis į redesign grąžino 403, todėl tikro nuotolinio vaizdo / prisijungimo neteigiu. Alias ir aktyvios versijos patvirtinti valdymo API, išvaizda bei veiksmai tikrinti vietinėje naršyklėje su sintetiniais duomenimis. Supabase schemų, įrašų, leidimų ir Stripe šiame pakeitime neliečiau.
+Tiesioginis automatinis HTTP kreipimasis į redesign grąžino 403, todėl tikro nuotolinio vaizdo / prisijungimo neteigiu. Alias ir aktyvios versijos patvirtinti valdymo API; išvaizda, formų veiksmai ir touch gestai tikrinti vietinėje naršyklėje su sintetiniais duomenimis. Supabase schemų, įrašų, leidimų ir Stripe šiame pakeitime neliečiau.
