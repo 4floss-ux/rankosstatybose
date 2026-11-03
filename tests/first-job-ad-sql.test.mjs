@@ -43,7 +43,7 @@ test('First free publication without monthly-quota SQL',async t=>{
   });
   await t.test('existing publisher is ineligible when campaign is enabled',async()=>{
    await actor(1);await create(10);
-   await db.exec('UPDATE app_private.job_ad_first_free_policy SET enabled=true');
+   await db.exec(await readFile(new URL('../docs/sql-review/20261103203000_first_job_ad_free_ACTIVATE_REVIEW.sql',import.meta.url),'utf8'));
    assert.equal((await offer(10)).first_free_available,false);
   });
   await t.test('Basic and Business first publication is free once, never for extensions',async()=>{

@@ -28,3 +28,9 @@ Paruošta peržiūrai, neįdiegta. `20261103200000_first_job_ad_free_REVIEW.sql`
 `tests/ad_quota_frontend.py`: sintetinis pirmas nemokamas pasiūlymas telefone / kompiuteryje, jokio realaus checkout.
 
 Tikra Supabase integracija ir istorija nepatikrinta šioje sesijoje. Produkcijoje niekas neįjungta.
+
+## Savininko leidimas ir prieigos riba
+
+Savininkas pokalbyje suteikė leidimą paskelbti, diegti ir išbandyti pakeitimus su jo testinėmis paskyromis. Pakartotinio leidimo įprastiems šio darbo veiksmams nereikia. Čia nėra Supabase valdymo įrankio ar prisijungusios testinės naršyklės; tai prieigos, ne leidimo kliūtis. Tikras mokėjimas, kitų klientų duomenų keitimas ir viešas atidarymas neįtraukiami.
+
+Tikrinančiam asmeniui: atlikti preflight ir istorijos vertinimą, palyginti bei pritaikyti atnaujintą `20261103200000_first_job_ad_free_REVIEW.sql`; įdiegus pasiūlymo frontendą pritaikyti atskirą `20261103203000_first_job_ad_free_ACTIVATE_REVIEW.sql`. Šis aktyvavimas nekeičia esamų skelbimų ar mokėjimų ir neįjungia mėnesinės kvotos. Atskirai patikrinti `job_ad_offer` tikros testinės paskyros kontekste, pirmą 0 € paskelbimą ir antrą mokamą pasiūlymą be Stripe checkout vykdymo. Vien lentelės sukūrimas dovanos neįjungia.
