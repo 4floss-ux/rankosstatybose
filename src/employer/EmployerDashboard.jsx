@@ -3469,6 +3469,9 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
     setInvitationStatuses({});
     setInvitationByWorker({});
     setCurrentJob(job);
+    // Tas pats darbas (pvz. ką tik sukurtas) nekeičia currentJob.id, todėl
+    // efektas nesuveiktų – darbo puslapį atidarome tiesiogiai.
+    setEmployerView("job");
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -4453,7 +4456,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   }, [employerView]);
   useEffect(() => {
     if (showJobForm) setEmployerView("new");
-    else setEmployerView((current) => (current === "new" ? (currentJob ? "active" : "overview") : current));
+    else setEmployerView((current) => (current === "new" ? (currentJob ? "job" : "overview") : current));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showJobForm]);
   useEffect(() => {

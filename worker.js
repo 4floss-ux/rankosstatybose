@@ -340,7 +340,7 @@ async function handle(request, env) {
     if (url.pathname === "/api/status") {
       const on = maintenanceOn(env);
       const bypass = on && (await hasAdminBypass(request, env));
-      return jsonResponse({ ok: true, maintenance: on && !bypass, bypass });
+      return jsonResponse({ ok: true, maintenance: on && !bypass, bypass, release: "s24-redesign-20261102" });
     }
     if (url.pathname === "/__admin/login") {
       return maintenanceOn(env) ? adminLogin(request, env) : redirect("/");

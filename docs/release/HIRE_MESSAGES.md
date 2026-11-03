@@ -2,6 +2,14 @@
 
 Branch: `feat/hire-company-messages`. Existing uncommitted files preserved.
 
+Synchronization: integrated `origin/main` at `043916b`, which also contains
+`origin/redesign` at `f419b42`; their file trees match at this check. Existing
+company-code, administrator billing labels and worker/employer E2E fixes retained.
+Neither target branch was modified. The owner's independent reviewer approved
+the `dac4d6c` SQL against the actual schema and deletion RPC. The proposal remains
+unapplied by this agent; live two-way messaging remains unverified and NO-GO for
+release until that test passes after separately approved database/deployment work.
+
 The administrator's company request and the employer portal share a text-only
 conversation section using existing card, field and button styles. No attachments,
 email notifications, read receipts or changes to existing recruitment workflows.

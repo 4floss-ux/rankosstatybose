@@ -1694,6 +1694,12 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
       }
       setConfirmInvitation(null);
       setCommitmentChecked(false);
+      // Atidarytas kvietimo puslapis rodytų seną „Priimti darbą“ būseną.
+      setWorkdayDetailsTarget((current) => {
+        if (!current || !isInvitationItem(current) || current.id !== invitationId) return current;
+        workerJobReturnView.current = status === "accepted" ? "jobs" : "invites";
+        return null;
+      });
 
       setNotice(
         status === "accepted"
@@ -3216,6 +3222,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
             onChat={openWorkerGroupConversation}
             pendingInvites={invitations.length}
             actionCount={workerRequiredActionCount}
+            actionOnlyAvailability={needsAvailabilityConfirm && workerActionWorkdays.length === 0}
             unreadMessages={workerUnreadMessages.length}
             metrics={metrics}
             workdays={workdays}

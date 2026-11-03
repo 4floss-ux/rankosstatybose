@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/config.js";
+import { effectivePlanKey } from "../../lib/effectivePlan.js";
 import { Svg } from "../Shell.jsx";
 import { Empty, Paged, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 import { AwardSvg } from "../worker/WorkerProfileEditor.jsx";
@@ -11,6 +13,11 @@ const ago = (iso) => { const d = daysAgo(iso); return d == null ? "—" : d <= 0
 const dt = (iso) => (iso ? new Date(iso).toLocaleDateString("lt-LT") : "—");
 const num = (v, d = 1) => (v == null ? "—" : Number(v).toFixed(d).replace(".", ","));
 const PLAN = { basic: "Basic", business: "Business", business_pro: "Business Pro" };
+// Administratoriaus santraukoje nėra grace/pending laukų. Rodome tik patikrintą pilną planą.
+const planLabel = (c, planRows) => {
+  const full = planRows?.[c.company_id];
+  return full ? PLAN[effectivePlanKey(full)] || "Basic" : "—";
+};
 
 function Head({ title, lead, extra }) {
   return <div className="head"><div><h1>{title}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>{extra}</div>;
@@ -90,6 +97,29 @@ export function AdminWorkersList({ workers, selfId, isSuspended, isRestricted, o
 /* ---------- Darbdaviai ---------- */
 export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onVerify, onMessage, onEdit, onSuspend, onDelete, onLoginAs }) {
   const [q, setQ] = useState(""); const [f, setF] = useState("all"); const [open, setOpen] = useState(null);
+  const [planRows, setPlanRows] = useState(null);
+  const [planError, setPlanError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlanRows(null);
+    setPlanError(false);
+    const ids = employers.map((c) => c.company_id).filter(Boolean);
+    if (!ids.length) { setPlanRows({}); return () => { cancelled = true; }; }
+    // Tik administratoriaus sąraše esančios įmonės; READ-ONLY, be DB migracijų.
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("companies")
+          .select("id,plan_key,subscription_status,plan_current_period_end,payment_grace_until,pending_plan_key,pending_plan_effective_at")
+          .in("id", ids);
+        if (error) throw error;
+        if (!cancelled) setPlanRows(Object.fromEntries((data || []).map((c) => [c.id, c])));
+      } catch {
+        if (!cancelled) { setPlanRows({}); setPlanError(true); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [employers]);
   const key = (c) => c.company_id || c.owner_id;
   const rows = employers.filter((c) => (f === "all" || (f === "unver" && !c.is_verified) || (f === "susp" && isSuspended(c))) && (!q.trim() || lc(`${c.company_name} ${c.company_code} ${c.city} ${c.display_name} ${c.email}`).includes(lc(q.trim()))));
   const status = (c) => isSuspended(c) ? <Pill tone="red">Suspenduotas</Pill> : !c.is_verified ? <Pill tone="orange">Nepatvirtinta</Pill> : <Pill tone="green">Patvirtinta</Pill>;
@@ -100,12 +130,13 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
   return (
     <>
       <Head title="Darbdaviai ir įmonės" lead={`${employers.length} darbdaviai`} />
+      {planError ? <div className="alert">Nepavyko patikrinti galiojančių planų. Atnaujinkite puslapį.</div> : null}
       <div className="abar2"><Search value={q} onChange={setQ} placeholder="Pavadinimas, kodas, miestas" />
         <Chips value={f} onChange={setF} options={[["all", "Visi", employers.length], ["unver", "Laukia patvirtinimo", employers.filter((x) => !x.is_verified).length], ["susp", "Suspenduoti", employers.filter(isSuspended).length]]} /></div>
       <Table cls="ae" head={["Darbdavys", "Planas", "Darbų", "Patikimumas", "Būsena", ""]} rows={rows} render={(x) => (
         <div className="atr" key={key(x)}>
           <span className="acell-nm"><Av name={x.company_name} co /><span><b>{x.company_name || "Įmonė"}</b><small>{x.company_code ? `Įmonė · ${x.company_code}` : "Darbdavys"} · {x.city || "Miestas nenurodytas"}</small></span></span>
-          <span data-l="Planas">{PLAN[x.plan_key] || "Basic"}</span>
+          <span data-l="Planas">{planLabel(x, planRows)}</span>
           <span data-l="Darbų">{Number(x.jobs_count || 0)}</span>
           <span data-l="Patikimumas"><b>{Number(x.reliability_rate ?? 100).toFixed(0)}</b>/100</span>
           <span>{status(x)}</span>
@@ -116,7 +147,7 @@ export function AdminEmployersList({ employers, selfId, isSuspended, busyId, onV
         <Modal eyebrow="Įmonė" title={c.company_name || "Įmonė"} sub={`${c.company_code ? `Įmonės kodas ${c.company_code} · ` : ""}${c.city || "Miestas nenurodytas"} · registr. ${dt(c.account_created_at)}`} onClose={close}>
           <div className="kv">
             <div><small>Savininkas</small><b>{c.display_name || "—"}</b></div>
-            <div><small>Planas</small><b>{PLAN[c.plan_key] || "Basic"}</b></div>
+            <div><small>Planas</small><b>{planLabel(c, planRows)}</b></div>
             <div><small>El. paštas</small><b>{c.email || "—"}</b></div>
             <div><small>Telefonas</small><b>{c.phone || "—"}</b></div>
             <div><small>Darbų</small><b>{Number(c.jobs_count || 0)}</b></div>

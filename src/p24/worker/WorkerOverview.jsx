@@ -39,7 +39,7 @@ function RingCard({ open, onToggle, label, value, max, color, unit, sub }) {
 
 export function WorkerOverview({
   todayItem, todayIsToday, canCheckIn, onArrive, onDetails, onChat,
-  pendingInvites, actionCount, unreadMessages, metrics, workdays, recentRatings,
+  pendingInvites, actionCount, actionOnlyAvailability, unreadMessages, metrics, workdays, recentRatings,
   onGo, onOpenMessages, onReliabilityRules,
 }) {
   const [openPanel, setOpenPanel] = useState(null);
@@ -97,7 +97,7 @@ export function WorkerOverview({
         <div className="ntiles">
           {tile("mail", "Nauji kvietimai", pendingInvites, pendingInvites ? "Laukia jūsų atsakymo" : "Naujų kvietimų nėra", () => onGo("invites"), pendingInvites)}
           {tile("euro", "Uždirbta šį mėnesį", `≈ ${monthEarn} €`, `${num(monthHours)} val. · ${thisMonth.length} ${thisMonth.length === 1 ? "darbas" : "darbai"}`, () => toggle("hours"), false)}
-          {tile("check", "Reikia veiksmo", actionCount, actionCount ? "Atvykimas ar dienos uždarymas" : "Veiksmų nėra", () => onGo("jobs"), actionCount)}
+          {tile("check", "Reikia veiksmo", actionCount, !actionCount ? "Veiksmų nėra" : actionOnlyAvailability ? "Patvirtinkite darbo grafiką" : "Atvykimas ar dienos uždarymas", () => onGo(actionOnlyAvailability ? "schedule" : "jobs"), actionCount)}
           {tile("chat", "Naujos žinutės", unreadMessages, unreadMessages ? "Atidarykite pokalbį" : "Visos perskaitytos", onOpenMessages, unreadMessages)}
         </div>
       </section>

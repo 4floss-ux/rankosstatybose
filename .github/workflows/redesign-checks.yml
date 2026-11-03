@@ -25,6 +25,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Check company-code validation
         run: node tests/company-code.test.mjs
+      - name: Check E2E launch regressions
+        run: node tests/e2e-launch-fixes.test.mjs
       - name: Check administrator session handling
         run: node --experimental-vm-modules tests/impersonation.test.mjs
       - name: Production bundle with no live credentials
