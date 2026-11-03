@@ -36,6 +36,8 @@ jobs:
 
       - name: Check hire host and legacy routes
         run: node tests/hire-routes.test.mjs
+      - name: Check hire message requests and validation
+        run: node tests/hire-messages.test.mjs
       - name: Independent hire bundle with no live credentials
         env:
           VITE_SUPABASE_URL: ""

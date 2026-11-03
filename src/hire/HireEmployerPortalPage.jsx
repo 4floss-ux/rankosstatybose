@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HireMessages } from "./HireMessages.jsx";
 import { supabase } from "../lib/config.js";
 import { AppBootLoader } from "../ui/AppBootLoader.jsx";
 import { Svg } from "../p24/Shell.jsx";
@@ -724,6 +725,7 @@ export function HireEmployerPortalPage() {
         <main className="h-in hp-main">
           {error && screen !== "new" && !portal.account?.mustChangePassword ? <div className="alert" role="alert"><div><b>{error}</b></div></div> : null}
           {screen === "new" ? needFormView : screen === "need" && selectedNeed ? needView : home}
+          {!portal.account?.mustChangePassword ? <HireMessages sessionToken={token} lang={lang} /> : null}
         </main>
       </div>
       <NoticeToast notice={notice} onClear={() => setNotice("")} />

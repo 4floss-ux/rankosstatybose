@@ -1,4 +1,5 @@
 import { HIRE_ORIGIN } from "../../lib/hireRoutes.js";
+import { HireMessages } from "../../hire/HireMessages.jsx";
 import { useState } from "react";
 import "../hire.css";
 import { Svg } from "../Shell.jsx";
@@ -156,6 +157,7 @@ function ForeignHireRequest({ r, h }) {
       </div>
 
       <aside className="jd-side">
+        {r.employer_account_id ? <HireMessages key={r.request_id} requestId={r.request_id} /> : null}
         <section className="card"><h2>Kontaktas</h2>
           {kv([["Kontaktinis asmuo", [r.brief_company_details?.contactName || r.contact_name, r.brief_company_details?.jobTitle || r.contact_job_title].filter(Boolean).join(" · ")], ["El. paštas", <a key="m" href={`mailto:${r.brief_company_details?.businessEmail || r.business_email}`}>{r.brief_company_details?.businessEmail || r.business_email || "—"}</a>], ["Telefonas", r.phone || "—"], ["Portalo prieiga", r.employer_account_id ? (r.employer_login_id || "Sukurta") : "Nesukurta"]], true)}
           <a className="btn sm" href={mailHref}><Svg name="mail" size={14} />Rašyti el. paštu</a>
