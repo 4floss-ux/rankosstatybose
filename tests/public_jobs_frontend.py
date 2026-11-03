@@ -37,9 +37,9 @@ with sync_playwright() as p:
   page.route('**/*',route_request)
   page.goto('http://localhost/darbo-skelbimai')
   for css in ['src/p24/p24.css','src/public/publicJobAds.css']:page.add_style_tag(path=str(repo/css))
-  page.add_script_tag(content=bundle)
+  page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
   page.locator('.job').nth(1).wait_for();assert page.locator('.job').count()==2
-  page.locator('.adcity select').select_option('Vilnius');page.wait_for_function("document.querySelectorAll('.job').length===1")
+  page.get_by_role('combobox',name='Miestas',exact=True).click();page.screenshot(path=f'/tmp/s24-public-city-menu-{width}.png');page.get_by_role('option',name='Vilnius',exact=True).click();page.wait_for_function("document.querySelectorAll('.job').length===1")
   href=page.locator('.job').get_attribute('href');assert href.endswith(window_id:='20000000-0000-4000-8000-000000000100')
   page.evaluate("window.mount({adId:window.ads[0].id})")
   page.get_by_role('button',name='Kandidatuoti',exact=True).click();assert page.evaluate('window.loginCount')==1

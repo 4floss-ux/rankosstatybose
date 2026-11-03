@@ -2,7 +2,7 @@ import { Svg } from "./Shell.jsx";
 const mapLink = address => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
 // The approved public/worker advert content, also shown to its employer.
-export function JobAdContent({ ad }) {
+export function JobAdContent({ ad, children }) {
   return (
 <div className="jd-main">
           <section className="card jd-sec"><h2>Apie darbą</h2><div className="jd-desc">{String(ad.description || "").split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</div></section>
@@ -17,6 +17,7 @@ export function JobAdContent({ ad }) {
               {ad.requirements?.length ? <section className="card jd-sec"><h2>Reikalavimai</h2><ul className="adlist">{ad.requirements.map((r, i) => <li key={i}><Svg name="check" size={15} width={2.4} />{r}</li>)}</ul></section> : null}
               {ad.offers?.length ? <section className="card jd-sec"><h2>Siūlome</h2><ul className="adlist">{ad.offers.map((r, i) => <li key={i}><Svg name="check" size={15} width={2.4} />{r}</li>)}</ul></section> : null}
             </div>) : null}
+          {children}
         </div>
   );
 }

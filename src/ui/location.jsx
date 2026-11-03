@@ -1,3 +1,4 @@
+import "./SiteSelect.css";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { SilentLoader } from "./brand.jsx";
@@ -284,6 +285,7 @@ export function CityAutocomplete({
       {open && !disabled && (
         <div
           role="listbox"
+          className="s24-select-menu"
           style={{
             position: "absolute",
             zIndex: 8001,
@@ -293,9 +295,9 @@ export function CityAutocomplete({
             maxHeight: 270,
             overflowY: "auto",
             background: "#fff",
-            border: "1px solid #dfe7ed",
-            borderRadius: 12,
-            boxShadow: "0 14px 35px rgba(34,38,49,.14)",
+            border: "1px solid #d7dbea",
+            borderRadius: 6,
+            boxShadow: "0 12px 32px rgba(34,38,49,.14)",
             padding: 5,
           }}
         >
@@ -305,6 +307,7 @@ export function CityAutocomplete({
                 key={city.city_key}
                 type="button"
                 role="option"
+                className="s24-select-option"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onChange(city.name);
@@ -320,7 +323,7 @@ export function CityAutocomplete({
                       : "#fff",
                   color: "#222631",
                   textAlign: "left",
-                  borderRadius: 8,
+                  borderRadius: 4,
                   padding: "10px 11px",
                   font: "inherit",
                   fontWeight: 600,
@@ -461,6 +464,7 @@ export function AddressAutocomplete({
       {open && !disabled && cleanValue.length >= 3 && selectedAddress?.label !== cleanValue && (
         <div
           role="listbox"
+          className="s24-select-menu"
           style={{
             position: "absolute",
             zIndex: 8101,
@@ -470,9 +474,9 @@ export function AddressAutocomplete({
             maxHeight: 280,
             overflowY: "auto",
             background: "#fff",
-            border: "1px solid #dfe7ed",
-            borderRadius: 12,
-            boxShadow: "0 14px 35px rgba(34,38,49,.16)",
+            border: "1px solid #d7dbea",
+            borderRadius: 6,
+            boxShadow: "0 12px 32px rgba(34,38,49,.14)",
             padding: 5,
           }}
         >
@@ -484,6 +488,7 @@ export function AddressAutocomplete({
                 key={`${row.label}-${row.latitude}-${row.longitude}`}
                 type="button"
                 role="option"
+                className="s24-select-option"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   onSelect({
@@ -501,7 +506,7 @@ export function AddressAutocomplete({
                   background: "#fff",
                   color: "#222631",
                   textAlign: "left",
-                  borderRadius: 8,
+                  borderRadius: 4,
                   padding: "10px 11px",
                   font: "inherit",
                   fontWeight: 650,

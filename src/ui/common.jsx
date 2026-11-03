@@ -1,3 +1,4 @@
+import { SiteSelect } from "./SiteSelect.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import { P24Modal } from "../p24/ui.jsx";
 
@@ -148,82 +149,10 @@ export function isValidLithuanianMobilePhone(value) {
 }
 
 export function RoundedSelect({ value, options, disabled, onChange, className = "ed-select", ariaLabel = "Pasirinkimas", buttonRef = null }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
-  const triggerRef = useRef(null);
-  const selected = options.find((option) => option.value === value);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event) => {
-      if (!containerRef.current?.contains(event.target)) setOpen(false);
-    };
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={containerRef} style={{ position: "relative", width: "100%", minWidth: 0 }}>
-      <button
-        ref={(node) => {
-          triggerRef.current = node;
-          if (typeof buttonRef === "function") buttonRef(node);
-          else if (buttonRef) buttonRef.current = node;
-        }}
-        type="button"
-        className={className}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            setOpen(true);
-            requestAnimationFrame(() => containerRef.current?.querySelector('[role="option"]')?.focus());
-          }
-        }}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", textAlign: "left", background: "#fff", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer" }}
-      >
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected?.label || "Pasirinkite"}</span>
-        <span aria-hidden="true" style={{ marginLeft: 12 }}>⌄</span>
-      </button>
-      {open && !disabled && (
-        <div role="listbox" aria-label={ariaLabel} style={{ position: "absolute", zIndex: 50, top: "calc(100% + 6px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto", padding: 5, background: "#fff", border: "1px solid #dfe7ed", borderRadius: 12, boxShadow: "0 14px 35px rgba(34,38,49,.14)" }}>
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="option"
-              aria-selected={option.value === value}
-              onClick={() => { onChange(option.value); setOpen(false); triggerRef.current?.focus(); }}
-              onKeyDown={(event) => {
-                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-                event.preventDefault();
-                const buttons = [...containerRef.current.querySelectorAll('[role="option"]')];
-                const next = buttons.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1);
-                buttons[(next + buttons.length) % buttons.length]?.focus();
-              }}
-              style={{ display: "block", width: "100%", padding: "10px 12px", textAlign: "left", border: 0, borderRadius: 8, background: option.value === value ? "#f0edf7" : "#fff", color: "#222631", font: "inherit", cursor: "pointer" }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <SiteSelect value={value} disabled={disabled} className={className} ariaLabel={ariaLabel} buttonRef={buttonRef}
+    onChange={event => onChange(options.find(option => String(option.value) === event.target.value)?.value ?? event.target.value)}>
+    {options.map(option => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
+  </SiteSelect>;
 }
 
 export function parseDateValue(value) {

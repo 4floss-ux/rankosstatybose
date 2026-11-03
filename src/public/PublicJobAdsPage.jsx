@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { PUBLIC_JOB_ADS_PATH, publicJobAdPath, publicJobRoute } from "../lib/publicJobAds.js";
@@ -70,12 +71,12 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
     <main className="public-ads-width public-ads-main">
       {route.adId || route.invalid ? <a className="linkbtn" href={PUBLIC_JOB_ADS_PATH}>← Visi darbo skelbimai</a> : <>
         <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Darbas statybose. Skelbimus peržiūrėkite laisvai, o kandidatuokite su darbuotojo paskyra.</p></div></div>
-        <label className="field adcity"><span>Miestas</span><select value={city} onChange={event => {
+        <label className="field adcity"><span>Miestas</span><SiteSelect value={city} onChange={event => {
           setCity(event.target.value); setPage(0);
           const url = new URL(window.location.href);
           if (event.target.value) url.searchParams.set("miestas", event.target.value); else url.searchParams.delete("miestas");
           window.history.replaceState(null, "", url.pathname + url.search);
-        }}><option value="">Visi miestai</option>{[...new Set([...cities, city].filter(Boolean))].sort((a,b) => a.localeCompare(b,"lt")).map(value => <option key={value}>{value}</option>)}</select></label>
+        }}><option value="">Visi miestai</option>{[...new Set([...cities, city].filter(Boolean))].sort((a,b) => a.localeCompare(b,"lt")).map(value => <option key={value}>{value}</option>)}</SiteSelect></label>
       </>}
       {accountMessage ? <p className="ferr" role="alert">{accountMessage}</p> : null}
       {loading ? <p role="status">Įkeliama...</p> : error ? <section className="card"><p className="ferr" role="alert">{error}</p><button className="btn" type="button" onClick={() => setRetry(value => value + 1)}>Bandyti dar kartą</button></section>

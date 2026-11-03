@@ -1,3 +1,4 @@
+import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
 import { supabase } from "../../lib/config.js";
@@ -149,8 +150,8 @@ function AdForm({ company, isPro, firstFree, quotaEnabled, pricingBusy, ad, onCa
         <div className="jd-main">
           {sec(1, "Pareigos ir vieta", <div className="form">
             <label className="field wide">Pareigos *<input value={f.title} maxLength={120} onChange={set("title")} placeholder="Pvz. Statybų darbininkas" /></label>
-            <label className="field">Miestas *<select value={f.city} onChange={set("city")}>{cities.map((c) => <option key={c}>{c}</option>)}</select></label>
-            <label className="field">Sutartis<select value={f.contract} onChange={set("contract")}>{contracts.map((c) => <option key={c}>{c}</option>)}</select></label>
+            <label className="field">Miestas *<SiteSelect value={f.city} onChange={set("city")}>{cities.map((c) => <option key={c}>{c}</option>)}</SiteSelect></label>
+            <label className="field">Sutartis<SiteSelect value={f.contract} onChange={set("contract")}>{contracts.map((c) => <option key={c}>{c}</option>)}</SiteSelect></label>
           </div>)}
           {sec(2, "Atlyginimas", <div className="form">
             <label className="field">Nuo *<span className="inpx"><input inputMode="numeric" value={f.s1} onChange={set("s1")} placeholder="1600" /><em>€ / mėn.</em></span></label>
@@ -220,7 +221,7 @@ function InterviewModal({ ad, cand, onClose, onDone }) {
           <label><input type="radio" name="iv-how" checked={how === "phone"} onChange={() => setHow("phone")} /><span>Telefonu</span></label>
         </div></div>
         <div className="pair2"><label className="field">Data<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label className="field">Laikas<select value={time} onChange={(e) => setTime(e.target.value)}>{times.map((t) => <option key={t}>{t}</option>)}</select></label></div>
+          <label className="field">Laikas<SiteSelect value={time} onChange={(e) => setTime(e.target.value)}>{times.map((t) => <option key={t}>{t}</option>)}</SiteSelect></label></div>
         {how === "live" ? <label className="field iv-addr">Adresas<input value={addr} maxLength={200} onChange={(e) => setAddr(e.target.value)} placeholder="Pvz. Ozo g. 25, Vilnius" /></label>
           : <p className="small muted iv-ph" style={{ margin: 0 }}>Paskambinsite kandidatui nurodytu laiku – jo telefoną matysite, kai jis patvirtins pokalbį.</p>}
         <label className="field">Žinutė (nebūtina)<textarea value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="Pvz. Pasiimkite asmens dokumentą." /></label>
@@ -377,7 +378,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
   const savers = ad.savers || [];
   return (
     <>
-      <header className="jd-hero"><div className="jd-titlerow"><h1>{up(ad.title)}</h1>{statusPill(ad)}{ad.live ? <ShareJobAdButton ad={ad} /> : null}</div>
+      <header className="jd-hero"><div className="jd-titlerow"><h1>{up(ad.title)}</h1>{statusPill(ad)}</div>
         <div className="jd-meta"><span><Svg name="pin" size={16} />{ad.city}</span><span><Svg name="euro" size={16} />{salTxt(ad)} {salKind(ad)} / mėn.</span>{ad.contract_type ? <span><Svg name="file" size={16} />{ad.contract_type}</span> : null}{ad.schedule ? <span><Svg name="clock" size={16} />{ad.schedule}</span> : null}</div></header>
       {err && <p className="ferr" role="alert">{err}</p>}
       {ad.status === "pending_payment" ? (
@@ -386,23 +387,12 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
           <button className="btn primary" type="button" disabled={busy === "pay"} onClick={pay}>{busy === "pay" ? "Jungiamasi prie Stripe..." : `Apmokėti ${FEE}`}</button>
         </div></section>) : null}
       <div className="jd-grid ead-detail">
-        <JobAdContent ad={ad} />
-        <aside className="jd-side">
-          <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
-          <section className="card jd-act" aria-label="Skelbimo valdymas">
-            <h2>Skelbimo valdymas</h2>
-            <button className="btn jd-wide" type="button" disabled={busy === "delete"} onClick={() => onEdit(ad)}><Svg name="edit" size={16} />Redaguoti skelbimą</button>
-            {ad.status !== "pending_payment" ? <button className="btn jd-wide" type="button" disabled={busy === "delete" || pricingBusy} onClick={() => setExt(true)}><Svg name="cal" size={16} />Pratęsti skelbimą</button> : null}
-            <button className="btn danger jd-wide" type="button" disabled={!deleteReady || busy === "delete" || ad.payment_pending} onClick={removeAd}>{busy === "delete" ? "Trinama..." : "Ištrinti skelbimą"}</button>
-            <p className="small muted" style={{ margin: 0 }}>{!deleteReady ? "Skelbimo ištrynimas laikinai nepasiekiamas." : ad.payment_pending ? "Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas." : "Ištrynus skelbimo ir kandidatūrų atkurti negalėsite. Nemokamo skelbimo dovana neatsinaujins."}</p>
-          </section>
-        </aside>
-      </div>
+        <JobAdContent ad={ad}>
       <section className="card"><header><div><h2 className="ead-section-title">Kandidatai <span className="cnt">{cands.filter((c) => c.status !== "interview").length}</span></h2></div></header>
         <div className="chips" role="group" aria-label="Filtras">{[["all", "Visi"], ["rel", "Patikimumas 95+"], ["docs", "Turi pažymėjimų"]].map(([k, t]) => <button key={k} type="button" className="chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{t}</button>)}</div>
         <div className="list">{list.length ? list.map(row) : <Empty title={filter === "all" ? "Naujų kandidatų nėra" : "Pagal šį filtrą kandidatų nėra"} sub={filter === "all" ? "Pakviestieji pokalbiui rodomi žemiau." : "Pasirinkite kitą filtrą."} icon="people" />}</div>
       </section>
-      <div className="adcols ead-secondary">
+      <div className="ead-secondary">
       <section className="card ivsec"><header><div><h2 className="ead-section-title"><Svg name="cal" size={17} width={2.2} /><span>Pakviesti pokalbiui</span><span className="cnt">{ivs.length}</span></h2></div></header>
         <div className="list">{ivs.length ? ivs.map(row) : <Empty title="Pokalbių dar nesuplanavote" sub="Prie kandidato spauskite „Kviesti pokalbiui“." icon="cal" />}</div></section>
       <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on /><span>Įsiminė skelbimą</span><span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
@@ -413,6 +403,19 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
               : ad.live ? <button className="btn sm" type="button" disabled={busy === "n" + w.worker_id} onClick={() => nudge(w)}><Svg name="send" size={15} />Pakviesti kandidatuoti</button> : null}
               <button className="btn sm" type="button" onClick={() => onWorkerProfile(w)}><Svg name="user" size={15} />Profilis</button></div>
           </div>)) : <Empty title="Skelbimo dar niekas neįsiminė" sub="Čia matysite darbuotojus, kuriuos galėsite pakviesti kandidatuoti." icon="people" />}</div></section>
+      </div>
+        </JobAdContent>
+        <aside className="jd-side">
+          <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
+          <section className="card jd-act" aria-label="Skelbimo valdymas">
+            <h2>Skelbimo valdymas</h2>
+            {ad.live ? <ShareJobAdButton ad={ad} className="btn jd-wide" /> : null}
+            <button className="btn jd-wide" type="button" disabled={busy === "delete"} onClick={() => onEdit(ad)}><Svg name="edit" size={16} />Redaguoti skelbimą</button>
+            {ad.status !== "pending_payment" ? <button className="btn jd-wide" type="button" disabled={busy === "delete" || pricingBusy} onClick={() => setExt(true)}><Svg name="cal" size={16} />Pratęsti skelbimą</button> : null}
+            <button className="btn danger jd-wide" type="button" disabled={!deleteReady || busy === "delete" || ad.payment_pending} onClick={removeAd}>{busy === "delete" ? "Trinama..." : "Ištrinti skelbimą"}</button>
+            <p className="small muted" style={{ margin: 0 }}>{!deleteReady ? "Skelbimo ištrynimas laikinai nepasiekiamas." : ad.payment_pending ? "Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas." : "Ištrynus skelbimo ir kandidatūrų atkurti negalėsite. Nemokamo skelbimo dovana neatsinaujins."}</p>
+          </section>
+        </aside>
       </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}

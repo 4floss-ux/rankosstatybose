@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/config.js";
 import { companyCodeEditError } from "../lib/companyCode.js";
@@ -3135,9 +3136,9 @@ export function AdminDashboard({
           <P24Modal eyebrow={eyebrow} title={actionDialog.name} onClose={() => setActionDialog(null)} busy={actionBusy}>
             {actionError ? <p className="ferr" role="alert" style={{ margin: 0 }}>{actionError}</p> : null}
             {susp ? (
-              <label className="field">Trukmė<select value={String(actionDays)} onChange={(e) => setActionDays(e.target.value)}>
+              <label className="field">Trukmė<SiteSelect value={String(actionDays)} onChange={(e) => setActionDays(e.target.value)}>
                 {[["7", "7 dienos"], ["14", "14 dienų"], ["30", "30 dienų"], ["3650", "Neterminuotai"]].concat([["7", ""], ["14", ""], ["30", ""], ["3650", ""]].some(([v]) => v === String(actionDays)) ? [] : [[String(actionDays), `${actionDays} d.`]]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select></label>
+              </SiteSelect></label>
             ) : null}
             {del ? <p className="small muted" style={{ margin: 0 }}>{t === "deleteAccount" ? "Bus ištrintas profilis, darbų istorija ir failai." : "Bus pašalintas darbas ir su juo susiję kvietimai, rezervacijos bei darbo dienų įrašai."} Atkurti negalima.</p> : null}
             <label className="field">{unsusp ? "Pastaba" : susp ? "Priežastis (matys naudotojas) *" : "Priežastis *"}<textarea value={actionReason} onChange={(e) => setActionReason(e.target.value)}

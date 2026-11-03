@@ -38,13 +38,17 @@ with sync_playwright() as p:
         page.set_content('<main class="p24" style="padding:16px"><div id="root"></div></main>')
         page.add_style_tag(path=str(repo/'src/p24/p24.css'))
         page.add_style_tag(path=str(repo/'src/p24/employer/EmployerPlans.css'))
-        page.add_script_tag(content=bundle)
+        page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
         section=page.get_by_role('region',name='Dabartinio plano informacija')
         section.wait_for()
         assert 'Business Pro' in section.inner_text()
         assert '2099' in section.inner_text()
         assert 'pratęsiama automatiškai' in section.inner_text()
         assert page.evaluate('window.actions')==[]
+        assert 'Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos' in page.locator('.pcards').inner_text()
+        assert '10 nemokamų' not in page.locator('.pcards').inner_text()
+        assert 'trumpalaikių darbo pasiūlymų' in page.locator('.pcards').text_content()
+
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
         current=page.locator('.plan-validity-current').bounding_box()
         until=page.locator('.plan-validity-until').bounding_box()
@@ -62,6 +66,9 @@ with sync_playwright() as p:
         page.evaluate("window.showPlans({planKey:'business',summary:{subscription_status:'trialing',current_period_end:'2099-12-03T12:00:00Z'}})")
         page.wait_for_function("document.querySelector('[aria-label=\"Dabartinio plano informacija\"]').textContent.includes('Išbandymas iki')")
         assert '2099' in section.inner_text()
+        page.evaluate("window.showPlans({planKey:'business_pro',adOffer:{enabled:true},billing:{effective_plan_key:'business_pro',current_period_end:'2099-12-03T12:00:00Z'}})")
+        page.wait_for_function("document.querySelector('.pcards').textContent.includes('10 nemokamų')")
+        assert 'visai įmonei' in page.locator('.pcards').text_content()
         assert not errors,errors
         print(f'{width}px PASS: plan validity visible, Basic/trial fallback, no overflow, existing billing button unchanged; synthetic data only')
         page.close()

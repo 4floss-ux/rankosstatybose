@@ -1,3 +1,4 @@
+import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useRef, useState } from "react";
 import { JOB_SCOPE_ACK_VERSION, supabase } from "../lib/config.js";
 import { BrandLogo, CloseMark, SilentLoader } from "../ui/brand.jsx";
@@ -4976,6 +4977,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         )}
         <div data-wv="plans" style={{ display: "contents" }}>
           <EmployerPlans
+            companyId={company?.id}
             planKey={planSummary?.plan_key}
             billing={billingStatus}
             summary={planSummary}
@@ -5209,18 +5211,18 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               <div className="jd-main">
                 <section className="card afsec"><header className="afh"><span className="afn">1</span><h2>Darbas</h2></header><div className="form">
                   <label className="field wide">Pavadinimas *<input value={form.title} onChange={(e) => updateField("title", e.target.value)} placeholder="Pvz. Pagalbiniai mūro darbai" />{errText("title")}</label>
-                  <label className="field">Kiek žmonių reikia<select value={String(form.workersNeeded || 1)} onChange={(e) => updateField("workersNeeded", e.target.value)}>
-                    {Array.from(new Set([1, 2, 3, 4, 5, 6, 8, 10, 15, 20, Number(form.workersNeeded || 1)])).sort((x, y) => x - y).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+                  <label className="field">Kiek žmonių reikia<SiteSelect value={String(form.workersNeeded || 1)} onChange={(e) => updateField("workersNeeded", e.target.value)}>
+                    {Array.from(new Set([1, 2, 3, 4, 5, 6, 8, 10, 15, 20, Number(form.workersNeeded || 1)])).sort((x, y) => x - y).map((n) => <option key={n} value={n}>{n}</option>)}</SiteSelect></label>
                   {planSummary?.can_team_management ? (
-                    <label className="field">Atsakingas<select value={form.responsibleUserId || ""} disabled={!["owner", "manager"].includes(companyMemberRole)} onChange={(e) => updateField("responsibleUserId", e.target.value)}>
-                      {activeTeamMembers.map((member) => <option key={member.user_id} value={member.user_id}>{member.user_id === user.id ? "Jūs" : member.display_name} · {companyTeamRoleLabel(member.member_role)}</option>)}</select></label>
+                    <label className="field">Atsakingas<SiteSelect value={form.responsibleUserId || ""} disabled={!["owner", "manager"].includes(companyMemberRole)} onChange={(e) => updateField("responsibleUserId", e.target.value)}>
+                      {activeTeamMembers.map((member) => <option key={member.user_id} value={member.user_id}>{member.user_id === user.id ? "Jūs" : member.display_name} · {companyTeamRoleLabel(member.member_role)}</option>)}</SiteSelect></label>
                   ) : <div className="field"><span>Atsakingas</span><div className="ro">Jūs</div></div>}
                 </div></section>
 
                 <section className="card afsec"><header className="afh"><span className="afn">2</span><h2>Vieta ir laikas</h2></header><div className="form">
                   {companySites.missing ? null : bizPlan ? (
-                    <label className="field wide">Objektas<select value={jobSiteId} disabled={editingConfirmedCount > 0} onChange={(e) => (e.target.value ? applyJobSite(e.target.value) : setJobSiteId(""))}>
-                      <option value="">Naujas adresas</option>{companySites.rows.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+                    <label className="field wide">Objektas<SiteSelect value={jobSiteId} disabled={editingConfirmedCount > 0} onChange={(e) => (e.target.value ? applyJobSite(e.target.value) : setJobSiteId(""))}>
+                      <option value="">Naujas adresas</option>{companySites.rows.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</SiteSelect></label>
                   ) : (
                     <div className="field wide"><span>Objektas <span className="protag">Business</span></span><button className="btn lockd" type="button" onClick={() => goEmployerView("plans")}><Svg name="lock" size={13} width={2.2} />Išsaugoti objektai – Business plane</button></div>
                   )}
@@ -5243,8 +5245,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
                       <RoundedTimeSelect ariaLabel="Pietų pertraukos pradžia" buttonRef={breakStartInputRef} className="ed-input wd-time-trigger" value={form.breakStartTime} disabled={editingConfirmedCount > 0} onChange={(value) => updateField("breakStartTime", value)} />
                       <RoundedTimeSelect ariaLabel="Pietų pertraukos pabaiga" buttonRef={breakEndInputRef} className="ed-input wd-time-trigger" value={form.breakEndTime} disabled={editingConfirmedCount > 0} onChange={(value) => updateField("breakEndTime", value)} align="right" />
                     </div> : <div className="ro">Pietų pertraukos nėra</div>}{errText("break")}</div>
-                  <label className="field">Atvykimas *<select value={form.transportMode} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("transportMode", e.target.value)}>
-                    <option value="self_arrival">Darbuotojas atvyksta pats</option><option value="employer_pickup">Darbdavys paima darbuotoją</option></select></label>
+                  <label className="field">Atvykimas *<SiteSelect value={form.transportMode} disabled={editingConfirmedCount > 0} onChange={(e) => updateField("transportMode", e.target.value)}>
+                    <option value="self_arrival">Darbuotojas atvyksta pats</option><option value="employer_pickup">Darbdavys paima darbuotoją</option></SiteSelect></label>
                 </div></section>
 
                 <section className="card afsec"><header className="afh"><span className="afn">3</span><h2>Atlygis</h2></header><div className="form">
@@ -6015,8 +6017,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             {!canRateCurrentJob ? <p className="small muted" style={{ margin: 0 }}>Darbo dieną su įvertinimu uždaro už darbą atsakingas: {teamMemberName(currentJobResponsibleUserId)}.</p> : null}
             {early ? (
               <div className="form">
-                <label className="field">Ankstyvo išėjimo tipas *<select value={attendanceMode} onChange={(e) => setAttendanceMode(e.target.value)}>
-                  <option value="left_early_agreed">Išėjo anksčiau – suderinta</option><option value="left_early_unexcused">Išėjo anksčiau be pateisinamos priežasties</option></select></label>
+                <label className="field">Ankstyvo išėjimo tipas *<SiteSelect value={attendanceMode} onChange={(e) => setAttendanceMode(e.target.value)}>
+                  <option value="left_early_agreed">Išėjo anksčiau – suderinta</option><option value="left_early_unexcused">Išėjo anksčiau be pateisinamos priežasties</option></SiteSelect></label>
                 <label className="field">Faktinis išėjimo laikas *<RoundedTimeSelect ariaLabel="Faktinis išėjimo laikas" className="ed-input wd-time-trigger" value={attendanceEndTime} onChange={setAttendanceEndTime} /></label>
               </div>
             ) : null}

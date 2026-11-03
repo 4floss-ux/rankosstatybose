@@ -1,3 +1,4 @@
+import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
@@ -151,7 +152,7 @@ function DocsSection({ userId }) {
       {open && (
         <Modal eyebrow="Pažymėjimai" title="Pridėti dokumentą" onClose={() => !busy && setOpen(false)}>
           <div className="form" style={{ gridTemplateColumns: "1fr" }}>
-            <label className="field">Dokumento tipas<select value={type} onChange={(e) => setType(e.target.value)}>{DOC_TYPES.map((t) => <option key={t}>{t}</option>)}</select></label>
+            <label className="field">Dokumento tipas<SiteSelect value={type} onChange={(e) => setType(e.target.value)}>{DOC_TYPES.map((t) => <option key={t}>{t}</option>)}</SiteSelect></label>
             <label className="field">Galioja iki<input type="date" value={until} min={todayISO()} onChange={(e) => setUntil(e.target.value)} /><span className="hint">Nebūtina, jei dokumentas neterminuotas.</span></label>
             <label className="upl">
               <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
@@ -237,7 +238,7 @@ export function WorkerProfileEditor({
           {(phoneEdit || !savedPhone) && phoneChanged && <div className="wide">{PhoneFields}</div>}
 
           <Field label="Kiek km galite nuvykti?" error={errors.travelRadius} fieldRef={ref("travelRadius")}>
-            <select value={km} onChange={(e) => updateField("travelRadius", Number(e.target.value))}>{kmOpts.map((k) => <option key={k} value={k}>{k} km</option>)}</select>
+            <SiteSelect value={km} onChange={(e) => updateField("travelRadius", Number(e.target.value))}>{kmOpts.map((k) => <option key={k} value={k}>{k} km</option>)}</SiteSelect>
           </Field>
           <Field label="Patirtis *" wide error={errors.shortBio} fieldRef={ref("shortBio")}>
             <textarea value={form.shortBio} onChange={(e) => updateField("shortBio", e.target.value)} placeholder="Pvz. 2 metus dirbau statybų pagalbiniu. Jei patirties neturite, įrašykite „Neturiu“." aria-invalid={Boolean(errors.shortBio)} />
