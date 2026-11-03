@@ -17,7 +17,17 @@ message bubbles, composer and send arrow; there is no inline message card.
 On mobile the admin launcher sits above the bottom navigation and the open
 conversation uses the existing full-screen Messenger layout. No attachments,
 email notifications, read receipts or changes to existing recruitment workflows.
-Latest 100 messages, manual refresh and refresh every 30 seconds while visible.
+Latest 100 messages; refresh on opening/focus and every 15 seconds while the page
+is visible. The launcher shows the count of incoming unread messages; outgoing
+messages do not contribute. Messages become read only with the chat open in a
+focused, visible page. Read message IDs (no text or session tokens) are stored in
+browser local storage, scoped by administrator and employer account, or by the
+employer login ID. This is browser-local read state, not shared read receipts or
+instant Realtime delivery. A new device can show old messages as unread.
+Company/admin sender labels are displayed using the existing Messenger sender-name
+styles; labels identify the company and administrator role, not the administrator's
+personal name (the current RPC does not return it). Synthetic test markers and
+punctuation are excluded from the company initials. No additional SQL is required.
 Failed sends retain the draft and retry ID. Text is rendered as React text, not HTML.
 Employer controls use Lithuanian or English; other portal languages fall back to
 English for this new section only.
@@ -60,7 +70,7 @@ payments, customer-data changes or real messages have been executed by this work
 ## Local results
 
 - Main and independent hire production builds: PASS (existing main bundle-size warning).
-- Message request/validation tests: 4 PASS.
+- Message request/validation/unread-state/initials tests: 7 PASS.
 - Actual SQL proposal executed in an in-memory PostgreSQL engine (PGlite):
   9 scenarios PASS, covering original/additional request mapping, cross-company
   isolation, retry IDs, role/session restrictions, browser table permissions,
@@ -69,9 +79,10 @@ payments, customer-data changes or real messages have been executed by this work
   compatibility with the live schema, the actual deletion RPC or real cryptography.
   Reviewer confirmed `revoked_at` exists; the account-to-additional-request mapping
   and existing deletion function still need independent live-schema review.
-- Synthetic browser checks at 1440px and 390px: PASS (rendering, text escaping,
+- Synthetic browser checks at 1440px, 781px and 390px: PASS (rendering, text escaping,
   empty-send prevention, failed-send draft preservation, retry identity and
-  employer RPC context). These do not prove database authorization.
+  employer RPC context, both roles' unread counters, read-state persistence,
+  sender labels, initials and long-message bounds). These do not prove database authorization.
 - Existing administrator-session checks: 18 PASS, using the required
   `--experimental-vm-modules` flag. Initial run without that flag failed to load
   the test fixture; no product-code regression was identified.

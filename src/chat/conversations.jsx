@@ -10,7 +10,7 @@ const dayLabel = (iso) => {
   return d.toLocaleDateString("lt-LT");
 };
 const ini2 = (n) => String(n || "?").replace(/^(UAB|MB|IĮ|AB)\s+/i, "").trim().split(/\s+/).map((p) => p[0] || "").join("").slice(0, 2).toLocaleUpperCase("lt-LT");
-export function ChatThreadView({ kind = "private", title, sub, privacy, messages, isMine, senderOf, isAdmin, loading, error, locked, lockText, value, setValue, onSend, sending, onClose, placeholder, messagesRef, panelId, panelClassName = "", inputRef, maxLength = 2000, labels = {}, footer }) {
+export function ChatThreadView({ kind = "private", title, sub, privacy, messages, isMine, senderOf, isAdmin, loading, error, locked, lockText, value, setValue, onSend, sending, onClose, placeholder, messagesRef, panelId, panelClassName = "", inputRef, maxLength = 2000, labels = {}, footer, showSenderNames = false, initialsOf = ini2 }) {
   const grp = kind !== "private";
   let lastDay = null;
   const rows = [];
@@ -20,10 +20,10 @@ export function ChatThreadView({ kind = "private", title, sub, privacy, messages
     if (day !== lastDay) { rows.push(<div className="dsep" key={`d${i}`}>{day}</div>); lastDay = day; }
     const same = (a, b) => a && b && senderOf(a) === senderOf(b) && dayLabel(a.created_at) === dayLabel(b.created_at);
     const first = !same(prev, m); const last = !same(m, next); const me = isMine(m); const who = senderOf(m);
-    if ((grp || isAdmin?.(m)) && first) rows.push(<div className={`who-n${me ? " me" : ""}${isAdmin?.(m) ? " adm" : ""}`} key={`w${i}`}>{me ? "Jūs" : who}</div>);
+    if ((showSenderNames || grp || isAdmin?.(m)) && first) rows.push(<div className={`who-n${me ? " me" : ""}${isAdmin?.(m) ? " adm" : ""}`} key={`w${i}`}>{showSenderNames ? who : me ? "Jūs" : who}</div>);
     rows.push(
       <div className={`mrow${me ? " me" : ""}${first ? " first newgrp" : ""}${last ? " last" : ""}`} key={m.id || m.message_id || i}>
-        {me ? null : <span className="cav sm">{ini2(who)}</span>}
+        {me ? null : <span className="cav sm">{initialsOf(who)}</span>}
         <div className="bub" style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>
         {last && m.created_at ? <span className="mtime">{new Date(m.created_at).toLocaleTimeString("lt-LT", { hour: "2-digit", minute: "2-digit" })}</span> : null}
       </div>
@@ -36,7 +36,7 @@ export function ChatThreadView({ kind = "private", title, sub, privacy, messages
           <div className={`thread${grp ? " grp" : ""}`} role="region" aria-label="Pokalbis">
             <div className="thead">
               <button type="button" className="tbtn back" aria-label={labels.back || "Atgal"} onClick={onClose}><Svg name="back" size={22} width={2.4} /></button>
-              <div className="tperson"><span className={`cav${grp ? " grp" : ""}`}>{grp ? <Svg name="people" size={22} /> : ini2(title)}</span><div className="tn"><b>{title}</b>{sub ? <small>{sub}</small> : null}</div></div>
+              <div className="tperson"><span className={`cav${grp ? " grp" : ""}`}>{grp ? <Svg name="people" size={22} /> : initialsOf(title)}</span><div className="tn"><b>{title}</b>{sub ? <small>{sub}</small> : null}</div></div>
               <button type="button" className="tbtn" aria-label={labels.close || "Uždaryti"} onClick={onClose}><Svg name="x" size={20} width={2.2} /></button>
             </div>
             <div className={`msgs ${grp ? "is-grp" : "is-prv"}`} ref={messagesRef}>

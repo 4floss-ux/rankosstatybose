@@ -2485,6 +2485,7 @@ export function AdminDashboard({
 
         {activeTab === "foreignHire" && (
           <AdminForeignHire requests={foreignHireRequests} h={{
+            viewerId: user?.id,
             expandedId: foreignHireExpandedId,
             open: (request) => {
               setForeignHireExpandedId(request.request_id);

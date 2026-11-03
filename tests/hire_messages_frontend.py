@@ -12,10 +12,12 @@ import {HireMessages} from './src/hire/HireMessages.jsx';
 import {ChatThreadView} from './src/chat/conversations.jsx';
 window.calls=[]; window.failSend=false; window.failLoad=false;
 window.rows=[{id:'synthetic-1',sender_kind:'admin',body:'<img src=x onerror=alert(1)>',created_at:'2026-11-03T10:00:00Z'}];
-window.renderMessages=(props)=>root.render(<HireMessages {...props}/>);
+const nativeSetInterval=window.setInterval.bind(window);
+window.setInterval=(fn,ms)=>{if(ms===15000)window.pollMessages=fn;return nativeSetInterval(fn,ms);};
+window.renderMessages=(props)=>root.render(<HireMessages key={props.instance || 'default'} {...props}/>);
 window.renderExisting=()=>root.render(<ChatThreadView title="Esamas pokalbis" messages={[]} isMine={()=>false} senderOf={()=>'Testas'} value="Originalus" setValue={()=>{}} onSend={event=>{event.preventDefault();window.originalSent=true;}} onClose={()=>{}} placeholder="Įprastas pokalbis"/>);
 const root=createRoot(document.getElementById('root'));
-window.renderMessages({requestId:'synthetic-request'});
+window.renderMessages({requestId:'synthetic-request',companyName:'[TEST ONLY] Statybos24 Hire',readScope:'admin:synthetic-owner:synthetic-company'});
 '''
 mock = '''export const supabase={rpc:async(name,args)=>{
 window.calls.push({name,args});
@@ -38,7 +40,7 @@ bundle = subprocess.run(['node', '--input-type=module', '-e', build], cwd=repo,
                         capture_output=True, text=True, check=True).stdout
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path='/usr/bin/chromium', args=['--no-sandbox', '--disable-dev-shm-usage'])
-    for width in [1440, 390]:
+    for width in [1440, 781, 390]:
         page = browser.new_page(viewport={'width': width, 'height': 900})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
@@ -84,12 +86,42 @@ with sync_playwright() as p:
         assert field.input_value() == ''
         ids = page.evaluate("window.calls.filter(c=>c.name.endsWith('_send_message')).map(c=>c.args.p_client_id)")
         assert len(ids) == 2 and ids[0] == ids[1]
+        page.keyboard.press('Escape')
+        page.evaluate("window.rows.push({id:'incoming-1',sender_kind:'employer',body:'Atsakymas iš įmonės',created_at:'2026-11-03T10:02:00Z'});window.pollMessages()")
+        page.get_by_role('status', name='Naujos žinutės: 1').wait_for()
+        launcher.click()
+        page.wait_for_function("!document.querySelector('.hire-chat-launcher .nb')")
+        page.get_by_text('Atsakymas iš įmonės',exact=True).wait_for()
+        assert page.locator('.who-n',has_text='Statybos24 administratorius').count() > 0
+        assert page.locator('.who-n',has_text='[TEST ONLY] Statybos24 Hire').count() > 0
+        assert page.locator('.tperson .cav').inner_text() == 'SH'
+        page.keyboard.press('Escape')
+        page.evaluate("window.renderMessages({instance:'remounted',requestId:'synthetic-request',companyName:'[TEST ONLY] Statybos24 Hire',readScope:'admin:synthetic-owner:synthetic-company'})")
+        page.wait_for_function("document.querySelector('.hire-chat-launcher')?.getAttribute('aria-expanded')==='false'")
+        launcher.click()
+        page.get_by_text('Atsakymas iš įmonės',exact=True).wait_for()
+        assert page.locator('.hire-chat-launcher .nb').count() == 0
+        page.evaluate("window.rows.push({id:'long-own',sender_kind:'admin',body:'Ilgas tekstas '.repeat(150),created_at:'2026-11-03T10:03:00Z'});window.pollMessages()")
+        page.get_by_text(('Ilgas tekstas ' * 150).strip(), exact=True).wait_for()
+        assert page.locator('.msgs').evaluate('(e)=>e.scrollWidth<=e.clientWidth')
+        bounds = page.locator('.msgs').bounding_box()
+        for box in page.locator('.msgs .bub').all():
+            rect = box.bounding_box()
+            assert rect['x'] >= bounds['x'] and rect['x']+rect['width'] <= bounds['x']+bounds['width']
         assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
-        page.evaluate("window.renderMessages({sessionToken:'synthetic-token',lang:'en'})")
+        page.evaluate("window.renderMessages({sessionToken:'synthetic-token',companyName:'Actual Company',readScope:'employer:synthetic-company',lang:'en'})")
+        page.get_by_role('button', name='Messages', exact=True).click()
         page.get_by_role('button', name='Send message', exact=True).wait_for()
         page.wait_for_function("window.calls.some(c=>c.name==='hire_employer_messages')")
         employer = page.evaluate("window.calls.filter(c=>c.name==='hire_employer_messages').at(-1)")
         assert employer['args'] == {'p_session_token': 'synthetic-token'}
+        page.keyboard.press('Escape')
+        page.evaluate("window.rows.push({id:'incoming-admin',sender_kind:'admin',body:'New administrator message',created_at:'2026-11-03T10:04:00Z'});window.pollMessages()")
+        page.get_by_role('status', name='New messages: 1').wait_for()
+        page.get_by_role('button', name='Messages', exact=True).click()
+        page.wait_for_function("!document.querySelector('.hire-chat-launcher .nb')")
+        assert page.locator('.who-n',has_text='Actual Company').count() > 0
+        assert page.locator('.who-n',has_text='Statybos24 administrator').count() > 0
         assert not errors, errors
         page.screenshot(path=f'/tmp/s24-messenger-{width}.png')
         page.evaluate('window.renderExisting()')
@@ -98,6 +130,6 @@ with sync_playwright() as p:
         assert original.get_attribute('maxlength') == '2000'
         page.get_by_role('button', name='Siųsti', exact=True).click()
         assert page.evaluate('window.originalSent') is True
-        print(f'{width}px PASS: existing Messenger opens from bubble, compose aligned, Escape/focus, retained draft, retry ID, employer context, safe text, no overflow')
+        print(f'{width}px PASS: unread/read badges for both roles, named senders, correct initials, long-message bounds, retained draft, retry ID, existing Messenger compatibility')
         page.close()
     browser.close()

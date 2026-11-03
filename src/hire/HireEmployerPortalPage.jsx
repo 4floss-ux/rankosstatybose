@@ -725,7 +725,7 @@ export function HireEmployerPortalPage() {
         <main className="h-in hp-main">
           {error && screen !== "new" && !portal.account?.mustChangePassword ? <div className="alert" role="alert"><div><b>{error}</b></div></div> : null}
           {screen === "new" ? needFormView : screen === "need" && selectedNeed ? needView : home}
-          {!portal.account?.mustChangePassword ? <HireMessages sessionToken={token} lang={lang} /> : null}
+          {!portal.account?.mustChangePassword ? <HireMessages sessionToken={token} companyName={companyName} readScope={portal.account?.loginId ? `employer:${portal.account.loginId}` : undefined} lang={lang} /> : null}
         </main>
       </div>
       <NoticeToast notice={notice} onClear={() => setNotice("")} />
