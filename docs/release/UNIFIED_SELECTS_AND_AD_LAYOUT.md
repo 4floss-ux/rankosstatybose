@@ -20,3 +20,13 @@ Vietoje praėjo: bendro select klaviatūra / formos / popup ribos 1440 ir 390 px
 Business Pro mėnesinės kvotos webhook integracija vis dar neįdiegta. Šis UI pakeitimas jos nesukuria. Nuolatinio skelbimų trynimo Supabase paketas iš ankstesnės šakos turi būti atskirai peržiūrėtas ir įdiegtas; kol serverio readiness=false, mygtukas lieka neaktyvus. Jokie realūs skelbimai, kandidatūros, failai ar mokėjimai šio darbo metu nebuvo keičiami.
 
 Main / redesign nejungiamos; produkcijos Maintenance paliekamas ON. Atskirai atnaujinant esamą redesign peržiūrą išsaugomas jos atviras testavimo režimas, o ne perkeliamas į produkcinį deployment. Hire prieigos / sesijos ir duomenų bazė nekeičiamos.
+
+## Įdiegimas
+
+Cloudflare valdymo API patvirtinta `2026-11-03T22:22:43.224847+00:00`:
+
+- Statybos24.lt: įrašas `6187b5b`, šaka `release/unified-ui-maintenance`, versija `aeb6910e-fecb-4713-8685-241fbab7b3d6`, 100 %, Maintenance ON.
+- Redesign alias: `700764f`, versija `3083806a-6451-49eb-98fb-e9137cc919e5`, jo ankstesnis testavimo režimas OFF paliktas; ši versija neaktyvuota produkciniam srautui.
+- Hire: `700764f`, versija `7bd042e9-4e86-4669-aae3-3ffdd3fc5c80`, 100 %, ankstesnis režimas OFF paliktas. Worker/routing/sesijų kodas nekeistas nuo patvirtinto `bb27102`.
+
+Tiesioginis automatinis HTTP kreipimasis į redesign grąžino 403, todėl tikro nuotolinio vaizdo / prisijungimo neteigiu. Alias ir aktyvios versijos patvirtinti valdymo API, išvaizda bei veiksmai tikrinti vietinėje naršyklėje su sintetiniais duomenimis. Supabase schemų, įrašų, leidimų ir Stripe šiame pakeitime neliečiau.
