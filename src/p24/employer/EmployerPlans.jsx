@@ -43,7 +43,7 @@ export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy
 
   return (
     <>
-      <div className="head"><div><h1>Planai</h1><p className="lead">Apmokama saugiai per Stripe. Prenumeratą valdo įmonės savininkas.</p></div>
+      <div className="head"><div><h1>Planai</h1><p className="lead">Prenumeratą valdo įmonės savininkas.</p></div>
         <div className="pertgl" role="group" aria-label="Atsiskaitymo laikotarpis">
           <button type="button" aria-pressed={!yr} onClick={() => setCycle("monthly")}>Kas mėnesį</button>
           <button type="button" aria-pressed={yr} onClick={() => setCycle("yearly")}>Už metus <em>−20 %</em></button>
