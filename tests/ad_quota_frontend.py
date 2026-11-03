@@ -17,7 +17,7 @@ window.mount=(remaining,options={})=>{
 '''
 mock='''export const supabase={rpc:async(name,args)=>{
  window.calls.push({name,args});
- if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
+ if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:window.options.malformed?[]:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,used:10-window.remaining,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
  if(name==='job_ad_upsert'){
   window.ad={...window.ad,...{status:window.options.race?'pending_payment':'active'}};window.remaining=0;return {data:window.ad};
  }
@@ -45,6 +45,10 @@ with sync_playwright() as p:
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.evaluate('window.mount(0)')
   page.get_by_role('button',name='Apmokėti 9,99 € ir paskelbti',exact=True).wait_for()
+  page.evaluate('window.mount(1,{malformed:true})')
+  page.get_by_role('alert').wait_for()
+  assert page.get_by_role('button',name='Paskelbti skelbimą',exact=True).is_disabled()
+  assert page.evaluate('window.payments')==0
   assert page.evaluate('window.payments')==0
   page.evaluate('window.mount(1,{race:true})')
   page.get_by_role('button',name='Paskelbti skelbimą',exact=True).wait_for()

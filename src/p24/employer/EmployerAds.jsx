@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
+import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
@@ -428,12 +428,13 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
     (async () => {
       try {
         let result = await supabase.rpc("job_ad_offer", { p_company_id: company.id });
+        let requireFirstFree = true;
         if (jobAdQuotaUnsupported(result.error)) {
+          requireFirstFree = false;
           result = isPro ? await supabase.rpc("job_ad_pro_quota", { p_company_id: company.id }) : { data: null };
-        } else if (!result.error && (!result.data || typeof result.data !== "object")) {
-          throw new Error("Invalid offer");
         }
         if (result.error && !jobAdQuotaUnsupported(result.error)) throw result.error;
+        if (!result.error && (requireFirstFree || result.data != null) && !jobAdOfferValid(result.data, requireFirstFree)) throw new Error("Invalid offer");
         if (active) setQuota(result.data || null);
       } catch {
         if (active) setQuotaError("Nepavyko patikrinti nemokamų paskelbimų likučio. Bandykite dar kartą.");
