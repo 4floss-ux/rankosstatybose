@@ -62,7 +62,7 @@ with sync_playwright() as p:
   for failure in ['exhaust','failOnce']:
    page.evaluate('window.mount(1,'+json.dumps({'detail':True,failure:True})+')')
    page.locator('article.job').click()
-   page.get_by_role('button',name='Pratęsti',exact=True).click()
+   page.get_by_role('button',name='Pratęsti skelbimą',exact=True).click()
    dialog=page.get_by_role('dialog');dialog.wait_for()
    dialog.get_by_role('button',name='Pratęsti',exact=True).click()
    dialog.get_by_role('alert').wait_for()
@@ -81,7 +81,7 @@ with sync_playwright() as p:
   page.get_by_placeholder('1600',exact=True).fill('1600')
   page.locator('textarea').first.fill('Sintetinis pirmojo skelbimo aprašymas')
   page.get_by_role('button',name='Paskelbti skelbimą',exact=True).click()
-  page.get_by_role('button',name='Redaguoti',exact=True).wait_for()
+  page.get_by_role('button',name='Redaguoti skelbimą',exact=True).wait_for()
   assert len(page.evaluate("window.calls.filter(c=>c.name==='job_ad_upsert')"))==1
   assert page.evaluate('window.payments')==0
   page.evaluate('window.mount(0,{basic:true,firstFree:false})')

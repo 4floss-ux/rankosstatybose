@@ -3,6 +3,8 @@ import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuot
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
+import { JobAdContent } from "../JobAdContent.jsx";
+import "./EmployerAds.css";
 import { ShareJobAdButton } from "../ShareJobAdButton.jsx";
 import { AdChat } from "../AdChat.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
@@ -306,10 +308,16 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWo
     const { data } = await supabase.storage.from("job-ad-cv").createSignedUrl(c.cv_path, 120);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   }
-  async function close() {
-    if (!(await askConfirm({ title: "Uždaryti skelbimą?", message: "Darbuotojai jo nebematys.", confirmLabel: "Uždaryti", danger: true }))) return;
-    const { error } = await supabase.rpc("job_ad_close", { p_ad_id: adId });
-    if (error) setErr(error.message); else { await load(); onChanged(); }
+  async function removeAd() {
+    if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
+    setBusy("delete"); setErr("");
+    try {
+      const { error } = await supabase.rpc("job_ad_delete", { p_ad_id: adId });
+      if (error) throw error;
+      onChanged(); onBack();
+    } catch (error) {
+      setErr(jobAdQuotaUnsupported(error) ? "Skelbimo ištrynimas dar neįjungtas. Skelbimas nepakeistas." : error.message || "Nepavyko ištrinti skelbimo.");
+    } finally { setBusy(""); }
   }
   async function pay() {
     setBusy("pay");
@@ -369,23 +377,35 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, onBack, onEdit, onWo
           <div><b>Skelbimas dar nepaskelbtas</b><p className="small muted" style={{ margin: "2px 0 0" }}>Apmokėjus {FEE} skelbimas bus matomas darbuotojams 30 dienų.</p></div>
           <button className="btn primary" type="button" disabled={busy === "pay"} onClick={pay}>{busy === "pay" ? "Jungiamasi prie Stripe..." : `Apmokėti ${FEE}`}</button>
         </div></section>) : null}
-      <section className="card"><header><div><h2>Kandidatai <span className="muted">· {cands.filter((c) => c.status !== "interview").length}</span></h2></div>
-        <div className="row" style={{ gap: 8 }}><button className="btn sm" type="button" onClick={() => onEdit(ad)}>Redaguoti</button>
-          {ad.status !== "pending_payment" ? <button className="btn sm" type="button" onClick={() => setExt(true)}>Pratęsti</button> : null}
-          {ad.status === "active" ? <button className="btn sm ghost" type="button" onClick={close}>Uždaryti</button> : null}</div></header>
+      <div className="jd-grid ead-detail">
+        <JobAdContent ad={ad} />
+        <aside className="jd-side">
+          <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
+          <section className="card jd-act" aria-label="Skelbimo valdymas">
+            <h2>Skelbimo valdymas</h2>
+            <button className="btn jd-wide" type="button" disabled={busy === "delete"} onClick={() => onEdit(ad)}><Svg name="edit" size={16} />Redaguoti skelbimą</button>
+            {ad.status !== "pending_payment" ? <button className="btn jd-wide" type="button" disabled={busy === "delete" || pricingBusy} onClick={() => setExt(true)}><Svg name="cal" size={16} />Pratęsti skelbimą</button> : null}
+            <button className="btn danger jd-wide" type="button" disabled={busy === "delete" || ad.payment_pending} onClick={removeAd}>{busy === "delete" ? "Trinama..." : "Ištrinti skelbimą"}</button>
+            <p className="small muted" style={{ margin: 0 }}>{ad.payment_pending ? "Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas." : "Ištrynus skelbimo ir kandidatūrų atkurti negalėsite. Nemokamo skelbimo dovana neatsinaujins."}</p>
+          </section>
+        </aside>
+      </div>
+      <section className="card"><header><div><h2 className="ead-section-title">Kandidatai <span className="cnt">{cands.filter((c) => c.status !== "interview").length}</span></h2></div></header>
         <div className="chips" role="group" aria-label="Filtras">{[["all", "Visi"], ["rel", "Patikimumas 95+"], ["docs", "Turi pažymėjimų"]].map(([k, t]) => <button key={k} type="button" className="chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{t}</button>)}</div>
         <div className="list">{list.length ? list.map(row) : <Empty title={filter === "all" ? "Naujų kandidatų nėra" : "Pagal šį filtrą kandidatų nėra"} sub={filter === "all" ? "Pakviestieji pokalbiui rodomi žemiau." : "Pasirinkite kitą filtrą."} icon="people" />}</div>
       </section>
-      <section className="card ivsec"><header><div><h2><Svg name="cal" size={17} width={2.2} /> Pakviesti pokalbiui <span className="muted">· {ivs.length}</span></h2></div></header>
-        <div className="list">{ivs.length ? ivs.map(row) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Dar nieko nepakvietėte. Prie kandidato spauskite „Kviesti pokalbiui“.</p>}</div></section>
-      <section className="card"><header><div><h2><Heart size={17} on /> Įsiminė skelbimą <span className="muted">· {savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
+      <div className="adcols ead-secondary">
+      <section className="card ivsec"><header><div><h2 className="ead-section-title"><Svg name="cal" size={17} width={2.2} /><span>Pakviesti pokalbiui</span><span className="cnt">{ivs.length}</span></h2></div></header>
+        <div className="list">{ivs.length ? ivs.map(row) : <Empty title="Pokalbių dar nesuplanavote" sub="Prie kandidato spauskite „Kviesti pokalbiui“." icon="cal" />}</div></section>
+      <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on /><span>Įsiminė skelbimą</span><span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
         <div className="list">{savers.length ? savers.map((w) => (
           <div className="wk fw" key={w.worker_id}><Av w={w} />
             <div className="fwm"><div className="fwt"><b className="nm">{w.name}</b><small className="muted">{w.city || ""}</small></div></div>
             <div className="wa">{w.nudged ? <Pill tone="green">Pakviestas kandidatuoti</Pill>
               : ad.live ? <button className="btn sm" type="button" disabled={busy === "n" + w.worker_id} onClick={() => nudge(w)}><Svg name="send" size={15} />Pakviesti kandidatuoti</button> : null}
               <button className="btn sm" type="button" onClick={() => onWorkerProfile(w)}><Svg name="user" size={15} />Profilis</button></div>
-          </div>)) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Kol kas niekas neįsiminė.</p>}</div></section>
+          </div>)) : <Empty title="Skelbimo dar niekas neįsiminė" sub="Čia matysite darbuotojus, kuriuos galėsite pakviesti kandidatuoti." icon="people" />}</div></section>
+      </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
       {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
