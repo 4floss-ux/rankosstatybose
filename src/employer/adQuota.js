@@ -7,3 +7,7 @@ export function jobAdFreeAvailable(isPro, quota) {
 export function jobAdQuotaUnsupported(error) {
   return error?.code === "PGRST202" || error?.code === "42883";
 }
+
+export function jobAdFirstFreeAvailable(offer) {
+  return offer?.first_free_available === true;
+}

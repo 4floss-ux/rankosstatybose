@@ -9,9 +9,9 @@ import "./EmployerPlans.css";
 const chevron = '<path d="m9 18 6-6-6-6"/>';
 // Kortelių tekstai – tik tai, kas tikrai veikia svetainėje.
 const CARD = {
-  basic: { eb: "Pradžia", d: "Pradėti darbuotojų paiešką.", extra: ["Darbo skelbimai – 9,99 € / 30 d."] },
-  business: { eb: "Reguliariai ieškantiems", d: "Daugiau atrankos ir valdymo galimybių.", extra: ["Darbo skelbimai – 9,99 € / 30 d.", "Mėnesio darbo ataskaita (PDF)"] },
-  business_pro: { eb: "Komandai", d: "Neriboti darbai, komanda ir pilnas valdymas.", extra: ["10 nemokamų darbo skelbimų arba pratęsimų per mėnesį", "Papildomas paskelbimas – 9,99 € / 30 d.", "Darbų kalendorius"] },
+  basic: { eb: "Pradžia", d: "Pradėti darbuotojų paiešką.", extra: ["Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos", "Kiti darbo skelbimai – 9,99 € / 30 d."] },
+  business: { eb: "Reguliariai ieškantiems", d: "Daugiau atrankos ir valdymo galimybių.", extra: ["Pirmas jūsų skelbimas – nemokamas vieną kartą po registracijos", "Kiti darbo skelbimai – 9,99 € / 30 d.", "Mėnesio darbo ataskaita (PDF)"] },
+  business_pro: { eb: "Komandai", d: "Neriboti darbai, komanda ir pilnas valdymas.", extra: ["Pirmas jūsų skelbimas – nemokamas papildomai vieną kartą po registracijos", "10 nemokamų darbo skelbimų arba pratęsimų per mėnesį", "Papildomas paskelbimas – 9,99 € / 30 d.", "Darbų kalendorius"] },
 };
 const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width:981px)").matches;
 

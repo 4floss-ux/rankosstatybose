@@ -12,12 +12,12 @@ window.mount=(remaining,options={})=>{
  window.remaining=remaining;window.options=options;window.calls=[];window.payments=0;
  window.ad={id:'synthetic-ad',title:'Sintetinis skelbimas',city:'Vilnius',salary_min:1000,description:'Sintetinis darbo aprašymas',status:'active',live:true,expires_at:'2099-01-01T00:00:00Z',candidates:[],savers:[]};
  const data={ads:options.detail?[window.ad]:[],loaded:true,reload:()=>{},error:null};
- root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={true} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
+ root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={!options.basic} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
 };window.mount(1);
 '''
 mock='''export const supabase={rpc:async(name,args)=>{
  window.calls.push({name,args});
- if(name==='job_ad_pro_quota')return {data:{enabled:true,limit:10,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
+ if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
  if(name==='job_ad_upsert'){
   window.ad={...window.ad,...{status:window.options.race?'pending_payment':'active'}};window.remaining=0;return {data:window.ad};
  }
@@ -70,6 +70,12 @@ with sync_playwright() as p:
     page.wait_for_function("!document.querySelector('[role=dialog]')")
     ids=page.evaluate("window.calls.filter(c=>c.name==='job_ad_extend_plan_with_quota').map(c=>c.args.p_request_id)")
     assert len(ids)==2 and ids[0]==ids[1]
+  page.evaluate('window.mount(0,{basic:true,firstFree:true})')
+  page.get_by_role('button',name='Paskelbti skelbimą',exact=True).wait_for()
+  page.get_by_text('Pirmas jūsų skelbimas – nemokamas',exact=True).wait_for()
+  assert page.evaluate('window.payments')==0
+  page.evaluate('window.mount(0,{basic:true,firstFree:false})')
+  page.get_by_role('button',name='Apmokėti 9,99 € ir paskelbti',exact=True).wait_for()
   assert not errors,errors
   print(f'{width}px PASS: shared quota pricing, unpaid fallback without checkout, exhausted extension price, retry ID, no remount loop; synthetic only')
   page.close()

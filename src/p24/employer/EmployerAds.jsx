@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { jobAdFreeAvailable, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
+import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
@@ -93,7 +93,7 @@ function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay }) {
 }
 
 /* ---------- Naujas / redaguoti ---------- */
-function AdForm({ company, isPro, pricingBusy, ad, onCancel, onSaved }) {
+function AdForm({ company, isPro, firstFree, pricingBusy, ad, onCancel, onSaved }) {
   const [f, setF] = useState(() => ({
     title: ad?.title || "", city: ad?.city || company?.city || "Vilnius", address: ad?.address || "",
     contract: ad?.contract_type || CONTRACTS[0], s1: ad ? String(Number(ad.salary_min)) : "", s2: ad?.salary_max ? String(Number(ad.salary_max)) : "",
@@ -175,7 +175,7 @@ function AdForm({ company, isPro, pricingBusy, ad, onCancel, onSaved }) {
             </div>
           </section>
           <section className="card jd-act">
-            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>Business Pro: 10 nemokamų paskelbimų per mėnesį</small></>}</div> : null}
+            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Įskaičiuota į Business Pro"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>Business Pro: 10 nemokamų paskelbimų per mėnesį</small></>}</div> : null}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
             <button className="btn primary jd-wide" type="button" disabled={busy || pricingBusy} onClick={save}>{busy ? "Saugoma..." : ad ? "Išsaugoti pakeitimus" : isPro ? "Paskelbti skelbimą" : `Apmokėti ${FEE} ir paskelbti`}</button>
             <button className="btn jd-wide" type="button" disabled={busy} onClick={onCancel}>Atšaukti</button>
@@ -415,7 +415,7 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   const [busyPay, setBusyPay] = useState("");
   const [payErr, setPayErr] = useState("");
   const [quota, setQuota] = useState(null);
-  const [quotaLoading, setQuotaLoading] = useState(isPro);
+  const [quotaLoading, setQuotaLoading] = useState(true);
   const [quotaError, setQuotaError] = useState("");
   const [quotaRetry, setQuotaRetry] = useState(0);
   const [quotaReady, setQuotaReady] = useState(false);
@@ -423,11 +423,16 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   useEffect(() => {
     let active = true;
     setQuotaError("");
-    if (!isPro || !company?.id) { setQuotaLoading(false); return; }
+    if (!company?.id) { setQuotaLoading(false); return; }
     setQuotaLoading(true);
     (async () => {
       try {
-        const result = await supabase.rpc("job_ad_pro_quota", { p_company_id: company.id });
+        let result = await supabase.rpc("job_ad_offer", { p_company_id: company.id });
+        if (jobAdQuotaUnsupported(result.error)) {
+          result = isPro ? await supabase.rpc("job_ad_pro_quota", { p_company_id: company.id }) : { data: null };
+        } else if (!result.error && (!result.data || typeof result.data !== "object")) {
+          throw new Error("Invalid offer");
+        }
         if (result.error && !jobAdQuotaUnsupported(result.error)) throw result.error;
         if (active) setQuota(result.data || null);
       } catch {
@@ -439,12 +444,13 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   useEffect(() => { if (startNew) { setCurrent(null); setMode("new"); onStartNewHandled?.(); } }, [startNew]);
   const top = () => window.scrollTo(0, 0);
   const freeAvailable = jobAdFreeAvailable(isPro, quota);
+  const firstFree = jobAdFirstFreeAvailable(quota);
   const pricingBusy = quotaLoading || Boolean(quotaError);
   const banner = <>{quotaError ? <div className="notebox"><p className="ferr" role="alert">{quotaError}</p><button type="button" className="btn" onClick={() => setQuotaRetry(value => value + 1)}>Bandyti dar kartą</button></div> : null}{quota?.enabled ? <div className="notebox" role="status">Šį prenumeratos mėnesį liko <b>{quota.remaining} iš 10</b> nemokamų paskelbimų visai įmonei. Naujas skelbimas arba pratęsimas dar 30 dienų naudoja vieną paskelbimą. Papildomai – <b>{FEE} / 30 d.</b>{quota.resets_at && Number.isFinite(Date.parse(quota.resets_at)) ? ` Kvota atsinaujins ${new Intl.DateTimeFormat("lt-LT", { timeZone: "Europe/Vilnius", year: "numeric", month: "long", day: "numeric" }).format(new Date(quota.resets_at))}.` : ""}</div> : null}</>;
   if (quotaLoading && !quotaReady) return <p className="small muted" role="status">Tikrinamas nemokamų paskelbimų likutis...</p>;
 
   if (mode === "new" || mode === "edit") {
-    return <>{banner}<AdForm company={company} isPro={freeAvailable} pricingBusy={pricingBusy} ad={mode === "edit" ? current : null}
+    return <>{banner}<AdForm company={company} isPro={firstFree || freeAvailable} firstFree={firstFree} pricingBusy={pricingBusy} ad={mode === "edit" ? current : null}
       onCancel={() => { setMode(current ? "detail" : "list"); top(); }}
       onSaved={(ad) => { data.reload(); setQuotaRetry(value => value + 1); setCurrent(ad); setMode("detail"); top(); }} /></>;
   }

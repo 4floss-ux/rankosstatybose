@@ -98,10 +98,16 @@ $fn$;
 REVOKE ALL ON FUNCTION public.job_ad_pro_quota(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.job_ad_pro_quota(uuid) TO authenticated;
 
+-- Optional one-time campaign overrides this helper in its separately reviewed SQL.
+CREATE FUNCTION app_private.job_ad_uses_first_free(p_ad_id uuid,p_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SET search_path = '' AS $$ SELECT false $$;
+REVOKE ALL ON FUNCTION app_private.job_ad_uses_first_free(uuid,uuid) FROM PUBLIC, anon, authenticated;
+
 CREATE FUNCTION app_private.enforce_job_ad_pro_quota()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
 DECLARE terms app_private.job_ad_pro_quota_terms; w record; n integer;
 BEGIN
+  IF TG_OP='INSERT' AND app_private.job_ad_uses_first_free(NEW.id,NEW.created_by) THEN RETURN NEW; END IF;
   IF NEW.status<>'active' OR NEW.expires_at IS NULL THEN RETURN NEW; END IF;
   IF TG_OP='UPDATE' THEN
     IF NEW.expires_at<=coalesce(OLD.expires_at,'-infinity'::timestamptz) THEN RETURN NEW; END IF;

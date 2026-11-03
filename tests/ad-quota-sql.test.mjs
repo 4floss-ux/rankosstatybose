@@ -32,6 +32,7 @@ test('Business Pro shared subscription-month quota proposal',async t=>{
   await db.exec(originalFunction('job_ad_upsert'));
   await db.exec(originalFunction('job_ad_extend_plan'));
   await db.exec(await readFile(new URL('../docs/sql-review/20261103190000_business_pro_ad_quota_REVIEW.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../docs/sql-review/20261103200000_first_job_ad_free_REVIEW.sql',import.meta.url),'utf8'));
   const actor=async n=>db.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claim.role','authenticated',false)",[id(n)]);
   const quota=async(company=10)=>(await db.query('SELECT public.job_ad_pro_quota($1) AS q',[id(company)])).rows[0].q;
   const create=async(company=10)=>(await db.query(`SELECT public.job_ad_upsert(NULL,$1,'Sintetinis skelbimas','Vilnius',NULL,NULL,NULL,NULL,1000,NULL,false,'Sintetinis darbo aprašymas',ARRAY[]::text[],ARRAY[]::text[]) AS ad`,[id(company)])).rows[0].ad;
@@ -132,6 +133,56 @@ test('Business Pro shared subscription-month quota proposal',async t=>{
    await assert.rejects(db.query('SELECT * FROM app_private.job_ad_pro_quota_usage'),/permission denied/);
    await db.exec('RESET ROLE; SET ROLE anon');
    await assert.rejects(quota(),/permission denied/);await db.exec('RESET ROLE');
+  });
+  const offer=async company=>(await db.query('SELECT public.job_ad_offer($1) AS offer',[id(company)])).rows[0].offer;
+  await t.test('first-ad campaign is off by default and existing publishers do not regain a first ad',async()=>{
+   await actor(1);assert.equal((await offer(10)).first_free_available,false);
+   await db.exec('UPDATE app_private.job_ad_first_free_policy SET enabled=true');
+   assert.equal((await offer(10)).first_free_available,false);
+  });
+  await t.test('Basic and Business receive a first publication once, never for extensions',async()=>{
+   for(const [user,company,plan] of [[5,50,'basic'],[6,60,'business']]){
+    await db.query('INSERT INTO auth.users VALUES($1)',[id(user)]);
+    await db.query('INSERT INTO public.companies VALUES($1,$2,$3)',[id(company),id(user),plan]);
+    await actor(user);assert.equal((await offer(company)).first_free_available,true);
+    // A failed publication must not consume the gift.
+    await assert.rejects(db.query("INSERT INTO public.job_ads(company_id,created_by,title,city,salary_min,description) VALUES($1,$2,'x','Vilnius',1000,'Sintetinis aprašymas')",[id(company),id(user)]),/check constraint/);
+    assert.equal((await offer(company)).first_free_available,true);
+    const first=await create(company);assert.equal(first.status,'active');
+    assert.equal((await offer(company)).first_free_available,false);
+    const next=await create(company);assert.equal(next.status,'pending_payment');
+    await assert.rejects(extend(first.id,800+user),/Pratęsimas apmokamas/);
+    await db.query('DELETE FROM public.job_ads WHERE id=$1',[first.id]);
+    await db.query("UPDATE app_private.job_ad_first_free_claims SET claimed_at=clock_timestamp()-interval '2 months' WHERE user_id=$1",[id(user)]);
+    assert.equal((await offer(company)).first_free_available,false);
+   }
+  });
+  await t.test('Pro first gift and a new team member gift do not spend the shared monthly ten',async()=>{
+   await db.query('INSERT INTO auth.users VALUES($1),($2)',[id(7),id(8)]);
+   await db.query("INSERT INTO public.companies VALUES($1,$2,'business_pro')",[id(70),id(7)]);
+   await db.query("INSERT INTO public.company_members VALUES($1,$2,true,'manager')",[id(70),id(8)]);
+   await actor(7);await enable(70,'synthetic-subscription-G');
+   const first=await create(70);assert.equal(first.status,'active');
+   assert.equal((await quota(70)).remaining,10);
+   await create(70);assert.equal((await quota(70)).remaining,9);
+   await actor(8);await create(70);assert.equal((await quota(70)).remaining,9);
+   await create(70);assert.equal((await quota(70)).remaining,8);
+  });
+  await t.test('one account cannot get a gift again in another company',async()=>{
+   await db.query('INSERT INTO auth.users VALUES($1)',[id(9)]);
+   await db.query("INSERT INTO public.companies VALUES($1,$3,'basic'),($2,$3,'basic')",[id(90),id(91),id(9)]);
+   await actor(9);
+   const pair=await Promise.all([create(90),create(91)]);
+   assert.deepEqual(pair.map(ad=>ad.status).sort(),['active','pending_payment']);
+   assert.equal((await offer(90)).first_free_available,false);
+   assert.equal((await offer(91)).first_free_available,false);
+   assert.equal((await db.query('SELECT count(*)::integer AS n FROM app_private.job_ad_first_free_claims WHERE user_id=$1',[id(9)])).rows[0].n,1);
+  });
+  await t.test('gift claims cannot be read or changed directly by browser roles',async()=>{
+   await db.exec('SET ROLE authenticated');
+   await assert.rejects(db.query('SELECT * FROM app_private.job_ad_first_free_claims'),/permission denied/);
+   await assert.rejects(db.query('UPDATE app_private.job_ad_first_free_policy SET enabled=true'),/permission denied/);
+   await db.exec('RESET ROLE');
   });
  }finally{await db.close();}
 });

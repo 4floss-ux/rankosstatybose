@@ -2,6 +2,32 @@
 
 Statusas: vietinis pasiūlymas peržiūrai. SQL nevykdytas, kainodara neįdiegta.
 
+## Pirmas skelbimas po registracijos (papildytas savininko reikalavimas)
+
+- Basic, Business ir Business Pro vartotojo pirmas naujas skelbimas nemokamas
+  vieną kartą po registracijos, galioja 30 dienų. Tai ne mėnesinė dovana ir
+  ne pratęsimo kuponas. Nepanaudotai dovanai papildomas laiko terminas nenustatytas.
+- Pagal savininko ankstesnį „kiekvienam vartotojui“ reikalavimą gavėjas yra
+  paskyra, įskaitant skelbti teisę turintį pakviestą narį. Įmonės pakeitimas
+  nesukuria naujos dovanos tam pačiam vartotojui.
+- Pro dovana papildoma prie bendrų 10, todėl naujų komandos narių vienkartinės
+  dovanos gali padidinti bendrą įmonės nemokamų skelbimų skaičių. Įprasti
+  mėnesio 10 ir toliau bendri visai įmonei. Ši papildoma dovana neatsinaujina.
+- Jau publikavęs paskyros naudotojas nelaikomas pirmą kartą publikuojančiu.
+  Paskelbimo istorija tikrinama ir tarp pašalintų/uždarytų skelbimų. Naujas
+  panaudojimo įrašas išlieka ir po skelbimo ar įmonės pašalinimo.
+- `20261103200000_first_job_ad_free_REVIEW.sql` taikomas tik po pagrindinio
+  kvotos projekto. Sukuria dvi privačias RLS lenteles, apsaugotą pirmo
+  paskelbimo trigerį ir `job_ad_offer` RPC. Kampanija pagal nutylėjimą IŠJUNGTA.
+- Abu projektus ir priežiūrą reikia peržiūrėti kartu. Tikrintojas turi patvirtinti
+  esamų BEFORE INSERT trigerių eiliškumą, publikacijų istorijos išsaugojimą ir
+  `auth.role()`/paslaugos aktoriaus kontekstą. Istoriniai fiziškai ištrinti
+  publikacijų įrašai negali būti atkurti iš likusių eilučių; prieš aktyvuojant
+  esamoms paskyroms reikia patvirtinti realų istorijos patikimumą.
+- Viešai nerodyti naujo pasiūlymo, kol neperžiūrėtas visas kelias. Diegimą,
+  serverio įjungimą ir pirmos dovanos kampanijos aktyvaciją atlikti už įjungto
+  Maintenance, atskirai patvirtinus savininkui. Šioje sesijoje niekas neįjungta.
+
 ## Savininko pasirinkta taisyklė
 
 - 10 nemokamų paskelbimų visai įmonei, bendra savininko ir teisę skelbti turinčių
@@ -67,6 +93,11 @@ Tikrintojas, turintis esamo prenumeratos serverio kodo prieigą, turi:
   pratęsimų, trumpi mėnesiai, atsinaujinimas, redagavimas, pašalinimas, rollback,
   skirtingos įmonės, teisių blokavimas ir mokamo periodo neįtraukimas į kvotą.
 - Naršyklės 1440/390 testai naudoja tik imituotas RPC ir checkout funkcijas.
+- Sujungtų projektų 16 SQL scenarijų praėjo. Papildomai patikrintas vienkartinis
+  Basic/Business/Pro paskelbimas, claim atšaukimas po neteisingo INSERT,
+  dovanos išsaugojimas pašalinus skelbimą, nekaupimas kas mėnesį, atskira
+  įmonės Pro kvota, nario dovana, ta pati paskyra skirtingose įmonėse ir
+  draudimas naršyklei keisti kampanijos būseną ar claims.
 - PGlite užklausas serializuoja. Tikras kelių jungčių vienalaikiškumas,
   tikras pirkimas/atšaukimas/pratęsimas test-mode aplinkoje ir tikro auth/DB
   integracija dar nepatikrinti. Jokių realių mokėjimų ar produkcinių įrašų nekeista.
