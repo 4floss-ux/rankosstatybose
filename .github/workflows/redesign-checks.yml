@@ -40,6 +40,8 @@ jobs:
         run: node tests/hire-routes.test.mjs
       - name: Check hire message requests and validation
         run: node tests/hire-messages.test.mjs
+      - name: Check current-plan validity display
+        run: node tests/plan-validity.test.mjs
       - name: Check hire message SQL with synthetic local PostgreSQL fixtures
         run: node tests/hire-messages-sql.test.mjs
       - name: Independent hire bundle with no live credentials
