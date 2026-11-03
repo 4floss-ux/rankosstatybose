@@ -10,11 +10,20 @@ Failed sends retain the draft and retry ID. Text is rendered as React text, not 
 Employer controls use Lithuanian or English; other portal languages fall back to
 English for this new section only.
 
+The conversation belongs to the company account, not to an individual workforce
+need. Admin RPCs resolve both original and additional request IDs through their
+employer account to the original request. Employer RPCs use that same original
+request from the validated session's account. Deleting an additional need keeps
+the shared conversation. Deleting the original request cascades its messages;
+deleting an account also cascades its employer-authored messages, so neither new
+foreign key blocks the existing request/account deletion sequence. This changes
+no existing deletion function and executes no deletion itself.
+
 ## Server review required before deployment
 
 `docs/sql-review/20261103160000_hire_messages_REVIEW.sql` is a proposed transaction,
-not an applied migration. In particular, the reviewer must confirm the real session
-revocation column (`revoked_at`) and compare the authorization with the existing
+not an applied migration. The reviewer confirmed the session revocation column
+(`revoked_at`); still compare the authorization with the existing
 `app_private.foreign_employer_session_account` helper. Prefer that existing helper
 after its actual return type/contract are confirmed. Do not apply an assumed schema.
 
@@ -40,6 +49,14 @@ payments, customer-data changes or real messages have been executed by this work
 
 - Main and independent hire production builds: PASS (existing main bundle-size warning).
 - Message request/validation tests: 4 PASS.
+- Actual SQL proposal executed in an in-memory PostgreSQL engine (PGlite):
+  9 scenarios PASS, covering original/additional request mapping, cross-company
+  isolation, retry IDs, role/session restrictions, browser table permissions,
+  additional-need deletion and both root/account deletion orders. Existing tables,
+  auth helpers and digest are synthetic fixtures. These tests do not establish
+  compatibility with the live schema, the actual deletion RPC or real cryptography.
+  Reviewer confirmed `revoked_at` exists; the account-to-additional-request mapping
+  and existing deletion function still need independent live-schema review.
 - Synthetic browser checks at 1440px and 390px: PASS (rendering, text escaping,
   empty-send prevention, failed-send draft preservation, retry identity and
   employer RPC context). These do not prove database authorization.

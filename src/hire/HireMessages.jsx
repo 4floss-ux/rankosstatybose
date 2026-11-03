@@ -74,7 +74,7 @@ export function HireMessages({ requestId, sessionToken, lang = "lt" }) {
       <h2>{t("Žinutės", "Messages")}</h2>
       <button className="btn sm" type="button" disabled={loading || busy} onClick={() => refresh.current()}>{t("Atnaujinti", "Refresh")}</button>
     </div>
-    <p className="small muted">{requestId ? "Susirašinėjimas su šia įmone jos privačiame portale." : t("Susirašinėjimas su Statybos24.", "Your conversation with Statybos24.")}</p>
+    <p className="small muted">{requestId ? "Bendras susirašinėjimas su šia įmone dėl visų jos darbuotojų poreikių." : t("Bendras susirašinėjimas su Statybos24 dėl visų jūsų darbuotojų poreikių.", "Your conversation with Statybos24 for all your workforce needs.")}</p>
     {error ? <p className="ferr" role="alert">{error}</p> : null}
     {loading ? <p role="status">{t("Kraunama...", "Loading...")}</p> : !messages.length && !error ? <p className="small muted">{t("Žinučių dar nėra.", "No messages yet.")}</p> : null}
     <ol style={{ listStyle: "none", padding: 0, maxHeight: 360, overflowY: "auto" }}>

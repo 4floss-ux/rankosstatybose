@@ -38,6 +38,8 @@ jobs:
         run: node tests/hire-routes.test.mjs
       - name: Check hire message requests and validation
         run: node tests/hire-messages.test.mjs
+      - name: Check hire message SQL with synthetic local PostgreSQL fixtures
+        run: node tests/hire-messages-sql.test.mjs
       - name: Independent hire bundle with no live credentials
         env:
           VITE_SUPABASE_URL: ""

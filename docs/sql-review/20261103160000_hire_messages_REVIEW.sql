@@ -1,16 +1,19 @@
 -- PROPOSAL ONLY. DO NOT APPLY AUTOMATICALLY.
--- Reviewer must confirm foreign_employer_sessions.revoked_at exists and matches
--- the existing portal's revocation rules. Also review existing table triggers.
+-- Reviewer confirmed foreign_employer_sessions.revoked_at exists. Still review
+-- session semantics, additional-request account links and existing deletion RPCs.
 -- Not placed in supabase/migrations; no live database execution authorized here.
 BEGIN;
 
 CREATE TABLE public.foreign_hire_messages (
   id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
-  request_id uuid NOT NULL REFERENCES public.foreign_hire_requests(id),
+  -- One conversation per employer account, stored under its original request.
+  -- Deleting an additional need does not delete the shared company conversation.
+  -- Deleting the original request removes its messages in the same transaction.
+  request_id uuid NOT NULL REFERENCES public.foreign_hire_requests(id) ON DELETE CASCADE,
   client_id uuid NOT NULL,
   sender_kind text NOT NULL CHECK (sender_kind IN ('admin', 'employer')),
   admin_id uuid REFERENCES public.profiles(id),
-  employer_account_id uuid REFERENCES public.foreign_employer_accounts(id),
+  employer_account_id uuid REFERENCES public.foreign_employer_accounts(id) ON DELETE CASCADE,
   body text NOT NULL CHECK (char_length(btrim(body)) BETWEEN 1 AND 4000),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   UNIQUE (request_id, client_id),
@@ -25,16 +28,23 @@ REVOKE ALL ON TABLE public.foreign_hire_messages FROM PUBLIC, anon, authenticate
 
 CREATE FUNCTION app_private.hire_message_admin_request(p_request_id uuid)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE v_request uuid;
 BEGIN
   IF auth.uid() IS NULL OR public.is_admin() IS DISTINCT FROM TRUE THEN
     RAISE EXCEPTION 'Access denied' USING ERRCODE = '42501';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.foreign_hire_requests r
-                 JOIN public.foreign_employer_accounts a ON a.request_id = r.id
-                 WHERE r.id = p_request_id AND a.is_active = true) THEN
+  -- Additional needs reference the same employer account. Resolve the supplied
+  -- request to that account's ORIGINAL request, matching the employer RPCs.
+  SELECT a.request_id INTO v_request
+  FROM public.foreign_hire_requests r
+  JOIN public.foreign_employer_accounts a
+    ON a.id = r.employer_account_id
+       OR (r.employer_account_id IS NULL AND a.request_id = r.id)
+  WHERE r.id = p_request_id AND a.is_active = true;
+  IF v_request IS NULL THEN
     RAISE EXCEPTION 'Conversation unavailable' USING ERRCODE = '42501';
   END IF;
-  RETURN p_request_id;
+  RETURN v_request;
 END;
 $fn$;
 
