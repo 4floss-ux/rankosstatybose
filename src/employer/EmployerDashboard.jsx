@@ -4978,6 +4978,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
           <EmployerPlans
             planKey={planSummary?.plan_key}
             billing={billingStatus}
+            summary={planSummary}
             cycle={planBillingCycle}
             setCycle={setPlanBillingCycle}
             busy={planActionBusy}

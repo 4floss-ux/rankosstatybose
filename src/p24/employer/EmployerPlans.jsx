@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Svg } from "../Shell.jsx";
 import { EMPLOYER_PLANS, employerPlanAnnualPrice, employerPlanAnnualSavings, formatPlanPrice } from "../../employer/plans.js";
+import { employerPlanValidity } from "../../employer/planValidity.js";
+import "./EmployerPlans.css";
 
 /* Prototipo ePlans. Kainos ir mygtukų logika – iš esamos Stripe sistemos (EmployerDashboard). */
 
@@ -13,13 +15,14 @@ const CARD = {
 };
 const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width:981px)").matches;
 
-export function EmployerPlans({ planKey, billing, cycle, setCycle, busy, isOwner, adminMode, onRequest, onPortal, onAdminActivate, notes }) {
+export function EmployerPlans({ planKey, billing, summary, cycle, setCycle, busy, isOwner, adminMode, onRequest, onPortal, onAdminActivate, notes }) {
   const [open, setOpen] = useState(() => (isDesktop() ? "" : "business_pro"));
   const leaveT = useRef(null);
   useEffect(() => () => clearTimeout(leaveT.current), []);
   const yr = cycle === "yearly";
   const currentBilling = billing?.billing_interval === "yearly" ? "yearly" : "monthly";
   const ord = { basic: 0, business: 1, business_pro: 2 };
+  const validity = employerPlanValidity(planKey, billing, summary);
 
   const button = (plan) => {
     const same = planKey === plan.key;
@@ -40,11 +43,22 @@ export function EmployerPlans({ planKey, billing, cycle, setCycle, busy, isOwner
 
   return (
     <>
-      <div className="head"><div><h1>Planai</h1><p className="lead">Apmokama saugiai per Stripe. Prenumeratą valdo įmonės savininkas.</p></div>
+      <div className="head"><div><h1>Planai</h1><p className="lead">Prenumeratą valdo įmonės savininkas.</p></div>
         <div className="pertgl" role="group" aria-label="Atsiskaitymo laikotarpis">
           <button type="button" aria-pressed={!yr} onClick={() => setCycle("monthly")}>Kas mėnesį</button>
           <button type="button" aria-pressed={yr} onClick={() => setCycle("yearly")}>Už metus <em>−20 %</em></button>
         </div></div>
+      {validity ? <section className="card plan-validity" aria-label="Dabartinio plano informacija">
+        <div className="plan-validity-current">
+          <span className="plan-validity-icon"><Svg name="card" size={22} /></span>
+          <div><span className="plan-validity-label">Dabartinis planas</span><h2>{EMPLOYER_PLANS.find(plan => plan.key === validity.key)?.name || validity.key}</h2></div>
+        </div>
+        <div className="plan-validity-until">
+          <span className="plan-validity-label">{validity.label}</span>
+          <b>{validity.value}</b>
+        </div>
+        <div className="plan-validity-detail"><Svg name="clock" size={16} /><span>{validity.detail}</span></div>
+      </section> : null}
       {notes}
       <div className={`pcards${open ? " any" : ""}`} onMouseLeave={() => { if (isDesktop()) { clearTimeout(leaveT.current); leaveT.current = setTimeout(() => setOpen(""), 200); } }}>
         {EMPLOYER_PLANS.map((plan) => {
