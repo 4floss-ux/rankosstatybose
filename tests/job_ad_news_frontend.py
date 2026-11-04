@@ -68,6 +68,8 @@ with sync_playwright() as p:
   assert page.get_by_text('Įmonė matys jūsų profilį, patikimumą ir įvertinimus',exact=True).count()==0
   assert 'Mano labai ilgas' in page.locator('.cvbox.ok').inner_text()
   assert 'Patvirtinote' in page.locator('.ivcard').inner_text()
+  assert page.locator('.ivcard').inner_text().lower().count('telefonu')==1
+  assert 'Įmonė susisieks jūsų profilyje nurodytu telefono numeriu.' in page.locator('.ivcard').inner_text()
   assert 'Paskambinsime nurodytu laiku.' in page.locator('.ivcard').inner_text()
   share=page.get_by_role('button',name='Dalintis',exact=True).bounding_box();profile=page.get_by_role('button',name='Įmonės profilis',exact=True).bounding_box()
   assert abs(share['width']-profile['width'])<1
