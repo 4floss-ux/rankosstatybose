@@ -206,7 +206,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
             <label className={`btn primary jd-wide cvup${busy ? " dis" : ""}`}><Svg name="upload" size={16} />{busy ? "Įkeliama..." : "Įkelti CV"}<input type="file" hidden disabled={busy} accept=".pdf,.doc,.docx,image/*" onChange={(e) => uploadCv(e.target.files?.[0])} /></label></div>) : null}
       {st === "interview" && x.interview_at ? (
         <div className={`ivcard${changedInterview ? " changed" : ""}`}><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>{changedInterview ? <strong className="iv-change">Pakeisti pokalbio duomenys. Patvirtinkite iš naujo.</strong> : null}
-          <span>{IV_HOW[x.interview_how]}{x.interview_how === "live" ? ` · ${x.interview_address || ""}` : " – įmonė paskambins"}</span>
+          <span>{x.interview_how === "live" ? `${IV_HOW[x.interview_how]} · ${x.interview_address || ""}` : "Įmonė susisieks jūsų profilyje nurodytu telefono numeriu."}</span>
           {x.interview_note ? <span className="small iv-note"><b>Pastaba</b>{x.interview_note}</span> : null}
           {x.interview_how === "live" && x.interview_address ? <a className="jd-map" href={mapLink(x.interview_address)} target="_blank" rel="noopener noreferrer">Rodyti žemėlapyje ↗</a> : null}
           {x.interview_confirmed_at ? <span className="ivok"><Svg name="check" size={13} width={3} />Patvirtinote</span>
