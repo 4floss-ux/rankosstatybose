@@ -194,7 +194,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
   const si = st === "rejected" ? -1 : steps.findIndex((s) => s[0] === st);
   const fav = isFavorite(ad.company_id);
 
-  const act = publicView ? <><button className="btn primary jd-wide" type="button" onClick={onPublicApply}>Kandidatuoti</button><p className="small muted" style={{ margin: 0 }}>Norėdami kandidatuoti, prisijunkite arba susikurkite darbuotojo paskyrą.</p></>
+  const act = publicView ? <><button className="btn primary jd-wide" type="button" onClick={onPublicApply}>Kandidatuoti</button><div className="public-apply-note"><b>Sudomino šis darbas?</b><span>Prisijunkite arba susikurkite darbuotojo paskyrą ir pateikite kandidatūrą.</span></div></>
     : st === "withdrawn" ? <p className="small muted">Kandidatūra atšaukta. Į šį skelbimą jau kandidatavote; pakartotinai kandidatuoti negalima.</p> : x ? (
     <>
       <div className="adtrack">{st === "rejected"
@@ -245,7 +245,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
             {!publicView ? <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button> : null}
             {ad.live ? <ShareJobAdButton ad={ad} className="btn jd-wide" /> : null}
           </section>
-          {ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
+          {!publicView && ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}

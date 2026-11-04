@@ -23,6 +23,7 @@ const PublicJobAdsPage = lazyPage(() => import("./public/PublicJobAdsPage.jsx"),
 
 export function App() {
   const publicJobs = publicJobRoute(window.location.pathname);
+  const publicHome = window.location.pathname === "/" && new URLSearchParams(window.location.search).get("pradzia") === "1";
   const [user, setUser] = useState(null);
   useEffect(() => {
     if(!user?.id || !supabase) return;
@@ -419,19 +420,19 @@ export function App() {
     </>;
   }
 
-  if (user && accountRole === "worker") {
+  if (!publicHome && user && accountRole === "worker") {
     return (
       <WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />
     );
   }
 
-  if (user && accountRole === "employer") {
+  if (!publicHome && user && accountRole === "employer") {
     return (
       <EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />
     );
   }
 
-  if (user && accountRole === "admin") {
+  if (!publicHome && user && accountRole === "admin") {
     if (adminMode === "worker") {
       return (
         <AdminWorkerGateway
@@ -466,6 +467,7 @@ export function App() {
   return (
     <>
       <PublicLandingP24
+        signedIn={Boolean(user)}
         onLogin={openLogin}
         onEmployerSignup={openEmployerSignup}
         onWorkerSignup={openWorkerSignup}
