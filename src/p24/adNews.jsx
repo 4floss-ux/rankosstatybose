@@ -113,8 +113,8 @@ export function adNewsConversations({ ads = [], news, side, onOpen }) {
   return source.map(row => ({ key: `ad:${row.application_id}`, kind: "private",
     name: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"), job: row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas",
     unread: Number(row.chat_unread || 0), lastAt: row.chat_latest_at || null,
-    lastText: Number(row.chat_unread) > 0 ? "Nauja žinutė dėl skelbimo" : "Pokalbis dėl skelbimo",
-    onOpen: (hiddenBefore) => onOpen({ hiddenBefore, applicationId: row.application_id, title: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"),
+    lastText: `${Number(row.chat_unread) > 0 ? "Nauja žinutė" : "Pokalbis"} · ${row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas"}`,
+    onOpen: (hiddenBefore) => onOpen({ hiddenBefore, adId: row.ad_id, applicationId: row.application_id, title: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"),
       sub: row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas", closed: ["rejected", "withdrawn"].includes(row.application_status) }),
   }));
 }

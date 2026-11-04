@@ -439,7 +439,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
-      {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
+      {chat ? <AdChat adId={ad.id} applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
       <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );

@@ -80,6 +80,8 @@ with sync_playwright() as p:
   assert page.locator('[data-testid=nav-count]').inner_text()=='2'
   page.evaluate('window.ackError=false');page.get_by_role('button',name='Pažymėti perskaityta').click();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='1'")
   page.get_by_role('button',name='Rašyti įmonei').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='0'")
+  assert page.get_by_text('Darbo skelbimas: '+page.evaluate('window.ad.title'),exact=True).count()==1
+  assert page.get_by_role('link',name='Atidaryti skelbimą').get_attribute('href')=='/darbo-skelbimai/'+page.evaluate('window.ad.id')
   # Hidden conversation must not silently consume incoming messages.
   page.locator('.msgs').evaluate("e=>e.style.display='none'")
   page.evaluate("window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,events:[]}]")
@@ -170,6 +172,7 @@ with sync_playwright() as p:
   assert page.locator('.conv').count()==1
   assert page.locator('.conv.un').count()==0
   assert 'Testinis Kandidatas' in page.locator('.conv').inner_text()
+  assert page.evaluate('window.ad.title') in page.locator('.conv').inner_text()
   page.locator('.conv').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
   # Confirmed face-to-face interviews expose the same contact on the Basic plan.
   page.evaluate("window.candidate.interview_how='live';window.candidate.interview_address='Bandymų g. 1';window.candidate.interview_confirmed_at='2026-11-04';window.mount('employer')")

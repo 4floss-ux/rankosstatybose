@@ -249,7 +249,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}
-      {chat && x ? <AdChat applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} onRead={news?.reload} closed={["rejected", "withdrawn"].includes(st)} onClose={() => setChat(false)} /> : null}
+      {chat && x ? <AdChat adId={ad.id} applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} onRead={news?.reload} closed={["rejected", "withdrawn"].includes(st)} onClose={() => setChat(false)} /> : null}
     </>
   );
 }
