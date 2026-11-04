@@ -61,7 +61,7 @@ export function BusinessPresentationPage({ onSignup }) {
     ["Konkretūs darbo kvietimai", "Darbuotojas prieš priimdamas mato darbo vietą, laiką, atlygį ir svarbiausias sąlygas."],
     ["El. pašto pranešimai", "Darbuotojai informuojami apie darbo pasiūlymus, kvietimus ir svarbius darbo veiksmus."],
     ["Patikimumas ir įvertinimai", "Business ir Pro planuose sprendimui padeda realių darbų istorija, atvykimai bei darbdavių vertinimai."],
-    ["Favoritai", "Gerai pasirodžiusius darbuotojus išsisaugote ir kitą kartą randate greičiau."],
+    ["Mėgstami darbuotojai", "Gerai pasirodžiusius darbuotojus išsisaugote ir kitą kartą randate greičiau."],
     ["Darbo pokalbiai", "Privatūs ir bendri darbo pokalbiai padeda su darbu susijusią komunikaciją laikyti vienoje vietoje."],
     ["Ilgalaikio įdarbinimo kryptis", "Po sėkmingo praktinio bendradarbiavimo galite darbuotojui pateikti ilgalaikio darbo pasiūlymą."],
     ["Komandos valdymas", "Business Pro leidžia iki 5 įmonės vartotojų, roles, atsakingo žmogaus paskyrimą, vadovų statistiką ir vidinį pokalbį."],
@@ -228,13 +228,13 @@ export function BusinessPresentationPage({ onSignup }) {
                 <div className="bp-real-copy">
                   <span className="bp-real-no">04 · Reputacija</span>
                   <h3>Sprendžiate pagal realų elgesį darbe</h3>
-                  <p>Po darbo kaupiasi informacija, kuri tampa vertingesnė už vien pažadą ar CV. Gerai pasirodžiusį žmogų galite išsisaugoti favorituose.</p>
+                  <p>Po darbo kaupiasi informacija, kuri tampa vertingesnė už vien pažadą ar CV. Gerai pasirodžiusį žmogų galite įtraukti į mėgstamų darbuotojų sąrašą.</p>
                   <ul className="bp-real-points">
                     <li>Atliktų darbų skaičius</li>
                     <li>Atvykimo patikimumas</li>
                     <li>Darbdavių įvertinimų vidurkis</li>
                     <li>Konkretaus darbo užbaigimas ir įvertinimas</li>
-                    <li>Favoritai pakartotiniam kvietimui</li>
+                    <li>Mėgstami darbuotojai pakartotiniam kvietimui</li>
                   </ul>
                 </div>
               </article>
@@ -311,7 +311,7 @@ export function BusinessPresentationPage({ onSignup }) {
           <section className="bp-section">
             <div className="bp-long">
               <h3>Trumpalaikis darbas gali tapti praktišku būdu rasti žmogų ilgam.</h3>
-              <p>Užuot sprendus vien iš CV ar pokalbio, galite žmogų pamatyti realiame objekte. Jei jis pasiteisina, išsaugote jį favorituose, kviečiate į kitus darbus ir bendradarbiavimą galite tęsti ilgalaikio įdarbinimo kryptimi.</p>
+              <p>Užuot sprendus vien iš CV ar pokalbio, galite žmogų pamatyti realiame objekte. Jei jis pasiteisina, įtraukiate jį į mėgstamų darbuotojų sąrašą, kviečiate į kitus darbus ir bendradarbiavimą galite tęsti ilgalaikio įdarbinimo kryptimi.</p>
             </div>
           </section>
 
@@ -332,7 +332,7 @@ export function BusinessPresentationPage({ onSignup }) {
               <article className="bp-plan featured">
                 <span className="bp-plan-tag">Rekomenduojamas</span><h3>Business</h3><div className="bp-price">29 € <small>/ mėn.</small></div>
                 <div className="bp-desc">Reguliariai darbuotojų ieškančiai įmonei, kuri nori geriau atsirinkti ir kaupti patikrintų žmonių ratą.</div>
-                <ul><li>Viskas, kas yra Basic plane</li><li>Iki 25 darbo pasiūlymų per mėnesį</li><li>Patikimumas ir įvertinimai</li><li>Favoritai</li><li>Privatūs ir bendri darbo pokalbiai</li><li>Išplėstinė įmonės statistika</li><li>1 įmonės vartotojas</li></ul>
+                <ul><li>Viskas, kas yra Basic plane</li><li>Iki 25 darbo pasiūlymų per mėnesį</li><li>Patikimumas ir įvertinimai</li><li>Mėgstami darbuotojai</li><li>Privatūs ir bendri darbo pokalbiai</li><li>Išplėstinė įmonės statistika</li><li>1 įmonės vartotojas</li></ul>
                 <div className="bp-why"><b>Naujoms įmonėms:</b> 30 dienų Business automatiškai, nemokamai, be kortelės ir be įsipareigojimo.</div>
               </article>
 
