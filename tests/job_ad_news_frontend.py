@@ -151,6 +151,7 @@ with sync_playwright() as p:
 
   page.get_by_role('button',name='Pratęsti skelbimą',exact=True).click()
   page.locator('.ad-extension').wait_for()
+  assert 'Business Pro' not in page.locator('.modal').inner_text()
   assert '9,99' in page.locator('.ad-extension-price').inner_text()
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.locator('.modal').screenshot(path=f'/tmp/s24-extension-{width}.png')
