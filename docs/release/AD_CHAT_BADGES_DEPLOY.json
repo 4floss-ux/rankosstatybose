@@ -1,0 +1,21 @@
+{
+  "source": "5d7ee4a",
+  "production_base": "e22aa9e3d1ef60d07777ef161305e38f48607150",
+  "release_commit": "dd57074",
+  "active_version": "006fde61-c809-4f2a-8198-4b047f0f6854",
+  "deployment_id": "28ecef56-02d5-4042-bea6-e7074e2aa740",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "paid_boost_code_deployed": false,
+  "files": [
+    "src/p24/AdChat.jsx",
+    "src/p24/adNews.jsx",
+    "src/p24/employer/EmployerAds.jsx",
+    "src/p24/worker/WorkerAds.jsx"
+  ],
+  "checks": "PASS production build; 1440/390 synthetic CV, interview, Messenger, unread counters and ad link tests",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at": "2026-11-04T22:12:08.144860+00:00"
+}
