@@ -62,6 +62,11 @@ export function NewsBadge({ count }) {
   return Number(count) > 0 ? <span title={`Neperskaitytų naujienų: ${count} – žinutės, CV arba pokalbio patvirtinimas`} className="ad-news-badge" role="status" aria-label={`Neperskaitytų naujienų: ${count}`}>{count}</span> : null;
 }
 
+export function MessageBadge({ news, applicationId }) {
+  const count = Number(news?.rows.find(row => row.application_id === applicationId)?.chat_unread || 0);
+  return count > 0 ? <span className="ad-news-badge" role="status" aria-label={`Neperskaitytų žinučių: ${count}`} title={`Neperskaitytų žinučių: ${count}`}>{count}</span> : null;
+}
+
 export function AdNews({ news, applicationId, autoRead = false, hideInterview = false }) {
   const original = news?.rows.find(r => r.application_id === applicationId);
   const row = original && hideInterview ? { ...original, events: original.events?.filter(event => !["interview", "interview_changed"].includes(event.kind)) } : original;
@@ -87,9 +92,8 @@ export function AdNews({ news, applicationId, autoRead = false, hideInterview = 
     document.addEventListener("visibilitychange", schedule);
     return () => { clearTimeout(timer); observer.disconnect(); document.removeEventListener("visibilitychange", schedule); };
   }, [autoRead, applicationId, versions]);
-  if (!row || !(row.events?.length || row.chat_unread)) return null;
+  if (!row?.events?.length) return null;
   return <div ref={element} className={`ad-news${row.events?.some(event => event.kind === "interview_changed") ? " changed" : ""}`} aria-label="Kandidatūros naujienos">
-    {Number(row.chat_unread) > 0 ? <b>Nauja žinutė <NewsBadge count={row.chat_unread} /></b> : null}
     {(row.events || []).map(e => <div key={e.kind}><b>{e.label}</b>{e.interview_at ? <span>{new Date(e.interview_at).toLocaleString("lt-LT", { timeZone: "Europe/Vilnius", dateStyle: "short", timeStyle: "short" })}</span> : null}</div>)}
     {row.events?.length ? <button className="btn sm" type="button" disabled={busy} onClick={async () => {
       setBusy(true); setError("");
@@ -109,8 +113,8 @@ export function adNewsConversations({ ads = [], news, side, onOpen }) {
   return source.map(row => ({ key: `ad:${row.application_id}`, kind: "private",
     name: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"), job: row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas",
     unread: Number(row.chat_unread || 0), lastAt: row.chat_latest_at || null,
-    lastText: Number(row.chat_unread) > 0 ? "Nauja žinutė dėl skelbimo" : "Pokalbis dėl skelbimo",
-    onOpen: (hiddenBefore) => onOpen({ hiddenBefore, applicationId: row.application_id, title: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"),
+    lastText: `${Number(row.chat_unread) > 0 ? "Nauja žinutė" : "Pokalbis"} · ${row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas"}`,
+    onOpen: (hiddenBefore) => onOpen({ hiddenBefore, adId: row.ad_id, applicationId: row.application_id, title: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"),
       sub: row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas", closed: ["rejected", "withdrawn"].includes(row.application_status) }),
   }));
 }

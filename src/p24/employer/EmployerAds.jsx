@@ -1,4 +1,4 @@
-import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
+import { useAdNews, AdNews, NewsBadge, MessageBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
@@ -360,9 +360,9 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
     const cvB = c.cv_path ? null : c.cv_requested_at ? <span className="pill cvp"><Svg name="clock" size={13} width={2.2} />CV prašoma</span>
       : <button className="btn sm" type="button" disabled={busy === c.id + "request_cv"} onClick={() => act(c, "request_cv")}><Svg name="file" size={14} />Prašyti CV</button>;
     const prof = <button className="btn sm" type="button" onClick={() => onWorkerProfile(c)}><Svg name="user" size={14} />Profilis</button>;
-    const acts = c.status === "rejected" ? <><Pill>Atmesta</Pill><button className="btn sm" type="button" onClick={() => setChat(c)}>Peržiūrėti žinutes</button>{prof}</>
-      : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}{prof}</>
-      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
+    const acts = c.status === "rejected" ? <><Pill>Atmesta</Pill><button className="btn sm" type="button" onClick={() => setChat(c)}>Peržiūrėti žinutes<MessageBadge news={news} applicationId={c.id} /></button>{prof}</>
+      : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti<MessageBadge news={news} applicationId={c.id} /></button>{cvB}{prof}</>
+      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti<MessageBadge news={news} applicationId={c.id} /></button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
     return (
       <div className="wk cand interview-candidate" key={c.id}>
         <Av w={c} />
@@ -439,7 +439,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
-      {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
+      {chat ? <AdChat adId={ad.id} applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
       <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
