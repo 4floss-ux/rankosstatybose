@@ -49,6 +49,10 @@ with sync_playwright() as p:
   page.add_script_tag(content=bundle);page.locator('article.job').wait_for()
   # List heart is next to salary, works after applying, and Enter does not open the ad.
   list_heart=page.locator('article.job button.adsave:visible').first
+  salary=page.locator('article.job .adsal b' if width>640 else 'article.job .adsal-m b').bounding_box()
+  heart=list_heart.bounding_box()
+  assert heart['x']>=salary['x']+salary['width'],(width,salary,heart)
+  assert abs((heart['y']+heart['height']/2)-(salary['y']+salary['height']/2))<8,(width,salary,heart)
   list_heart.click();assert page.evaluate('window.ad.saved') is True
   list_heart.press('Enter');assert page.evaluate('window.ad.saved') is False
   assert page.locator('article.job').count()==1
@@ -58,6 +62,9 @@ with sync_playwright() as p:
   assert page.locator('article.job .ad-news-badge').inner_text()=='2'
   page.locator('article.job').click();page.locator('.cvbox.ok').wait_for()
   assert page.locator('.ad-news.changed').count()==1
+  salary=page.locator('.jd-pay b').bounding_box();heart=page.locator('.jd-pay .adsave').bounding_box()
+  assert heart['x']>=salary['x']+salary['width']
+  assert abs((heart['y']+heart['height']/2)-(salary['y']+salary['height']/2))<3
   assert page.get_by_text('Įmonė matys jūsų profilį, patikimumą ir įvertinimus',exact=True).count()==0
   assert 'Mano labai ilgas' in page.locator('.cvbox.ok').inner_text()
   assert 'Patvirtinote' in page.locator('.ivcard').inner_text()
