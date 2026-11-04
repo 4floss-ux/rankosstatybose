@@ -22,8 +22,8 @@ window.mount('worker');'''
 mock='''export const supabase={rpc:async(name,args)=>{
 window.calls.push({name,args});const mode=window.mode;
 if(name==='job_ad_news')return {data:JSON.parse(JSON.stringify(window.records[mode]))};
-if(name==='job_ad_news_read'){if(window.ackError)return {error:{message:'Synthetic failure'}};window.records[mode]=window.records[mode].map(r=>({...r,events:r.events.filter(e=>!args.p_events.some(x=>x.kind===e.kind&&x.version===e.version))})).filter(r=>r.events.length||r.chat_unread);return {data:null};}
-if(name==='job_ad_chat_messages'){window.records[mode]=window.records[mode].map(r=>({...r,chat_unread:0})).filter(r=>r.events.length);return {data:[{id:'msg',body:'Sintetinė žinutė',is_mine:false,created_at:'2026-11-03T10:00:00Z'}]};}
+if(name==='job_ad_news_read'){if(window.ackError)return {error:{message:'Synthetic failure'}};window.records[mode]=window.records[mode].map(r=>({...r,events:r.events.filter(e=>!args.p_events.some(x=>x.kind===e.kind&&x.version===e.version))})).filter(r=>r.events.length||r.chat_unread||r.chat_latest_at);return {data:null};}
+if(name==='job_ad_chat_messages'){window.records[mode]=window.records[mode].map(r=>({...r,chat_unread:0})).filter(r=>r.events.length||r.chat_latest_at);return {data:[{id:'msg',body:'Sintetinė žinutė',is_mine:false,created_at:'2026-11-03T10:00:00Z'}]};}
 if(name==='job_ads_worker_list')return {data:[{...window.ad,application:{...window.candidate}}]};
 if(name==='job_ads_company_list')return {data:[{...window.ad,candidates:1}]};
 if(name==='job_ad_company_detail')return {data:{...window.ad,candidates:[{...window.candidate}],savers:[]}};
@@ -83,7 +83,7 @@ with sync_playwright() as p:
   assert page.evaluate("window.calls.some(c=>c.name==='job_ad_attach_cv')&&window.calls.some(c=>c.name==='job_ad_confirm_interview')")
   page.screenshot(path=f'/tmp/s24-worker-candidate-{width}.png',full_page=True)
   # Switching to employer resets the previous worker badge; employer gets own news.
-  page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
+  page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,chat_latest_at:'2026-11-04T10:00:00Z',participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
   page.locator('article.job').wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='3'")
   page.locator('article.job').click();page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
   page.get_by_text('Kandidatas patvirtino pokalbio laiką',exact=True).wait_for()
@@ -98,6 +98,19 @@ with sync_playwright() as p:
   page.screenshot(path=f'/tmp/s24-candidate-interview-{width}.png',full_page=True)
   page.get_by_role('button',name='Siųsti naują laiką').click()
   page.wait_for_function("window.calls.some(c=>c.name==='job_ad_candidate_update'&&c.args.p_interview_how==='phone')")
+  # Employer can reopen a read conversation; only its red badge disappears.
+  page.get_by_role('button',name='Atidaryti Messenger',exact=True).click()
+  page.locator('.conv.un').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
+  page.wait_for_function("document.querySelector('[data-testid=messenger-count]').textContent==='0'")
+  page.get_by_role('region',name='Pokalbis',exact=True).get_by_role('button',name='Uždaryti',exact=True).click()
+  page.get_by_role('button',name='Atidaryti Messenger',exact=True).click()
+  assert page.locator('.conv').count()==1
+  assert page.locator('.conv.un').count()==0
+  page.clock.fast_forward(15001)
+  assert page.locator('.conv').count()==1
+  assert page.locator('.conv.un').count()==0
+  assert 'Testinis Kandidatas' in page.locator('.conv').inner_text()
+  page.locator('.conv').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
   assert not errors,errors
   print(f'PASS {width}px: automatic global/ad/candidate counters, isolated roles, news acknowledgement/error, chat reads, CV card, interview/calendar/select, share width; synthetic only')
   page.close()

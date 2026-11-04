@@ -39,7 +39,7 @@ RETURNS TABLE (application_id uuid, ad_id uuid, chat_unread integer, events json
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT a.id, a.ad_id, coalesce(u.unread, 0), ev.items, statement_timestamp(),
     CASE WHEN access.side = 'company' THEN p.display_name ELSE c.name END, ad.title, a.status,
-    (SELECT max(m.created_at) FROM public.job_ad_messages m WHERE m.application_id = a.id AND m.sender_side <> access.side)
+    (SELECT max(m.created_at) FROM public.job_ad_messages m WHERE m.application_id = a.id)
   FROM public.job_ad_applications a
   JOIN public.job_ads ad ON ad.id = a.ad_id
   JOIN public.profiles p ON p.id = a.worker_id
@@ -64,15 +64,19 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   ) ev
   WHERE auth.uid() IS NOT NULL AND access.side IS NOT NULL AND ad.status <> 'removed'
     AND (p_company_id IS NULL OR ad.company_id = p_company_id)
+    AND public.account_can_use_platform(auth.uid()) IS TRUE
     AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_active = true)
-    AND (coalesce(u.unread, 0) > 0 OR jsonb_array_length(ev.items) > 0);
+    -- Keep every existing conversation, even with no unread messages or events.
+    AND (coalesce(u.unread, 0) > 0 OR jsonb_array_length(ev.items) > 0
+      OR EXISTS (SELECT 1 FROM public.job_ad_messages m WHERE m.application_id = a.id));
 $$;
 
 CREATE OR REPLACE FUNCTION public.job_ad_news_read(p_application_id uuid, p_events jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE v_side text := public.job_ad_chat_side(p_application_id); v_versions jsonb;
 BEGIN
-  IF auth.uid() IS NULL OR v_side IS NULL OR NOT EXISTS (
+  IF auth.uid() IS NULL OR v_side IS NULL
+    OR public.account_can_use_platform(auth.uid()) IS DISTINCT FROM TRUE OR NOT EXISTS (
     SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_active = true
   ) THEN RAISE EXCEPTION 'Neturite prieigos.' USING ERRCODE = '42501'; END IF;
   IF p_events IS NULL OR jsonb_typeof(p_events) <> 'array' THEN

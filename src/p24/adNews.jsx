@@ -84,7 +84,7 @@ export function adNewsConversations({ ads = [], news, side, onOpen }) {
     ? ads.filter(ad => ad.application).map(ad => ({ application_id: ad.application.id, ad_id: ad.id,
         participant_name: ad.company_name, ad_title: ad.title, application_status: ad.application.status,
         ...news?.rows.find(row => row.application_id === ad.application.id) }))
-    : (news?.rows || []).filter(row => Number(row.chat_unread) > 0);
+    : (news?.rows || []).filter(row => row.chat_latest_at || Number(row.chat_unread) > 0);
   return source.map(row => ({ key: `ad:${row.application_id}`, kind: "private",
     name: row.participant_name || (side === "worker" ? "Įmonė" : "Kandidatas"), job: row.ad_title || ads.find(ad => ad.id === row.ad_id)?.title || "Darbo skelbimas",
     unread: Number(row.chat_unread || 0), lastAt: row.chat_latest_at || null,

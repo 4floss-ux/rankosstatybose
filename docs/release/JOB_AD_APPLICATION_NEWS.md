@@ -28,9 +28,16 @@ Prieš bet kokį būsimą diegimą nepriklausomas tikrintojas turi palyginti š�
 ## Patikrinta vietoje
 
 - `python tests/job_ad_news_frontend.py`: 1440 / 390 px, automatiniai meniu ir eilučių skaitikliai neatidarius skelbimo, skirtingos pusės, esamo Messenger sąrašo / burbuliuko sutartis ir atidarymas, žinutės perskaitymas, CV / patvirtinimo įvykiai, skaitymo klaidos išsaugojimas, CV įkėlimo ir pokalbio patvirtinimo frontend keliai, datos / laiko / būdo valdikliai, ilgas failo pavadinimas, vienodas mygtukų plotis, be horizontalaus perpildymo.
-- `node --test tests/job-ad-news-sql.test.mjs`: tikras siūlomas SQL izoliuotame vietiniame PGlite, 5 scenarijų grupės ir bendras testas (6 PASS). Abipusės žinutės, CV, kvietimas, patvirtinimas, laiko pakeitimas, pakartotinių veiksmų deduplikavimas, konkurencinis naujo įvykio išsaugojimas, senesnio perskaitymo atsakymo atmetimas, įmonės filtras, kita paskyra, anoniminės teisės ir lentelės apsauga.
+- `node --test tests/job-ad-news-sql.test.mjs`: tikras siūlomas SQL izoliuotame vietiniame PGlite, 7 scenarijų grupės ir bendras testas (8 PASS). Abipusės žinutės, CV, kvietimas, patvirtinimas, laiko pakeitimas, pakartotinių veiksmų deduplikavimas, konkurencinis naujo įvykio išsaugojimas, senesnio perskaitymo atsakymo atmetimas, įmonės filtras, kita paskyra, anoniminės teisės ir lentelės apsauga.
 - Susiję ankstesni testai: darbdavio skelbimo detalė, viešas sąrašas / miesto filtras / nuoroda, grįžimas po prisijungimo, vienkartinio kandidatavimo SQL, 18 administratoriaus sesijos testų.
-- Galutinis bendras Node testų paleidimas: **34 PASS, 0 FAIL** (įskaitant 6 naujienų SQL ir 18 administratoriaus sesijos patikrų).
+- Galutinis bendras Node testų paleidimas: **36 PASS, 0 FAIL** (įskaitant 8 naujienų SQL ir 18 administratoriaus sesijos patikrų).
 - Pagrindinės svetainės ir atskiro Hire surinkimas. Išlieka įprastas didesnių JS paketų įspėjimas.
 
 Visuose naršyklės testuose Supabase ir Storage atsakymai sintetiniai, išorinis tinklas užblokuotas. Vietinis SQL testas nepatvirtina produkcinės schemos ar realios Supabase integracijos. Tikras testas su savininko paskyromis neatliktas: šioje sesijoje nėra saugios prisijungusios Work naršyklės valdymo ir Supabase prieigos. Slaptažodžiai, sesijos, klientų duomenys ar mokėjimai nenaudoti.
+
+## Nepriklausomos peržiūros pataisos po `34bec97`
+
+- Darbdavio Messenger sąrašas nebefiltruojamas vien pagal neperskaitytas žinutes. SQL grąžina ir perskaitytus pokalbius, kuriuose yra žinučių, o sąsaja išlaiko juos su nuliniu skaitikliu. Paskutinės žinutės laikas skaičiuojamas iš abiejų pusių žinučių, todėl išlieka ir darbdavio pradėtas pokalbis be kandidato atsakymo. Tuščios kandidatūros ar vien CV / kvietimo naujiena į Messenger pokalbių sąrašą savaime nepridedamos.
+- Abiejose naujose SQL funkcijose papildomai naudojama esama `public.account_can_use_platform(auth.uid())` patikra. Išsaugota aktyvumo, konkrečios kandidatūros pusės ir pasirinktos įmonės apsauga. Sustabdytas darbuotojas ar darbdavys negauna net perskaitytų pokalbių metaduomenų ir negali keisti skaitymo žymėjimo.
+- Pridėti atskiri SQL testai: pokalbio išlikimas perskaičius; tik darbdavio siųstos žinutės; aktyvus, bet sustabdytas darbuotojas ir darbdavys; bandymas pažymėti naujienas perskaitytomis sustabdytos paskyros teisėmis. Naršyklėje 1440 / 390 px patikrinamas pakartotinis perskaityto pokalbio atidarymas ir išlikimas po automatinio atnaujinimo.
+- Šis SQL vis dar tik peržiūrai. Tikros Supabase ar tikrų paskyrų šiuo papildymu nebandyta, nieko nediegta, šakos nejungtos, Maintenance nekeistas.
