@@ -1,0 +1,33 @@
+{
+  "approved_source": "514dfc4",
+  "production_base": "da83813",
+  "release_commit": "a49e70b8bb1b546198f78380a1c89a8ef20776a8",
+  "old_version": "c773869b-ab68-42a9-8308-5583ae22b89e",
+  "new_version": "373459c2-5162-47cf-865f-7d1a1d671eaa",
+  "bindings_identical": true,
+  "maintenance": "on",
+  "changed_source_files": 4,
+  "sql_executed": false,
+  "verified_at_vilnius": "2026-11-04T22:18:57.639788+02:00",
+  "deployment_id": "5f5766ae-32df-4b74-9e32-1f4b49ac2da0",
+  "deployment_created_on": "2026-11-04T20:18:35.343301Z",
+  "active_version": "373459c2-5162-47cf-865f-7d1a1d671eaa",
+  "traffic_percentage": 100,
+  "tests": {
+    "production_build": "PASS",
+    "node_passed": 20,
+    "browser_widths": [
+      1440,
+      390
+    ],
+    "browser_suites": [
+      "candidate news and interview attention",
+      "employer ad details",
+      "public ads",
+      "authentication return"
+    ],
+    "real_authenticated_integration": "NOT TESTED"
+  },
+  "sql_repeated": false,
+  "worker_config_routes_packages_changed": false
+}
