@@ -1,4 +1,3 @@
-import { confirmedInterviewPhone } from "../../lib/jobAdInterview.js";
 import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -288,7 +287,11 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
   const [ext, setExt] = useState(false);
   const [busy, setBusy] = useState("");
   const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc("job_ad_company_detail", { p_ad_id: adId });
+    const [{ data, error }, saved] = await Promise.all([
+      supabase.rpc("job_ad_company_detail", { p_ad_id: adId }),
+      supabase.rpc("job_ad_company_savers", { p_ad_id: adId }),
+    ]);
+    if (data && !saved.error && Array.isArray(saved.data)) data.savers = saved.data;
     if (error) setErr(error.message || "Nepavyko įkelti skelbimo."); else { setErr(""); setAd(data); }
   }, [adId]);
   useEffect(() => {
@@ -352,7 +355,6 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
   const ivs = cands.filter((c) => c.status === "interview").sort((x, y) => new Date(x.interview_at) - new Date(y.interview_at));
 
   const row = (c) => {
-    const phone = confirmedInterviewPhone(c);
     const cvB = c.cv_path ? null : c.cv_requested_at ? <span className="pill cvp"><Svg name="clock" size={13} width={2.2} />CV prašoma</span>
       : <button className="btn sm" type="button" disabled={busy === c.id + "request_cv"} onClick={() => act(c, "request_cv")}><Svg name="file" size={14} />Prašyti CV</button>;
     const prof = <button className="btn sm" type="button" onClick={() => onWorkerProfile(c)}><Svg name="user" size={14} />Profilis</button>;
@@ -375,7 +377,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
             <div className="ivline candidate-interview"><Svg name="cal" size={18} width={2.2} />
               <div className="iv-summary"><b>Pokalbis {ivShort(c.interview_at)}</b><span>{IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : ""}</span>
                 {c.interview_note ? <small>{c.interview_note}</small> : null}
-                {phone ? <div className="candidate-contact"><small>Kandidato telefonas</small><a className="btn sm" href={`tel:${phone.replace(/\s/g, "")}`}><Svg name="phone" size={14} />{phone}</a></div> : null}
+
               </div>
               {c.interview_confirmed_at ? <em className="ok"><Svg name="check" size={12} width={3} />Patvirtino</em> : <em>Laukiama patvirtinimo</em>}
             </div>
@@ -406,13 +408,13 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       <div className="ead-secondary">
       <section className="card ivsec"><header><div><h2 className="ead-section-title"><Svg name="cal" size={17} width={2.2} /><span>Pakviesti pokalbiui</span><span className="cnt">{ivs.length}</span></h2></div></header>
         <div className="list">{ivs.length ? ivs.map(row) : <Empty title="Pokalbių dar nesuplanavote" sub="Prie kandidato spauskite „Kviesti pokalbiui“." icon="cal" />}</div></section>
-      <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on /><span>Įsiminė skelbimą</span><span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
+      <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on /><span>Įsiminė skelbimą</span><span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Visi darbuotojai, įsiminę šį skelbimą</p></div></header>
         <div className="list">{savers.length ? savers.map((w) => (
           <div className="wk fw" key={w.worker_id}><Av w={w} />
             <div className="fwm"><div className="fwt"><b className="nm">{w.name}</b><small className="muted">{w.city || ""}</small></div></div>
-            <div className="wa">{w.nudged ? <Pill tone="green">Pakviestas kandidatuoti</Pill>
+            <div className="wa">{w.has_applied || cands.some(c => c.worker_id === w.worker_id) ? <Pill tone="green">Jau kandidatavo</Pill> : w.nudged ? <Pill tone="green">Pakviestas kandidatuoti</Pill>
               : ad.live ? <button className="btn sm" type="button" disabled={busy === "n" + w.worker_id} onClick={() => nudge(w)}><Svg name="send" size={15} />Pakviesti kandidatuoti</button> : null}
-              <button className="btn sm" type="button" onClick={() => onWorkerProfile(w)}><Svg name="user" size={15} />Profilis</button></div>
+              <button className="btn sm" type="button" onClick={() => onWorkerProfile(cands.find(c => c.worker_id === w.worker_id) || w)}><Svg name="user" size={15} />Profilis</button></div>
           </div>)) : <Empty title="Skelbimo dar niekas neįsiminė" sub="Čia matysite darbuotojus, kuriuos galėsite pakviesti kandidatuoti." icon="people" />}</div></section>
       </div>
         </JobAdContent>
