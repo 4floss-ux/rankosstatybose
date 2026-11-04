@@ -49,6 +49,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [messengerOpen, setMessengerOpen] = useState(false);
   const [adConversation, setAdConversation] = useState(null);
+  const [linkedAdId, setLinkedAdId] = useState(null);
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const [employerView, setEmployerView] = useState(() => {
     try {
@@ -4603,7 +4604,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
       utility={!onAdminReturn && !impersonation ? <AdminPrivateInboxButton user={user} /> : null}
     >
     {messengerOpen && <Messenger conversations={employerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
-    {employerCanAds && adConversation?.scope === `${user.id}:${company?.id}` && <AdChat key={adConversation.applicationId} {...adConversation} onRead={employerAds.news.reload} onClose={() => setAdConversation(null)} />}
+    {employerCanAds && adConversation?.scope === `${user.id}:${company?.id}` && <AdChat onOpenAd={adId => { setLinkedAdId(adId); setEmployerView("eads"); window.scrollTo(0, 0); }} key={adConversation.applicationId} {...adConversation} onRead={employerAds.news.reload} onClose={() => setAdConversation(null)} />}
     <div className="ed-page">
       {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
@@ -5062,6 +5063,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             <EmployerAds
               key={`${user.id}:${company?.id}:${employerAdsNavKey}`}
               data={employerAds}
+              initialAdId={linkedAdId}
+              onInitialAdHandled={() => setLinkedAdId(null)}
               company={company}
               isPro={employerAdsIsPro}
               startNew={employerAdsStartNew}

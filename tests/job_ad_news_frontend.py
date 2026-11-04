@@ -52,7 +52,9 @@ with sync_playwright() as p:
   salary=page.locator('article.job .adsal b' if width>640 else 'article.job .adsal-m b').bounding_box()
   heart=list_heart.bounding_box()
   assert heart['x']>=salary['x']+salary['width'],(width,salary,heart)
-  assert abs((heart['y']+heart['height']/2)-(salary['y']+salary['height']/2))<8,(width,salary,heart)
+  salary_note=page.locator('article.job .adsal > span' if width>640 else 'article.job .adsal-m > span').bounding_box()
+  text_top=min(salary['y'],salary_note['y']);text_bottom=max(salary['y']+salary['height'],salary_note['y']+salary_note['height'])
+  assert abs((heart['y']+heart['height']/2)-(text_top+text_bottom)/2)<3,(width,salary,heart)
   list_heart.click();assert page.evaluate('window.ad.saved') is True
   list_heart.press('Enter');assert page.evaluate('window.ad.saved') is False
   assert page.locator('article.job').count()==1
@@ -83,6 +85,10 @@ with sync_playwright() as p:
   assert page.get_by_text('Darbo skelbimas: '+page.evaluate('window.ad.title'),exact=True).count()==1
   assert page.get_by_role('link',name='Atidaryti skelbimą').get_attribute('href')=='/darbo-skelbimai/'+page.evaluate('window.ad.id')
   assert page.get_by_role('link',name='Atidaryti skelbimą').get_attribute('target') is None
+  page.get_by_placeholder('Rašykite žinutę...').fill('Nebaigtas atsakymas')
+  page.get_by_role('link',name='Atidaryti skelbimą').click()
+  assert page.get_by_placeholder('Rašykite žinutę...').input_value()=='Nebaigtas atsakymas'
+  assert page.get_by_role('region',name='Pokalbis',exact=True).count()==1
   # Hidden conversation must not silently consume incoming messages.
   page.locator('.msgs').evaluate("e=>e.style.display='none'")
   page.evaluate("window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,events:[]}]")
