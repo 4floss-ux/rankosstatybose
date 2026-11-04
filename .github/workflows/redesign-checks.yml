@@ -67,3 +67,6 @@ jobs:
 
       - name: Check confirmed interview contact visibility
         run: node --test tests/job-ad-interview-contact.test.mjs
+
+      - name: Check saved applicants with isolated PostgreSQL
+        run: node --test tests/job-ad-savers-sql.test.mjs

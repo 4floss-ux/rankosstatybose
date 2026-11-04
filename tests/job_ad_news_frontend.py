@@ -24,6 +24,8 @@ window.calls.push({name,args});const mode=window.mode;
 if(name==='job_ad_news')return {data:JSON.parse(JSON.stringify(window.records[mode]))};
 if(name==='job_ad_news_read'){if(window.ackError)return {error:{message:'Synthetic failure'}};window.records[mode]=window.records[mode].map(r=>({...r,events:r.events.filter(e=>!args.p_events.some(x=>x.kind===e.kind&&x.version===e.version))})).filter(r=>r.events.length||r.chat_unread||r.chat_latest_at);return {data:null};}
 if(name==='job_ad_chat_messages'){window.records[mode]=window.records[mode].map(r=>({...r,chat_unread:0})).filter(r=>r.events.length||r.chat_latest_at);return {data:[{id:'msg',body:'Sintetinė žinutė',is_mine:false,created_at:'2026-11-03T10:00:00Z'}]};}
+if(name==='job_ad_set_saved'){window.ad.saved=args.p_saved;return {data:args.p_saved};}
+if(name==='job_ad_company_savers')return {data:window.ad.saved?[{worker_id:'worker',name:window.candidate.name,has_applied:true}]:[]};
 if(name==='job_ad_interview_state')return {data:[{application_id:'application',needs_reconfirmation:!!window.candidate.interview_changed}]};
 if(name==='job_ads_worker_list')return {data:[{...window.ad,application:{...window.candidate}}]};
 if(name==='job_ads_company_list')return {data:[{...window.ad,candidates:1}]};
@@ -45,6 +47,11 @@ with sync_playwright() as p:
   page.goto('http://localhost');page.clock.install()
   for css in ['src/p24/p24.css','src/p24/employer/EmployerAds.css','src/ui/SiteSelect.css']:page.add_style_tag(path=str(repo/css))
   page.add_script_tag(content=bundle);page.locator('article.job').wait_for()
+  # List heart is next to salary, works after applying, and Enter does not open the ad.
+  list_heart=page.locator('article.job button.adsave:visible').first
+  list_heart.click();assert page.evaluate('window.ad.saved') is True
+  list_heart.press('Enter');assert page.evaluate('window.ad.saved') is False
+  assert page.locator('article.job').count()==1
   # Global counter refreshes while the advert remains unopened.
   page.evaluate("window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,events:[{kind:'interview_changed',version:'v1',label:'Pakeistas pokalbio laikas',interview_at:window.candidate.interview_at}]}]")
   page.clock.fast_forward(15001);page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='2'")
@@ -86,22 +93,32 @@ with sync_playwright() as p:
   page.screenshot(path=f'/tmp/s24-worker-candidate-{width}.png',full_page=True)
   assert page.locator('.ivcard.changed').count()==0
   # Read notification state is independent from renewed interview confirmation.
-  page.evaluate("window.candidate.interview_changed=true;window.candidate.interview_confirmed_at=null;window.records.worker=[];window.mount('worker')")
+  page.evaluate("window.candidate.interview_changed=true;window.candidate.interview_confirmed_at=null;window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:0,events:[{kind:'interview_changed',version:'v4',label:'Pakeistas pokalbio laikas'}]}];window.mount('worker')")
   page.locator('article.job').wait_for();page.locator('article.job').click()
   page.locator('.ivcard.changed').wait_for()
   page.get_by_text('Pokalbis pakeistas',exact=True).wait_for()
+  assert page.get_by_role('button',name='Pažymėti perskaityta').count()==0
+  assert page.get_by_role('button',name='Patvirtinti pokalbį',exact=True).count()==1
   assert 'Patvirtinkite iš naujo' in page.locator('.ivcard.changed').inner_text()
   page.screenshot(path=f'/tmp/s24-interview-changed-{width}.png',full_page=True)
   page.get_by_role('button',name='Patvirtinti pokalbį',exact=True).click()
   page.get_by_text('Patvirtinote',exact=True).wait_for()
   assert page.locator('.ivcard.changed').count()==0
 
+  # Saving stays available after applying and accepting an interview.
+  page.locator('.jd-pay button.adsave').click()
+  assert page.locator('.jd-pay button.adsave').get_attribute('aria-pressed')=='true'
+  assert page.evaluate('window.ad.saved') is True
   # Switching to employer resets the previous worker badge; employer gets own news.
   page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,chat_latest_at:'2026-11-04T10:00:00Z',participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
   page.locator('article.job').wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='3'")
   page.locator('article.job').click();page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
-  assert page.locator('.candidate-contact a').get_attribute('href')=='tel:+37060000000'
-  assert page.locator('.candidate-contact').get_by_text('Kandidato telefonas',exact=True).count()==1
+  saved_section=page.locator('section.card').filter(has=page.get_by_role('heading',name='Įsiminė skelbimą',exact=False))
+  assert 'Testinis Kandidatas' in saved_section.inner_text()
+  assert 'Jau kandidatavo' in saved_section.inner_text()
+  assert saved_section.get_by_role('button',name='Pakviesti kandidatuoti',exact=True).count()==0
+  assert page.locator('.candidate-contact').count()==0
+  assert page.locator('.wk.cand').get_by_text('+370 600 00000',exact=True).count()==0
   page.get_by_text('Kandidatas patvirtino pokalbio laiką',exact=True).wait_for()
   # Seeing CV/confirmation news clears only those events, not incoming messages.
   page.locator('.ad-news').scroll_into_view_if_needed()
@@ -139,8 +156,7 @@ with sync_playwright() as p:
   # Confirmed face-to-face interviews expose the same contact on the Basic plan.
   page.evaluate("window.candidate.interview_how='live';window.candidate.interview_address='Bandymų g. 1';window.candidate.interview_confirmed_at='2026-11-04';window.mount('employer')")
   page.locator('article.job').wait_for();page.locator('article.job').click()
-  page.locator('.candidate-contact a').wait_for()
-  assert page.locator('.candidate-contact a').get_attribute('href')=='tel:+37060000000'
+  assert page.locator('.candidate-contact').count()==0
   assert not errors,errors
   print(f'PASS {width}px: automatic global/ad/candidate counters, isolated roles, news acknowledgement/error, chat reads, CV card, interview/calendar/select, share width; synthetic only')
   page.close()

@@ -3290,5 +3290,7 @@
 
 .p24 .ad-news.changed{background:var(--red-bg);border-color:#f0c9c1;color:var(--red)}
 .p24 .ad-news.changed>div>b,.p24 .ad-news.changed>div>span{color:var(--red)}
-.p24 .candidate-contact{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:6px;padding-top:8px;border-top:1px solid #bfe3d2}
-.p24 .candidate-contact>.btn{height:auto;min-height:32px;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+
+.p24 .jd-pay-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}.p24 .jd-pay-top .adsave{flex:none}
+.p24 .adsal .adsave{align-self:flex-end;margin-top:6px}
+@media(max-width:640px){.p24 .adsal-m{display:flex;align-items:center;justify-content:space-between;gap:10px}}

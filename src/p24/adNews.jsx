@@ -62,8 +62,9 @@ export function NewsBadge({ count }) {
   return Number(count) > 0 ? <span title={`Neperskaitytų naujienų: ${count} – žinutės, CV arba pokalbio patvirtinimas`} className="ad-news-badge" role="status" aria-label={`Neperskaitytų naujienų: ${count}`}>{count}</span> : null;
 }
 
-export function AdNews({ news, applicationId, autoRead = false }) {
-  const row = news?.rows.find(r => r.application_id === applicationId);
+export function AdNews({ news, applicationId, autoRead = false, hideInterview = false }) {
+  const original = news?.rows.find(r => r.application_id === applicationId);
+  const row = original && hideInterview ? { ...original, events: original.events?.filter(event => !["interview", "interview_changed"].includes(event.kind)) } : original;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const element = useRef(null);

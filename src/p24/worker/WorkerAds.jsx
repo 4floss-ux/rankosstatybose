@@ -78,7 +78,7 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, news
   const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
   const Tag = publicHref ? "a" : "article";
   return (
-    <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter") onOpen(ad); }}>
+    <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(ad); }}>
       <div className="jm">
         <div className="jtop"><h3>{up(ad.title)}</h3>
           <div className="row jpills"><NewsBadge count={newsCount} />
@@ -92,10 +92,9 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, news
           <div className="av co sm" style={{ border: "1px solid var(--line)", overflow: "hidden" }}>{avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(String(ad.company_name || "").replace(/^(UAB|MB)\s+/, ""))}</div>
           <div><b className="nm">{ad.company_name}{fav ? <span className="cofav" title="Mėgstama įmonė"><Heart size={13} on /></span> : null}</b></div>
         </div>
-        <div className="adsal-m"><b>{salTxt(ad)}</b> {salKind(ad)} / mėn.</div>
+        <div className="adsal-m"><span><b>{salTxt(ad)}</b> {salKind(ad)} / mėn.</span>{!publicHref && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div>
       </div>
-      <div className="adsal"><b>{salTxt(ad)}</b><span>{salKind(ad)} / mėn.</span></div>
-      {publicHref || x || !ad.live ? null : <SaveBtn ad={ad} onToggle={onToggleSave} />}
+      <div className="adsal"><b>{salTxt(ad)}</b><span>{salKind(ad)} / mėn.</span>{!publicHref && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div>
       <span className="jgo" aria-hidden="true"><Svg size={18} paths={chevron} /></span>
     </Tag>
   );
@@ -155,7 +154,14 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
     setBusy(true); setErr("");
     const { error } = await supabase.rpc(fn, args);
     setBusy(false);
-    if (error) setErr(error.message || "Nepavyko."); else onChanged();
+    if (error) setErr(error.message || "Nepavyko."); else {
+      if (fn === "job_ad_confirm_interview") {
+        const row = news?.rows.find(row => row.application_id === x.id);
+        const events = row?.events?.filter(event => ["interview", "interview_changed"].includes(event.kind));
+        if (events?.length) try { await news.mark({ ...row, events }); } catch { setErr("Pokalbis patvirtintas, bet nepavyko atnaujinti naujienos žymėjimo."); }
+      }
+      onChanged(); news?.reload();
+    }
   }
   async function uploadCv(file) {
     if (!file) return;
@@ -199,7 +205,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
         : <div className="cvbox"><span className="ivk">Įmonė prašo CV</span><span>Jai trūksta informacijos apie jus. Įkelkite CV – jį matys tik ši įmonė.</span>
             <label className={`btn primary jd-wide cvup${busy ? " dis" : ""}`}><Svg name="upload" size={16} />{busy ? "Įkeliama..." : "Įkelti CV"}<input type="file" hidden disabled={busy} accept=".pdf,.doc,.docx,image/*" onChange={(e) => uploadCv(e.target.files?.[0])} /></label></div>) : null}
       {st === "interview" && x.interview_at ? (
-        <div className={`ivcard${changedInterview ? " changed" : ""}`}><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>{changedInterview ? <strong className="iv-change">Pakeistas pokalbio laikas arba būdas. Patvirtinkite iš naujo.</strong> : null}
+        <div className={`ivcard${changedInterview ? " changed" : ""}`}><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>{changedInterview ? <strong className="iv-change">Pakeisti pokalbio duomenys. Patvirtinkite iš naujo.</strong> : null}
           <span>{IV_HOW[x.interview_how]}{x.interview_how === "live" ? ` · ${x.interview_address || ""}` : " – įmonė paskambins"}</span>
           {x.interview_note ? <span className="small iv-note"><b>Pastaba</b>{x.interview_note}</span> : null}
           {x.interview_how === "live" && x.interview_address ? <a className="jd-map" href={mapLink(x.interview_address)} target="_blank" rel="noopener noreferrer">Rodyti žemėlapyje ↗</a> : null}
@@ -212,7 +218,6 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
     <>
       {ad.nudged ? <div className="nudge"><Svg name="send" size={15} width={2.2} /><span><b>Įmonė kviečia kandidatuoti.</b> Ji matė, kad įsiminėte skelbimą, ir jūsų profilis jai tinka.</span></div> : null}
       <button className="btn primary jd-wide" type="button" onClick={() => setApply(true)}>Kandidatuoti</button>
-      <SaveBtn ad={ad} label onToggle={onToggleSave} />
 
     </>
   ) : <p className="small muted" style={{ margin: 0 }}>Skelbimas nebegalioja.</p>;
@@ -232,9 +237,9 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
       <div className="jd-grid">
         <JobAdContent ad={ad} />
         <aside className="jd-side">
-          <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
+          <section className="card jd-pay"><div className="jd-pay-top"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span>{!publicView && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
           <section className="card jd-act">
-            {x ? <AdNews news={news} applicationId={x.id} /> : null}
+            {x ? <AdNews news={news} applicationId={x.id} hideInterview={st === "interview" && !x.interview_confirmed_at} /> : null}
             {act}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
             {!publicView ? <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button> : null}
