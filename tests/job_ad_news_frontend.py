@@ -148,6 +148,12 @@ with sync_playwright() as p:
   assert page.get_by_role('button',name='Rašyti',exact=False).get_by_role('status').inner_text()=='1'
   page.locator('.wk.cand').screenshot(path=f'/tmp/s24-candidate-card-{width}.png')
 
+  page.get_by_role('button',name='Pratęsti skelbimą',exact=True).click()
+  page.locator('.ad-extension').wait_for()
+  assert '9,99' in page.locator('.ad-extension-price').inner_text()
+  assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
+  page.locator('.modal').screenshot(path=f'/tmp/s24-extension-{width}.png')
+  page.get_by_role('button',name='Atšaukti',exact=True).click()
   page.get_by_role('button',name='Keisti laiką',exact=True).click()
   assert page.locator('input[type=date]').count()==0
   page.get_by_role('button',name='Pokalbio data',exact=True).click()

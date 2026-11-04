@@ -5,3 +5,13 @@
 .p24 .ead-secondary > .card{min-width:0}
 .p24 .ead-detail .jd-desc,.p24 .ead-detail .jd-dl dd,.p24 .ead-detail .adlist li{overflow-wrap:anywhere}
 .p24 .ead-detail > .jd-side{position:static}
+
+/* Extension summary uses the existing portal palette and button styles. */
+.p24 .ad-extension{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.p24 .ad-extension-price{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px;background:var(--navy);color:#fff}
+.p24 .ad-extension-price div{display:grid;gap:5px}.p24 .ad-extension-price span{font-size:13px;opacity:.8}.p24 .ad-extension-price b{font-size:18px}.p24 .ad-extension-price strong{font:800 28px/1.2 var(--display);white-space:nowrap}
+.p24 .ad-extension-period{display:flex;gap:12px;align-items:center;padding:20px;color:var(--navy)}.p24 .ad-extension-period div{display:grid;gap:5px}.p24 .ad-extension-period span{font-size:13px;color:var(--muted)}
+.p24 .ad-extension-note{margin:0 20px;padding:12px;background:var(--bg,#f5f5f9);border-radius:6px;color:var(--muted);font-size:13px;line-height:1.5}.p24 .ad-extension-note.included{background:#e8f5ee;color:#13744c}
+.p24 .ad-extension-kept{display:flex;gap:8px;align-items:flex-start;margin:16px 20px;color:var(--muted);font-size:13px}.p24 .ad-extension-kept svg{flex-shrink:0;color:#13744c}
+.p24 .ad-extension-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+@media(max-width:640px){.p24 .ad-extension-price,.p24 .ad-extension-period{padding:16px}.p24 .ad-extension-price strong{font-size:25px}.p24 .ad-extension-note{margin:0 16px}.p24 .ad-extension-kept{margin:14px 16px}.p24 .ad-extension-actions{display:grid;grid-template-columns:1fr}.p24 .ad-extension-actions .primary{grid-row:1}}
