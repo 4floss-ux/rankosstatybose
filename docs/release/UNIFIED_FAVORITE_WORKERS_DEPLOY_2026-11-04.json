@@ -1,0 +1,22 @@
+{
+  "source": "c202143",
+  "production_base": "ed9a52b5bb84638202427c6998b518231c3d2e76",
+  "release_commit": "1bd50bb41f4e2d29e1e80507e464cb6bbe2d152e",
+  "old_version": "64687103-b20a-470c-bd01-1d6a6fb13ddf",
+  "active_version": "30123124-065b-48f4-9cda-0cc9869f7b82",
+  "deployment_id": "7aef81e5-819f-458e-a26c-53ac02329bef",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "real_customer_records_modified": false,
+  "files": [
+    "src/employer/EmployerDashboard.jsx",
+    "src/employer/plans.js",
+    "src/public/PublicLandingPage.jsx",
+    "src/public/BusinessPresentationPage.jsx"
+  ],
+  "checks": "PASS build and full-App synthetic navigation 1440/390: one favorite-workers screen, existing saved list/profile/removal, no legacy modal or duplicate names",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at_vilnius": "2026-11-04T23:28:43.167836+02:00"
+}
