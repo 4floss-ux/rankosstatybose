@@ -237,7 +237,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
       <div className="jd-grid">
         <JobAdContent ad={ad} />
         <aside className="jd-side">
-          <section className="card jd-pay"><div className="jd-pay-top"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span>{!publicView && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
+          <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><div className="jd-pay-top"><b>{salTxt(ad)}</b>{!publicView && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div><span>per mėnesį</span></section>
           <section className="card jd-act">
             {x ? <AdNews news={news} applicationId={x.id} hideInterview={st === "interview" && !x.interview_confirmed_at} /> : null}
             {act}

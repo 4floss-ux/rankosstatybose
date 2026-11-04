@@ -3292,5 +3292,8 @@
 .p24 .ad-news.changed>div>b,.p24 .ad-news.changed>div>span{color:var(--red)}
 
 .p24 .jd-pay-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}.p24 .jd-pay-top .adsave{flex:none}
-.p24 .adsal .adsave{align-self:flex-end;margin-top:6px}
+.p24 .adsal .adsave{margin-top:0}
+@media(min-width:641px){.p24 .adsal:has(>.adsave){display:grid;grid-template-columns:auto 32px;gap:2px 12px;align-items:center}.p24 .adsal:has(>.adsave)>b{grid-column:1;grid-row:1}.p24 .adsal:has(>.adsave)>span{grid-column:1;grid-row:2}.p24 .adsal:has(>.adsave)>.adsave{grid-column:2;grid-row:1;align-self:center}}
 @media(max-width:640px){.p24 .adsal-m{display:flex;align-items:center;justify-content:space-between;gap:10px}}
+#root .p24 .job .adsal .adsave,#root .p24 .job .adsal-m .adsave{position:static;top:auto;right:auto;margin:0}
+#root .p24 .job:has(.adsal .adsave) .jtop{padding-right:0}
