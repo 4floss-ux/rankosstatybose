@@ -87,7 +87,7 @@ export function AdNews({ news, applicationId, autoRead = false }) {
     return () => { clearTimeout(timer); observer.disconnect(); document.removeEventListener("visibilitychange", schedule); };
   }, [autoRead, applicationId, versions]);
   if (!row || !(row.events?.length || row.chat_unread)) return null;
-  return <div ref={element} className="ad-news" aria-label="Kandidatūros naujienos">
+  return <div ref={element} className={`ad-news${row.events?.some(event => event.kind === "interview_changed") ? " changed" : ""}`} aria-label="Kandidatūros naujienos">
     {Number(row.chat_unread) > 0 ? <b>Nauja žinutė <NewsBadge count={row.chat_unread} /></b> : null}
     {(row.events || []).map(e => <div key={e.kind}><b>{e.label}</b>{e.interview_at ? <span>{new Date(e.interview_at).toLocaleString("lt-LT", { timeZone: "Europe/Vilnius", dateStyle: "short", timeStyle: "short" })}</span> : null}</div>)}
     {row.events?.length ? <button className="btn sm" type="button" disabled={busy} onClick={async () => {
