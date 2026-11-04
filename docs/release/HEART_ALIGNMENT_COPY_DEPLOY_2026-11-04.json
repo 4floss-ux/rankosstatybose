@@ -1,0 +1,22 @@
+{
+  "sources": [
+    "a07b56c",
+    "4fc8051"
+  ],
+  "original_production_base": "70d5ccd7bd09e7b8e2675de20125443e5a2d5a05",
+  "intermediate_version": "d5187ac6-fbd6-4497-9559-0ac8fc606e18",
+  "active_version": "64687103-b20a-470c-bd01-1d6a6fb13ddf",
+  "deployment_id": "6ceee30b-69bd-4e12-ad9b-54b8277418d4",
+  "release_commit": "ed9a52b5bb84638202427c6998b518231c3d2e76",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "files": [
+    "src/p24/worker/WorkerAds.jsx",
+    "src/p24/p24.css"
+  ],
+  "checks": "PASS build and synthetic 1440/390 browser; measured heart right-of-salary alignment in list/detail; one Telefonu heading, clarified body; save/news regressions",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at_vilnius": "2026-11-04T23:21:09.464410+02:00"
+}
