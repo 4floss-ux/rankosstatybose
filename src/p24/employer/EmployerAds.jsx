@@ -442,7 +442,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
-      {chat ? <AdChat adId={ad.id} applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
+      {chat ? <AdChat onOpenAd={() => window.scrollTo(0, 0)} adId={ad.id} applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
       <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
@@ -473,9 +473,13 @@ export function useEmployerAds(companyId, enabled, accountId) {
   return { ads: ownAds, loaded, error, reload, news, newCount: candidateCount + news.total };
 }
 
-export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, onStartNewHandled }) {
+export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, onStartNewHandled, initialAdId, onInitialAdHandled }) {
   const [mode, setMode] = useState("list");
   const [current, setCurrent] = useState(null);
+  useEffect(() => {
+    if (!initialAdId) return;
+    setCurrent({ id: initialAdId }); setMode("detail"); onInitialAdHandled?.();
+  }, [initialAdId, onInitialAdHandled]);
   const [busyPay, setBusyPay] = useState("");
   const [payErr, setPayErr] = useState("");
   const [quota, setQuota] = useState(null);

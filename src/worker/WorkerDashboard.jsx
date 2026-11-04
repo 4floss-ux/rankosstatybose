@@ -3070,7 +3070,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
       messenger={{ unread: workerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
     >
     {messengerOpen && <Messenger conversations={workerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
-    {!onAdminReturn && adConversation?.scope === user.id && <AdChat key={adConversation.applicationId} {...adConversation} onRead={workerAds.news.reload} onClose={() => setAdConversation(null)} />}
+    {!onAdminReturn && adConversation?.scope === user.id && <AdChat onOpenAd={adId => { setLinkedAdId(adId); setWorkerView("ads"); window.scrollTo(0, 0); }} key={adConversation.applicationId} {...adConversation} onRead={workerAds.news.reload} onClose={() => setAdConversation(null)} />}
     <div className="wd-page">
       {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
