@@ -12,7 +12,7 @@ import {adNewsConversations} from './src/p24/adNews.jsx';
 import {unifiedCloseStyles} from './src/ui/common.jsx';
 const root=createRoot(document.getElementById('root'));let seq=0;
 window.ad={id:'40000000-0000-4000-8000-000000000100',company_id:'company',company_name:'UAB Bandymų įmonė',title:'Sintetinis darbas',city:'Vilnius',salary_min:1500,description:'Tik bandymams skirtas aprašymas.',live:true,expires_at:'2099-01-01',requirements:['Patirtis'],offers:['Įrankiai']};
-window.candidate={id:'application',worker_id:'worker',name:'Testinis Kandidatas',created_at:'2026-11-01',status:'interview',cv_requested_at:'2026-11-02',cv_sent_at:'2026-11-03',cv_name:'Mano labai ilgas gyvenimo aprašymas CV testavimui.pdf',cv_path:'application/cv.pdf',interview_at:'2099-11-05T10:00:00Z',interview_how:'phone',interview_note:'Paskambinsime nurodytu laiku.',interview_confirmed_at:'2026-11-03'};
+window.candidate={id:'application',worker_id:'worker',name:'Testinis Kandidatas',phone:'+370 600 00000',created_at:'2026-11-01',status:'interview',cv_requested_at:'2026-11-02',cv_sent_at:'2026-11-03',cv_name:'Mano labai ilgas gyvenimo aprašymas CV testavimui.pdf',cv_path:'application/cv.pdf',interview_at:'2099-11-05T10:00:00Z',interview_how:'phone',interview_note:'Paskambinsime nurodytu laiku.',interview_confirmed_at:'2026-11-03'};
 window.calls=[];window.records={worker:[],employer:[]};window.mode='worker';
 function Inbox({data,side}){const [open,setOpen]=useState(false);const [chat,setChat]=useState(null);const conversations=adNewsConversations({ads:data.ads,news:data.news,side,onOpen:setChat});return <><button aria-label="Atidaryti Messenger" onClick={()=>setOpen(true)}>Žinutės <span data-testid="messenger-count">{conversations.filter(c=>c.unread).length}</span></button>{open&&<Messenger conversations={conversations} hidden={{}} onHide={()=>{}} onClose={()=>setOpen(false)}/ >}{chat&&<AdChat {...chat} onRead={data.news.reload} onClose={()=>setChat(null)}/>}</>}
 function Worker(){const data=useWorkerAds(true,'worker');return <><output data-testid="nav-count">{data.news.total}</output><Inbox data={data} side="worker"/><WorkerAds data={data} me={{}} isFavorite={()=>false} toggleFavorite={()=>{}} onCompany={()=>{}} /></>}
@@ -50,6 +50,7 @@ with sync_playwright() as p:
   page.clock.fast_forward(15001);page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='2'")
   assert page.locator('article.job .ad-news-badge').inner_text()=='2'
   page.locator('article.job').click();page.locator('.cvbox.ok').wait_for()
+  assert page.locator('.ad-news.changed').count()==1
   assert page.get_by_text('Įmonė matys jūsų profilį, patikimumą ir įvertinimus',exact=True).count()==0
   assert 'Mano labai ilgas' in page.locator('.cvbox.ok').inner_text()
   assert 'Patvirtinote' in page.locator('.ivcard').inner_text()
@@ -99,6 +100,8 @@ with sync_playwright() as p:
   page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,chat_latest_at:'2026-11-04T10:00:00Z',participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
   page.locator('article.job').wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='3'")
   page.locator('article.job').click();page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
+  assert page.locator('.candidate-contact a').get_attribute('href')=='tel:+37060000000'
+  assert page.locator('.candidate-contact').get_by_text('Kandidato telefonas',exact=True).count()==1
   page.get_by_text('Kandidatas patvirtino pokalbio laiką',exact=True).wait_for()
   # Seeing CV/confirmation news clears only those events, not incoming messages.
   page.locator('.ad-news').scroll_into_view_if_needed()
@@ -119,6 +122,7 @@ with sync_playwright() as p:
   page.screenshot(path=f'/tmp/s24-candidate-interview-{width}.png',full_page=True)
   page.get_by_role('button',name='Siųsti naują laiką').click()
   page.wait_for_function("window.calls.some(c=>c.name==='job_ad_candidate_update'&&c.args.p_interview_how==='phone')")
+  page.wait_for_function("document.querySelectorAll('.candidate-contact a').length===0")
   # Employer can reopen a read conversation; only its red badge disappears.
   page.get_by_role('button',name='Atidaryti Messenger',exact=True).click()
   page.locator('.conv.un').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
@@ -132,6 +136,11 @@ with sync_playwright() as p:
   assert page.locator('.conv.un').count()==0
   assert 'Testinis Kandidatas' in page.locator('.conv').inner_text()
   page.locator('.conv').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
+  # Confirmed face-to-face interviews expose the same contact on the Basic plan.
+  page.evaluate("window.candidate.interview_how='live';window.candidate.interview_address='Bandymų g. 1';window.candidate.interview_confirmed_at='2026-11-04';window.mount('employer')")
+  page.locator('article.job').wait_for();page.locator('article.job').click()
+  page.locator('.candidate-contact a').wait_for()
+  assert page.locator('.candidate-contact a').get_attribute('href')=='tel:+37060000000'
   assert not errors,errors
   print(f'PASS {width}px: automatic global/ad/candidate counters, isolated roles, news acknowledgement/error, chat reads, CV card, interview/calendar/select, share width; synthetic only')
   page.close()

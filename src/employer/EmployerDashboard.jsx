@@ -1,3 +1,4 @@
+import { confirmedInterviewPhone } from "../lib/jobAdInterview.js";
 import { AdChat } from "../p24/AdChat.jsx";
 import { adNewsConversations } from "../p24/adNews.jsx";
 import { SiteSelect } from "../ui/SiteSelect.jsx";
@@ -5066,7 +5067,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               isPro={employerAdsIsPro}
               startNew={employerAdsStartNew}
               onStartNewHandled={() => setEmployerAdsStartNew(false)}
-              onWorkerProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.name || "Darbuotojas", city: w.city || "", avatarUrl: workerAvatarUrl(w.avatar_path), initials: workerInitials(w.name || "D") })}
+              onWorkerProfile={(w) => openWorkerProfile({ id: w.worker_id, name: w.name || "Darbuotojas", city: w.city || "", phone: confirmedInterviewPhone(w), avatarUrl: workerAvatarUrl(w.avatar_path), initials: workerInitials(w.name || "D") })}
             />
           </div>
         )}

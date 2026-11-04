@@ -64,3 +64,6 @@ jobs:
 
       - name: Check candidate news and existing chat read integration in synthetic PostgreSQL
         run: node --test tests/job-ad-news-sql.test.mjs
+
+      - name: Check confirmed interview contact visibility
+        run: node --test tests/job-ad-interview-contact.test.mjs

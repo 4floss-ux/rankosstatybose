@@ -1,3 +1,4 @@
+import { confirmedInterviewPhone } from "../../lib/jobAdInterview.js";
 import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -351,6 +352,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
   const ivs = cands.filter((c) => c.status === "interview").sort((x, y) => new Date(x.interview_at) - new Date(y.interview_at));
 
   const row = (c) => {
+    const phone = confirmedInterviewPhone(c);
     const cvB = c.cv_path ? null : c.cv_requested_at ? <span className="pill cvp"><Svg name="clock" size={13} width={2.2} />CV prašoma</span>
       : <button className="btn sm" type="button" disabled={busy === c.id + "request_cv"} onClick={() => act(c, "request_cv")}><Svg name="file" size={14} />Prašyti CV</button>;
     const prof = <button className="btn sm" type="button" onClick={() => onWorkerProfile(c)}><Svg name="user" size={14} />Profilis</button>;
@@ -371,8 +373,9 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
           {c.message ? <p className="candmsg">„{c.message}“</p> : null}
           {c.status === "interview" && c.interview_at ? (
             <div className="ivline candidate-interview"><Svg name="cal" size={18} width={2.2} />
-              <div className="iv-summary"><b>Pokalbis {ivShort(c.interview_at)}</b><span>{IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : c.phone ? ` · ${c.phone}` : ""}</span>
+              <div className="iv-summary"><b>Pokalbis {ivShort(c.interview_at)}</b><span>{IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : ""}</span>
                 {c.interview_note ? <small>{c.interview_note}</small> : null}
+                {phone ? <div className="candidate-contact"><small>Kandidato telefonas</small><a className="btn sm" href={`tel:${phone.replace(/\s/g, "")}`}><Svg name="phone" size={14} />{phone}</a></div> : null}
               </div>
               {c.interview_confirmed_at ? <em className="ok"><Svg name="check" size={12} width={3} />Patvirtino</em> : <em>Laukiama patvirtinimo</em>}
             </div>
