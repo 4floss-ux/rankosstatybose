@@ -43,7 +43,7 @@ export function AdChat({ applicationId, adId, title, sub, closed, onClose, onRea
   }
 
   return (
-    <ChatThreadView kind="private" title={title} sub={sub} privacy={[sub ? `Darbo skelbimas: ${sub}` : "Pokalbis dėl skelbimo", <>Žinutes matote tik jūs ir kita pusė.{adId ? <> <a href={publicJobAdPath(adId)} target="_blank" rel="noopener noreferrer">Atidaryti skelbimą</a></> : null}</>]}
+    <ChatThreadView kind="private" title={title} sub={sub} privacy={[sub ? `Darbo skelbimas: ${sub}` : "Pokalbis dėl skelbimo", <>Žinutes matote tik jūs ir kita pusė.{adId ? <> <a href={publicJobAdPath(adId)}>Atidaryti skelbimą</a></> : null}</>]}
       messages={messages} isMine={(m) => m.is_mine} senderOf={(m) => (m.is_mine ? "Jūs" : title)}
       loading={loading} error={error} locked={closed} lockText="Pokalbis uždarytas."
       value={value} setValue={setValue} onSend={send} sending={sending} onClose={onClose} placeholder="Rašykite žinutę..." messagesRef={ref} />
