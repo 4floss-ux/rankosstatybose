@@ -9,18 +9,24 @@ test('candidate news extends existing chat reads without crossing accounts', asy
  try {
  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth;
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
- CREATE TABLE public.profiles(id uuid PRIMARY KEY,is_active boolean, display_name text, suspended boolean NOT NULL DEFAULT false);
+ CREATE TABLE public.profiles(id uuid PRIMARY KEY,is_active boolean, display_name text, suspended boolean NOT NULL DEFAULT false, role text NOT NULL DEFAULT 'worker');
  CREATE FUNCTION public.account_can_use_platform(u uuid) RETURNS boolean LANGUAGE sql AS $$SELECT EXISTS(SELECT 1 FROM public.profiles WHERE id=u AND is_active AND NOT suspended)$$;
  CREATE TABLE public.job_ads(id uuid PRIMARY KEY,company_id uuid,status text,title text);
  CREATE TABLE public.job_ad_applications(id uuid PRIMARY KEY,ad_id uuid REFERENCES public.job_ads(id),worker_id uuid,status text,cv_sent_at timestamptz,cv_path text,cv_name text,cv_requested_at timestamptz,interview_at timestamptz,interview_how text,interview_address text,interview_note text,interview_confirmed_at timestamptz);
  CREATE FUNCTION public.job_ad_can_manage(c uuid) RETURNS boolean LANGUAGE sql AS $$SELECT auth.uid()='${id(1)}'::uuid AND c='${id(10)}'::uuid$$;
  INSERT INTO public.profiles(id,is_active,display_name) VALUES('${id(1)}',true,'Darbdavys'),('${id(2)}',true,'Testinis Kandidatas'),('${id(3)}',true,'Kita paskyra'),('${id(4)}',false,'Neaktyvi');
+ UPDATE public.profiles SET role='employer' WHERE id='${id(1)}';
  CREATE TABLE public.companies(id uuid PRIMARY KEY, name text);
  INSERT INTO public.companies VALUES('${id(10)}','Bandymų įmonė'),('${id(20)}','Kita įmonė');
  INSERT INTO public.job_ads VALUES('${id(100)}','${id(10)}','active','Bandomas skelbimas'),('${id(200)}','${id(20)}','active','Kitas skelbimas');
  INSERT INTO public.job_ad_applications(id,ad_id,worker_id,status) VALUES('${id(1000)}','${id(100)}','${id(2)}','sent'),('${id(2000)}','${id(200)}','${id(3)}','sent');`);
  await db.exec(await readFile(new URL('../supabase/migrations/20261101220000_redesign_job_ad_chat.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../docs/sql-review/20261104003000_job_ad_news_REVIEW.sql',import.meta.url),'utf8'));
+ const original = await readFile(new URL('../supabase/migrations/20261101150000_redesign_job_ads.sql',import.meta.url),'utf8');
+ const workerStart=original.indexOf('create or replace function public.job_ad_require_worker(');
+ await db.exec(original.slice(workerStart,original.indexOf('end $$;',workerStart)+8));
+ await db.exec(await readFile(new URL('../docs/sql-review/20261104140000_job_ad_interview_state_REVIEW.sql',import.meta.url),'utf8'));
+
  const actor=async n=>db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[n?id(n):'']);
  const news=async company=>(await db.query('SELECT * FROM public.job_ad_news($1)',[company?id(company):null])).rows;
  const app=id(1000);
@@ -87,10 +93,26 @@ test('candidate news extends existing chat reads without crossing accounts', asy
   const row=(await news())[0];assert.equal(row.events.length,1);assert.notEqual(row.events[0].version,old.events[0].version);
   await ack(row);await ack(old);assert.equal((await unreadNews()).length,0);
  });
+ await t.test('changed interview attention survives reading news and resets only on confirmation',async()=>{
+  await actor(2);
+  const state=async()=>(await db.query('SELECT * FROM public.job_ad_interview_state()')).rows;
+  assert.equal((await state()).find(r=>r.application_id===app).needs_reconfirmation,true);
+  const row=(await news()).find(r=>r.application_id===app);if(row.events.length)await ack(row);
+  assert.equal((await state()).find(r=>r.application_id===app).needs_reconfirmation,true);
+  assert.equal((await state()).some(r=>r.application_id===id(2000)),false);
+  await db.query('UPDATE public.job_ad_applications SET interview_confirmed_at=clock_timestamp() WHERE id=$1',[app]);
+  assert.equal((await state()).find(r=>r.application_id===app).needs_reconfirmation,false);
+  await db.query("UPDATE public.job_ad_applications SET interview_how='live',interview_address='Testo g. 1',interview_confirmed_at=null WHERE id=$1",[app]);
+  assert.equal((await state()).find(r=>r.application_id===app).needs_reconfirmation,true);
+  await db.query('UPDATE public.profiles SET suspended=true WHERE id=$1',[id(2)]);
+  await assert.rejects(state(),/darbuotojams/);
+  await db.query('UPDATE public.profiles SET suspended=false WHERE id=$1',[id(2)]);
+  await actor(1);await assert.rejects(state(),/darbuotojams/);
+ });
  await t.test('unauthorized reads and anonymous execution denied, RLS retained',async()=>{
   await actor(3);await assert.rejects(ack({application_id:app,events:[{kind:'interview',version:'x'}]}),/Neturite prieigos/);
   await actor(4);assert.equal((await unreadNews()).length,0);
-  await db.exec('SET ROLE anon');await assert.rejects(news(),/permission denied/);await db.exec('RESET ROLE');
+  await db.exec('SET ROLE anon');await assert.rejects(news(),/permission denied/);await assert.rejects(db.query('SELECT * FROM public.job_ad_interview_state()'),/permission denied/);await db.exec('RESET ROLE');
   assert.equal((await db.query("SELECT relrowsecurity FROM pg_class WHERE relname='job_ad_message_reads'")).rows[0].relrowsecurity,true);
   assert.equal((await db.query("SELECT has_table_privilege('authenticated','public.job_ad_message_reads','SELECT') AS ok")).rows[0].ok,false);
  });

@@ -59,15 +59,35 @@ export function useAdNews(enabled, scope, onUpdate, companyId) {
 }
 
 export function NewsBadge({ count }) {
-  return Number(count) > 0 ? <span className="ad-news-badge" role="status" aria-label={`Neperskaitytų naujienų: ${count}`}>{count}</span> : null;
+  return Number(count) > 0 ? <span title={`Neperskaitytų naujienų: ${count} – žinutės, CV arba pokalbio patvirtinimas`} className="ad-news-badge" role="status" aria-label={`Neperskaitytų naujienų: ${count}`}>{count}</span> : null;
 }
 
-export function AdNews({ news, applicationId }) {
+export function AdNews({ news, applicationId, autoRead = false }) {
   const row = news?.rows.find(r => r.application_id === applicationId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const element = useRef(null);
+  const currentNews = useRef(news);
+  currentNews.current = news;
+  const versions = JSON.stringify(row?.events?.map(({ kind, version }) => ({ kind, version })) || []);
+  useEffect(() => {
+    if (!autoRead || !row?.events?.length || !element.current) return;
+    let timer;
+    let visible = false;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (!visible || document.visibilityState === "hidden") return;
+      timer = setTimeout(async () => {
+        try { await currentNews.current.mark(row); } catch { setError("Nepavyko pažymėti perskaityta. Bandykite dar kartą."); }
+      }, 1200);
+    };
+    const observer = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; schedule(); }, { threshold: 0.5 });
+    observer.observe(element.current);
+    document.addEventListener("visibilitychange", schedule);
+    return () => { clearTimeout(timer); observer.disconnect(); document.removeEventListener("visibilitychange", schedule); };
+  }, [autoRead, applicationId, versions]);
   if (!row || !(row.events?.length || row.chat_unread)) return null;
-  return <div className="ad-news" aria-label="Kandidatūros naujienos">
+  return <div ref={element} className="ad-news" aria-label="Kandidatūros naujienos">
     {Number(row.chat_unread) > 0 ? <b>Nauja žinutė <NewsBadge count={row.chat_unread} /></b> : null}
     {(row.events || []).map(e => <div key={e.kind}><b>{e.label}</b>{e.interview_at ? <span>{new Date(e.interview_at).toLocaleString("lt-LT", { timeZone: "Europe/Vilnius", dateStyle: "short", timeStyle: "short" })}</span> : null}</div>)}
     {row.events?.length ? <button className="btn sm" type="button" disabled={busy} onClick={async () => {

@@ -24,6 +24,7 @@ window.calls.push({name,args});const mode=window.mode;
 if(name==='job_ad_news')return {data:JSON.parse(JSON.stringify(window.records[mode]))};
 if(name==='job_ad_news_read'){if(window.ackError)return {error:{message:'Synthetic failure'}};window.records[mode]=window.records[mode].map(r=>({...r,events:r.events.filter(e=>!args.p_events.some(x=>x.kind===e.kind&&x.version===e.version))})).filter(r=>r.events.length||r.chat_unread||r.chat_latest_at);return {data:null};}
 if(name==='job_ad_chat_messages'){window.records[mode]=window.records[mode].map(r=>({...r,chat_unread:0})).filter(r=>r.events.length||r.chat_latest_at);return {data:[{id:'msg',body:'Sintetinė žinutė',is_mine:false,created_at:'2026-11-03T10:00:00Z'}]};}
+if(name==='job_ad_interview_state')return {data:[{application_id:'application',needs_reconfirmation:!!window.candidate.interview_changed}]};
 if(name==='job_ads_worker_list')return {data:[{...window.ad,application:{...window.candidate}}]};
 if(name==='job_ads_company_list')return {data:[{...window.ad,candidates:1}]};
 if(name==='job_ad_company_detail')return {data:{...window.ad,candidates:[{...window.candidate}],savers:[]}};
@@ -82,11 +83,31 @@ with sync_playwright() as p:
   page.get_by_text('Patvirtinote',exact=True).wait_for()
   assert page.evaluate("window.calls.some(c=>c.name==='job_ad_attach_cv')&&window.calls.some(c=>c.name==='job_ad_confirm_interview')")
   page.screenshot(path=f'/tmp/s24-worker-candidate-{width}.png',full_page=True)
+  assert page.locator('.ivcard.changed').count()==0
+  # Read notification state is independent from renewed interview confirmation.
+  page.evaluate("window.candidate.interview_changed=true;window.candidate.interview_confirmed_at=null;window.records.worker=[];window.mount('worker')")
+  page.locator('article.job').wait_for();page.locator('article.job').click()
+  page.locator('.ivcard.changed').wait_for()
+  page.get_by_text('Pokalbis pakeistas',exact=True).wait_for()
+  assert 'Patvirtinkite iš naujo' in page.locator('.ivcard.changed').inner_text()
+  page.screenshot(path=f'/tmp/s24-interview-changed-{width}.png',full_page=True)
+  page.get_by_role('button',name='Patvirtinti pokalbį',exact=True).click()
+  page.get_by_text('Patvirtinote',exact=True).wait_for()
+  assert page.locator('.ivcard.changed').count()==0
+
   # Switching to employer resets the previous worker badge; employer gets own news.
   page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,chat_latest_at:'2026-11-04T10:00:00Z',participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
   page.locator('article.job').wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='3'")
   page.locator('article.job').click();page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
   page.get_by_text('Kandidatas patvirtino pokalbio laiką',exact=True).wait_for()
+  # Seeing CV/confirmation news clears only those events, not incoming messages.
+  page.locator('.ad-news').scroll_into_view_if_needed()
+  page.clock.run_for(1600)
+  page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='1'")
+  assert page.evaluate('window.records.employer[0].chat_unread')==1
+  assert page.evaluate('window.records.employer[0].events.length')==0
+  page.locator('.wk.cand').screenshot(path=f'/tmp/s24-candidate-card-{width}.png')
+
   page.get_by_role('button',name='Keisti laiką',exact=True).click()
   assert page.locator('input[type=date]').count()==0
   page.get_by_role('button',name='Pokalbio data',exact=True).click()

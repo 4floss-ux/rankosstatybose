@@ -358,20 +358,24 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}{prof}</>
       : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
     return (
-      <div className="wk cand" key={c.id}>
+      <div className="wk cand interview-candidate" key={c.id}>
         <Av w={c} />
         <div className="wn">
           <div className="cnm"><b className="nm">{c.name}</b><NewsBadge count={news?.count(c.id)} /><small className="cmeta">{c.city || ""}{c.attendance_rate !== null && c.attendance_rate !== undefined ? ` · patikimumas ${Math.round(Number(c.attendance_rate))}/100` : ""}<i>•</i>Kandidatavo prieš {daysAgo(c.created_at)} d.</small></div>
           <div className="tags">
             {c.status === "sent" ? <Pill tone="orange">Nauja</Pill> : null}
-            {c.cv_path ? <button type="button" className="tag doc" onClick={() => openCv(c)}><Svg name="file" size={13} />CV</button> : null}
+            {c.cv_path ? <button type="button" className="tag doc" onClick={() => openCv(c)}><Svg name="file" size={13} />{c.cv_name || "CV"}</button> : null}
             {(c.documents || []).map((d) => <span className="tag doc" key={d}><Svg name="file" size={13} />{d}</span>)}
           </div>
-          <AdNews news={news} applicationId={c.id} />
+          <AdNews news={news} applicationId={c.id} autoRead />
           {c.message ? <p className="candmsg">„{c.message}“</p> : null}
           {c.status === "interview" && c.interview_at ? (
-            <div className="ivline"><Svg name="cal" size={15} width={2.2} /><span><b>Pokalbis {ivShort(c.interview_at)}</b> · {IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : c.phone ? ` · ${c.phone}` : ""}</span>
-              {c.interview_confirmed_at ? <em className="ok"><Svg name="check" size={12} width={3} />Patvirtino</em> : <em>Laukiama patvirtinimo</em>}</div>
+            <div className="ivline candidate-interview"><Svg name="cal" size={18} width={2.2} />
+              <div className="iv-summary"><b>Pokalbis {ivShort(c.interview_at)}</b><span>{IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : c.phone ? ` · ${c.phone}` : ""}</span>
+                {c.interview_note ? <small>{c.interview_note}</small> : null}
+              </div>
+              {c.interview_confirmed_at ? <em className="ok"><Svg name="check" size={12} width={3} />Patvirtino</em> : <em>Laukiama patvirtinimo</em>}
+            </div>
           ) : null}
         </div>
         <div className="wa cva">{acts}</div>

@@ -44,11 +44,16 @@ export function useWorkerAds(enabled, accountId) {
   const [owner, setOwner] = useState(accountId);
   const reload = useCallback(async () => {
     if (!enabled) return;
-    const { data, error: e } = await supabase.rpc("job_ads_worker_list");
+    const [{ data, error: e }, interviewState] = await Promise.all([
+      supabase.rpc("job_ads_worker_list"), supabase.rpc("job_ad_interview_state"),
+    ]);
     if (activeScope.current !== accountId) return;
     setOwner(accountId);
     if (e) setError(e.message || "Nepavyko įkelti skelbimų.");
-    else { setError(""); setAds(Array.isArray(data) ? data : []); }
+    else { setError(""); setAds(Array.isArray(data) ? data.map(ad => {
+      const state = !interviewState.error && Array.isArray(interviewState.data) ? interviewState.data.find(row => row.application_id === ad.application?.id) : null;
+      return state && ad.application ? { ...ad, application: { ...ad.application, interview_changed: state.needs_reconfirmation } } : ad;
+    }) : []); }
     setLoaded(true);
   }, [enabled, accountId]);
   useEffect(() => { if (enabled) reload(); else setLoaded(true); }, [enabled, reload]);
@@ -78,7 +83,7 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, news
         <div className="jtop"><h3>{up(ad.title)}</h3>
           <div className="row jpills"><NewsBadge count={newsCount} />
             {x && x.cv_requested_at && !x.cv_sent_at && x.status !== "rejected" ? <Pill tone="orange">Prašo CV</Pill> : null}
-            {x ? <Pill tone={AD_ST[x.status]?.[1]}>{AD_ST[x.status]?.[0]}</Pill> : ad.nudged ? <Pill tone="orange">Kviečia kandidatuoti</Pill> : null}
+            {x ? <Pill tone={x.interview_changed && !x.interview_confirmed_at ? "red" : AD_ST[x.status]?.[1]}>{x.interview_changed && !x.interview_confirmed_at ? "Pokalbis pakeistas" : AD_ST[x.status]?.[0]}</Pill> : ad.nudged ? <Pill tone="orange">Kviečia kandidatuoti</Pill> : null}
             {!ad.live ? <Pill>Nebegalioja</Pill> : null}
             {mutual ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}
           </div>
@@ -139,6 +144,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
   const [chat, setChat] = useState(false);
   const x = ad.application;
   const st = x?.status;
+  const changedInterview = !x?.interview_confirmed_at && (x?.interview_changed || news?.rows.find(row => row.application_id === x?.id)?.events?.some(event => event.kind === "interview_changed"));
   const [apply, setApply] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -193,7 +199,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
         : <div className="cvbox"><span className="ivk">Įmonė prašo CV</span><span>Jai trūksta informacijos apie jus. Įkelkite CV – jį matys tik ši įmonė.</span>
             <label className={`btn primary jd-wide cvup${busy ? " dis" : ""}`}><Svg name="upload" size={16} />{busy ? "Įkeliama..." : "Įkelti CV"}<input type="file" hidden disabled={busy} accept=".pdf,.doc,.docx,image/*" onChange={(e) => uploadCv(e.target.files?.[0])} /></label></div>) : null}
       {st === "interview" && x.interview_at ? (
-        <div className="ivcard"><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>
+        <div className={`ivcard${changedInterview ? " changed" : ""}`}><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>{changedInterview ? <strong className="iv-change">Pakeistas pokalbio laikas arba būdas. Patvirtinkite iš naujo.</strong> : null}
           <span>{IV_HOW[x.interview_how]}{x.interview_how === "live" ? ` · ${x.interview_address || ""}` : " – įmonė paskambins"}</span>
           {x.interview_note ? <span className="small iv-note"><b>Pastaba</b>{x.interview_note}</span> : null}
           {x.interview_how === "live" && x.interview_address ? <a className="jd-map" href={mapLink(x.interview_address)} target="_blank" rel="noopener noreferrer">Rodyti žemėlapyje ↗</a> : null}
@@ -214,7 +220,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
   return (
     <>
       <header className="jd-hero">
-        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={AD_ST[st]?.[1]}>{AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
+        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={changedInterview ? "red" : AD_ST[st]?.[1]}>{changedInterview ? "Pokalbis pakeistas" : AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
         <div className="jd-meta">
           {!publicView ? <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"} aria-label={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"}
             onClick={() => toggleFavorite(ad.company_id, { name: ad.company_name, avatar_path: ad.company_avatar_path })}><Heart size={17} on={fav} /></button> : null}
