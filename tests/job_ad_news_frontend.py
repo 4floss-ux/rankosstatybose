@@ -82,6 +82,7 @@ with sync_playwright() as p:
   page.get_by_role('button',name='Rašyti įmonei').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='0'")
   assert page.get_by_text('Darbo skelbimas: '+page.evaluate('window.ad.title'),exact=True).count()==1
   assert page.get_by_role('link',name='Atidaryti skelbimą').get_attribute('href')=='/darbo-skelbimai/'+page.evaluate('window.ad.id')
+  assert page.get_by_role('link',name='Atidaryti skelbimą').get_attribute('target') is None
   # Hidden conversation must not silently consume incoming messages.
   page.locator('.msgs').evaluate("e=>e.style.display='none'")
   page.evaluate("window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,events:[]}]")
