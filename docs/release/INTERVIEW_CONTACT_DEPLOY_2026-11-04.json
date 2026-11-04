@@ -1,0 +1,35 @@
+{
+  "approved_source": "0edff3f",
+  "production_base": "a49e70b",
+  "release_commit": "18656a75770f7e8359c779ba482f88268473d859",
+  "old_version": "373459c2-5162-47cf-865f-7d1a1d671eaa",
+  "new_version": "c2d24799-889c-44d9-bbf8-994eae86bd33",
+  "bindings_identical": true,
+  "maintenance": "on",
+  "changed_source_files": 5,
+  "sql_executed": false,
+  "verified_at_vilnius": "2026-11-04T22:29:11.507193+02:00",
+  "deployment_id": "5221c219-bd51-43c4-b648-18eacd5f913e",
+  "deployment_created_on": "2026-11-04T20:28:53.094703Z",
+  "active_version": "c2d24799-889c-44d9-bbf8-994eae86bd33",
+  "traffic_percentage": 100,
+  "checks": {
+    "build": "PASS",
+    "node_passed": 22,
+    "browser_widths": [
+      1440,
+      390
+    ],
+    "browser_suites": [
+      "confirmed live and phone interview contacts on Basic",
+      "red changed-interview notice",
+      "candidate news and Messenger",
+      "employer ad detail",
+      "public ads",
+      "authentication return"
+    ],
+    "real_authenticated_integration": "NOT TESTED"
+  },
+  "sql_repeated": false,
+  "worker_config_routes_packages_changed": false
+}
