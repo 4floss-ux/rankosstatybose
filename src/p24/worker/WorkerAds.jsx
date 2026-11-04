@@ -1,4 +1,4 @@
-import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
+import { useAdNews, AdNews, NewsBadge, MessageBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/config.js";
@@ -212,7 +212,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
           {x.interview_confirmed_at ? <span className="ivok"><Svg name="check" size={13} width={3} />Patvirtinote</span>
             : <button className="btn primary jd-wide" type="button" disabled={busy} onClick={() => run("job_ad_confirm_interview", { p_application_id: x.id })}>Patvirtinti pokalbį</button>}
         </div>) : null}
-      <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />{st === "rejected" ? "Peržiūrėti žinutes" : "Rašyti įmonei"}</button>
+      <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />{st === "rejected" ? "Peržiūrėti žinutes" : "Rašyti įmonei"}<MessageBadge news={news} applicationId={x.id} /></button>
     </>
   ) : ad.live ? (
     <>

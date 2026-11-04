@@ -73,6 +73,8 @@ with sync_playwright() as p:
   assert 'Paskambinsime nurodytu laiku.' in page.locator('.ivcard').inner_text()
   share=page.get_by_role('button',name='Dalintis',exact=True).bounding_box();profile=page.get_by_role('button',name='Įmonės profilis',exact=True).bounding_box()
   assert abs(share['width']-profile['width'])<1
+  assert page.get_by_role('button',name='Rašyti įmonei').get_by_role('status').inner_text()=='1'
+  assert page.get_by_text('Nauja žinutė',exact=True).count()==0
   # Errors do not clear news; successful acknowledgement leaves unread chat.
   page.evaluate('window.ackError=true');page.get_by_role('button',name='Pažymėti perskaityta').click();page.get_by_role('alert').wait_for()
   assert page.locator('[data-testid=nav-count]').inner_text()=='2'
@@ -140,6 +142,8 @@ with sync_playwright() as p:
   page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='1'")
   assert page.evaluate('window.records.employer[0].chat_unread')==1
   assert page.evaluate('window.records.employer[0].events.length')==0
+  assert page.locator('.ad-news').count()==0
+  assert page.get_by_role('button',name='Rašyti',exact=False).get_by_role('status').inner_text()=='1'
   page.locator('.wk.cand').screenshot(path=f'/tmp/s24-candidate-card-{width}.png')
 
   page.get_by_role('button',name='Keisti laiką',exact=True).click()
