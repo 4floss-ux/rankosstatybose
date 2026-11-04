@@ -146,7 +146,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   const [urgentSearchCompleted, setUrgentSearchCompleted] = useState(false);
   const [urgentSearchError, setUrgentSearchError] = useState("");
   const [urgentPhoneCopied, setUrgentPhoneCopied] = useState("");
-  const [showSavedWorkers, setShowSavedWorkers] = useState(false);
   const [savedWorkers, setSavedWorkers] = useState([]);
   const [savedWorkersLoading, setSavedWorkersLoading] = useState(false);
   const [savedWorkerBusy, setSavedWorkerBusy] = useState("");
@@ -3531,7 +3530,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
     try {
       await loadSavedWorkers(company?.id, planSummary);
     } catch (err) {
-      setError(err?.message || "Nepavyko įkelti darbuotojų komandos.");
+      setError(err?.message || "Nepavyko įkelti mėgstamų darbuotojų.");
     } finally {
       setSavedWorkersLoading(false);
     }
@@ -3542,7 +3541,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
 
     if (!planSummary?.can_saved_workers) {
       setNotice(
-        "„Darbuotojai favoritai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
+        "„Mėgstami darbuotojai“ prieinami Business ir Business Pro planuose. Planus galite peržiūrėti paspaudę „Planai“."
       );
       return;
     }
@@ -3561,12 +3560,12 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
 
       const saved = await loadSavedWorkers(company.id, planSummary);
       if (!saved.some((item) => item.id === worker.id)) {
-        setError("Darbuotojas išsaugotas, bet jo nėra gautame favoritų sąraše. Atnaujinkite puslapį.");
+        setError("Darbuotojas išsaugotas, bet jo nėra mėgstamų darbuotojų sąraše. Atnaujinkite puslapį.");
         return;
       }
-      setNotice(`${worker.name || "Darbuotojas"} pridėtas į darbuotojų favoritus.`);
+      setNotice(`${worker.name || "Darbuotojas"} pridėtas į mėgstamų darbuotojų sąrašą.`);
     } catch (err) {
-      setError(err?.message || "Nepavyko pridėti darbuotojo į komandą.");
+      setError(err?.message || "Nepavyko pridėti darbuotojo į mėgstamus.");
     } finally {
       setSavedWorkerBusy("");
     }
@@ -3590,9 +3589,9 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
       if (result.error) throw result.error;
 
       await loadSavedWorkers(company.id, planSummary);
-      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš darbuotojų favoritų.`);
+      setNotice(`${worker.name || "Darbuotojas"} pašalintas iš mėgstamų darbuotojų sąrašo.`);
     } catch (err) {
-      setError(err?.message || "Nepavyko pašalinti darbuotojo iš komandos.");
+      setError(err?.message || "Nepavyko pašalinti darbuotojo iš mėgstamų.");
     } finally {
       setSavedWorkerBusy("");
     }
@@ -3621,24 +3620,24 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
       await findMatches(currentJob);
 
       if (!saved) {
-        setNotice("Darbuotojų favorituose dar nėra išsaugotų darbuotojų.");
+        setNotice("Mėgstamų darbuotojų sąraše dar nėra išsaugotų darbuotojų.");
       } else if (!matching) {
         setNotice(
-          "Šiam darbui šiuo metu netinka nė vienas darbuotojas iš favoritų pagal vietą, laiką, prieinamumą ir kitus darbo kriterijus."
+          "Šiam darbui šiuo metu netinka nė vienas darbuotojas iš mėgstamų darbuotojų sąrašo pagal vietą, laiką, prieinamumą ir kitus darbo kriterijus."
         );
       } else if (invited) {
         setNotice(
-          `Kvietimai išsiųsti ${invited} tinkamiems darbuotojams iš favoritų.${
+          `Kvietimai išsiųsti ${invited} tinkamiems darbuotojams iš mėgstamų darbuotojų sąrašo.${
             already ? ` ${already} jau buvo pakviesti anksčiau.` : ""
           }`
         );
       } else {
         setNotice(
-          "Visi šiam darbui tinkami darbuotojai iš favoritų jau buvo pakviesti."
+          "Visi šiam darbui tinkami darbuotojai iš mėgstamų darbuotojų sąrašo jau buvo pakviesti."
         );
       }
     } catch (err) {
-      setError(err?.message || "Nepavyko pakviesti „Mano komandos“.");
+      setError(err?.message || "Nepavyko pakviesti mėgstamų darbuotojų.");
     } finally {
       setInvitingSavedTeam(false);
     }
@@ -5149,11 +5148,11 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             <button
               className="ed-secondary"
               type="button"
-              onClick={openSavedWorkerTeam}
+              onClick={() => goEmployerView("favorites")}
             >
               {planSummary?.can_saved_workers
-                ? `Darbuotojai favoritai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
-                : "Darbuotojai favoritai · Business"}
+                ? `Mėgstami darbuotojai${savedWorkers.length ? ` · ${savedWorkers.length}` : ""}`
+                : "Mėgstami darbuotojai · Business"}
             </button>
 
             {companyMemberRole === "owner" && (
@@ -6730,113 +6729,6 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             </div>
 
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSavedWorkers && (
-        <div
-          className="ed-saved-overlay"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !savedWorkerBusy) {
-              setShowSavedWorkers(false);
-            }
-          }}
-        >
-          <div className="ed-saved-modal">
-            <div className="ed-saved-head">
-              <div>
-                <div className="eyebrow">DARBUOTOJAI FAVORITAI</div>
-                <h2>Patikrinti darbuotojai, su kuriais jau dirbote</h2>
-                <p>
-                  Čia galite kaupti gerai pasirodžiusius darbuotojus. Sukūrus
-                  naują darbą sistema iš jų parodys tik tuos, kurie tuo metu
-                  atitinka darbo vietą, grafiką ir kitus kriterijus.
-                </p>
-              </div>
-
-              <button
-                className="rs-close"
-                type="button"
-                disabled={Boolean(savedWorkerBusy)}
-                onClick={() => setShowSavedWorkers(false)}
-              >
-                <CloseMark />
-              </button>
-            </div>
-
-            {savedWorkersLoading ? (
-              <div className="ed-empty"><SilentLoader size={20} minHeight={44} /></div>
-            ) : savedWorkers.length ? (
-              <div className="ed-saved-list">
-                {savedWorkers.map((worker) => (
-                  <div className="ed-saved-row" key={worker.id}>
-                    <div className="ed-saved-main">
-                      <div className="ed-avatar">
-                        {worker.avatarUrl ? (
-                          <img src={worker.avatarUrl} alt={worker.name} />
-                        ) : (
-                          worker.initials
-                        )}
-                      </div>
-                      <MonthlyAwardMiniList
-                        awards={workerAwardsById[worker.id] || []}
-                        size={42}
-                      />
-                      <div>
-                        <b>{worker.name}</b>
-                        <span>
-                          {worker.city || "Miestas nenurodytas"} ·{" "}
-                          Atlikta darbų: {Number(worker.completedJobs || 0)}
-                          {worker.hasDrivingLicenseB ? " · B kategorija" : ""}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="ed-saved-meta">
-                      <span>Paskutinis darbas su jumis</span>
-                      <b>
-                        {formatJobTitle(worker.last_job_title, "Įvykdytas darbas")}
-                        {worker.last_work_date
-                          ? ` · ${worker.last_work_date}`
-                          : ""}
-                      </b>
-                      <span style={{ marginTop: 7 }}>
-                        Patikimumas{" "}
-                        <b
-                          style={{
-                            color: reliabilityScoreColor(worker.attendanceRate),
-                          }}
-                        >
-                          {Math.round(worker.attendanceRate)}%
-                        </b>
-                        {worker.ratingAverage !== null
-                          ? ` · ${worker.ratingAverage.toFixed(1)}/10`
-                          : ""}
-                      </span>
-                    </div>
-
-                    <div className="ed-saved-actions">
-                      <button
-                        className="ed-secondary"
-                        type="button"
-                        disabled={savedWorkerBusy === worker.id}
-                        onClick={() => removeWorkerFromTeam(worker)}
-                      >
-                        {savedWorkerBusy === worker.id
-                          ? "Šalinama..."
-                          : "Pašalinti"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="ed-empty">
-                Darbuotojų favoritų sąrašas dar tuščias. Užbaigę darbo dieną prie patikusio
-                darbuotojo spauskite „Pridėti į favoritus“.
-              </div>
-            )}
           </div>
         </div>
       )}

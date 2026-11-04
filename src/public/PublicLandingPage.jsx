@@ -297,7 +297,7 @@ export function PublicLandingPage({
                 <ul>
                   <li>Paieška pagal miestą, laiką ir prieinamumą</li>
                   <li>Kvietimai, pokalbiai ir darbo dienos valdymas</li>
-                  <li>Favoritai, istorija, įvertinimai ir komandos funkcijos</li>
+                  <li>Mėgstami darbuotojai, istorija, įvertinimai ir komandos funkcijos</li>
                 </ul>
               </article>
 

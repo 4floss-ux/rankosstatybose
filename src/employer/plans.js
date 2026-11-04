@@ -53,7 +53,7 @@ export const EMPLOYER_PLANS = [
       "Viskas, kas yra Basic plane",
       "Iki 25 trumpalaikių darbo pasiūlymų per mėnesį",
       "Darbuotojų patikimumas ir įvertinimai",
-      "„Darbuotojai favoritai“ – išsaugoti gerai pasirodžiusius darbuotojus",
+      "Mėgstami darbuotojai – išsaugoti gerai pasirodžiusius darbuotojus",
       "Privatūs ir bendri darbo pokalbiai",
       "Išplėstinė darbdavio statistika",
       "1 paskyros naudotojas",
