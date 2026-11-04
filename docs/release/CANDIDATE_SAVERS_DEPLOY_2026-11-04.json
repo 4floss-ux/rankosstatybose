@@ -1,0 +1,43 @@
+{
+  "approved_source": "102bdfa",
+  "production_base": "18656a75770f7e8359c779ba482f88268473d859",
+  "release_commit": "70d5ccd7bd09e7b8e2675de20125443e5a2d5a05",
+  "old_version": "c2d24799-889c-44d9-bbf8-994eae86bd33",
+  "new_version": "7a01c5c7-24ce-49df-bddb-4521ecc19bc9",
+  "bindings_identical": true,
+  "maintenance": "on",
+  "patch_check": {
+    "patch_exact_match": true,
+    "sha256": "678d349a8f82f95865361209a6c6805d41f34eea7358fd73985d2a94228bd8ee",
+    "files": [
+      "src/p24/adNews.jsx",
+      "src/p24/employer/EmployerAds.jsx",
+      "src/p24/p24.css",
+      "src/p24/worker/WorkerAds.jsx"
+    ]
+  },
+  "sql_executed": false,
+  "verified_at_vilnius": "2026-11-04T23:07:03.933836+02:00",
+  "deployment_id": "8121756a-48f0-4b4e-ba8d-186d8f6440a2",
+  "deployment_created_on": "2026-11-04T21:06:40.240681Z",
+  "active_version": "7a01c5c7-24ce-49df-bddb-4521ecc19bc9",
+  "traffic_percentage": 100,
+  "checks": {
+    "build": "PASS",
+    "non_sql_node_tests_passed": 22,
+    "browser_widths": [
+      1440,
+      390
+    ],
+    "browser_suites": [
+      "candidate news: save after applying, one confirmation, all savers including applicant, Messenger, no phone in card",
+      "actual profile modal: confirmed live/phone contact on Basic/Business/Pro, unconfirmed hidden",
+      "employer ad details",
+      "public ad list, filter, share and safe login return"
+    ],
+    "real_authenticated_supabase_integration": "NOT TESTED"
+  },
+  "sql_repeated": false,
+  "worker_config_routes_packages_changed": false,
+  "main_redesign_merged": false
+}
