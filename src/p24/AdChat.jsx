@@ -3,7 +3,7 @@ import { supabase } from "../lib/config.js";
 import { ChatThreadView } from "../chat/conversations.jsx";
 
 /* Skelbimo pokalbis tarp įmonės ir kandidato (prototipe „Rašyti“ / „Rašyti įmonei“). */
-export function AdChat({ applicationId, title, sub, closed, onClose }) {
+export function AdChat({ applicationId, title, sub, closed, onClose, onRead, hiddenBefore }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -12,16 +12,20 @@ export function AdChat({ applicationId, title, sub, closed, onClose }) {
   const ref = useRef(null);
 
   async function load(silent) {
+    if (document.visibilityState === "hidden" || (ref.current && !ref.current.getClientRects().length)) return;
     if (!silent) setLoading(true);
     const { data, error: err } = await supabase.rpc("job_ad_chat_messages", { p_application_id: applicationId });
     if (err) setError(err.message || "Nepavyko įkelti pokalbio.");
-    else { setError(""); setMessages(data || []); }
+    else { setError(""); setMessages((data || []).filter(message => !hiddenBefore || new Date(message.created_at) > new Date(hiddenBefore))); onRead?.(); }
     setLoading(false);
   }
   useEffect(() => {
     load(false);
-    const timer = setInterval(() => load(true), 15000);
-    return () => clearInterval(timer);
+    const refresh = () => load(true);
+    const timer = setInterval(refresh, 15000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", refresh); window.removeEventListener("focus", refresh); };
   }, [applicationId]);
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [messages.length]);
 

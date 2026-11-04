@@ -1,3 +1,5 @@
+import { AdChat } from "../p24/AdChat.jsx";
+import { adNewsConversations } from "../p24/adNews.jsx";
 import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useRef, useState } from "react";
 import { JOB_SCOPE_ACK_VERSION, supabase } from "../lib/config.js";
@@ -45,6 +47,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   const [companyMemberRole, setCompanyMemberRole] = useState(null);
   const [showCompanyEditor, setShowCompanyEditor] = useState(false);
   const [messengerOpen, setMessengerOpen] = useState(false);
+  const [adConversation, setAdConversation] = useState(null);
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const [employerView, setEmployerView] = useState(() => {
     try {
@@ -83,7 +86,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
   const [companyAvatarMarkedForRemoval, setCompanyAvatarMarkedForRemoval] = useState(false);
   const [planSummary, setPlanSummary] = useState(null);
   const [employerAdsStartNew, setEmployerAdsStartNew] = useState(false);
-  const employerAds = useEmployerAds(company?.id, Boolean(company?.id) && ["owner", "manager"].includes(companyMemberRole) && !onAdminReturn);
+  const employerAds = useEmployerAds(company?.id, Boolean(company?.id) && ["owner", "manager"].includes(companyMemberRole) && !onAdminReturn, user.id);
   // Grįžus iš Stripe po skelbimo apmokėjimo – patvirtiname serveryje ir atidarome skelbimus.
   useEffect(() => {
     if (!company?.id || typeof window === "undefined") return;
@@ -4476,6 +4479,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
     return map;
   }, {});
   const employerConversations = [
+    ...adNewsConversations({ ads: employerAds.ads, news: employerAds.news, side: "company", onOpen: chat => { setMessengerOpen(false); setAdConversation({ ...chat, scope: `${user.id}:${company?.id}` }); } }),
     ...activeVisibleJobs.filter((job) => job.status !== "cancelled" && job.status !== "completed").map((job) => {
       const msgs = unreadEmployerGroupChatNotifications(job.id);
       return { key: `job:${job.id}`, kind: "group", name: job.title, job: job.work_date, unread: msgs.length, lastAt: employerLastAt(msgs), lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => { if (!requireEmployerChatPlan()) return; setGroupConversation({ jobId: job.id, title: job.title, hiddenBefore: since }); } };
@@ -4599,6 +4603,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
       utility={!onAdminReturn && !impersonation ? <AdminPrivateInboxButton user={user} /> : null}
     >
     {messengerOpen && <Messenger conversations={employerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
+    {employerCanAds && adConversation?.scope === `${user.id}:${company?.id}` && <AdChat key={adConversation.applicationId} {...adConversation} onRead={employerAds.news.reload} onClose={() => setAdConversation(null)} />}
     <div className="ed-page">
       {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="employer" />}
       <style>{`
@@ -5055,7 +5060,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         {employerCanAds && (
           <div data-wv="eads" style={{ display: "contents" }}>
             <EmployerAds
-              key={employerAdsNavKey}
+              key={`${user.id}:${company?.id}:${employerAdsNavKey}`}
               data={employerAds}
               company={company}
               isPro={employerAdsIsPro}

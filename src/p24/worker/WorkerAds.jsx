@@ -1,5 +1,6 @@
+import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { MB, prepareUpload, safeExt } from "../../lib/imageUpload.js";
 import { companyAvatarUrl } from "../../ui/avatars.jsx";
@@ -34,18 +35,27 @@ export function needsAction(a) {
 }
 
 /* Bendras duomenų „kabliukas“ – naudojamas ir meniu ženkliukui. */
-export function useWorkerAds(enabled) {
+export function useWorkerAds(enabled, accountId) {
   const [ads, setAds] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const activeScope = useRef(accountId);
+  activeScope.current = accountId;
+  const [owner, setOwner] = useState(accountId);
   const reload = useCallback(async () => {
+    if (!enabled) return;
     const { data, error: e } = await supabase.rpc("job_ads_worker_list");
+    if (activeScope.current !== accountId) return;
+    setOwner(accountId);
     if (e) setError(e.message || "Nepavyko įkelti skelbimų.");
     else { setError(""); setAds(Array.isArray(data) ? data : []); }
     setLoaded(true);
-  }, []);
+  }, [enabled, accountId]);
   useEffect(() => { if (enabled) reload(); else setLoaded(true); }, [enabled, reload]);
-  return { ads, setAds, loaded, error, reload, actionCount: ads.filter(needsAction).length };
+  const news = useAdNews(enabled, accountId, reload);
+  useEffect(() => { setAds([]); setLoaded(false); }, [accountId]);
+  const ownAds = enabled && owner === accountId ? ads : [];
+  return { ads: ownAds, setAds, loaded, error, reload, news, actionCount: news.total };
 }
 
 function SaveBtn({ ad, label, onToggle }) {
@@ -58,7 +68,7 @@ function SaveBtn({ ad, label, onToggle }) {
   );
 }
 
-export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref }) {
+export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, newsCount }) {
   const x = ad.application;
   const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
   const Tag = publicHref ? "a" : "article";
@@ -66,7 +76,7 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref }) {
     <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter") onOpen(ad); }}>
       <div className="jm">
         <div className="jtop"><h3>{up(ad.title)}</h3>
-          <div className="row jpills">
+          <div className="row jpills"><NewsBadge count={newsCount} />
             {x && x.cv_requested_at && !x.cv_sent_at && x.status !== "rejected" ? <Pill tone="orange">Prašo CV</Pill> : null}
             {x ? <Pill tone={AD_ST[x.status]?.[1]}>{AD_ST[x.status]?.[0]}</Pill> : ad.nudged ? <Pill tone="orange">Kviečia kandidatuoti</Pill> : null}
             {!ad.live ? <Pill>Nebegalioja</Pill> : null}
@@ -125,7 +135,7 @@ function ApplyModal({ ad, me, onClose, onSent }) {
   );
 }
 
-export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavorite, onBack, onToggleSave, onChanged, onCompany, publicView = false, onPublicApply }) {
+export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavorite, onBack, onToggleSave, onChanged, onCompany, publicView = false, onPublicApply, news }) {
   const [chat, setChat] = useState(false);
   const x = ad.application;
   const st = x?.status;
@@ -179,25 +189,25 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
         ? <p className="small muted" style={{ margin: 0 }}>Įmonė pasirinko kitą kandidatą.</p>
         : steps.map(([k, t], i) => <div key={k} className={`ats${i <= si ? " on" : ""}`}><i>{i <= si ? <Svg name="check" size={12} width={3} /> : null}</i><span>{t}</span></div>)}</div>
       {st !== "rejected" && x.cv_requested_at ? (x.cv_sent_at
-        ? <div className="cvbox ok"><Svg name="check" size={15} width={2.6} /><span><b>CV išsiųstas</b> {x.cv_name}</span></div>
+        ? <div className="cvbox ok" role="status"><Svg name="file" size={22} /><div className="cv-file"><b>CV išsiųstas</b><span className="cv-filename">{x.cv_name || "CV failas"}</span><small>Įkeltas · matomas šiai įmonei</small></div><Svg name="check" size={16} width={2.6} /></div>
         : <div className="cvbox"><span className="ivk">Įmonė prašo CV</span><span>Jai trūksta informacijos apie jus. Įkelkite CV – jį matys tik ši įmonė.</span>
             <label className={`btn primary jd-wide cvup${busy ? " dis" : ""}`}><Svg name="upload" size={16} />{busy ? "Įkeliama..." : "Įkelti CV"}<input type="file" hidden disabled={busy} accept=".pdf,.doc,.docx,image/*" onChange={(e) => uploadCv(e.target.files?.[0])} /></label></div>) : null}
       {st === "interview" && x.interview_at ? (
-        <div className="ivcard"><span className="ivk">Pokalbis</span><b>{ivWhen(x.interview_at)}</b>
+        <div className="ivcard"><span className="ivk">{IV_HOW[x.interview_how]} · pokalbis</span><b>{ivWhen(x.interview_at)}</b>
           <span>{IV_HOW[x.interview_how]}{x.interview_how === "live" ? ` · ${x.interview_address || ""}` : " – įmonė paskambins"}</span>
-          {x.interview_note ? <span className="small">„{x.interview_note}“</span> : null}
+          {x.interview_note ? <span className="small iv-note"><b>Pastaba</b>{x.interview_note}</span> : null}
           {x.interview_how === "live" && x.interview_address ? <a className="jd-map" href={mapLink(x.interview_address)} target="_blank" rel="noopener noreferrer">Rodyti žemėlapyje ↗</a> : null}
           {x.interview_confirmed_at ? <span className="ivok"><Svg name="check" size={13} width={3} />Patvirtinote</span>
             : <button className="btn primary jd-wide" type="button" disabled={busy} onClick={() => run("job_ad_confirm_interview", { p_application_id: x.id })}>Patvirtinti pokalbį</button>}
         </div>) : null}
-      {st === "interview" ? <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />Rašyti įmonei</button> : null}
+      <button className="btn jd-wide" type="button" onClick={() => setChat(true)}><Svg name="chat" size={16} />{st === "rejected" ? "Peržiūrėti žinutes" : "Rašyti įmonei"}</button>
     </>
   ) : ad.live ? (
     <>
       {ad.nudged ? <div className="nudge"><Svg name="send" size={15} width={2.2} /><span><b>Įmonė kviečia kandidatuoti.</b> Ji matė, kad įsiminėte skelbimą, ir jūsų profilis jai tinka.</span></div> : null}
       <button className="btn primary jd-wide" type="button" onClick={() => setApply(true)}>Kandidatuoti</button>
       <SaveBtn ad={ad} label onToggle={onToggleSave} />
-      <p className="small muted" style={{ margin: 0, textAlign: "center" }}>Įmonė matys jūsų profilį, patikimumą ir įvertinimus</p>
+
     </>
   ) : <p className="small muted" style={{ margin: 0 }}>Skelbimas nebegalioja.</p>;
 
@@ -218,22 +228,23 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
         <aside className="jd-side">
           <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
           <section className="card jd-act">
+            {x ? <AdNews news={news} applicationId={x.id} /> : null}
             {act}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
             {!publicView ? <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button> : null}
-            {ad.live ? <ShareJobAdButton ad={ad} /> : null}
+            {ad.live ? <ShareJobAdButton ad={ad} className="btn jd-wide" /> : null}
           </section>
           {ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}
-      {chat && x ? <AdChat applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} closed={st === "rejected"} onClose={() => setChat(false)} /> : null}
+      {chat && x ? <AdChat applicationId={x.id} title={ad.company_name || "Įmonė"} sub={ad.title} onRead={news?.reload} closed={["rejected", "withdrawn"].includes(st)} onClose={() => setChat(false)} /> : null}
     </>
   );
 }
 
 export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCompany, initialAdId, onInitialAdHandled }) {
-  const { ads, setAds, loaded, error, reload } = data;
+  const { ads, setAds, loaded, error, reload, news } = data;
   const [tab, setTab] = useState("all");
   const [city, setCity] = useState("Visi");
   const [openId, setOpenId] = useState(initialAdId || null);
@@ -263,11 +274,12 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
     return { all, saved, mine, savedInCity: saved.filter(inCity), cities: ["Visi", ...new Set([...AD_CITIES, ...live.map((a) => a.city)])], live };
   }, [ads, city, isFavorite]);
 
-  if (open) return <AdPage ad={open} me={me} isFavorite={isFavorite} isMutual={isMutual} toggleFavorite={toggleFavorite} onBack={() => setOpenId(null)} onToggleSave={toggleSave} onChanged={reload} onCompany={onCompany} />;
+  if (open) return <AdPage ad={open} me={me} isFavorite={isFavorite} isMutual={isMutual} toggleFavorite={toggleFavorite} onBack={() => setOpenId(null)} onToggleSave={toggleSave} onChanged={reload} onCompany={onCompany} news={news} />;
 
   const list = tab === "mine" ? lists.mine : tab === "saved" ? lists.savedInCity : lists.all;
   return (
     <>
+      {news?.error ? <p className="ferr" role="alert">{news.error}</p> : null}
       {initialMissing ? <p className="ferr" role="alert">Pasirinktas skelbimas nepasiekiamas arba jo galiojimas pasibaigęs.</p> : null}
       <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Nuolatinis darbas statybose. Kandidatuokite su savo statybos24 profiliu – CV nereikia.</p></div></div>
       <div className="adbar">
@@ -284,7 +296,7 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
       <section className="card">
         {!loaded ? <p className="muted small" style={{ margin: 0 }}>Įkeliama...</p>
           : error ? <p className="ferr" role="alert" style={{ margin: 0 }}>{error}</p>
-          : list.length ? <Paged items={list} render={(a) => <AdCard key={a.id} ad={a} fav={isFavorite(a.company_id)} mutual={isMutual?.(a.company_id)} onOpen={openAd} onToggleSave={toggleSave} />} />
+          : list.length ? <Paged items={list} render={(a) => <AdCard key={a.id} ad={a} fav={isFavorite(a.company_id)} newsCount={news?.count(a.application?.id)} mutual={isMutual?.(a.company_id)} onOpen={openAd} onToggleSave={toggleSave} />} />
           : tab === "mine" ? <Empty title="Kandidatūrų dar nėra" sub="Atidarykite skelbimą ir paspauskite „Kandidatuoti“." icon="briefcase" />
           : tab === "saved" ? <Empty title={lists.saved.length ? "Šiame mieste įsimintų skelbimų nėra" : "Įsimintų skelbimų dar nėra"} sub={lists.saved.length ? "Pasirinkite kitą miestą." : "Prie patikusio skelbimo paspauskite širdelę."} icon="briefcase" />
           : <Empty title={city === "Visi" ? "Skelbimų dar nėra" : "Šiame mieste skelbimų nėra"} sub={city === "Visi" ? "Kai įmonės įkels ilgalaikio darbo skelbimų, jie atsiras čia." : "Pasirinkite kitą miestą."} icon="briefcase" />}

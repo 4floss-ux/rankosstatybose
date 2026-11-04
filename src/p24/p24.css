@@ -3262,3 +3262,12 @@
 .p24.p24-admin-editor .field button.input.wd-time-trigger:focus-visible{outline:2px solid var(--orange)!important;outline-offset:0!important;box-shadow:none!important}
 
 .p24 .company-change-target,.p24 .company-change-meta{overflow-wrap:anywhere}
+
+/* Candidate updates reuse the site's existing cards, green status and red counters. */
+.p24 .ad-news-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:11px;font-weight:800;line-height:1;vertical-align:middle}
+.p24 .ad-news{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px;border:1px solid var(--line);border-radius:6px;background:var(--soft);font-size:13px;margin:8px 0;overflow-wrap:anywhere}
+.p24 .ad-news>div{display:flex;flex-direction:column;gap:3px}.p24 .ad-news span{font-size:12px}
+.p24 .cv-file{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}.p24 .cv-filename{overflow-wrap:anywhere;color:var(--navy)}
+.p24 .iv-note{display:flex;flex-direction:column;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid #bfe3d2;overflow-wrap:anywhere}.p24 .ivcard .iv-note b{font:700 12px/1.4 var(--font)}
+.p24 .ad-date-trigger{height:38px;justify-content:space-between;text-align:left;font-weight:400}
+.p24 .ivm .segs.wide2{display:grid!important;grid-template-columns:1fr 1fr}.p24 .ivm .segs.wide2 label{text-align:center}

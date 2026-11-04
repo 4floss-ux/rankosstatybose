@@ -1,3 +1,5 @@
+import { AdChat } from "../p24/AdChat.jsx";
+import { adNewsConversations } from "../p24/adNews.jsx";
 import { useEffect, useRef, useState } from "react";
 import { getVilniusTodayISO, supabase, workerBirthDateError } from "../lib/config.js";
 import { CloseMark, SilentLoader } from "../ui/brand.jsx";
@@ -77,9 +79,10 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
   const [workdays, setWorkdays] = useState([]);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [messengerOpen, setMessengerOpen] = useState(false);
+  const [adConversation, setAdConversation] = useState(null);
   const { hidden: chatHidden, hide: hideChat } = useChatHidden(user.id);
   const { favoriteIds, favoriteCompanies, toggleFavorite, isFavorite } = useFavoriteCompanies(user.id);
-  const workerAds = useWorkerAds(!onAdminReturn);
+  const workerAds = useWorkerAds(!onAdminReturn, user.id);
   const [linkedAdId, setLinkedAdId] = useState(initialAdId);
   const [workerView, setWorkerView] = useState(() => {
     if (initialAdId) return "ads";
@@ -2995,6 +2998,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
 
   const lastNotificationAt = (list) => list.reduce((latest, item) => (!latest || item.created_at > latest ? item.created_at : latest), null);
   const workerConversations = [
+    ...adNewsConversations({ ads: workerAds.ads, news: workerAds.news, side: "worker", onOpen: chat => { setMessengerOpen(false); setAdConversation({ ...chat, scope: user.id }); } }),
     ...invitations.filter((item) => item.status === "pending").map((item) => {
       const msgs = unreadWorkerNotifications(item.id).filter((n) => n.event_type === "message");
       return { key: `inv:${item.id}`, kind: "private", name: item.companyName || "Darbdavys", job: item.job?.title, unread: msgs.length, lastAt: lastNotificationAt(msgs) || item.invited_at, lastText: msgs.length ? "Nauja žinutė" : "", onOpen: (since) => setConversation({ invitationId: item.id, title: `${item.companyName} · ${formatJobTitle(item.job?.title)}`, hiddenBefore: since }) };
@@ -3066,6 +3070,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
       messenger={{ unread: workerMessengerUnread, onOpen: () => setMessengerOpen((value) => !value) }}
     >
     {messengerOpen && <Messenger conversations={workerConversations} hidden={chatHidden} onHide={hideChat} onClose={() => setMessengerOpen(false)} />}
+    {!onAdminReturn && adConversation?.scope === user.id && <AdChat key={adConversation.applicationId} {...adConversation} onRead={workerAds.news.reload} onClose={() => setAdConversation(null)} />}
     <div className="wd-page">
       {!onAdminReturn && !impersonation && <MainSiteInPageAlerts user={user} kind="worker" />}
       <style>{`
@@ -3841,7 +3846,7 @@ export function WorkerDashboard({ user, onLogout, onAdminReturn = null, imperson
 
         <div data-wv="ads" style={{ display: "contents" }}>
           <WorkerAds
-            key={workerAdsNavKey}
+            key={`${user.id}:${workerAdsNavKey}`}
             data={workerAds}
             initialAdId={linkedAdId}
             onInitialAdHandled={() => setLinkedAdId(null)}
