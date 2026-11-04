@@ -1,0 +1,35 @@
+{
+  "old_version": "75983651-3a43-4491-b55f-f514f3e09924",
+  "uploaded_version": "c773869b-ab68-42a9-8308-5583ae22b89e",
+  "bindings_identical": true,
+  "maintenance": "on",
+  "production_predecessor_unchanged": true,
+  "approved_source": "16a54b4",
+  "production_base": "d0a6e9d",
+  "release_commit": "da83813390d84a25109705a5725cc76ff3e72dc7",
+  "changed_source_files": 7,
+  "worker_routing_config_unchanged": true,
+  "sql_executed": false,
+  "checked_at_vilnius": "2026-11-04T13:08:14.061308+02:00",
+  "active_version": "c773869b-ab68-42a9-8308-5583ae22b89e",
+  "deployment_id": "e2b3df1f-b91f-4196-9569-8901d5740680",
+  "deployment_created_on": "2026-11-04T11:07:41.958904Z",
+  "traffic_percentage": 100,
+  "deployment_message": "Owner-approved 16a54b4 advert news frontend only; existing production patches preserved; Maintenance ON",
+  "tests": {
+    "node_passed": 20,
+    "browser_widths": [
+      1440,
+      390
+    ],
+    "browser_suites": [
+      "candidate news/Messenger/CV/interview",
+      "employer advert details",
+      "public advert list/filter/detail",
+      "login return and once-only application"
+    ],
+    "production_build": "PASS",
+    "real_authenticated_database_integration": "NOT TESTED"
+  },
+  "direct_live_http_check": "Unavailable: statybos24.lt is outside configured network destinations. Active deployment verified using official Cloudflare API."
+}
