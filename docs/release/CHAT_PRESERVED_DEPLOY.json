@@ -1,0 +1,22 @@
+{
+  "source": "77b65a7",
+  "production_base": "eec1d4c",
+  "release_commit": "8966ea2",
+  "active_version": "80f43d35-45bb-4781-bfb5-622886213ba1",
+  "deployment_id": "8642b90b-80ac-45f7-8d35-6ab68bce6c65",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "files": [
+    "src/employer/EmployerDashboard.jsx",
+    "src/p24/AdChat.jsx",
+    "src/p24/employer/EmployerAds.jsx",
+    "src/p24/p24.css",
+    "src/p24/worker/WorkerAds.jsx",
+    "src/worker/WorkerDashboard.jsx"
+  ],
+  "checks": "PASS production build and synthetic 1440/390 centered heart / chat and draft preserved / CV / interview / Messenger regression tests",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at": "2026-11-04T22:24:17.193623+00:00"
+}
