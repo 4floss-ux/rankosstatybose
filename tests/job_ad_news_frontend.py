@@ -121,7 +121,12 @@ with sync_playwright() as p:
   # Switching to employer resets the previous worker badge; employer gets own news.
   page.evaluate("window.records.employer=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,chat_latest_at:'2026-11-04T10:00:00Z',participant_name:'Testinis Kandidatas',ad_title:window.ad.title,events:[{kind:'cv_uploaded',version:'v2',label:'Kandidatas įkėlė CV'},{kind:'confirmed',version:'v3',label:'Kandidatas patvirtino pokalbio laiką'}]}];window.mount('employer')")
   page.locator('article.job').wait_for();page.wait_for_function("document.querySelector('[data-testid=nav-count]').textContent==='3'")
-  page.locator('article.job').click();page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
+  page.locator('article.job').click();page.locator('.interview-toggle').wait_for()
+  assert page.locator('.interview-toggle').get_attribute('aria-expanded')=='false'
+  assert page.locator('.interview-fold .wk').count()==0
+  page.locator('.interview-toggle').click()
+  assert page.locator('.interview-toggle').get_attribute('aria-expanded')=='true'
+  page.get_by_text('Kandidatas įkėlė CV',exact=True).wait_for()
   saved_section=page.locator('section.card').filter(has=page.get_by_role('heading',name='Įsiminė skelbimą',exact=False))
   assert 'Testinis Kandidatas' in saved_section.inner_text()
   assert 'Jau kandidatavo' in saved_section.inner_text()

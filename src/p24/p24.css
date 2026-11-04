@@ -3297,3 +3297,10 @@
 @media(max-width:640px){.p24 .adsal-m{display:flex;align-items:center;justify-content:space-between;gap:10px}}
 #root .p24 .job .adsal .adsave,#root .p24 .job .adsal-m .adsave{position:static;top:auto;right:auto;margin:0}
 #root .p24 .job:has(.adsal .adsave) .jtop{padding-right:0}
+
+.p24 .interview-fold{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--white)}
+.p24 .interview-toggle{display:flex;align-items:center;gap:9px;width:100%;padding:15px 16px;border:0;background:var(--white);color:var(--navy);font:700 14px/1.4 var(--font);text-align:left;cursor:pointer}
+.p24 .interview-toggle>svg:last-child{margin-left:auto;transition:transform .15s}.p24 .interview-toggle[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
+.p24 .interview-toggle:focus-visible{outline:2px solid var(--orange);outline-offset:-3px}
+.p24 .interview-fold .wk.interview-candidate{border:0;border-top:1px solid var(--line);border-radius:0;margin:0}
+.p24 .interview-fold .cnm>.nm,.p24 .interview-fold .cnm>.ad-news-badge{display:none}
