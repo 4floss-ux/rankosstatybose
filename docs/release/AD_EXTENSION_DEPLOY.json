@@ -1,0 +1,23 @@
+{
+  "source": "9eff0bb",
+  "production_base": "33a3db9",
+  "release_commit": "ec8e59e",
+  "active_version": "dd9131f9-bd26-4281-9c65-c229a679bfd5",
+  "deployment_id": "1b378d66-88ea-4bce-8417-72b643dbe999",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "paid_boost_code_deployed": false,
+  "files": [
+    "src/employer/adQuota.js",
+    "src/p24/AdChat.jsx",
+    "src/p24/employer/EmployerAds.css",
+    "src/p24/employer/EmployerAds.jsx",
+    "src/p24/worker/WorkerAds.jsx"
+  ],
+  "checks": "PASS quota helper tests, production build, synthetic 1440/390 extension modal / CV / interview / Messenger / same-tab ad links",
+  "real_authenticated_integration": "NOT TESTED",
+  "server_monthly_quota_activation": "NOT CHANGED",
+  "verified_at": "2026-11-04T22:19:49.731068+00:00"
+}
