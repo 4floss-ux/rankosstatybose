@@ -15,7 +15,7 @@ window.mount=(remaining,options={})=>{
  root.render(<EmployerAds key={++seq} data={data} company={{id:'synthetic-company',city:'Vilnius'}} isPro={!options.basic} startNew={!options.detail} onStartNewHandled={()=>{}}/>);
 };window.mount(1);
 '''
-mock='''export const supabase={rpc:async(name,args)=>{
+mock='''export const supabase={rpc:async(name,args)=>{name=({job_ads_worker_boosted_list:'job_ads_worker_list',job_ads_company_boosted_list:'job_ads_company_list',job_ads_public_boosted_list:'job_ads_public_list',job_ad_public_boosted_detail:'job_ad_public_detail'})[name]||name;
  window.calls.push({name,args});
  if(name==='job_ad_offer'||name==='job_ad_pro_quota')return {data:window.options.malformed?[]:{enabled:!window.options.basic,first_free_available:!!window.options.firstFree,limit:10,used:10-window.remaining,remaining:window.remaining,resets_at:'2099-12-15T12:00:00Z'}};
  if(name==='job_ad_upsert'){

@@ -19,7 +19,7 @@ function Worker(){const data=useWorkerAds(true,'worker');return <><output data-t
 function Employer(){const data=useEmployerAds('company',true,'employer');return <><output data-testid="nav-count">{data.newCount}</output><Inbox data={data} side="company"/><EmployerAds data={data} company={{id:'company',city:'Vilnius'}} isPro={false} onWorkerProfile={()=>{}} /></>}
 window.mount=(mode)=>{window.mode=mode;root.render(<main className="p24" style={{padding:16,display:'flex',flexDirection:'column',gap:18}} key={++seq}><style>{unifiedCloseStyles}</style>{mode==='worker'?<Worker/>:<Employer/>}</main>)};
 window.mount('worker');'''
-mock='''export const supabase={rpc:async(name,args)=>{
+mock='''export const supabase={rpc:async(name,args)=>{name=({job_ads_worker_boosted_list:'job_ads_worker_list',job_ads_company_boosted_list:'job_ads_company_list',job_ads_public_boosted_list:'job_ads_public_list',job_ad_public_boosted_detail:'job_ad_public_detail'})[name]||name;
 window.calls.push({name,args});const mode=window.mode;
 if(name==='job_ad_news')return {data:JSON.parse(JSON.stringify(window.records[mode]))};
 if(name==='job_ad_news_read'){if(window.ackError)return {error:{message:'Synthetic failure'}};window.records[mode]=window.records[mode].map(r=>({...r,events:r.events.filter(e=>!args.p_events.some(x=>x.kind===e.kind&&x.version===e.version))})).filter(r=>r.events.length||r.chat_unread||r.chat_latest_at);return {data:null};}

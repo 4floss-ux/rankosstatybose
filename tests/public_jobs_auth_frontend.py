@@ -10,6 +10,7 @@ stub=(ROOT/'docs/redesign/tools/stubs/supabase.js').read_text().replace('const R
 stub=stub.replace('function chain(kind, name)', 'function chain(kind, name, args)')
 stub=stub.replace('const res = () => {','''const res = () => {
  if(kind==='rpc'){
+  name=({job_ads_worker_boosted_list:'job_ads_worker_list',job_ads_company_boosted_list:'job_ads_company_list',job_ads_public_boosted_list:'job_ads_public_list',job_ad_public_boosted_detail:'job_ad_public_detail'})[name]||name;
   window.__calls=window.__calls||[];window.__calls.push(name);
   const ad=window.__DATA['rpc:job_ads_worker_list'][0];
   if(name==='job_ad_public_detail')return {data:ad,error:null};

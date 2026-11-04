@@ -1,3 +1,4 @@
+import { handleBoost } from "./boost.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
@@ -31,7 +32,7 @@ async function stripe(cfg: Cfg, path: string, params: URLSearchParams | null = n
   const res = await fetch("https://api.stripe.com/v1/" + path, { method: params ? "POST" : "GET", headers, body: params || undefined, signal: AbortSignal.timeout(15000) });
   const data = await res.json();
   if (!res.ok) {
-    console.error("Stripe request failed", { path: path.split("?")[0], status: res.status, code: data?.error?.code });
+    console.error("Stripe request failed", { path: path.split("?")[0].replace(/cs_[A-Za-z0-9_]+/g, "[session]"), status: res.status, code: data?.error?.code });
     throw new PayError("Nepavyko susisiekti su mokėjimų sistema. Bandykite dar kartą.", 502);
   }
   if (data?.livemode !== undefined && data.livemode !== (cfg.environment === "live")) throw new PayError("Mokėjimas priklauso kitai Stripe aplinkai.", 409);
@@ -70,7 +71,16 @@ Deno.serve(async (req) => {
     let body: any; try { body = await req.json(); } catch { throw new PayError("Netinkama užklausa."); }
     const adId = String(body?.adId || "");
     if (!/^[0-9a-f-]{36}$/i.test(adId)) throw new PayError("Netinkamas skelbimas.");
-    const { user } = await loadAd(cfg, req, adId);
+    const loaded = await loadAd(cfg, req, adId);
+    const { user } = loaded;
+    if (["boost_create", "boost_confirm"].includes(body?.action)) {
+      // Separate key: testing boost payments must never switch existing payments to test mode.
+      const boostKey = Deno.env.get("STRIPE_BOOST_SECRET_KEY") || "";
+      const boostEnvironment = /^(sk|rk)_live_/.test(boostKey) ? "live" : /^(sk|rk)_test_/.test(boostKey) ? "test" : null;
+      if (!boostEnvironment) throw new PayError("Iškėlimo mokėjimai dar nesukonfigūruoti.", 503);
+      const boostCfg = { ...cfg, key: boostKey, environment: boostEnvironment };
+      return reply(await handleBoost({ cfg: boostCfg, ...loaded, req, body, stripe: (path: string, params: URLSearchParams | null = null, key: string | null = null) => stripe(boostCfg, path, params, key) }));
+    }
     if (!["create", "confirm"].includes(body?.action)) throw new PayError("Netinkamas veiksmas.");
     const acquired = await user.rpc("job_ad_checkout_acquire", { p_ad_id: adId });
     if (acquired.error || !acquired.data) throw new PayError("Mokėjimo užklausa šiuo metu negalima. Bandykite vėliau.", 409);

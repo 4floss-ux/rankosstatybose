@@ -1,0 +1,4 @@
+# REVIEW ONLY: add this section to deployment configuration for this new webhook only.
+# Existing functions' JWT settings must remain unchanged. HMAC verification is in the handler.
+[functions.job-ad-boost-webhook]
+verify_jwt = false

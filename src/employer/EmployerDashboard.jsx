@@ -1,3 +1,4 @@
+import { confirmAdBoost } from "../p24/employer/AdBoost.jsx";
 import { confirmedInterviewPhone } from "../lib/jobAdInterview.js";
 import { AdChat } from "../p24/AdChat.jsx";
 import { adNewsConversations } from "../p24/adNews.jsx";
@@ -100,6 +101,21 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
     window.history.replaceState(null, "", `${window.location.pathname}${query.toString() ? `?${query}` : ""}${window.location.hash}`);
     setEmployerView("eads");
     if (kind === "success" && adId) confirmAdPayment(adId, sessionId).then(() => employerAds.reload());
+  }, [company?.id]);
+  const [boostReturnNotice, setBoostReturnNotice] = useState("");
+  useEffect(() => {
+    if (!company?.id) return;
+    const query = new URLSearchParams(window.location.search), status = query.get("adboost");
+    if (!status) return;
+    const adId = query.get("ad"), sessionId = query.get("session_id");
+    ["adboost","ad","session_id"].forEach(key => query.delete(key));
+    window.history.replaceState(null,"",`${window.location.pathname}${query.toString()?`?${query}`:""}${window.location.hash}`);
+    setEmployerView("eads");
+    if (status === "success" && adId && sessionId) {
+      setBoostReturnNotice("Tikrinamas iškėlimo mokėjimas...");
+      confirmAdBoost(adId, sessionId).then(result => { setBoostReturnNotice(result.delivered ? (Date.parse(result.boosted_until) > Date.now() ? "Skelbimas iškeltas 7 dienoms." : "Ankstesnis iškėlimo mokėjimas patvirtintas; jo galiojimas jau pasibaigęs.") : "Mokėjimas gautas, bet iškėlimas dar neįjungtas. Kreipkitės į pagalbą; pakartotinai nemokėkite."); employerAds.reload(); })
+        .catch(() => setBoostReturnNotice("Nepavyko patikrinti iškėlimo mokėjimo. Pakartotinai nemokėkite – patikrinkite skelbimą arba kreipkitės į pagalbą."));
+    } else setBoostReturnNotice("Iškėlimo apmokėjimas atšauktas. Skelbimas nepakeistas.");
   }, [company?.id]);
   const employerCalendarMemory = useRef(null);
   const [calendarRequested, setCalendarRequested] = useState(() => new URLSearchParams(window.location.search).get("employerView") === "calendar");
@@ -5059,6 +5075,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         </div>
         {employerCanAds && (
           <div data-wv="eads" style={{ display: "contents" }}>
+            {boostReturnNotice ? <div className="notebox" role="status">{boostReturnNotice}</div> : null}
             <EmployerAds
               key={`${user.id}:${company?.id}:${employerAdsNavKey}`}
               data={employerAds}

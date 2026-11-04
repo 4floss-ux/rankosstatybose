@@ -1,3 +1,5 @@
+import { AdBoostControl } from "./AdBoost.jsx";
+import { boostCompatibleRpc, isAdBoosted } from "../../lib/jobAdBoost.js";
 import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -73,7 +75,7 @@ function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay, news }) {
               return (
                 <article key={a.id} className="job" tabIndex={0} role="link" aria-label={up(a.title)} onClick={() => onOpen(a)} onKeyDown={(e) => { if (e.key === "Enter") onOpen(a); }}>
                   <div className="jm">
-                    <div className="jtop"><h3>{up(a.title)}</h3><div className="row jpills"><NewsBadge count={news?.adCount(a.id)} />{nw ? <Pill tone="orange">{nw} {nw === 1 ? "nauja kandidatūra" : "naujos kandidatūros"}</Pill> : null}{statusPill(a)}</div></div>
+                    <div className="jtop"><h3>{up(a.title)}</h3><div className="row jpills"><NewsBadge count={news?.adCount(a.id)} />{nw ? <Pill tone="orange">{nw} {nw === 1 ? "nauja kandidatūra" : "naujos kandidatūros"}</Pill> : null}{isAdBoosted(a) ? <Pill tone="blue">Iškeltas</Pill> : null}{statusPill(a)}</div></div>
                     <div className="metrics">
                       <span><Svg name="people" size={16} /><b>{a.candidates || 0}</b> kandidatai</span>
                       <span><Svg name="search" size={16} /><b>{a.views || 0}</b> peržiūros</span>
@@ -429,6 +431,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
           <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><b>{salTxt(ad)}</b><span>per mėnesį</span></section>
           <section className="card jd-act" aria-label="Skelbimo valdymas">
             <h2>Skelbimo valdymas</h2>
+            <AdBoostControl ad={ad} onChanged={() => { load(); onChanged(); }} />
             {ad.live ? <ShareJobAdButton ad={ad} className="btn jd-wide" /> : null}
             <button className="btn jd-wide" type="button" disabled={busy === "delete"} onClick={() => onEdit(ad)}><Svg name="edit" size={16} />Redaguoti skelbimą</button>
             {ad.status !== "pending_payment" ? <button className="btn jd-wide" type="button" disabled={busy === "delete" || pricingBusy} onClick={() => setExt(true)}><Svg name="cal" size={16} />Pratęsti skelbimą</button> : null}
@@ -456,7 +459,7 @@ export function useEmployerAds(companyId, enabled, accountId) {
   const [owner, setOwner] = useState(scope);
   const reload = useCallback(async () => {
     if (!companyId || !enabled) { setLoaded(true); return; }
-    const { data, error: e } = await supabase.rpc("job_ads_company_list", { p_company_id: companyId });
+    const { data, error: e } = await boostCompatibleRpc(supabase, "job_ads_company_boosted_list", "job_ads_company_list", { p_company_id: companyId });
     if (activeScope.current !== scope) return;
     setOwner(scope);
     if (e) setError(e.message || "Nepavyko įkelti skelbimų."); else { setError(""); setAds(Array.isArray(data) ? data : []); }

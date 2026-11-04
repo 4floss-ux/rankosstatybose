@@ -14,7 +14,7 @@ window.calls=[];window.loginCount=0;
 window.mount=(route,user=null)=>root.render(<PublicJobAdsPage key={++seq} route={route} user={user} onLogin={()=>window.loginCount++}/>);
 window.privateAd=(status)=>root.render(<div className="p24"><AdPage key={++seq} ad={{...window.ads[0],application:{id:'application',status}}} onChanged={()=>{}}/></div>);
 window.mount({list:true});'''
-mock='''export const supabase={rpc:async(name,args)=>{
+mock='''export const supabase={rpc:async(name,args)=>{name=({job_ads_worker_boosted_list:'job_ads_worker_list',job_ads_company_boosted_list:'job_ads_company_list',job_ads_public_boosted_list:'job_ads_public_list',job_ad_public_boosted_detail:'job_ad_public_detail'})[name]||name;
 window.calls.push(name);
 if(window.fail)return {error:{message:'Synthetic error'}};
 if(name==='job_ads_public_cities')return {data:['Kaunas','Vilnius']};

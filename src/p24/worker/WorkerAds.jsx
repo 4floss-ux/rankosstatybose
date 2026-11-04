@@ -1,3 +1,5 @@
+import { useBoostClock } from "../useBoostClock.js";
+import { boostCompatibleRpc, compareAdBoost, isAdBoosted } from "../../lib/jobAdBoost.js";
 import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -45,7 +47,7 @@ export function useWorkerAds(enabled, accountId) {
   const reload = useCallback(async () => {
     if (!enabled) return;
     const [{ data, error: e }, interviewState] = await Promise.all([
-      supabase.rpc("job_ads_worker_list"), supabase.rpc("job_ad_interview_state"),
+      boostCompatibleRpc(supabase, "job_ads_worker_boosted_list", "job_ads_worker_list"), supabase.rpc("job_ad_interview_state"),
     ]);
     if (activeScope.current !== accountId) return;
     setOwner(accountId);
@@ -57,6 +59,7 @@ export function useWorkerAds(enabled, accountId) {
     setLoaded(true);
   }, [enabled, accountId]);
   useEffect(() => { if (enabled) reload(); else setLoaded(true); }, [enabled, reload]);
+  useEffect(() => { if (!enabled) return; const timer=setInterval(()=>{if(document.visibilityState!=="hidden")reload();},60000);return ()=>clearInterval(timer); }, [enabled,reload]);
   const news = useAdNews(enabled, accountId, reload);
   useEffect(() => { setAds([]); setLoaded(false); }, [accountId]);
   const ownAds = enabled && owner === accountId ? ads : [];
@@ -81,7 +84,7 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, news
     <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(ad); }}>
       <div className="jm">
         <div className="jtop"><h3>{up(ad.title)}</h3>
-          <div className="row jpills"><NewsBadge count={newsCount} />
+          <div className="row jpills">{isAdBoosted(ad) ? <Pill tone="blue">Iškeltas</Pill> : null}<NewsBadge count={newsCount} />
             {x && x.cv_requested_at && !x.cv_sent_at && x.status !== "rejected" ? <Pill tone="orange">Prašo CV</Pill> : null}
             {x ? <Pill tone={x.interview_changed && !x.interview_confirmed_at ? "red" : AD_ST[x.status]?.[1]}>{x.interview_changed && !x.interview_confirmed_at ? "Pokalbis pakeistas" : AD_ST[x.status]?.[0]}</Pill> : ad.nudged ? <Pill tone="orange">Kviečia kandidatuoti</Pill> : null}
             {!ad.live ? <Pill>Nebegalioja</Pill> : null}
@@ -225,7 +228,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
   return (
     <>
       <header className="jd-hero">
-        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{st ? <Pill tone={changedInterview ? "red" : AD_ST[st]?.[1]}>{changedInterview ? "Pokalbis pakeistas" : AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
+        <div className="jd-titlerow"><h1>{up(ad.title)}</h1>{isAdBoosted(ad) ? <Pill tone="blue">Iškeltas</Pill> : null}{st ? <Pill tone={changedInterview ? "red" : AD_ST[st]?.[1]}>{changedInterview ? "Pokalbis pakeistas" : AD_ST[st]?.[0]}</Pill> : null}{isMutual?.(ad.company_id) ? <span className="pill team"><Svg name="people" size={13} width={2.2} />Nuolatinė komanda</span> : null}</div>
         <div className="jd-meta">
           {!publicView ? <button type="button" className={`favbtn${fav ? " on" : ""}`} aria-pressed={fav} title={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"} aria-label={fav ? "Pašalinti iš mėgstamų įmonių" : "Pridėti prie mėgstamų įmonių"}
             onClick={() => toggleFavorite(ad.company_id, { name: ad.company_name, avatar_path: ad.company_avatar_path })}><Heart size={17} on={fav} /></button> : null}
@@ -256,6 +259,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
 
 export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCompany, initialAdId, onInitialAdHandled }) {
   const { ads, setAds, loaded, error, reload, news } = data;
+  const boostNow = useBoostClock();
   const [tab, setTab] = useState("all");
   const [city, setCity] = useState("Visi");
   const [openId, setOpenId] = useState(initialAdId || null);
@@ -279,11 +283,11 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
   const lists = useMemo(() => {
     const inCity = (a) => city === "Visi" || a.city === city;
     const live = ads.filter((a) => a.live);
-    const all = live.filter(inCity).sort((a, b) => isFavorite(b.company_id) - isFavorite(a.company_id));
+    const all = live.filter(inCity).sort((a, b) => compareAdBoost(a, b, boostNow) || isFavorite(b.company_id) - isFavorite(a.company_id));
     const saved = live.filter((a) => a.saved);
     const mine = ads.filter((a) => a.application);
     return { all, saved, mine, savedInCity: saved.filter(inCity), cities: ["Visi", ...new Set([...AD_CITIES, ...live.map((a) => a.city)])], live };
-  }, [ads, city, isFavorite]);
+  }, [ads, city, isFavorite, boostNow]);
 
   if (open) return <AdPage ad={open} me={me} isFavorite={isFavorite} isMutual={isMutual} toggleFavorite={toggleFavorite} onBack={() => setOpenId(null)} onToggleSave={toggleSave} onChanged={reload} onCompany={onCompany} news={news} />;
 

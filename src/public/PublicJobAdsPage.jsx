@@ -1,3 +1,5 @@
+import { useBoostClock } from "../p24/useBoostClock.js";
+import { boostCompatibleRpc } from "../lib/jobAdBoost.js";
 import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/config.js";
@@ -9,6 +11,7 @@ import "./publicJobAds.css";
 
 const PAGE_SIZE = 24;
 export function PublicJobAdsPage({ route, user, onLogin }) {
+  const boostNow = useBoostClock();
   const [city, setCity] = useState(() => new URLSearchParams(window.location.search).get("miestas") || "");
   const [page, setPage] = useState(0);
   const [ads, setAds] = useState([]);
@@ -27,8 +30,8 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
       try {
         if (!supabase) throw new Error("Unavailable");
         const result = route.adId
-          ? await supabase.rpc("job_ad_public_detail", { p_ad_id: route.adId })
-          : await supabase.rpc("job_ads_public_list", { p_city: city || null, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE });
+          ? await boostCompatibleRpc(supabase, "job_ad_public_boosted_detail", "job_ad_public_detail", { p_ad_id: route.adId })
+          : await boostCompatibleRpc(supabase, "job_ads_public_boosted_list", "job_ads_public_list", { p_city: city || null, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE });
         if (result.error) throw result.error;
         if (!active) return;
         if (route.adId) {
@@ -44,7 +47,7 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [route.adId, route.invalid, city, page, retry]);
+  }, [route.adId, route.invalid, city, page, retry, boostNow]);
   useEffect(() => {
     if (route.adId || route.invalid || !supabase) return;
     let active = true;

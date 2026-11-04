@@ -70,3 +70,6 @@ jobs:
 
       - name: Check saved applicants with isolated PostgreSQL
         run: node --test tests/job-ad-savers-sql.test.mjs
+
+      - name: Check paid boost ordering, signature, checkout and isolated SQL
+        run: node --test tests/job-ad-boost.test.mjs tests/job-ad-boost-checkout.test.mjs tests/job-ad-boost-sql.test.mjs

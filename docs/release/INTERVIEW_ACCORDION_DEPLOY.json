@@ -1,0 +1,20 @@
+{
+  "source": "d16d4a2",
+  "production_base": "1bd50bb41f4e2d29e1e80507e464cb6bbe2d152e",
+  "release_commit": "e22aa9e3d1ef60d07777ef161305e38f48607150",
+  "old_version": "30123124-065b-48f4-9cda-0cc9869f7b82",
+  "active_version": "ec03d89f-2eb2-47f8-8c6e-7a6ccbc44193",
+  "deployment_id": "e4f593ca-50d4-41a8-9f36-4978e3977bd6",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "paid_boost_code_deployed": false,
+  "files": [
+    "src/p24/employer/EmployerAds.jsx",
+    "src/p24/p24.css"
+  ],
+  "checks": "PASS production build and 1440/390 synthetic invited-candidate accordion plus previous CV/Messenger/news/contact/save flows",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at_vilnius": "2026-11-04T23:56:46.862969+02:00"
+}
