@@ -7,9 +7,9 @@ test('server quota governs the free/paid offer for the whole company',()=>{
  assert.equal(jobAdFreeAvailable(true,{enabled:true}),false);
  assert.equal(jobAdFreeAvailable(false,{enabled:true,remaining:10}),false);
 });
-test('unprovisioned legacy accounts retain their current offer',()=>{
- assert.equal(jobAdFreeAvailable(true,{enabled:false}),true);
- assert.equal(jobAdFreeAvailable(true,null),true);
+test('disabled or missing quotas never promise unlimited free Pro actions',()=>{
+ assert.equal(jobAdFreeAvailable(true,{enabled:false}),false);
+ assert.equal(jobAdFreeAvailable(true,null),false);
 });
 test('only a missing RPC permits legacy compatibility, not authorization/network failures',()=>{
  assert.equal(jobAdQuotaUnsupported({code:'PGRST202'}),true);

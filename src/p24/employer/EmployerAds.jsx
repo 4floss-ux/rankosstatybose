@@ -180,7 +180,7 @@ function AdForm({ company, isPro, firstFree, quotaEnabled, pricingBusy, ad, onCa
             </div>
           </section>
           <section className="card jd-act">
-            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Įskaičiuota į Business Pro"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div> : null}
+            {!ad ? <div className="adfee">{isPro ? <><span>Skelbimo kaina</span><b>0 €</b><small>{firstFree ? "Pirmas jūsų skelbimas – nemokamas" : "Panaudojamas 1 iš 10 Business Pro paskelbimų"}</small></> : <><span>Skelbimo kaina</span><b>{FEE} <em>/ 30 d.</em></b><small>{quotaEnabled ? "Business Pro: nemokamai tik turint nepanaudotų paskelbimų iš 10" : "Business Pro: iki 10 paskelbimų arba pratęsimų per prenumeratos mėnesį"}</small></>}</div> : null}
             {err && <p className="ferr" role="alert" style={{ margin: 0 }}>{err}</p>}
             <button className="btn primary jd-wide" type="button" disabled={busy || pricingBusy} onClick={save}>{busy ? "Saugoma..." : ad ? "Išsaugoti pakeitimus" : isPro ? "Paskelbti skelbimą" : `Apmokėti ${FEE} ir paskelbti`}</button>
             <button className="btn jd-wide" type="button" disabled={busy} onClick={onCancel}>Atšaukti</button>
@@ -265,7 +265,7 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
   }
   return (
     <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div>
+      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Panaudojamas 1 iš 10 Business Pro paskelbimų</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: nemokamai tik turint nepanaudotų paskelbimų iš 10" : "Business Pro: iki 10 paskelbimų arba pratęsimų per prenumeratos mėnesį"}</small></>}</div>
       <p className="small muted" style={{ margin: "12px 0 0" }}>Po pratęsimo skelbimas galios dar {left + 30} d. Kandidatai ir įsiminimai išlieka.</p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>

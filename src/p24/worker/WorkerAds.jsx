@@ -292,7 +292,7 @@ export function WorkerAds({ data, me, isFavorite, isMutual, toggleFavorite, onCo
     <>
       {news?.error ? <p className="ferr" role="alert">{news.error}</p> : null}
       {initialMissing ? <p className="ferr" role="alert">Pasirinktas skelbimas nepasiekiamas arba jo galiojimas pasibaigęs.</p> : null}
-      <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Nuolatinis darbas statybose. Kandidatuokite su savo statybos24 profiliu – CV nereikia.</p></div></div>
+      <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Nuolatinis darbas statybose. Kandidatuokite su savo statybos24 profiliu. Įmonė gali paprašyti CV.</p></div></div>
       <div className="adbar">
         <div className="toggle2 sm adtabs" role="group" aria-label="Skelbimai">
           <button type="button" aria-pressed={tab === "all"} onClick={() => setTab("all")}>Visi skelbimai</button>
