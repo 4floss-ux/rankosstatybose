@@ -1,3 +1,4 @@
+import { useAdNews, AdNews, NewsBadge } from "../adNews.jsx";
 import { SiteSelect } from "../../ui/SiteSelect.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { jobAdFreeAvailable, jobAdFirstFreeAvailable, jobAdOfferValid, jobAdQuotaUnsupported } from "../../employer/adQuota.js";
@@ -8,7 +9,7 @@ import { JobAdContent } from "../JobAdContent.jsx";
 import "./EmployerAds.css";
 import { ShareJobAdButton } from "../ShareJobAdButton.jsx";
 import { AdChat } from "../AdChat.jsx";
-import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
+import { RoundedDateSelect, StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { Empty, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
 import { salKind, salTxt } from "../worker/WorkerAds.jsx";
 
@@ -58,7 +59,7 @@ export async function confirmAdPayment(adId, sessionId) {
 }
 
 /* ---------- Sąrašas ---------- */
-function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay }) {
+function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay, news }) {
   return (
     <>
       <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Nuolatiniai darbuotojai su patikrinta darbo istorija.</p></div>
@@ -72,7 +73,7 @@ function AdsList({ ads, loaded, error, onOpen, onNew, onPay, busyPay }) {
               return (
                 <article key={a.id} className="job" tabIndex={0} role="link" aria-label={up(a.title)} onClick={() => onOpen(a)} onKeyDown={(e) => { if (e.key === "Enter") onOpen(a); }}>
                   <div className="jm">
-                    <div className="jtop"><h3>{up(a.title)}</h3><div className="row jpills">{nw ? <Pill tone="orange">{nw} {nw === 1 ? "nauja kandidatūra" : "naujos kandidatūros"}</Pill> : null}{statusPill(a)}</div></div>
+                    <div className="jtop"><h3>{up(a.title)}</h3><div className="row jpills"><NewsBadge count={news?.adCount(a.id)} />{nw ? <Pill tone="orange">{nw} {nw === 1 ? "nauja kandidatūra" : "naujos kandidatūros"}</Pill> : null}{statusPill(a)}</div></div>
                     <div className="metrics">
                       <span><Svg name="people" size={16} /><b>{a.candidates || 0}</b> kandidatai</span>
                       <span><Svg name="search" size={16} /><b>{a.views || 0}</b> peržiūros</span>
@@ -217,10 +218,10 @@ function InterviewModal({ ad, cand, onClose, onDone }) {
     <Modal title={cand.interview_at ? "Keisti pokalbio laiką" : "Kviesti pokalbiui"} eyebrow={cand.name} sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
       <div className="ivm">
         <div className="field"><span>Kaip vyks pokalbis</span><div className="segs wide2" role="radiogroup" aria-label="Pokalbio būdas">
-          <label><input type="radio" name="iv-how" checked={how === "live"} onChange={() => setHow("live")} /><span>Gyvai</span></label>
-          <label><input type="radio" name="iv-how" checked={how === "phone"} onChange={() => setHow("phone")} /><span>Telefonu</span></label>
+          <label><input type="radio" name="iv-how" value="live" checked={how === "live"} onChange={() => setHow("live")} /><span>Gyvai</span></label>
+          <label><input type="radio" name="iv-how" value="phone" checked={how === "phone"} onChange={() => setHow("phone")} /><span>Telefonu</span></label>
         </div></div>
-        <div className="pair2"><label className="field">Data<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <div className="pair2"><label className="field">Data<RoundedDateSelect value={date} onChange={setDate} ariaLabel="Pokalbio data" allowClear={false} className="btn jd-wide ad-date-trigger" /></label>
           <label className="field">Laikas<SiteSelect value={time} onChange={(e) => setTime(e.target.value)}>{times.map((t) => <option key={t}>{t}</option>)}</SiteSelect></label></div>
         {how === "live" ? <label className="field iv-addr">Adresas<input value={addr} maxLength={200} onChange={(e) => setAddr(e.target.value)} placeholder="Pvz. Ozo g. 25, Vilnius" /></label>
           : <p className="small muted iv-ph" style={{ margin: 0 }}>Paskambinsite kandidatui nurodytu laiku – jo telefoną matysite, kai jis patvirtins pokalbį.</p>}
@@ -276,7 +277,7 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
 }
 
 /* ---------- Skelbimo puslapis su kandidatais ---------- */
-function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDeleted, onBack, onEdit, onWorkerProfile, onChanged }) {
+function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDeleted, onBack, onEdit, onWorkerProfile, onChanged, news }) {
   const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [chat, setChat] = useState(null);
   const [ad, setAd] = useState(null);
@@ -292,6 +293,8 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
   useEffect(() => {
     (async () => { await load(); await supabase.rpc("job_ad_company_mark_seen", { p_ad_id: adId }); onChanged(); })();
   }, [adId]);
+
+  useEffect(() => { if (news?.rows) load(); }, [news?.rows, load]);
 
   async function act(cand, action) {
     setBusy(cand.id + action);
@@ -351,19 +354,20 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
     const cvB = c.cv_path ? null : c.cv_requested_at ? <span className="pill cvp"><Svg name="clock" size={13} width={2.2} />CV prašoma</span>
       : <button className="btn sm" type="button" disabled={busy === c.id + "request_cv"} onClick={() => act(c, "request_cv")}><Svg name="file" size={14} />Prašyti CV</button>;
     const prof = <button className="btn sm" type="button" onClick={() => onWorkerProfile(c)}><Svg name="user" size={14} />Profilis</button>;
-    const acts = c.status === "rejected" ? <><Pill>Atmesta</Pill>{prof}</>
+    const acts = c.status === "rejected" ? <><Pill>Atmesta</Pill><button className="btn sm" type="button" onClick={() => setChat(c)}>Peržiūrėti žinutes</button>{prof}</>
       : c.status === "interview" ? <><button className="btn sm" type="button" onClick={() => setIv(c)}>Keisti laiką</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}{prof}</>
-      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
+      : <><button className="btn sm primary" type="button" onClick={() => setIv(c)}>Kviesti pokalbiui</button><button className="btn sm" type="button" onClick={() => setChat(c)}><Svg name="chat" size={14} />Rašyti</button>{cvB}<button className="btn sm" type="button" disabled={busy === c.id + "reject"} onClick={async () => { if (await askConfirm({ title: `Atmesti ${c.name} kandidatūrą?`, confirmLabel: "Atmesti", danger: true })) act(c, "reject"); }}>Atmesti</button>{prof}</>;
     return (
       <div className="wk cand" key={c.id}>
         <Av w={c} />
         <div className="wn">
-          <div className="cnm"><b className="nm">{c.name}</b><small className="cmeta">{c.city || ""}{c.attendance_rate !== null && c.attendance_rate !== undefined ? ` · patikimumas ${Math.round(Number(c.attendance_rate))}/100` : ""}<i>•</i>Kandidatavo prieš {daysAgo(c.created_at)} d.</small></div>
+          <div className="cnm"><b className="nm">{c.name}</b><NewsBadge count={news?.count(c.id)} /><small className="cmeta">{c.city || ""}{c.attendance_rate !== null && c.attendance_rate !== undefined ? ` · patikimumas ${Math.round(Number(c.attendance_rate))}/100` : ""}<i>•</i>Kandidatavo prieš {daysAgo(c.created_at)} d.</small></div>
           <div className="tags">
             {c.status === "sent" ? <Pill tone="orange">Nauja</Pill> : null}
             {c.cv_path ? <button type="button" className="tag doc" onClick={() => openCv(c)}><Svg name="file" size={13} />CV</button> : null}
             {(c.documents || []).map((d) => <span className="tag doc" key={d}><Svg name="file" size={13} />{d}</span>)}
           </div>
+          <AdNews news={news} applicationId={c.id} />
           {c.message ? <p className="candmsg">„{c.message}“</p> : null}
           {c.status === "interview" && c.interview_at ? (
             <div className="ivline"><Svg name="cal" size={15} width={2.2} /><span><b>Pokalbis {ivShort(c.interview_at)}</b> · {IV_HOW[c.interview_how]}{c.interview_how === "live" ? ` · ${c.interview_address || ""}` : c.phone ? ` · ${c.phone}` : ""}</span>
@@ -419,26 +423,35 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
       </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} quotaEnabled={quotaEnabled} pricingBusy={pricingBusy} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
-      {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
+      {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} onRead={news?.reload} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
       <StyledConfirmDialog dialog={dialog} onResolve={resolveConfirm} />
     </>
   );
 }
 
 /* ---------- Duomenys meniu ženkliukui ---------- */
-export function useEmployerAds(companyId, enabled) {
+export function useEmployerAds(companyId, enabled, accountId) {
   const [ads, setAds] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const scope = `${accountId || ""}:${companyId || ""}`;
+  const activeScope = useRef(scope);
+  activeScope.current = scope;
+  const [owner, setOwner] = useState(scope);
   const reload = useCallback(async () => {
     if (!companyId || !enabled) { setLoaded(true); return; }
     const { data, error: e } = await supabase.rpc("job_ads_company_list", { p_company_id: companyId });
+    if (activeScope.current !== scope) return;
+    setOwner(scope);
     if (e) setError(e.message || "Nepavyko įkelti skelbimų."); else { setError(""); setAds(Array.isArray(data) ? data : []); }
     setLoaded(true);
-  }, [companyId, enabled]);
+  }, [companyId, enabled, accountId]);
   useEffect(() => { reload(); }, [reload]);
-  const newCount = useMemo(() => ads.reduce((n, a) => n + Number(a.new_candidates || 0), 0), [ads]);
-  return { ads, loaded, error, reload, newCount };
+  const news = useAdNews(enabled, `${accountId || ""}:${companyId || ""}`, reload, companyId);
+  useEffect(() => { setAds([]); setLoaded(false); }, [accountId, companyId]);
+  const ownAds = enabled && owner === scope ? ads : [];
+  const candidateCount = useMemo(() => ownAds.reduce((n, a) => n + Number(a.new_candidates || 0), 0), [ads, owner, scope, enabled]);
+  return { ads: ownAds, loaded, error, reload, news, newCount: candidateCount + news.total };
 }
 
 export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, onStartNewHandled }) {
@@ -497,14 +510,15 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
       onSaved={(ad) => { data.reload(); setQuotaRetry(value => value + 1); setCurrent(ad); setMode("detail"); top(); }} /></>;
   }
   if (mode === "detail" && current) {
-    return <>{banner}<AdDetail adId={current.id} deleteReady={deleteReady} onDeleted={pending => setDeleteNotice(pending ? "Skelbimas ir kandidatūros ištrinti. Priedų trynimas dar baigiamas." : "Skelbimas ir su juo susiję duomenys ištrinti.")} isPro={freeAvailable} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} onBack={() => { setMode("list"); setCurrent(null); top(); }}
+    return <>{banner}<AdDetail news={data.news} adId={current.id} deleteReady={deleteReady} onDeleted={pending => setDeleteNotice(pending ? "Skelbimas ir kandidatūros ištrinti. Priedų trynimas dar baigiamas." : "Skelbimas ir su juo susiję duomenys ištrinti.")} isPro={freeAvailable} quotaEnabled={quota?.enabled === true} pricingBusy={pricingBusy} onBack={() => { setMode("list"); setCurrent(null); top(); }}
       onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={() => { data.reload(); setQuotaRetry(value => value + 1); }} /></>;
   }
   return (
     <>
       {banner}
+      {data.news?.error ? <p className="ferr" role="alert">{data.news.error}</p> : null}
       {payErr && <p className="ferr" role="alert">{payErr}</p>}
-      <AdsList ads={data.ads} loaded={data.loaded} error={data.error} busyPay={busyPay}
+      <AdsList news={data.news} ads={data.ads} loaded={data.loaded} error={data.error} busyPay={busyPay}
         onOpen={(a) => { setCurrent(a); setMode("detail"); top(); }}
         onNew={() => { setCurrent(null); setMode("new"); setQuotaRetry(value => value + 1); top(); }}
         onPay={async (a) => { setBusyPay(a.id); setPayErr(""); try { const r = await startPayment(a.id); if (r.paid) data.reload(); } catch (e) { setPayErr(e?.message || "Nepavyko pradėti apmokėjimo."); } finally { setBusyPay(""); } }} />

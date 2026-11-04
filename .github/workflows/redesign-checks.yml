@@ -61,3 +61,6 @@ jobs:
         run: node tests/first-job-ad-sql.test.mjs
       - name: Check permanent deletion, storage cleanup and payment race protection with synthetic fixtures
         run: node --test tests/job-ad-delete-sql.test.mjs tests/job-ad-delete-cleanup.test.mjs tests/job-ad-delete-edge.test.mjs
+
+      - name: Check candidate news and existing chat read integration in synthetic PostgreSQL
+        run: node --test tests/job-ad-news-sql.test.mjs
