@@ -1,3 +1,4 @@
+import { legacyHireRedirect } from "./src/lib/hireRoutes.js";
 import { maintenancePage } from "./maintenance-page.js";
 
 const JSON_HEADERS = {
@@ -332,6 +333,8 @@ export default {
 
 async function handle(request, env) {
     const url = new URL(request.url);
+    const hireRedirect = legacyHireRedirect(url, request.method);
+    if (hireRedirect) return new Response(null, { status: 308, headers: { location: hireRedirect, "cache-control": "no-store" } });
 
     // Atnaujinimo režimas – tikrinama prieš bet ką kita
     if (url.pathname === "/api/status") {
