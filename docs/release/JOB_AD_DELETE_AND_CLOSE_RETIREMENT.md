@@ -14,7 +14,7 @@ Savininko sprendimas (2026-11-05): darbdaviui palikti tik **„Ištrinti skelbim
 
 1. Patikrinti esamą veikiantį **9,99 € `job-ad-checkout`** ir pritaikyti į jį tik checkout nuomos (`job_ad_checkout_acquire/release`) suderinamą apsaugą. Nepakeisti `STRIPE_SECRET_KEY` ar esamo apmokėjimo eigos; 4,99 € lieka **Sandbox / OFF**.
 2. Patikrinti visas senesnės ištrynimo migracijos priklausomybes su produkcine schema, Storage CV prieigos užraktais, kvotos/dovanos logika, kandidatų žinučių FK, mokėjimų apskaita. Pritaikyti `20261103220000_job_ad_delete_REVIEW.sql` vieną kartą **su `enabled=false`**.
-3. Įdiegti `job-ad-delete` Edge su `verify_jwt=true`; sutvarkyti service-only failų valymo Cron/Vault saugiai, be slaptų raktų įrašo į GitHub/žurnalus. Patikrinti valymą, autorizaciją, pakartotinį trynimą ir neapmokėtas/aktyvias Stripe sesijas.
+3. Įdiegti `job-ad-delete` Edge su `verify_jwt=true`; sutvarkyti trumpai galiojančiu HMAC pasirašyto failų valymo Cron/Vault saugiai, be slaptų raktų įrašo į GitHub/žurnalus. Patikrinti valymą, autorizaciją, pakartotinį trynimą ir neapmokėtas/aktyvias Stripe sesijas.
 4. Tik po išsamių Sandbox ir testinės paskyros bandymų įjungti ištrynimą atskiru `20261103222000_job_ad_delete_ACTIVATE_REVIEW.sql`.
 5. Įsitikinti, kad **nėra `closed` skelbimų**, neliko klientų kvietimų į `job_ad_close`, ir pasiekiamas naujas ištrynimo kelias. Tada atskirai vykdyti `20261105200000_job_ad_closed_retirement_REVIEW.sql`.
 6. Patikrinti 9,99 € skelbimų paskelbimą/pratęsimą, 4,99 € pending/paid mokėjimo režimus, skelbimų matomumą, kandidatus, CV valymą ir savininko trynimo teises. `Maintenance` palikti **ON**.
@@ -22,3 +22,11 @@ Savininko sprendimas (2026-11-05): darbdaviui palikti tik **„Ištrinti skelbim
 ## Saugos ribos
 
 **Šio pakeitimo įkėlimas į GitHub nėra produkcinis diegimas.** Kol visi integraciniai patikrinimai nebaigti, nediegti DDL, nerevokuoti kitų leidimų ir neįjungti trynimo ar iškėlimo. Istorinių migracijų nekeisti. Jei senoji `closed` būsena dar naudojama ne GitHub laikomame kliente, prieš `DROP FUNCTION` reikia jį išjungti. Jeigu iškėlimo užsakymas įstrigo `pending`, pirmiau patikrinti Stripe sesiją ir atitinkamai įvykdyti ar atšaukti mokėjimą – ne trinti po laiko limito.
+
+## 2026-11-05 saugumo patikslinimas
+
+Supabase `pg_net` platforminės lentelės `net.http_request_queue` / `net._http_response` turi PUBLIC skaitymo teises. `postgres` rolė nėra jų savininkė; bandymas apriboti teises per migraciją su saugos patikra **nepraėjo ir buvo atšauktas**. **Niekada nesiųsti `SUPABASE_SERVICE_ROLE_KEY` į `pg_net` eilę.**
+
+Vietoj seno `job_ad_cleanup_service_key` naudoti `job_ad_cleanup_hmac_secret` („Vault“) ir tokios pačios reikšmės `JOB_AD_DELETE_CLEANUP_HMAC_SECRET` („Edge Functions → Secrets“). Kriptografiškai pasirašyti tik laiko žymą; galiojimas 120 sekundžių, ribotos galios veiksmas `cleanup` tvarko tik privačioje eilėje jau teisėtai patvirtintus trynimus. Pasirašymo raktas lieka Vault/Edge, o eilėje yra tik trumpalaikis parašas. Kad užklausa iš Cron ateitų be JWT, naujos `job-ad-delete` Edge `verify_jwt=false`; **vartotojo trynimas vis tiek autentifikuojamas** per `auth.getUser` prieš bet kokį DB pakeitimą.
+
+Būtina realiai išbandyti anoniminius `delete` ir `cleanup` bandymus (abu turi būti atmesti), galiojantį HMAC, pasenusį HMAC ir vieną sintetinį CV failo išvalymą prieš aktyvuojant. Nei į Vault, nei į Edge niekada nekopijuoti viso `service_role` rakto šiam tikslui.
