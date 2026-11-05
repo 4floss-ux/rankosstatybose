@@ -65,7 +65,7 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
   }
   return <div className="p24 public-job-ads">
     <header className="public-ads-header"><div className="public-ads-width row">
-      <a href="/?pradzia=1" aria-label="Statybos24 pradžia"><img src="/brand-logo-tight.png" alt="statybos24.lt" /></a>
+      <a href={route.adId || route.invalid ? "/?pradzia=1" : PUBLIC_JOB_ADS_PATH} aria-label={route.adId || route.invalid ? "Statybos24 pradžia" : "Atnaujinti skelbimų sąrašą"}><img src="/brand-logo-tight.png" alt="statybos24.lt" /></a>
       <nav aria-label="Pagrindinis meniu"><a className="btn sm" href="/?pradzia=1">Pagrindinis puslapis</a>{route.adId || route.invalid ? <a className="btn sm" href={PUBLIC_JOB_ADS_PATH}>← Grįžti į skelbimus</a> : null}{user ? <a className="btn sm" href="/">Mano paskyra</a> : null}</nav>
     </div></header>
     <main className="public-ads-width public-ads-main">

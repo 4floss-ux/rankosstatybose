@@ -39,15 +39,20 @@ with sync_playwright() as p:
   for css in ['src/p24/p24.css','src/public/publicJobAds.css']:page.add_style_tag(path=str(repo/css))
   page.add_style_tag(path=str(repo/'src/ui/SiteSelect.css'));page.add_script_tag(content=bundle)
   page.locator('.job').nth(1).wait_for();assert page.locator('.job').count()==2
+  assert page.get_by_role('link',name='Atnaujinti skelbimų sąrašą',exact=True).get_attribute('href')=='/darbo-skelbimai'
   assert page.get_by_role('link',name='Pagrindinis puslapis',exact=True).get_attribute('href')=='/?pradzia=1'
   assert page.get_by_role('link',name='Mano paskyra',exact=True).count()==0
   assert page.get_by_role('button',name='Prisijungti',exact=True).count()==0
   assert page.get_by_role('combobox',name='Miestas',exact=True).bounding_box()['width']<=280
   page.get_by_role('combobox',name='Miestas',exact=True).click();page.screenshot(path=f'/tmp/s24-public-city-menu-{width}.png');page.get_by_role('option',name='Vilnius',exact=True).click();page.wait_for_function("document.querySelectorAll('.job').length===1")
+  assert page.locator('.job > .ad-company-logo').count()==1
   href=page.locator('.job').get_attribute('href');assert href.endswith(window_id:='20000000-0000-4000-8000-000000000100')
   page.evaluate("window.mount({adId:window.ads[0].id})")
   assert page.get_by_role('link',name='← Grįžti į skelbimus',exact=True).count()==1
+  assert page.get_by_role('link',name='Statybos24 pradžia',exact=True).get_attribute('href')=='/?pradzia=1'
   assert page.locator('.adexp').count()==0
+  assert 'UAB Pavyzdys' in page.locator('.jd-publisher').inner_text()
+  assert page.locator('.jd-publisher').bounding_box()['y']<page.locator('.jd-pay').bounding_box()['y']
   page.get_by_role('button',name='Kandidatuoti',exact=True).click();assert page.evaluate('window.loginCount')==1
   assert not page.evaluate("window.calls.includes('job_ad_mark_viewed')||window.calls.includes('job_ads_worker_list')||window.calls.includes('job_ad_apply')")
   page.evaluate("Object.defineProperty(navigator,'share',{value:undefined,configurable:true});Object.defineProperty(navigator,'clipboard',{value:{writeText:async url=>window.copied=url},configurable:true})")
