@@ -265,9 +265,9 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
     finally { setBusy(false); }
   }
   return (
-    <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div>
-      <p className="small muted" style={{ margin: "12px 0 0" }}>Po pratęsimo skelbimas galios dar {left + 30} d. Kandidatai ir įsiminimai išlieka.</p>
+    <Modal eyebrow="Skelbimas" title="Pratęsti skelbimą" sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
+      
+      <p style={{ margin: 0 }}>Skelbimo galiojimas bus pratęstas <b>30 dienų</b>.{ad.live ? ` Po pratęsimo liks ${left + 30} d.` : " Skelbimas galios 30 dienų."}</p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
         <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
