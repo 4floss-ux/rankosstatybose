@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/config.js";
 import { workerAvatarUrl } from "../../ui/avatars.jsx";
 import { Svg } from "../Shell.jsx";
+import { JobAdContent } from "../JobAdContent.jsx";
+import "./EmployerAds.css";
 import { AdChat } from "../AdChat.jsx";
 import { StyledConfirmDialog, useStyledConfirm } from "../../ui/common.jsx";
 import { Empty, Pill, initialsOf, up, P24Modal } from "../ui.jsx";
@@ -369,16 +371,41 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged, onD
           <div><b>Skelbimas dar nepaskelbtas</b><p className="small muted" style={{ margin: "2px 0 0" }}>Apmokėjus {FEE} skelbimas bus matomas darbuotojams 30 dienų.</p></div>
           <button className="btn primary" type="button" disabled={busy === "pay"} onClick={pay}>{busy === "pay" ? "Jungiamasi prie Stripe..." : `Apmokėti ${FEE}`}</button>
         </div></section>) : null}
-      <section className="card"><header><div><h2>Kandidatai <span className="muted">· {cands.filter((c) => c.status !== "interview").length}</span></h2></div>
-        <div className="row" style={{ gap: 8 }}><button className="btn sm" type="button" onClick={() => onEdit(ad)}>Redaguoti</button>
-          {ad.status !== "pending_payment" ? <button className="btn sm" type="button" onClick={() => setExt(true)}>Pratęsti</button> : null}
-          <button className="btn sm danger" type="button" disabled={busy === "remove"} onClick={removeAd}>{busy === "remove" ? "Trinama..." : "Ištrinti"}</button></div></header>
+      <div className="jd-grid ead-detail">
+        <JobAdContent ad={ad} />
+        <aside className="jd-side">
+          <section className="card jd-pay">
+            <span className="jd-paylab">Atlyginimas {salKind(ad)}</span>
+            <b>{salTxt(ad)}</b>
+            <span>per mėnesį</span>
+          </section>
+          <section className="card jd-act" aria-label="Skelbimo valdymas">
+            <h2>Skelbimo valdymas</h2>
+            <button className="btn jd-wide" type="button" disabled={busy === "remove"} onClick={() => onEdit(ad)}>
+              <Svg name="edit" size={16} />Redaguoti skelbimą
+            </button>
+            {ad.status !== "pending_payment" ? (
+              <button className="btn jd-wide" type="button" disabled={busy === "remove"} onClick={() => setExt(true)}>
+                <Svg name="cal" size={16} />Pratęsti skelbimą
+              </button>
+            ) : null}
+            <button className="btn danger jd-wide" type="button" disabled={busy === "remove" || Boolean(ad.payment_pending)} onClick={removeAd}>
+              {busy === "remove" ? "Trinama..." : "Ištrinti skelbimą"}
+            </button>
+            <p className="small muted" style={{ margin: 0 }}>
+              Ištrynus skelbimas dings iš sąrašų, o jo kandidatų CV bus pašalinti. Mokėjimas automatiškai negrąžinamas.
+            </p>
+          </section>
+        </aside>
+      </div>
+      <section className="card"><header><div><h2 className="ead-section-title">Kandidatai <span className="cnt">{cands.filter((c) => c.status !== "interview").length}</span></h2></div></header>
         <div className="chips" role="group" aria-label="Filtras">{[["all", "Visi"], ["rel", "Patikimumas 95+"], ["docs", "Turi pažymėjimų"]].map(([k, t]) => <button key={k} type="button" className="chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{t}</button>)}</div>
         <div className="list">{list.length ? list.map(row) : <Empty title={filter === "all" ? "Naujų kandidatų nėra" : "Pagal šį filtrą kandidatų nėra"} sub={filter === "all" ? "Pakviestieji pokalbiui rodomi žemiau." : "Pasirinkite kitą filtrą."} icon="people" />}</div>
       </section>
-      <section className="card ivsec"><header><div><h2><Svg name="cal" size={17} width={2.2} /> Pakviesti pokalbiui <span className="muted">· {ivs.length}</span></h2></div></header>
+      <div className="adcols ead-secondary">
+      <section className="card ivsec"><header><div><h2 className="ead-section-title"><Svg name="cal" size={17} width={2.2} />Pakviesti pokalbiui <span className="cnt">{ivs.length}</span></h2></div></header>
         <div className="list">{ivs.length ? ivs.map(row) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Dar nieko nepakvietėte. Prie kandidato spauskite „Kviesti pokalbiui“.</p>}</div></section>
-      <section className="card"><header><div><h2><Heart size={17} on /> Įsiminė skelbimą <span className="muted">· {savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
+      <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on />Įsiminė skelbimą <span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
         <div className="list">{savers.length ? savers.map((w) => (
           <div className="wk fw" key={w.worker_id}><Av w={w} />
             <div className="fwm"><div className="fwt"><b className="nm">{w.name}</b><small className="muted">{w.city || ""}</small></div></div>
@@ -386,6 +413,7 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged, onD
               : ad.live ? <button className="btn sm" type="button" disabled={busy === "n" + w.worker_id} onClick={() => nudge(w)}><Svg name="send" size={15} />Pakviesti kandidatuoti</button> : null}
               <button className="btn sm" type="button" onClick={() => onWorkerProfile(w)}><Svg name="user" size={15} />Profilis</button></div>
           </div>)) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Kol kas niekas neįsiminė.</p>}</div></section>
+      </div>
       {iv && <InterviewModal ad={ad} cand={iv} onClose={() => setIv(null)} onDone={() => { setIv(null); load(); onChanged(); }} />}
       {ext && <ExtendModal ad={ad} isPro={isPro} onClose={() => setExt(false)} onDone={() => { setExt(false); load(); onChanged(); }} />}
       {chat ? <AdChat applicationId={chat.id} title={chat.name || "Kandidatas"} sub={ad.title} closed={chat.status === "rejected"} onClose={() => setChat(null)} /> : null}
