@@ -1,0 +1,6 @@
+.p24 .ead-section-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.p24 .ead-section-title svg{flex:none}
+.p24 .ead-section-title .cnt{margin-left:0}
+.p24 .ead-secondary{align-items:start}
+.p24 .ead-secondary > .card{min-width:0}
+.p24 .ead-detail .jd-desc,.p24 .ead-detail .jd-dl dd,.p24 .ead-detail .adlist li{overflow-wrap:anywhere}
