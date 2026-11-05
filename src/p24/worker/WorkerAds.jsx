@@ -73,12 +73,21 @@ function SaveBtn({ ad, label, onToggle }) {
   );
 }
 
+function CompanyAdLogo({ ad }) {
+  const [failed, setFailed] = useState(false);
+  const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
+  useEffect(() => setFailed(false), [avatar]);
+  return <span className="ad-company-logo" aria-label={`Įmonė ${ad.company_name || ""}`}>
+    {avatar && !failed ? <img src={avatar} alt="" onError={() => setFailed(true)} /> : initialsOf(String(ad.company_name || "Įmonė").replace(/^(UAB|MB)\s+/, ""))}
+  </span>;
+}
+
 export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, newsCount }) {
   const x = ad.application;
-  const avatar = ad.company_avatar_path ? companyAvatarUrl(ad.company_avatar_path) : "";
   const Tag = publicHref ? "a" : "article";
   return (
     <Tag className="job" href={publicHref} tabIndex={0} role="link" aria-label={up(ad.title)} onClick={publicHref ? undefined : () => onOpen(ad)} onKeyDown={publicHref ? undefined : (e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(ad); }}>
+      <CompanyAdLogo ad={ad} />
       <div className="jm">
         <div className="jtop"><h3>{up(ad.title)}</h3>
           <div className="row jpills"><NewsBadge count={newsCount} />
@@ -89,7 +98,6 @@ export function AdCard({ ad, fav, mutual, onOpen, onToggleSave, publicHref, news
           </div>
         </div>
         <div className="co-line">
-          <div className="av co sm" style={{ border: "1px solid var(--line)", overflow: "hidden" }}>{avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(String(ad.company_name || "").replace(/^(UAB|MB)\s+/, ""))}</div>
           <div><b className="nm">{ad.company_name}{fav ? <span className="cofav" title="Mėgstama įmonė"><Heart size={13} on /></span> : null}</b></div>
         </div>
         <div className="adsal-m"><span><b>{salTxt(ad)}</b> {salKind(ad)} / mėn.</span>{!publicHref && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div>
@@ -194,7 +202,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
   const si = st === "rejected" ? -1 : steps.findIndex((s) => s[0] === st);
   const fav = isFavorite(ad.company_id);
 
-  const act = publicView ? <><button className="btn primary jd-wide" type="button" onClick={onPublicApply}>Kandidatuoti</button><p className="small muted" style={{ margin: 0 }}>Norėdami kandidatuoti, prisijunkite arba susikurkite darbuotojo paskyrą.</p></>
+  const act = publicView ? <><button className="btn primary jd-wide" type="button" onClick={onPublicApply}>Kandidatuoti</button><div className="public-apply-note"><b>Sudomino šis darbas?</b><span>Prisijunkite arba susikurkite darbuotojo paskyrą ir pateikite kandidatūrą.</span></div></>
     : st === "withdrawn" ? <p className="small muted">Kandidatūra atšaukta. Į šį skelbimą jau kandidatavote; pakartotinai kandidatuoti negalima.</p> : x ? (
     <>
       <div className="adtrack">{st === "rejected"
@@ -237,6 +245,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
       <div className="jd-grid">
         <JobAdContent ad={ad} />
         <aside className="jd-side">
+          <section className="card jd-publisher"><CompanyAdLogo ad={ad} /><div><span>Skelbimą paskelbė</span><b>{ad.company_name || "Įmonė"}</b></div></section>
           <section className="card jd-pay"><span className="jd-paylab">Atlyginimas {salKind(ad)}</span><div className="jd-pay-top"><b>{salTxt(ad)}</b>{!publicView && ad.live ? <SaveBtn ad={ad} onToggle={onToggleSave} /> : null}</div><span>per mėnesį</span></section>
           <section className="card jd-act">
             {x ? <AdNews news={news} applicationId={x.id} hideInterview={st === "interview" && !x.interview_confirmed_at} /> : null}
@@ -245,7 +254,7 @@ export function AdPage({ ad, me, isFavorite = () => false, isMutual, toggleFavor
             {!publicView ? <button className="btn jd-wide" type="button" onClick={() => onCompany(ad)}><Svg name="home" size={16} />Įmonės profilis</button> : null}
             {ad.live ? <ShareJobAdButton ad={ad} className="btn jd-wide" /> : null}
           </section>
-          {ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
+          {!publicView && ad.live && ad.expires_at ? <p className="small muted adexp">Skelbimas galioja dar {daysLeft(ad.expires_at)} d.</p> : null}
         </aside>
       </div>
       {apply && <ApplyModal ad={ad} me={me} onClose={() => setApply(false)} onSent={() => { setApply(false); onChanged(); }} />}

@@ -24,7 +24,7 @@ function Menu({ drawer, groups, current, go, cta, close, rail, toggleRail, free,
   return (
     <>
       <div className="sidetop">
-        <a className="logo" href="#" aria-label="statybos24.lt" onClick={(event) => { event.preventDefault(); go(groups[0]?.[1]?.[0]?.key || "overview"); }}>
+        <a className="logo" href="/?pradzia=1" aria-label="Statybos24 pagrindinis puslapis">
           <img className="full" src="/brand-logo-light.png" alt="statybos24.lt" />
           <img className="mark" src="/brand-mark-light.png" alt="" />
         </a>
@@ -153,7 +153,7 @@ export function P24Shell({ groups, tabs, current, onGo, cta, free, who, extra, r
   return (
     <div ref={rootRef} className={`p24 in-app${rail ? " rail" : ""}${open ? " open" : ""}${fitLevel ? ` ${fitLevel}` : ""}`}>
       <header className="topbar">
-        <a href="#" aria-label="statybos24.lt" onClick={(event) => { event.preventDefault(); go(tabs[0]?.key || "overview"); }}>
+        <a href="/?pradzia=1" aria-label="Statybos24 pagrindinis puslapis">
           <img src="/brand-logo-tight.png" alt="statybos24.lt" />
         </a>
         <div className="row" style={{ gap: 8 }}>

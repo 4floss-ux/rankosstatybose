@@ -5,7 +5,7 @@ import { clearStatybos24DeferredInstallPrompt, statybos24DeferredInstallPrompt }
 import { Svg } from "../Shell.jsx";
 
 // Naujas pradinis puslapis – prototipo HTML 1:1 (statinis turinys), mygtukai prijungti prie tikrų veiksmų.
-export function PublicLandingP24({ onLogin, onEmployerSignup, onWorkerSignup }) {
+export function PublicLandingP24({ signedIn = false, onLogin, onEmployerSignup, onWorkerSignup }) {
   const rootRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toTop, setToTop] = useState(false);
@@ -13,6 +13,7 @@ export function PublicLandingP24({ onLogin, onEmployerSignup, onWorkerSignup }) 
 
   useEffect(() => {
     const root = rootRef.current;
+    if (signedIn && root) root.querySelectorAll('[data-act="auth"][data-v="login"]').forEach(button => { button.textContent = "Mano paskyra"; });
     if (!root) return undefined;
     // Atsiradimo animacijos ([data-rv]) ir antraštės žodžiai kaip prototipe
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
@@ -69,7 +70,8 @@ export function PublicLandingP24({ onLogin, onEmployerSignup, onWorkerSignup }) 
     if (["auth", "lpMenu", "lpTop", "lpPlay", "lpFs", "lpFsX", "lpApp"].includes(act)) event.preventDefault();
     if (act === "auth") {
       setMenuOpen(false);
-      if (v === "login") onLogin();
+      if (signedIn) window.location.assign("/");
+      else if (v === "login") onLogin();
       else if (v === "signup-emp") onEmployerSignup();
       else onWorkerSignup();
     } else if (act === "lpMenu") setMenuOpen((value) => !value);

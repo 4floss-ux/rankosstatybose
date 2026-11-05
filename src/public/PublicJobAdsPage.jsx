@@ -1,3 +1,4 @@
+import { LITHUANIAN_CITY_NAMES } from "../ui/location.jsx";
 import { SiteSelect } from "../ui/SiteSelect.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/config.js";
@@ -64,20 +65,19 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
   }
   return <div className="p24 public-job-ads">
     <header className="public-ads-header"><div className="public-ads-width row">
-      <a href="/" aria-label="Statybos24 pradžia"><img src="/brand-logo-tight.png" alt="statybos24.lt" /></a>
-      <nav aria-label="Pagrindinis meniu"><a href={PUBLIC_JOB_ADS_PATH}>Darbo skelbimai</a></nav>
-      {user ? <a className="btn sm" href="/">Mano paskyra</a> : <button className="btn sm" type="button" onClick={onLogin}>Prisijungti</button>}
+      <a href={route.adId || route.invalid ? "/?pradzia=1" : PUBLIC_JOB_ADS_PATH} aria-label={route.adId || route.invalid ? "Statybos24 pradžia" : "Atnaujinti skelbimų sąrašą"}><img src="/brand-logo-tight.png" alt="statybos24.lt" /></a>
+      <nav aria-label="Pagrindinis meniu"><a className="btn sm" href="/?pradzia=1">Pagrindinis puslapis</a>{route.adId || route.invalid ? <a className="btn sm" href={PUBLIC_JOB_ADS_PATH}>← Grįžti į skelbimus</a> : null}{user ? <a className="btn sm" href="/">Mano paskyra</a> : null}</nav>
     </div></header>
     <main className="public-ads-width public-ads-main">
-      {route.adId || route.invalid ? <a className="linkbtn" href={PUBLIC_JOB_ADS_PATH}>← Visi darbo skelbimai</a> : <>
+      {!route.adId && !route.invalid ? <>
         <div className="head"><div><h1>Darbo skelbimai</h1><p className="lead">Darbas statybose. Skelbimus peržiūrėkite laisvai, o kandidatuokite su darbuotojo paskyra.</p></div></div>
         <label className="field adcity"><span>Miestas</span><SiteSelect value={city} onChange={event => {
           setCity(event.target.value); setPage(0);
           const url = new URL(window.location.href);
           if (event.target.value) url.searchParams.set("miestas", event.target.value); else url.searchParams.delete("miestas");
           window.history.replaceState(null, "", url.pathname + url.search);
-        }}><option value="">Visi miestai</option>{[...new Set([...cities, city].filter(Boolean))].sort((a,b) => a.localeCompare(b,"lt")).map(value => <option key={value}>{value}</option>)}</SiteSelect></label>
-      </>}
+        }}><option value="">Visi miestai</option>{[...new Set([...LITHUANIAN_CITY_NAMES, ...cities, city].filter(Boolean))].sort((a,b) => a.localeCompare(b,"lt")).map(value => <option key={value}>{value}</option>)}</SiteSelect></label>
+      </> : null}
       {accountMessage ? <p className="ferr" role="alert">{accountMessage}</p> : null}
       {loading ? <p role="status">Įkeliama...</p> : error ? <section className="card"><p className="ferr" role="alert">{error}</p><button className="btn" type="button" onClick={() => setRetry(value => value + 1)}>Bandyti dar kartą</button></section>
         : route.invalid || (route.adId && !ad) ? <section className="card"><Empty title="Skelbimas nepasiekiamas" sub="Jis gali būti uždarytas arba jo galiojimas pasibaigęs." icon="briefcase" /></section>
