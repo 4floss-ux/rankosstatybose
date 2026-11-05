@@ -1,0 +1,26 @@
+{
+  "source": "3c2c867",
+  "production_base": "90ba294",
+  "release_commit": "0c2f3e9",
+  "active_version": "b76dddd0-6a1a-4d8d-98ac-ccd9b7ac5f6b",
+  "deployment_id": "6fbb7552-c2be-43df-8a52-610d32cad5bd",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "sql_executed": false,
+  "payments_changed": false,
+  "files": [
+    "src/App.jsx",
+    "src/p24/Messenger.jsx",
+    "src/p24/Shell.jsx",
+    "src/p24/adNews.jsx",
+    "src/p24/p24.css",
+    "src/p24/public/PublicLandingP24.jsx",
+    "src/p24/worker/WorkerAds.jsx",
+    "src/public/PublicJobAdsPage.jsx",
+    "src/public/publicJobAds.css"
+  ],
+  "checks": "PASS production build; synthetic 1440/390 public ads list/filter/detail/share, contextual logo navigation, company identity, full App login return and authenticated home/account roundtrip, Messenger job ads filter, chat/CV/interview news regression tests",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at": "2026-11-05T05:45:32.170219+00:00"
+}
