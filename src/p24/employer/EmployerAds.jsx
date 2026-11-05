@@ -241,7 +241,6 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
   const [exhausted, setExhausted] = useState(false);
   const requestId = useRef(null);
   const isPro = freeAvailable && !exhausted;
-  const left = ad.live ? daysLeft(ad.expires_at) : 0;
   async function go() {
     if (pricingBusy) return;
     setBusy(true); setErr("");
@@ -264,12 +263,8 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
     finally { setBusy(false); }
   }
   return (
-    <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="ad-extension">
-        <div className="ad-extension-price"><div><span>Pratęsimas</span><b>Dar 30 dienų</b></div><strong>{isPro ? "0 €" : FEE}</strong></div>
-        <div className="ad-extension-period"><Svg name="cal" size={20} /><div><b>Po pratęsimo galios dar {left + 30} d.</b><span>{ad.live ? `Prie likusių ${left} d. pridedama 30 dienų.` : "Skelbimas vėl bus rodomas 30 dienų."}</span></div></div>
-        <p className="ad-extension-kept"><Svg name="check" size={16} />Kandidatai, susirašinėjimai ir įsiminimai išlieka.</p>
-      </div>
+    <Modal title="Pratęsti skelbimą" sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
+      <p className="ad-extension-summary">Skelbimo galiojimas bus pratęstas <b>30 dienų.</b></p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="ad-extension-actions">
         <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>

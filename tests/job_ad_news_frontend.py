@@ -162,9 +162,11 @@ with sync_playwright() as p:
   page.locator('.wk.cand').screenshot(path=f'/tmp/s24-candidate-card-{width}.png')
 
   page.get_by_role('button',name='Pratęsti skelbimą',exact=True).click()
-  page.locator('.ad-extension').wait_for()
+  page.locator('.ad-extension-summary').wait_for()
   assert 'Business Pro' not in page.locator('.modal').inner_text()
-  assert '9,99' in page.locator('.ad-extension-price').inner_text()
+  assert page.get_by_role('button',name='Pratęsti už 9,99 €',exact=True).count()==1
+  assert page.locator('.ad-extension-summary').inner_text()=='Skelbimo galiojimas bus pratęstas 30 dienų.'
+  assert page.locator('.ad-extension-price,.ad-extension-kept,.ad-extension-period').count()==0
   assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.locator('.modal').screenshot(path=f'/tmp/s24-extension-{width}.png')
   page.get_by_role('button',name='Atšaukti',exact=True).click()
