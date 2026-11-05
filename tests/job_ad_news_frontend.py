@@ -100,6 +100,12 @@ with sync_playwright() as p:
   page.evaluate("window.records.worker=[{application_id:'application',ad_id:window.ad.id,chat_unread:1,events:[],participant_name:'UAB Bandymų įmonė',ad_title:window.ad.title,chat_latest_at:'2026-11-04T10:00:00Z'}];window.mount('worker')")
   page.wait_for_function("document.querySelector('[data-testid=messenger-count]').textContent==='1'")
   page.get_by_role('button',name='Atidaryti Messenger',exact=True).click()
+  page.get_by_role('button',name='Privatūs',exact=True).click()
+  assert page.locator('.conv').count()==0
+  page.get_by_role('button',name='Darbo skelbimai',exact=False).filter(has=page.locator('em')).click()
+  assert page.locator('.conv.un').count()==1
+  assert 'darbo skelbimas' in page.locator('.conv').inner_text().lower()
+  assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.locator('.conv.un').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
   page.wait_for_function("document.querySelector('[data-testid=messenger-count]').textContent==='0'")
   # Preserve actual upload/confirmation frontend path (mock storage/RPC only).
@@ -176,6 +182,12 @@ with sync_playwright() as p:
   page.wait_for_function("document.querySelectorAll('.candidate-contact a').length===0")
   # Employer can reopen a read conversation; only its red badge disappears.
   page.get_by_role('button',name='Atidaryti Messenger',exact=True).click()
+  page.get_by_role('button',name='Privatūs',exact=True).click()
+  assert page.locator('.conv').count()==0
+  page.get_by_role('button',name='Darbo skelbimai',exact=False).filter(has=page.locator('em')).click()
+  assert page.locator('.conv.un').count()==1
+  assert 'darbo skelbimas' in page.locator('.conv').inner_text().lower()
+  assert not page.evaluate('document.documentElement.scrollWidth>innerWidth')
   page.locator('.conv.un').click();page.get_by_text('Sintetinė žinutė',exact=True).wait_for()
   page.wait_for_function("document.querySelector('[data-testid=messenger-count]').textContent==='0'")
   page.get_by_role('region',name='Pokalbis',exact=True).get_by_role('button',name='Uždaryti',exact=True).click()

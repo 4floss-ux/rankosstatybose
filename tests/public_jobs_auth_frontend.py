@@ -57,6 +57,18 @@ with sync_playwright() as p:
   assert page.get_by_role('button',name='Kandidatuoti',exact=True).count()==0
   assert page.get_by_role('button',name='Atšaukti kandidatūrą',exact=True).count()==0
   assert page.evaluate("window.__calls.filter(n=>n==='job_ad_apply').length")==1
+  # Public home remains accessible without signing out, and account return works.
+  ctx.add_init_script("window.__ROLE='worker'")
+  page.goto('http://s24.test/?pradzia=1',wait_until='domcontentloaded')
+  page.locator('[data-act="auth"][data-v="login"]:visible').first.wait_for()
+  page.wait_for_function("document.querySelector('[data-act=auth][data-v=login]').textContent==='Mano paskyra'")
+  if width<640:
+   page.locator('.lp-burger').click()
+   page.locator('.lp-mmenu [data-act="auth"][data-v="login"]').click()
+  else:
+   page.locator('.lp-hacts [data-act="auth"][data-v="login"]').click()
+  page.wait_for_url('http://s24.test/')
+  page.locator('.app').first.wait_for()
   assert not errors,errors
   print(f'PASS {width}px: full App mocked login returns to exact ad; application sent once; no withdrawal')
   ctx.close()

@@ -40,7 +40,7 @@ function Cav({ conv }) {
   return <span className="cav">{initialsOf(conv.name)}</span>;
 }
 
-const typeLabel = (conv) => (conv.kind === "team" ? "Vadovų pokalbis" : conv.kind === "group" ? "Darbo pokalbis" : "Privatus");
+const typeLabel = (conv) => (conv.category === "job-ad" ? "Darbo skelbimas" : conv.kind === "team" ? "Vadovų pokalbis" : conv.kind === "group" ? "Darbo pokalbis" : "Privatus");
 
 export function Messenger({ conversations, hidden, onHide, onClose }) {
   const [filter, setFilter] = useState("all");
@@ -48,8 +48,8 @@ export function Messenger({ conversations, hidden, onHide, onClose }) {
   const [confirmKey, setConfirmKey] = useState(null);
   const convs = visibleConversations(conversations, hidden);
   const q = query.trim().toLocaleLowerCase("lt-LT");
-  const list = convs.filter((conv) => (filter === "all" || conv.kind === filter) && (!q || `${conv.name} ${conv.job || ""}`.toLocaleLowerCase("lt-LT").includes(q)));
-  const count = (kind) => convs.filter((conv) => (kind === "all" || conv.kind === kind) && conv.unread).length;
+  const list = convs.filter((conv) => (filter === "all" || (conv.category || conv.kind) === filter) && (!q || `${conv.name} ${conv.job || ""}`.toLocaleLowerCase("lt-LT").includes(q)));
+  const count = (kind) => convs.filter((conv) => (kind === "all" || (conv.category || conv.kind) === kind) && conv.unread).length;
   const seg = (kind, label) => (
     <button type="button" aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{label}{count(kind) ? <> <em>{count(kind)}</em></> : null}</button>
   );
@@ -60,7 +60,7 @@ export function Messenger({ conversations, hidden, onHide, onClose }) {
         <div className="convs">
           <div className="pophead"><b>Žinutės</b><button type="button" className="tbtn" aria-label="Uždaryti žinutes" onClick={onClose}><Svg name="x" size={20} width={2.2} /></button></div>
           <div className="convs-head">
-            <div className="cfilter" role="group" aria-label="Pokalbių tipas">{seg("all", "Visi")}{seg("private", "Privatūs")}{seg("group", hasTeam ? "Darbo" : "Darbo pokalbiai")}{hasTeam ? seg("team", "Vadovai") : null}</div>
+            <div className="cfilter ad-conversation-filters" role="group" aria-label="Pokalbių tipas">{seg("all", "Visi")}{seg("private", "Privatūs")}{seg("job-ad", "Darbo skelbimai")}{seg("group", hasTeam ? "Darbo" : "Darbo pokalbiai")}{hasTeam ? seg("team", "Vadovai") : null}</div>
             <label className="csearch"><Svg name="search" size={17} /><span className="sr">Ieškoti pokalbio</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ieškoti" autoComplete="off" /></label>
           </div>
           <div className="clist">
