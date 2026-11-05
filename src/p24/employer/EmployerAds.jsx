@@ -32,7 +32,7 @@ function Modal({ title, eyebrow, sub, onClose, children }) {
 }
 function statusPill(a) {
   if (a.status === "pending_payment") return <Pill tone="orange">{a.payment_pending ? "Laukia apmokėjimo" : "Neapmokėtas"}</Pill>;
-  if (a.status === "closed") return <Pill>Uždarytas</Pill>;
+  if (a.status === "closed") return <Pill>Nebegalioja</Pill>;
   if (!a.live) return <Pill>Nebegalioja</Pill>;
   return <Pill tone="green">Aktyvus · liko {daysLeft(a.expires_at)} d.</Pill>;
 }
@@ -257,7 +257,7 @@ function ExtendModal({ ad, isPro, onClose, onDone }) {
 }
 
 /* ---------- Skelbimo puslapis su kandidatais ---------- */
-function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
+function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged, onDeleted }) {
   const { dialog, askConfirm, resolveConfirm } = useStyledConfirm();
   const [chat, setChat] = useState(null);
   const [ad, setAd] = useState(null);
@@ -290,10 +290,26 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
     const { data } = await supabase.storage.from("job-ad-cv").createSignedUrl(c.cv_path, 120);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   }
-  async function close() {
-    if (!(await askConfirm({ title: "Uždaryti skelbimą?", message: "Darbuotojai jo nebematys.", confirmLabel: "Uždaryti", danger: true }))) return;
-    const { error } = await supabase.rpc("job_ad_close", { p_ad_id: adId });
-    if (error) setErr(error.message); else { await load(); onChanged(); }
+  async function removeAd() {
+    const accepted = await askConfirm({
+      title: "Ištrinti darbo skelbimą?",
+      message: "Skelbimas iškart dings iš sąrašų, o kandidatų įkelti CV bus negrįžtamai pašalinti. Apmokėjimas automatiškai negrąžinamas.",
+      confirmLabel: "Ištrinti skelbimą",
+      cancelLabel: "Atšaukti",
+      danger: true,
+    });
+    if (!accepted) return;
+    setBusy("remove"); setErr("");
+    try {
+      const { error } = await supabase.rpc("job_ad_employer_delete", { p_ad_id: adId });
+      if (error) throw error;
+      await onChanged();
+      onDeleted();
+    } catch (e) {
+      setErr(e?.message || "Nepavyko ištrinti skelbimo.");
+    } finally {
+      setBusy("");
+    }
   }
   async function pay() {
     setBusy("pay");
@@ -356,7 +372,7 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged }) {
       <section className="card"><header><div><h2>Kandidatai <span className="muted">· {cands.filter((c) => c.status !== "interview").length}</span></h2></div>
         <div className="row" style={{ gap: 8 }}><button className="btn sm" type="button" onClick={() => onEdit(ad)}>Redaguoti</button>
           {ad.status !== "pending_payment" ? <button className="btn sm" type="button" onClick={() => setExt(true)}>Pratęsti</button> : null}
-          {ad.status === "active" ? <button className="btn sm ghost" type="button" onClick={close}>Uždaryti</button> : null}</div></header>
+          <button className="btn sm danger" type="button" disabled={busy === "remove"} onClick={removeAd}>{busy === "remove" ? "Trinama..." : "Ištrinti"}</button></div></header>
         <div className="chips" role="group" aria-label="Filtras">{[["all", "Visi"], ["rel", "Patikimumas 95+"], ["docs", "Turi pažymėjimų"]].map(([k, t]) => <button key={k} type="button" className="chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{t}</button>)}</div>
         <div className="list">{list.length ? list.map(row) : <Empty title={filter === "all" ? "Naujų kandidatų nėra" : "Pagal šį filtrą kandidatų nėra"} sub={filter === "all" ? "Pakviestieji pokalbiui rodomi žemiau." : "Pasirinkite kitą filtrą."} icon="people" />}</div>
       </section>
@@ -409,7 +425,8 @@ export function EmployerAds({ data, company, isPro, onWorkerProfile, startNew, o
   }
   if (mode === "detail" && current) {
     return <AdDetail adId={current.id} isPro={isPro} onBack={() => { setMode("list"); setCurrent(null); top(); }}
-      onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={data.reload} />;
+      onEdit={(ad) => { setCurrent(ad); setMode("edit"); top(); }} onWorkerProfile={onWorkerProfile} onChanged={data.reload}
+      onDeleted={() => { setCurrent(null); setMode("list"); top(); }} />;
   }
   return (
     <>
