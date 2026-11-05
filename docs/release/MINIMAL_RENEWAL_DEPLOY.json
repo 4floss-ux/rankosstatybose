@@ -1,0 +1,20 @@
+{
+  "production_source_base": "f08186b",
+  "source_proof": "GitHub Workers Builds check identifies predecessor 4e899911-1972-4128-95cb-9dbd22a78846 for commit f08186b; active runtime source map recovered and preserved exactly",
+  "release_commit": "a71416d",
+  "old_version": "4e899911-1972-4128-95cb-9dbd22a78846",
+  "active_version": "49bf61cf-5e26-4ebd-9395-cf0382a97149",
+  "deployment_id": "d0f317d5-4be9-4e75-b322-9d07dedc6f79",
+  "traffic_percentage": 100,
+  "maintenance": "on",
+  "bindings_identical": true,
+  "runtime_sources_identical_to_predecessor": true,
+  "sql_executed": false,
+  "payments_changed": false,
+  "ui_files_changed": [
+    "src/p24/employer/EmployerAds.jsx"
+  ],
+  "checks": "PASS 1440/390 synthetic minimal paid/free dialog; cancel without mutation; existing free extension RPC; production build",
+  "real_authenticated_integration": "NOT TESTED",
+  "verified_at": "2026-11-05T15:41:20.355904+00:00"
+}
