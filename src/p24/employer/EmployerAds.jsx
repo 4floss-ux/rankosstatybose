@@ -264,6 +264,8 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged, onD
   const [ad, setAd] = useState(null);
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
+  const [expandedCandidates, setExpandedCandidates] = useState(() => new Set());
+  useEffect(() => { setExpandedCandidates(new Set()); }, [adId]);
   const [iv, setIv] = useState(null);
   const [ext, setExt] = useState(false);
   const [busy, setBusy] = useState("");
@@ -403,7 +405,27 @@ function AdDetail({ adId, isPro, onBack, onEdit, onWorkerProfile, onChanged, onD
       </section>
       <div className="adcols ead-secondary">
       <section className="card ivsec"><header><div><h2 className="ead-section-title"><Svg name="cal" size={17} width={2.2} />Pakviesti pokalbiui <span className="cnt">{ivs.length}</span></h2></div></header>
-        <div className="list">{ivs.length ? ivs.map(row) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Dar nieko nepakvietėte. Prie kandidato spauskite „Kviesti pokalbiui“.</p>}</div></section>
+        <div className="list">
+          {ivs.length ? ivs.map((c) => (
+            <div className="interview-fold" key={c.id}>
+              <button className="interview-toggle" type="button"
+                aria-expanded={expandedCandidates.has(c.id)}
+                aria-controls={`interview-${c.id}`}
+                onClick={() => setExpandedCandidates((current) => {
+                  const next = new Set(current);
+                  if (next.has(c.id)) next.delete(c.id);
+                  else next.add(c.id);
+                  return next;
+                })}>
+                <span>{c.name}</span>
+                <Svg size={17} paths='<path d="m6 9 6 6 6-6"/>' />
+              </button>
+              {expandedCandidates.has(c.id) ? (
+                <div id={`interview-${c.id}`}>{row(c)}</div>
+              ) : null}
+            </div>
+          )) : <p className="small muted" style={{ padding: "6px 2px", margin: 0 }}>Dar nieko nepakvietėte. Prie kandidato spauskite „Kviesti pokalbiui“.</p>}
+        </div></section>
       <section className="card"><header><div><h2 className="ead-section-title"><Heart size={17} on />Įsiminė skelbimą <span className="cnt">{savers.length}</span></h2><p className="small muted" style={{ margin: "2px 0 0" }}>Dar nekandidatavo</p></div></header>
         <div className="list">{savers.length ? savers.map((w) => (
           <div className="wk fw" key={w.worker_id}><Av w={w} />
