@@ -230,7 +230,6 @@ function InterviewModal({ ad, cand, onClose, onDone }) {
 
 function ExtendModal({ ad, isPro, onClose, onDone }) {
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
-  const left = ad.live ? daysLeft(ad.expires_at) : 0;
   async function go() {
     setBusy(true); setErr("");
     try {
@@ -246,12 +245,12 @@ function ExtendModal({ ad, isPro, onClose, onDone }) {
     finally { setBusy(false); }
   }
   return (
-    <Modal eyebrow="Skelbimas" title="Pratęsti skelbimą" sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
-      <p style={{ margin: 0 }}>Skelbimo galiojimas bus pratęstas <b>30 dienų</b>.{ad.live ? ` Po pratęsimo liks ${left + 30} d.` : " Skelbimas galios 30 dienų."}</p>
+    <Modal title="Pratęsti skelbimą" sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
+      <p style={{ margin: 0 }}>Skelbimo galiojimas bus pratęstas <b>30 dienų.</b></p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
         <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
-        <button className="btn primary" type="button" disabled={busy} onClick={go}>{busy ? "Vykdoma..." : isPro ? "Pratęsti nemokamai" : `Pratęsti už ${FEE}`}</button>
+        <button className="btn primary" type="button" disabled={busy} onClick={go}>{busy ? "Vykdoma..." : isPro ? "Pratęsti" : `Pratęsti už ${FEE}`}</button>
       </div>
     </Modal>
   );
