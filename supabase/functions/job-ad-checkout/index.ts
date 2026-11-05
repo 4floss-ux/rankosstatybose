@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     }
 
     if (body?.action !== "create") throw new PayError("Netinkamas veiksmas.");
-    if (!["pending_payment", "active", "closed"].includes(ad.status)) throw new PayError("Šio skelbimo apmokėti negalima.", 409);
+    if (!["pending_payment", "active"].includes(ad.status)) throw new PayError("Šio skelbimo apmokėti negalima.", 409);
 
     // Neužbaigtą sesiją pakartotinai naudojame, kad nebūtų dvigubų mokėjimų.
     if (ad.pending_session_id) {

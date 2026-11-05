@@ -83,7 +83,7 @@ export function PublicJobAdsPage({ route, user, onLogin }) {
       </>}
       {accountMessage ? <p className="ferr" role="alert">{accountMessage}</p> : null}
       {loading ? <p role="status">Įkeliama...</p> : error ? <section className="card"><p className="ferr" role="alert">{error}</p><button className="btn" type="button" onClick={() => setRetry(value => value + 1)}>Bandyti dar kartą</button></section>
-        : route.invalid || (route.adId && !ad) ? <section className="card"><Empty title="Skelbimas nepasiekiamas" sub="Jis gali būti uždarytas arba jo galiojimas pasibaigęs." icon="briefcase" /></section>
+        : route.invalid || (route.adId && !ad) ? <section className="card"><Empty title="Skelbimas nepasiekiamas" sub="Jis galėjo būti ištrintas arba jo galiojimas pasibaigęs." icon="briefcase" /></section>
         : route.adId ? <AdPage ad={ad} publicView onPublicApply={apply} />
         : <><section className="card">{ads.length ? <div className="list">{ads.map(value => <AdCard key={value.id} ad={value} publicHref={publicJobAdPath(value.id)} />)}</div>
           : <Empty title={city ? "Šiame mieste skelbimų nėra" : "Skelbimų dar nėra"} sub={city ? "Pasirinkite kitą miestą." : "Paskelbti darbo skelbimai bus rodomi čia."} icon="briefcase" />}</section>

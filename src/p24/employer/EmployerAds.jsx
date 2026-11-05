@@ -40,7 +40,6 @@ function Modal({ title, eyebrow, sub, onClose, children }) {
 }
 function statusPill(a) {
   if (a.status === "pending_payment") return <Pill tone="orange">{a.payment_pending ? "Laukia apmokėjimo" : "Neapmokėtas"}</Pill>;
-  if (a.status === "closed") return <Pill>Uždarytas</Pill>;
   if (!a.live) return <Pill>Nebegalioja</Pill>;
   return <Pill tone="green">Aktyvus · liko {daysLeft(a.expires_at)} d.</Pill>;
 }
@@ -321,7 +320,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   }
   async function removeAd() {
-    if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
+    if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei skelbimas buvo mokamai iškeltas, likusios iškėlimo dienos bus prarastos; pinigų grąžinimas nėra automatinis. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
     setBusy("delete"); setErr("");
     try {
       const { data, error } = await supabase.functions.invoke("job-ad-delete", { body: { adId } });
