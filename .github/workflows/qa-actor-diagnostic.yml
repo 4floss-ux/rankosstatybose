@@ -14,5 +14,5 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/qa-auth-diagnostic"
-          echo "Checking staged actor service..."
+          echo "Checking all three staging actor OTP flows..."
           curl --retry 2 --retry-delay 1 --max-time 20 -fsSL "$URL" | python3 -m json.tool
