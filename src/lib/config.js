@@ -1,3 +1,4 @@
+import { e2eEnabled, e2eFetch, E2eWebSocket } from "./e2eTransport.js";
 import * as Sentry from "@sentry/react";
 import { isHireHostname } from "./hireRoutes.js";
 import { createClient } from "@supabase/supabase-js";
@@ -18,7 +19,7 @@ export function sanitizeSentryUrl(value) {
 
 Sentry.init({
   dsn: SENTRY_DSN,
-  enabled: import.meta.env.PROD,
+  enabled: import.meta.env.PROD && !e2eEnabled,
   environment: import.meta.env.PROD ? "production" : "development",
   sendDefaultPii: false,
   attachStacktrace: true,
@@ -103,7 +104,7 @@ if (!isHireProjectPath && typeof window !== "undefined") {
   });
   // Register the existing push service worker on initial visit too, not just
   // after users opt in to notifications. Registration does NOT ask for push permission.
-  if (window.isSecureContext && "serviceWorker" in navigator) {
+  if (!e2eEnabled && window.isSecureContext && "serviceWorker" in navigator) {
     const registerMainSiteWorker = () => {
       navigator.serviceWorker.register("/statybos24-push-sw.js", {
         scope: "/", updateViaCache: "none",
@@ -115,7 +116,7 @@ if (!isHireProjectPath && typeof window !== "undefined") {
 }
 
 export const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey, isHireProjectPath ? {
+  ? createClient(supabaseUrl, supabaseKey, e2eEnabled ? { global: { fetch: e2eFetch }, realtime: { transport: E2eWebSocket } } : isHireProjectPath ? {
       auth: {
         storageKey: "statybos24-hire-private-auth-v1",
         persistSession: false,

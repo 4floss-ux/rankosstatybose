@@ -1,3 +1,5 @@
+import { e2eEnabled, bootstrapE2eSession } from "./lib/e2eTransport.js";
+import { supabase } from "./lib/config.js";
 import { Suspense } from "react";
 import { legacyHireRedirect } from "./lib/hireRoutes.js";
 import { createRoot } from "react-dom/client";
@@ -21,6 +23,7 @@ const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 async function mountSiteWhenFontsReady() {
   const rootElement = document.getElementById("root");
   if (!rootElement) return;
+  if (e2eEnabled) await bootstrapE2eSession(supabase);
   if (document.fonts?.load) {
     const loading = Promise.allSettled([
       document.fonts.load('400 16px Inter'),
@@ -48,7 +51,7 @@ async function mountSiteWhenFontsReady() {
         <Suspense fallback={<AppBootLoader />}>
           <App />
         </Suspense>
-        <SiteAnalyticsTracker />
+        {!e2eEnabled && <SiteAnalyticsTracker />}
         <MobilePopupBackGuard />
         <BackToTopButton />
       </>

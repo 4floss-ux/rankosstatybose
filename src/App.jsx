@@ -29,7 +29,7 @@ export function App() {
   const [qaMode, setQaMode] = useState(() => new URLSearchParams(window.location.search).get("testas") === "1");
   const [qaAllowed, setQaAllowed] = useState(false);
   useEffect(() => {
-    if (!user?.id || !supabase) { setQaAllowed(false); return; }
+    if (e2eRealAccounts || !user?.id || !supabase) { setQaAllowed(false); return; }
     let cancelled = false;
     setQaAllowed(false);
     supabase.functions.invoke("qa-preview", {body: {op: "check"}})
@@ -326,6 +326,7 @@ export function App() {
 
   const logout = async () => {
     if (supabase) await supabase.auth.signOut();
+    if (e2eRealAccounts) {window.location.replace("/__e2e/login");return;}
   };
 
   const finishPasswordRecovery = () => {
@@ -452,8 +453,8 @@ export function App() {
       </span>
       <button type="button" onClick={async () => {
         await supabase.auth.signOut();
-        setAuthMode("login");
-        setAuthOpen(true);
+        window.location.replace("/__e2e/login");
+        return;
       }} style={{border:0,borderRadius:5,padding:"8px 12px",fontWeight:800,cursor:"pointer"}}>
         Pakeisti testinę paskyrą
       </button>

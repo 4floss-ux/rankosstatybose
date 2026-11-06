@@ -1,8 +1,12 @@
 name: QA sandbox safe build (no deploy)
 on:
   push:
-    branches: [fix/job-ad-delete-retire-close-20261105]
+    branches: [fix/job-ad-delete-retire-close-20261105, feat/isolated-real-e2e-20261106]
     paths:
+      - e2e/**
+      - scripts/build-e2e.mjs
+      - src/lib/e2eTransport.js
+      - tests/e2e-*.mjs
       - src/App.jsx
       - src/p24/qa/**
       - supabase/functions/qa-preview/**
@@ -28,6 +32,8 @@ jobs:
           VITE_SUPABASE_URL: ""
           VITE_SUPABASE_PUBLISHABLE_KEY: ""
         run: npm run build
+      - name: Server-side isolated E2E security checks
+        run: node --test tests/e2e-isolation.test.mjs
       - name: QA sandbox isolation static checks
         run: |
           node --input-type=module <<'NODE'
