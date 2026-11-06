@@ -36,7 +36,7 @@ jobs:
           const edge = readFileSync("supabase/functions/qa-preview/index.ts","utf8");
           const app = readFileSync("src/App.jsx","utf8");
           const view = readFileSync("src/p24/qa/QaSandbox.jsx","utf8");
-          assert.match(edge, /APPROVED_EMAILS/);
+          assert.match(edge, /ALLOWED_EMAIL_DIGESTS/);
           assert.match(edge, /auth.getUser\(token\)/);
           assert.match(edge, /qa_preview_state/);
           assert.match(edge, /Array.from\(\{ length: 10 \}/);
