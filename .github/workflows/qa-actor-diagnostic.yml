@@ -1,0 +1,18 @@
+name: Diagnostic check of staging test actor
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths: [".github/workflows/qa-actor-diagnostic.yml"]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check staging-only auth service without showing identity details
+        run: |
+          set -euo pipefail
+          URL="https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/qa-auth-diagnostic"
+          echo "Checking staged actor service..."
+          curl --retry 2 --retry-delay 1 --max-time 20 -fsSL "$URL" | python3 -m json.tool
