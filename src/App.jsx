@@ -18,12 +18,37 @@ const EmployerDashboard = lazyPage(() => import("./employer/EmployerDashboard.js
 const AdminDashboard = lazyPage(() => import("./admin/AdminDashboard.jsx"), "AdminDashboard");
 const AdminWorkerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminWorkerGateway");
 const AdminEmployerGateway = lazyPage(() => import("./admin/adminParts.jsx"), "AdminEmployerGateway");
+const QaSandbox = lazyPage(() => import("./p24/qa/QaSandbox.jsx"), "QaSandbox");
 const BusinessPresentationPage = lazyPage(() => import("./public/BusinessPresentationPage.jsx"), "BusinessPresentationPage");
 const PublicJobAdsPage = lazyPage(() => import("./public/PublicJobAdsPage.jsx"), "PublicJobAdsPage");
 
 export function App() {
   const publicJobs = publicJobRoute(window.location.pathname);
   const [user, setUser] = useState(null);
+  const [qaMode, setQaMode] = useState(() => new URLSearchParams(window.location.search).get("testas") === "1");
+  const [qaAllowed, setQaAllowed] = useState(false);
+  useEffect(() => {
+    if (!user?.id || !supabase) { setQaAllowed(false); return; }
+    let cancelled = false;
+    setQaAllowed(false);
+    supabase.functions.invoke("qa-preview", {body: {op: "check"}})
+      .then(({data,error}) => {if (!cancelled) setQaAllowed(!error && data?.authorized === true);})
+      .catch(() => {if (!cancelled) setQaAllowed(false);});
+    return () => {cancelled = true;};
+  }, [user?.id]);
+  const openQaMode = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("testas","1");
+    window.history.replaceState({},"",url.pathname + url.search + url.hash);
+    setQaMode(true);
+  };
+  const closeQaMode = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("testas");
+    window.history.replaceState({},"",url.pathname + url.search + url.hash);
+    setQaMode(false);
+  };
+
   useEffect(() => {
     if(!user?.id || !supabase) return;
     let stopped=false, busy=false, recordedDay="";
@@ -412,6 +437,22 @@ export function App() {
   }
 
   const impersonation = impersonated ? { name: impersonated.name, onEnd: finishImpersonation } : null;
+  if (user && accountRole && qaMode && !impersonated) {
+    return <QaSandbox onExit={closeQaMode} />;
+  }
+  const qaLaunchButton = qaAllowed && !impersonated ? (
+    <button type="button" onClick={openQaMode}
+      title="Privatus testavimo režimas – tik netikri duomenys"
+      style={{
+        position:"fixed",right:18,top:72,zIndex:210,
+        padding:"9px 14px",borderRadius:8,border:"1px solid #c6b4e6",
+        background:"#5e478d",color:"#fff",fontWeight:800,fontSize:12,
+        boxShadow:"0 4px 16px rgba(0,0,0,.14)",cursor:"pointer"
+      }}>
+      🧪 Testavimo režimas
+    </button>
+  ) : null;
+
 
   if (publicJobs && !(publicJobs.adId && user && accountRole === "worker")) {
     return <><PublicJobAdsPage route={publicJobs} user={user} onLogin={() => { setAuthMode("login"); setAuthRole("worker"); setAuthOpen(true); }} />
@@ -421,13 +462,13 @@ export function App() {
 
   if (user && accountRole === "worker") {
     return (
-      <WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />
+      <><WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />{qaLaunchButton}</>
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />
+      <><EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />{qaLaunchButton}</>
     );
   }
 
@@ -453,6 +494,7 @@ export function App() {
     }
 
     return (
+      <>
       <AdminDashboard
         user={user}
         onLogout={logout}
@@ -460,6 +502,8 @@ export function App() {
         onOpenEmployer={() => setAdminMode("employer")}
         initialTab={new URLSearchParams(window.location.search).get("admin_tab")}
       />
+      {qaLaunchButton}
+      </>
     );
   }
 
