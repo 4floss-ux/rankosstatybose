@@ -441,25 +441,6 @@ export function App() {
   if (user && accountRole && qaMode && !impersonated && !e2eRealAccounts) {
     return <QaSandbox onExit={closeQaMode} />;
   }
-  const e2eAccountSwitcher = e2eRealAccounts && user ? (
-    <aside role="note" aria-label="Izoliuota tikrų paskyrų testavimo aplinka"
-      style={{position:"fixed",bottom:16,left:16,right:16,zIndex:2200,
-        display:"flex",alignItems:"center",justifyContent:"space-between",
-        gap:12,flexWrap:"wrap",padding:"10px 14px",borderRadius:9,
-        background:"#352b52",color:"#fff",boxShadow:"0 5px 24px #0004"}}>
-      <span style={{fontSize:12,fontWeight:800}}>
-        🧪 TESTINĖ APLINKA · Tikros funkcijos · Testiniai duomenys · {accountRole}
-      </span>
-      <button type="button" onClick={async () => {
-        await supabase.auth.signOut();
-        setAuthMode("login");
-        setAuthOpen(true);
-      }} style={{border:0,borderRadius:5,padding:"8px 12px",fontWeight:800,cursor:"pointer"}}>
-        Pakeisti testinę paskyrą
-      </button>
-    </aside>
-  ) : null;
-
   const qaLaunchButton = qaAllowed && !impersonated && !e2eRealAccounts ? (
     <button type="button" onClick={openQaMode}
       title="Privatus testavimo režimas – tik netikri duomenys"
@@ -482,13 +463,13 @@ export function App() {
 
   if (user && accountRole === "worker") {
     return (
-      <><WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />{qaLaunchButton}{e2eAccountSwitcher}</>
+      <><WorkerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} initialAdId={publicJobs?.adId} />{qaLaunchButton}</>
     );
   }
 
   if (user && accountRole === "employer") {
     return (
-      <><EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />{qaLaunchButton}{e2eAccountSwitcher}</>
+      <><EmployerDashboard user={user} onLogout={impersonation ? finishImpersonation : logout} impersonation={impersonation} />{qaLaunchButton}</>
     );
   }
 
@@ -523,7 +504,7 @@ export function App() {
         initialTab={new URLSearchParams(window.location.search).get("admin_tab")}
       />
       {qaLaunchButton}
-      {e2eAccountSwitcher}
+      
       </>
     );
   }
