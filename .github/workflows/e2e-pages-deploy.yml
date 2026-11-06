@@ -1,4 +1,4 @@
-name: Publish Statybos24 private E2E to GitHub Pages
+name: Publish Statybos24 E2E to GitHub Pages
 on:
   push:
     branches: [fix/job-ad-delete-retire-close-20261105]
@@ -25,6 +25,8 @@ jobs:
           node-version: "22"
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Build isolated staging app
         env:
           VITE_SUPABASE_URL: https://wpldojonwvccdmpmlbfe.supabase.co
