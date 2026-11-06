@@ -2,11 +2,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 // Server-side authenticated access only. This preview never writes real records.
-const APPROVED_EMAILS = new Set([
-  "tattoo.staponas@gmail.com",
-  "beatabune@gmail.com",
-  "4floss@gmail.com",
+const ALLOWED_EMAIL_DIGESTS = new Set([
+  "b960bbdbaa9f429d4c78f90e2c980e756d51c89f65b5a32917bd6eb1f4943a4c",
+  "dff5bbf81cbcd479ce632a992586a8e140d740b3bd2c4ad669e23a119651d919",
+  "c0912188fa877c3b2fa6ea6eed6d0b910726452330d3a942ad95e7acde4d141b",
 ]);
+async function approvedVerifiedEmail(email: string): Promise<boolean> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email.trim().toLowerCase()));
+  const digest = Array.from(new Uint8Array(bytes)).map((byte) => byte.toString(16).padStart(2,"0")).join("");
+  return ALLOWED_EMAIL_DIGESTS.has(digest);
+}
 const ORIGINS = new Set([
   "https://statybos24.lt",
   "https://www.statybos24.lt",
@@ -160,7 +165,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const {data:userData,error:userError} = await authClient.auth.getUser(token);
   const user = userData?.user;
   if (userError || !user) return reply(req,{error:"Sign in required"},401);
-  if (!APPROVED_EMAILS.has(String(user.email || "").toLowerCase()) || !user.email_confirmed_at) {
+  if (!await approvedVerifiedEmail(String(user.email || "")) || !user.email_confirmed_at) {
     return reply(req,{error:"No access to test mode"},403);
   }
   let body: Record<string, unknown>;
