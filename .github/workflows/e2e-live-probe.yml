@@ -1,0 +1,46 @@
+name: E2E staging website public reachability and access smoke
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths: [".github/workflows/e2e-live-probe.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe isolated staging website and script assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1"
+          echo "Checking staging HTML GET..."
+          HTTP=$(curl --max-time 30 -sSL -o /tmp/e2e-index.html -w '%{http_code}' "$BASE/e2e-site/")
+          echo "HTML HTTP: $HTTP"
+          test "$HTTP" = "200"
+          grep -q 'Statybos24' /tmp/e2e-index.html || grep -qi 'statybos24' /tmp/e2e-index.html
+          ASSET=$(grep -oE '/functions/v1/e2e-site/assets/[^"]+\.js' /tmp/e2e-index.html | head -1 || true)
+          if [ -z "$ASSET" ]; then
+            echo "::error::JS file not linked"; exit 1
+          fi
+          echo "Checking JS asset GET..."
+          JS_HTTP=$(curl --max-time 30 -sSL -o /tmp/e2e-app.js -w '%{http_code}' "https://wpldojonwvccdmpmlbfe.supabase.co$ASSET")
+          echo "Asset HTTP: $JS_HTTP; bytes $(wc -c </tmp/e2e-app.js)"
+          test "$JS_HTTP" = "200"
+          test "$(wc -c </tmp/e2e-app.js)" -gt 200
+      - name: Server denies unauthenticated role switching
+        shell: bash
+        run: |
+          set -euo pipefail
+          HTTP=$(curl --max-time 20 -sS -o /tmp/qa-actor-response -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            -H 'Authorization: Bearer deliberately-invalid-test-token' \
+            --data '{"role":"admin"}' \
+            "https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/qa-actor")
+          echo "Unauthorized actor HTTP: $HTTP"
+          test "$HTTP" = "403" -o "$HTTP" = "401"
+          echo "PASS: no test actor session was returned."
