@@ -4,11 +4,7 @@ Sukurta 2026-11-06. Tik demonstracijai, ne tikrų klientų operacijoms.
 
 ## Kam skirta
 
-Trys savininko nurodytos prisijungusios paskyros gali matyti tą pačią sintetinę būseną:
-
-- tattoo.staponas@gmail.com
-- beatabune@gmail.com
-- 4floss@gmail.com
+Trys savininko nurodytos prisijungusios paskyros gali matyti tą pačią sintetinę būseną. Paskyrų el. pašto adresai neįrašomi kaip paprastas tekstas į serverio šaltinį.
 
 Autorizacija privalomai tikrinama **Supabase Edge funkcijoje** `qa-preview`, pasitikint `auth.getUser(jwt)`, o ne naršyklės perduotu el. paštu. Prieiga nepatvirtintiems vartotojams neleidžiama.
 
