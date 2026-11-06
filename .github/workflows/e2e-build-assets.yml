@@ -1,0 +1,51 @@
+name: Build isolated Statybos24 E2E website assets
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "vite.config.js"
+      - ".github/workflows/e2e-build-assets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build against STAGING only
+        env:
+          VITE_SUPABASE_URL: https://wpldojonwvccdmpmlbfe.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ePFObotMe2_u0f_8wcSZww_PtTWxv_S
+          VITE_E2E_REAL_ACCOUNTS: "true"
+        run: |
+          node -e 'if(process.env.VITE_SUPABASE_URL!=="https://wpldojonwvccdmpmlbfe.supabase.co" || process.env.VITE_E2E_REAL_ACCOUNTS!=="true")process.exit(1)'
+          npm install --no-audit --no-fund
+          npm run build -- --base=/functions/v1/e2e-site/
+          test -s dist/index.html
+          test -n "$(find dist/assets -maxdepth 1 -type f -name '*.js' -print -quit)"
+      - name: Publish static assets to dedicated repository branch (NOT the public website)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          cd dist
+          printf '%s' 'Built for isolated Supabase E2E static proxy only.' > E2E-STAGING-ONLY.txt
+          git init --initial-branch=e2e-assets
+          git config user.name "Statybos24 QA build"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish staging-only QA assets from $GITHUB_SHA"
+          git remote add upload "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force upload HEAD:refs/heads/e2e-assets
