@@ -41,6 +41,8 @@ jobs:
             const response = await page.goto("https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/e2e-site/",
               {waitUntil:"domcontentloaded",timeout:45000});
             if(response?.status()!==200)throw Error("HTML response: "+response?.status());
+            console.log("HTTP RESP HEADERS:",JSON.stringify(response?.headers()));
+            console.log("DOCUMENT INITIAL HTML:",(await page.content()).slice(0,550));
             await page.waitForTimeout(5500);
             console.log("DOCUMENT TITLE:",await page.title());
             console.log("BODY TEXT:",(await page.locator("body").innerText()).slice(0,1500));
