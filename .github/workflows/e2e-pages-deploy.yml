@@ -1,0 +1,81 @@
+name: Publish Statybos24 private E2E to GitHub Pages
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths: [".github/workflows/e2e-pages-deploy.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "statybos24-e2e-pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Build isolated staging app
+        env:
+          VITE_SUPABASE_URL: https://wpldojonwvccdmpmlbfe.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ePFObotMe2_u0f_8wcSZww_PtTWxv_S
+          VITE_E2E_REAL_ACCOUNTS: "true"
+        shell: bash
+        run: |
+          test "$VITE_SUPABASE_URL" = "https://wpldojonwvccdmpmlbfe.supabase.co"
+          npm install --no-audit --no-fund
+          npm run build -- --base=/rankosstatybose/
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import path from "node:path";
+          const dist="dist", base="/rankosstatybose/";
+          const files=fs.readdirSync(dist,{withFileTypes:true})
+            .filter(f=>f.isFile() && /\.(png|svg|jpg|jpeg|webp|ico|woff2?|webmanifest|json)$/.test(f.name))
+            .map(f=>f.name);
+          function rewrite(file){
+            let text=fs.readFileSync(file,"utf8");
+            for(const name of files){
+              for(const mark of ['"/', "'/","(/"]){
+                const find=mark+name;
+                text=text.replaceAll(find,mark.slice(0,-1)+base+name);
+              }
+            }
+            fs.writeFileSync(file,text);
+          }
+          function walk(dir){
+            for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+              const name=path.join(dir,entry.name);
+              if(entry.isDirectory())walk(name);
+              else if(/\.(html|js|css|webmanifest)$/.test(name))rewrite(name);
+            }
+          }
+          walk(dist);
+          fs.copyFileSync("dist/index.html","dist/404.html");
+          fs.writeFileSync("dist/.nojekyll","");
+          NODE
+          test -s dist/index.html
+      - name: Upload GitHub Pages static files
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
