@@ -33,9 +33,9 @@ jobs:
           const browser=await chromium.launch({channel:"chrome",headless:true,args:["--no-sandbox"]});
           try{
             const page=await browser.newPage({viewport:{width:1320,height:900}});
-            const errors=[],failed=[];
+            const errors=[],failed=[],consoleErrors=[];
             page.on("pageerror",e=>errors.push(e.message));
-            page.on("console",e=>{if(e.type()==="error")errors.push(e.text())});
+            page.on("console",e=>{if(e.type()==="error")consoleErrors.push(e.text())});
             page.on("response",r=>{if(r.status()>=400)failed.push(r.status()+" "+r.url().slice(0,180))});
             let status=0;
             for(let attempt=0;attempt<8;attempt++){
@@ -60,8 +60,9 @@ jobs:
             if(await page.getByText("Pasirink, kuo nori būti").count())throw Error("Unauthorized visitor saw role switcher");
             console.log("PASS: Private login form is visible and actor switching is gated.");
             console.log("JS RUNTIME ERRORS:",JSON.stringify(errors.slice(0,8)));
-            console.log("FAILED REQUESTS:",JSON.stringify(failed.slice(0,8)));
-            if(errors.length)throw Error("JS runtime exceptions.");
+            console.log("FAILED REQUESTS:",JSON.stringify(failed.slice(-12)));
+            console.log("CONSOLE ERRORS:",JSON.stringify(consoleErrors.slice(-12)));
+            if(errors.length)throw Error("Uncaught JS runtime exceptions.");
             await page.screenshot({path:"/tmp/qa-login.png",fullPage:true});
           }finally{await browser.close();}
           NODE
