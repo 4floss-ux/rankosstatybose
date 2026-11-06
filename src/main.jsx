@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/react";
 import "./styles.css";
 import { unifiedCloseStyles } from "./ui/common.jsx";
 import { App } from "./App.jsx";
+import { E2EGate } from "./p24/qa/E2EGate.jsx";
 import { mobileModalSafetyStyles, mobileResponsiveFixStyles } from "./styles/mobileStyles.js";
 import { BackToTopButton, FatalAppError, MobilePopupBackGuard, SiteAnalyticsTracker } from "./app/siteChrome.jsx";
 import { AppBootLoader } from "./ui/AppBootLoader.jsx";
@@ -46,7 +47,7 @@ async function mountSiteWhenFontsReady() {
         <style>{mobileResponsiveFixStyles}</style>
         <style>{mobileModalSafetyStyles}</style>
         <Suspense fallback={<AppBootLoader />}>
-          <App />
+          {import.meta.env.VITE_E2E_REAL_ACCOUNTS === "true" ? <E2EGate><App /></E2EGate> : <App />}
         </Suspense>
         <SiteAnalyticsTracker />
         <MobilePopupBackGuard />
