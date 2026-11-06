@@ -1,0 +1,47 @@
+name: QA sandbox safe build (no deploy)
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths:
+      - src/App.jsx
+      - src/p24/qa/**
+      - supabase/functions/qa-preview/**
+      - .github/workflows/qa-sandbox-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Production build (no credentials; no deployment)
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_PUBLISHABLE_KEY: ""
+        run: npm run build
+      - name: QA sandbox isolation static checks
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import assert from "node:assert/strict";
+          const edge = readFileSync("supabase/functions/qa-preview/index.ts","utf8");
+          const app = readFileSync("src/App.jsx","utf8");
+          const view = readFileSync("src/p24/qa/QaSandbox.jsx","utf8");
+          assert.match(edge, /ALLOWED_EMAIL_DIGESTS/);
+          assert.match(edge, /auth.getUser\(token\)/);
+          assert.match(edge, /qa_preview_state/);
+          assert.match(edge, /Array.from\(\{ length: 10 \}/);
+          assert.match(app, /<QaSandbox onExit=/);
+          assert.match(view, /P24Shell/);
+          assert.doesNotMatch(view, /stripe|\.rpc\(|storage\.from\(/i);
+          console.log("Isolated QA frontend checks passed.");
+          NODE
