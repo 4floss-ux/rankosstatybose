@@ -1,0 +1,56 @@
+name: Real-account QA login browser smoke
+on:
+  push:
+    branches: [fix/job-ad-delete-retire-close-20261105]
+    paths: [".github/workflows/e2e-browser-smoke.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install browser driver
+        shell: bash
+        run: |
+          set -e
+          google-chrome --version || chromium --version || true
+          mkdir -p /tmp/statybos24-browser
+          cd /tmp/statybos24-browser
+          npm init -y >/dev/null
+          npm install playwright --no-audit --no-fund
+      - name: Verify real login gate appears in Chromium
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "/tmp/statybos24-browser/node_modules/playwright/index.mjs";
+          const browser = await chromium.launch({
+            headless:true,
+            channel:"chrome",
+            args:["--no-sandbox"]
+          });
+          try {
+            const page = await browser.newPage({viewport:{width:1365,height:900}});
+            const errors=[];
+            page.on("pageerror",e=>errors.push(e.message));
+            const response = await page.goto("https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/e2e-site/",
+              {waitUntil:"domcontentloaded",timeout:45000});
+            if(response?.status()!==200)throw Error("HTML response: "+response?.status());
+            await page.locator('input[type="email"]').waitFor({state:"visible",timeout:25000});
+            await page.locator('input[type="password"]').waitFor({state:"visible",timeout:5000});
+            const body=(await page.locator("body").innerText()).slice(0,1000);
+            if(!body.includes("Statybos24")||!body.includes("Prisijunk savo Statybos24 paskyra"))throw Error("QA access gate missing");
+            if(errors.length)throw Error("Browser runtime errors: "+errors.join(" | "));
+            await page.screenshot({path:"/tmp/statybos24-qa-login.png",fullPage:true});
+            console.log("PASS: Headless Chromium renders isolated owner login.");
+            console.log("Login form visible, no runtime JS errors.");
+          } finally {await browser.close();}
+          NODE
+      - name: Save private staging screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-login-screen
+          path: /tmp/statybos24-qa-login.png
+          if-no-files-found: ignore
