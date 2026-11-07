@@ -18,9 +18,7 @@
 .qa-e2e-signout{border:0;background:transparent;color:#344d67;text-decoration:underline;cursor:pointer;font-size:12px;padding:6px 0;margin-top:10px}
 .qa-e2e-error{border:1px solid #ffc9c3;background:#fff1ee;border-radius:6px;color:#a32324;padding:10px 12px;font-size:12px}
 .qa-e2e-footnote{border-top:1px solid #e7ebef;margin-top:20px;padding-top:15px;color:#607083;font-size:11px;line-height:1.5}
-.qa-e2e-toolbar{position:relative;box-sizing:border-box;width:100%;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:5px 12px;margin:0;background:#2b3152;border:0;color:white;font:800 12px Inter,system-ui}
-.qa-e2e-toolbar button{border:0;background:white;color:#263250;padding:8px 13px;font:800 12px Inter,system-ui;border-radius:5px;cursor:pointer}
-@media(max-width:600px){.qa-e2e-card{padding:24px 20px}.qa-e2e-card h1{font-size:28px}.qa-e2e-toolbar{font-size:11px}.qa-e2e-toolbar button{margin-left:auto}}
+@media(max-width:600px){.qa-e2e-card{padding:24px 20px}.qa-e2e-card h1{font-size:28px}}
 
 .qa-e2e-roles{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 12px}
 .qa-e2e-roles button{flex:1 0 auto;padding:9px 10px;border:1px solid #d2dbe6;border-radius:7px;background:#fafbfc;color:#293c54;font-weight:750;cursor:pointer}
