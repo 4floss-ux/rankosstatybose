@@ -127,7 +127,7 @@ export function PublicLandingPage({
         @media(max-width:700px){
           .home-plan-mobile-nav{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:12px;align-items:center;margin:0 0 22px;padding:9px;background:#f1f4f6;border:1px solid #e2e9ee;border-radius:13px;position:sticky;top:8px;z-index:5}
           .home-plan-mobile-nav button{width:40px;height:40px;display:grid;place-items:center;border:1px solid #dbe4ea;border-radius:10px;background:#fff;color:#1F1B18;font:inherit;font-size:25px;line-height:1;cursor:pointer}
-          .home-plan-mobile-nav button:active{background:#f0edf7;border-color:var(--link)}
+          .home-plan-mobile-nav button:active{background:#FFF1D6;border-color:var(--link)}
           .home-plan-mobile-nav button:focus-visible{outline:2px solid #B57300;outline-offset:2px}
           .home-plan-mobile-nav>div{text-align:center;min-width:0}.home-plan-mobile-nav b{display:block;font-size:14px}.home-plan-mobile-nav span{display:block;font-size:10px;color:#7a8996;margin-top:3px}
           .home-page .home-prices>.home-plan{display:none}.home-page .home-prices>.home-plan.mobile-current-plan{display:flex}
