@@ -44,3 +44,10 @@ jobs:
           echo "Unauthorized actor HTTP: $HTTP"
           test "$HTTP" = "403" -o "$HTTP" = "401"
           echo "PASS: no test actor session was returned."
+          LIST_HTTP=$(curl --max-time 20 -sS -o /tmp/qa-list-denied -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            --data '{"role":"list"}' \
+            "https://wpldojonwvccdmpmlbfe.supabase.co/functions/v1/qa-actor")
+          echo "Unauthorized people seed HTTP: $LIST_HTTP"
+          test "$LIST_HTTP" = "403" -o "$LIST_HTTP" = "401"
+          echo "PASS: only authorized testers may seed or view synthetic people."
