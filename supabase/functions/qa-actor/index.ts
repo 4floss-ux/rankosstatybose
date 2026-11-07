@@ -117,6 +117,25 @@ async function ensureQaPeople(db: ReturnType<typeof createClient>): Promise<void
  if(failures.length)console.error("QA seed incomplete:",failures.join(","));
 }
 
+async function refreshQaWorkerPresence(db: ReturnType<typeof createClient>): Promise<void> {
+  // Staging-only test account refresh: the normal production matching logic
+  // requires a recent worker login + availability confirmation (<24 hours).
+  // These are dedicated, synthetic test workers, never production users.
+  const list = await db.from("profiles")
+    .select("id,display_name,role").eq("role","worker").limit(50);
+  if(list.error) throw new Error("Could not inspect isolated test workers");
+  const names = new Set(DEMO_WORKERS.map(([first,last])=>first+" "+last));
+  const testIds = (list.data||[])
+    .filter(p=>names.has(p.display_name)||p.id==="ddc83b32-ceed-430e-8db1-2e55140fec88")
+    .map(p=>p.id);
+  if(testIds.length===0) return;
+  const at = new Date().toISOString();
+  const update = await db.from("worker_profiles")
+    .update({last_active_at:at,availability_confirmed_at:at})
+    .in("user_id",testIds);
+  if(update.error) console.error("QA test worker refresh failed",update.error.code);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null,{status:204,headers:HEADERS});
   if (req.method !== "POST") return answer(405,{error:"Unsupported method"});
@@ -140,7 +159,15 @@ Deno.serve(async (req: Request) => {
     body=JSON.parse(text);
   } catch {return answer(400,{error:"Invalid request"});}
   const role = body?.role;
-  if (role === "check") return answer(200,{ok:true,authorized:true});
+  if (role === "check") {
+    const stageUrl = Deno.env.get("SUPABASE_URL") || "";
+    const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if(!stageUrl.includes("wpldojonwvccdmpmlbfe")||!secret)
+      return answer(503,{error:"Staging-only check is not configured"});
+    const stage = createClient(stageUrl,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+    await refreshQaWorkerPresence(stage);
+    return answer(200,{ok:true,authorized:true});
+  }
   if (!["worker","employer","admin","list"].includes(String(role)))
     return answer(400,{error:"Invalid role"});
   const url = Deno.env.get("SUPABASE_URL") || "";
@@ -158,6 +185,7 @@ Deno.serve(async (req: Request) => {
     // Only an owner verified by production Auth can provision test users.
     // Never create or mutate users on the production project.
     await ensureQaPeople(db);
+    await refreshQaWorkerPresence(db);
     const all=await db.from("profiles").select("id,role,display_name,city")
       .in("role",["worker","employer","admin"]).order("display_name",{ascending:true}).limit(70);
     if(all.error)return answer(503,{error:"Could not load test people",code:all.error.code});
