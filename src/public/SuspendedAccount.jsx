@@ -10,18 +10,18 @@ export function SuspendedAccount({
     <div
       style={{
         minHeight: "100vh",
-        background: "#f6f8fa",
+        background: "#FAF9F7",
         display: "grid",
         placeItems: "center",
         padding: 20,
-        color: "#222631",
+        color: "#1F1B18",
       }}
     >
       <div
         style={{
           width: "min(620px,100%)",
           background: "#fff",
-          border: "1px solid #e4ebf0",
+          border: "1px solid #E7E2DC",
           borderRadius: 18,
           padding: 26,
           boxShadow: "0 18px 55px rgba(34,38,49,.10)",
@@ -43,7 +43,7 @@ export function SuspendedAccount({
             : "Šios paskyros naudojimas laikinai sustabdytas"}
         </h1>
 
-        <p style={{ color: "#6c7a88", lineHeight: 1.6 }}>
+        <p style={{ color: "#655D56", lineHeight: 1.6 }}>
           {disabled
             ? "Administratoriaus sprendimu ši paskyra šiuo metu negali naudotis platformos funkcijomis."
             : `Paskyra suspenduota iki ${
@@ -62,8 +62,8 @@ export function SuspendedAccount({
               marginTop: 14,
               padding: 13,
               borderRadius: 10,
-              background: "#f1eef8",
-              color: "#433960",
+              background: "#FFF1D6",
+              color: "#A65D00",
               lineHeight: 1.5,
             }}
           >
