@@ -1,0 +1,59 @@
+name: Temporary colors-only verification (no deploy)
+on:
+  push:
+    branches:
+      - design/colors-only-1c1410-ffb020-20261107
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      VITE_SUPABASE_URL: ""
+      VITE_SUPABASE_PUBLISHABLE_KEY: ""
+      VITE_SUPABASE_ANON_KEY: ""
+      SENTRY_AUTH_TOKEN: ""
+      SENTRY_ORG: ""
+      SENTRY_PROJECT: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies without credentials
+        run: npm install --no-audit --no-fund
+      - name: Company code validation
+        run: node tests/company-code.test.mjs
+      - name: E2E launch regression checks
+        run: node tests/e2e-launch-fixes.test.mjs
+      - name: Admin session regression checks
+        run: node --experimental-vm-modules tests/impersonation.test.mjs
+      - name: Verify palette and selectors are present
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const p24 = fs.readFileSync('src/p24/p24.css','utf8');
+          const shell = fs.readFileSync('src/ui/appShell.jsx','utf8');
+          const root = fs.readFileSync('src/styles.css','utf8');
+          assert.match(p24,/--nav-bg:#1C1410/);
+          assert.match(p24,/--orange:#FFB020/);
+          assert.match(p24,/--focus:#B57300/);
+          assert.match(p24,/--green:#15803D/);
+          assert.match(p24,/--red:#B91C1C/);
+          assert.match(p24,/--blue:#1D4ED8/);
+          assert.match(p24,/--warning:#A65D00/);
+          assert.match(p24,/--cta-gradient:linear-gradient\(100deg, #E18E13 0%, #FFB020 100%\)/);
+          assert.match(p24,/\.p24 \.item\[aria-current="page"\]\{background:var\(--orange\);color:var\(--nav-bg\)\}/);
+          assert.match(p24,/\.p24 \.wd-accept\{background:var\(--green\)!important/);
+          assert.match(root,/--nav-bg:#1C1410/);
+          assert.match(shell,/--s24-navy:#1C1410/);
+          console.log('Colors-only selector and token assertions passed');
+          NODE
+      - name: Production build with no live credentials or deployment
+        run: npm run build
