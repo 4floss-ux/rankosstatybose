@@ -342,10 +342,10 @@ export function BackToTopButton() {
         width: 42,
         height: 42,
         padding: 0,
-        border: "1px solid #d7e0e7",
+        border: "1px solid #E7E2DC",
         borderRadius: "50%",
         background: "rgba(255,255,255,.94)",
-        color: "#526374",
+        color: "#655D56",
         boxShadow: "0 6px 20px rgba(34,38,49,.12)",
         display: "grid",
         placeItems: "center",
@@ -377,8 +377,8 @@ export function FatalAppError() {
         display: "grid",
         placeItems: "center",
         padding: 24,
-        background: "#f4f7f9",
-        color: "#222631",
+        background: "#FAF9F7",
+        color: "#1F1B18",
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
@@ -388,12 +388,12 @@ export function FatalAppError() {
           padding: 28,
           borderRadius: 18,
           background: "#fff",
-          border: "1px solid #e4ebf0",
+          border: "1px solid #E7E2DC",
           textAlign: "center",
         }}
       >
         <h1 style={{ margin: "0 0 10px", fontSize: 24 }}>Nepavyko parodyti puslapio</h1>
-        <p style={{ margin: "0 0 20px", color: "#607080", lineHeight: 1.55 }}>
+        <p style={{ margin: "0 0 20px", color: "#655D56", lineHeight: 1.55 }}>
           Techninė klaida užregistruota. Perkraukite puslapį ir bandykite dar kartą.
         </p>
         <button
@@ -404,8 +404,8 @@ export function FatalAppError() {
             padding: "10px 18px",
             border: 0,
             borderRadius: 10,
-            background: "#f0b429",
-            color: "#222631",
+            background: "#FFB020",
+            color: "#1F1B18",
             fontWeight: 800,
             cursor: "pointer",
           }}

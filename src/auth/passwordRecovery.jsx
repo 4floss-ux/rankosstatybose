@@ -154,13 +154,13 @@ export function PasswordRecoveryPage({ user, checking, authorized, error, onDone
     }
   }
 
-  const inputStyle = { width: "100%", border: "1px solid #dfe7ed", borderRadius: 10,
+  const inputStyle = { width: "100%", border: "1px solid #E7E2DC", borderRadius: 10,
     padding: "12px 13px", font: "inherit" };
   const labelStyle = { display: "grid", gap: 6, fontSize: 14, fontWeight: 700 };
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center",
-      padding: 20, background: "#f3f6f8" }}>
+      padding: 20, background: "#FAF9F7" }}>
       <section aria-labelledby="password-recovery-title" style={{ width: "min(480px, 100%)",
         padding: 28, borderRadius: 20, background: "#fff", boxShadow: "0 16px 60px rgba(34,38,49,.12)" }}>
         <div className="eyebrow">SLAPTAŽODŽIO ATKŪRIMAS</div>
@@ -171,7 +171,7 @@ export function PasswordRecoveryPage({ user, checking, authorized, error, onDone
           <SilentLoader size={20} minHeight={42} />
         ) : unavailable ? (
           <>
-            <p role="alert" style={{ color: "#a14425", lineHeight: 1.5 }}>{unavailable}</p>
+            <p role="alert" style={{ color: "#B91C1C", lineHeight: 1.5 }}>{unavailable}</p>
             <button className="btn primary" type="button" onClick={() => setRequestOpen(true)}>
               Gauti naują nuorodą
             </button>
@@ -180,7 +180,7 @@ export function PasswordRecoveryPage({ user, checking, authorized, error, onDone
           <p role="status" style={{ lineHeight: 1.5 }}>Naujas slaptažodis išsaugotas. Atidaroma jūsų paskyra...</p>
         ) : (
           <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
-            <p style={{ margin: "0 0 4px", color: "#526374", lineHeight: 1.5 }}>
+            <p style={{ margin: "0 0 4px", color: "#655D56", lineHeight: 1.5 }}>
               Pasirinkite bent 8 simbolių slaptažodį ir įveskite jį dar kartą.
             </p>
             <label style={labelStyle}>Naujas slaptažodis
@@ -193,7 +193,7 @@ export function PasswordRecoveryPage({ user, checking, authorized, error, onDone
                 required minLength={8} value={confirmation} disabled={loading}
                 onChange={(event) => setConfirmation(event.target.value)} />
             </label>
-            {message && <p role="alert" style={{ margin: 0, color: "#a14425", lineHeight: 1.5 }}>{message}</p>}
+            {message && <p role="alert" style={{ margin: 0, color: "#B91C1C", lineHeight: 1.5 }}>{message}</p>}
             <button className="btn primary" type="submit" disabled={loading}>
               {loading ? "Išsaugoma..." : "Išsaugoti naują slaptažodį"}
             </button>

@@ -1080,7 +1080,7 @@ export const mobileResponsiveFixStyles = `
       border-radius: 999px !important;
       border: 1px solid #d9e3ea !important;
       background: #fff !important;
-      color: #222631 !important;
+      color: #1F1B18 !important;
       font-size: 12px !important;
       font-weight: 800 !important;
       cursor: pointer !important;
@@ -1239,7 +1239,7 @@ export const mobileResponsiveFixStyles = `
     .ed-results .ed-worker > .ed-metric {
       min-height: 58px !important;
       padding: 10px 11px !important;
-      border: 1px solid #e4ebf0 !important;
+      border: 1px solid #E7E2DC !important;
       border-radius: 12px !important;
       background: #fbfcfd !important;
     }
@@ -1373,7 +1373,7 @@ export const mobileResponsiveFixStyles = `
 
     .ed-job-history > div:nth-child(2) > div:last-child {
       margin-top: 2px !important;
-      color: #6c7a88 !important;
+      color: #655D56 !important;
       font-size: 11px !important;
       line-height: 1.25 !important;
     }
@@ -1384,7 +1384,7 @@ export const mobileResponsiveFixStyles = `
       grid-row: 2 !important;
       align-self: center !important;
       min-width: 0 !important;
-      color: #526374 !important;
+      color: #655D56 !important;
       font-size: 11px !important;
       line-height: 1.3 !important;
       font-weight: 750 !important;
@@ -1540,7 +1540,7 @@ export const mobileResponsiveFixStyles = `
       border-radius: 999px !important;
       padding: 6px 10px !important;
       background: #f3f6f8 !important;
-      color: #526374 !important;
+      color: #655D56 !important;
       font-size: 11px !important;
       font-weight: 800 !important;
     }
@@ -1570,7 +1570,7 @@ export const mobileResponsiveFixStyles = `
 
     .wd-history-carousel-copy span {
       display: block !important;
-      color: #6c7a88 !important;
+      color: #655D56 !important;
       font-size: 11px !important;
       line-height: 1.35 !important;
     }
@@ -1588,7 +1588,7 @@ export const mobileResponsiveFixStyles = `
       border-radius: 12px !important;
       border: 1px solid #d7e1e8 !important;
       background: #fff !important;
-      color: #222631 !important;
+      color: #1F1B18 !important;
       font-size: 20px !important;
       font-weight: 800 !important;
       line-height: 1 !important;
@@ -2376,7 +2376,7 @@ export const mobileResponsiveFixStyles = `
       gap: 8px !important;
       margin: 10px 0 4px !important;
       padding: 7px 8px !important;
-      border: 1px solid #dfe7ed !important;
+      border: 1px solid #E7E2DC !important;
       border-radius: 12px !important;
       background: #fff !important;
     }
@@ -2390,7 +2390,7 @@ export const mobileResponsiveFixStyles = `
     .ed-active-carousel-nav b,
     .wd-availability-carousel-nav b {
       display: block !important;
-      color: #222631 !important;
+      color: #1F1B18 !important;
       font-size: 11.5px !important;
       line-height: 1.25 !important;
     }
@@ -2412,7 +2412,7 @@ export const mobileResponsiveFixStyles = `
       border: 1px solid #d7e1e8 !important;
       border-radius: 10px !important;
       background: #fff !important;
-      color: #222631 !important;
+      color: #1F1B18 !important;
       font-size: 20px !important;
       line-height: 1 !important;
       font-weight: 900 !important;
