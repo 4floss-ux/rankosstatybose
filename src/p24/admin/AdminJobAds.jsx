@@ -33,7 +33,7 @@ export function AdminJobAds() {
 
   const needle = q.trim().toLocaleLowerCase("lt-LT");
   const list = rows.filter((a) => !needle || `${a.title} ${a.city} ${a.company_name}`.toLocaleLowerCase("lt-LT").includes(needle));
-  const state = (a) => a.status === "pending_payment" ? <Pill tone="orange">Neapmokėtas</Pill> : a.status === "closed" ? <Pill>Uždarytas</Pill> : a.live ? `${daysLeft(a.expires_at)} d.` : <Pill>Nebegalioja</Pill>;
+  const state = (a) => a.status === "pending_payment" ? <Pill tone="orange">Neapmokėtas</Pill> : a.live ? `${daysLeft(a.expires_at)} d.` : <Pill>Nebegalioja</Pill>;
 
   return (
     <>
@@ -67,7 +67,7 @@ export function AdminJobAds() {
             </dl>
             <p className="small" style={{ whiteSpace: "pre-wrap" }}>{open.description}</p>
             <div className="row" style={{ justifyContent: "flex-end" }}>
-              <button className="btn" type="button" onClick={() => setOpen(null)}>Uždaryti</button>
+              <button className="btn" type="button" onClick={() => setOpen(null)}>Grįžti</button>
               <button className="btn danger" type="button" disabled={busy === open.id} onClick={() => remove(open)}>Pašalinti skelbimą</button>
             </div>
         </P24Modal>

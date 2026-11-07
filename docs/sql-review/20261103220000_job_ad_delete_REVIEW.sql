@@ -151,6 +151,14 @@ BEGIN
  IF a.pending_session_id IS NOT NULL OR EXISTS(SELECT 1 FROM app_private.job_ad_checkout_leases WHERE ad_id=a.id AND expires_at>clock_timestamp()) THEN
   RAISE EXCEPTION 'Skelbimo negalima ištrinti, kol pradėtas jo apmokėjimas.' USING ERRCODE='55000';
  END IF;
+ -- Paid boost checkout also reserves an order. Prevent deletion before its
+ -- Stripe session is resolved; this check shares the advert row lock with
+ -- job_ad_boost_prepare and job_ad_boost_activate_paid.
+ IF to_regclass('app_private.job_ad_boost_orders') IS NOT NULL THEN
+  IF EXISTS(SELECT 1 FROM app_private.job_ad_boost_orders WHERE ad_id=a.id AND status='pending') THEN
+   RAISE EXCEPTION 'Skelbimo negalima ištrinti, kol vyksta jo iškėlimo mokėjimas.' USING ERRCODE='55000';
+  END IF;
+ END IF;
  SELECT coalesce(array_agg(id ORDER BY id),'{}'::uuid[]) INTO apps FROM public.job_ad_applications WHERE ad_id=a.id;
  FOREACH app IN ARRAY apps LOOP
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('job-ad-cv:'||app::text,0));

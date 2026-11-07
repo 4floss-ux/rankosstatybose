@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "npm:@supabase/supabase-js@2.57.4";
 import {runCleanup} from "./cleanup.mjs";
+import {verifyCleanupAuth} from "./cleanupAuth.mjs";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json"}});
 Deno.serve(async req=>{
@@ -13,7 +14,9 @@ Deno.serve(async req=>{
   const body=await req.json().catch(()=>null);
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   if(body?.action==='cleanup'){
-   if(authorization!==`Bearer ${service}`)return reply({error:'Nėra teisių.'},403);
+   const secret=Deno.env.get('JOB_AD_DELETE_CLEANUP_HMAC_SECRET')||'';
+   const verified=await verifyCleanupAuth(req.headers,secret);
+   if(!verified)return reply({error:'Nėra teisių.'},403);
    await runCleanup(admin);return reply({ok:true});
   }
   if(body?.action && body.action!=='delete')return reply({error:'Netinkamas veiksmas.'},400);

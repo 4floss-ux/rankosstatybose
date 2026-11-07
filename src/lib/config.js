@@ -114,15 +114,51 @@ if (!isHireProjectPath && typeof window !== "undefined") {
   }
 }
 
-export const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey, isHireProjectPath ? {
+// In the isolated QA build, each browser tab may represent a different fake
+// person. LocalStorage + the shared Supabase broadcast channel would otherwise
+// log out the worker tab when switching to an employer in another tab.
+function qaTabAuthOptions() {
+  try {
+    const tabKey = "statybos24-e2e-tab-id-v1";
+    let id = window.sessionStorage.getItem(tabKey);
+    if (!id) {
+      id = window.crypto.randomUUID();
+      window.sessionStorage.setItem(tabKey, id);
+    }
+    return {
       auth: {
-        storageKey: "statybos24-hire-private-auth-v1",
-        persistSession: false,
-        autoRefreshToken: false,
+        storageKey: "statybos24-e2e-actor-" + id,
+        storage: window.sessionStorage,
+        persistSession: true,
+        autoRefreshToken: true,
         detectSessionInUrl: false,
       },
-    } : undefined)
+    };
+  } catch {
+    // A private browser may disable sessionStorage. Fall back to persistent
+    // single-tab authentication rather than crashing the entire site.
+    return {
+      auth: {
+        storageKey: "statybos24-e2e-fallback-auth-v1",
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    };
+  }
+}
+
+export const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey,
+      isHireProjectPath ? {
+        auth: {
+          storageKey: "statybos24-hire-private-auth-v1",
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      } : import.meta.env.VITE_E2E_REAL_ACCOUNTS === "true"
+        ? qaTabAuthOptions() : undefined)
   : null;
 export const TERMS_VERSION = "2026-10-05-v6";
 export const JOB_SCOPE_ACK_VERSION = "2026-10-02-v1";

@@ -11,13 +11,19 @@ BEGIN
  IF to_regclass('net.http_request_queue') IS NULL OR to_regclass('vault.decrypted_secrets') IS NULL THEN
   RAISE EXCEPTION 'Private cleanup configuration tables are required';
  END IF;
- IF has_table_privilege('anon','net.http_request_queue','SELECT')
-    OR has_table_privilege('authenticated','net.http_request_queue','SELECT')
-    OR has_table_privilege('anon','vault.decrypted_secrets','SELECT')
+ -- pg_net queue may be readable. Never put raw secrets there: the Cron
+ -- command must send only short-lived HMAC proofs, not a service_role key.
+ IF has_table_privilege('anon','vault.decrypted_secrets','SELECT')
     OR has_table_privilege('authenticated','vault.decrypted_secrets','SELECT') THEN
-  RAISE EXCEPTION 'Cleanup credentials could be readable by browser roles; review access without blindly changing permissions';
+  RAISE EXCEPTION 'Vault signing credentials are publicly readable';
  END IF;
- IF NOT EXISTS(SELECT 1 FROM cron.job WHERE jobname='s24-job-ad-file-cleanup' AND active) THEN
+ IF (SELECT count(*) FROM vault.decrypted_secrets
+      WHERE name='job_ad_cleanup_hmac_secret' AND length(decrypted_secret)>=32)<>1 THEN
+  RAISE EXCEPTION 'Cleanup signing key missing';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM cron.job WHERE jobname='s24-job-ad-file-cleanup' AND active
+      AND command LIKE '%x-s24-cleanup-signature%'
+      AND command NOT ILIKE '%Bearer %') THEN
   RAISE EXCEPTION 'Deletion requires an active service cleanup schedule';
  END IF;
  IF has_function_privilege('authenticated','public.job_ad_delete_claim_jobs(uuid,integer)','EXECUTE')

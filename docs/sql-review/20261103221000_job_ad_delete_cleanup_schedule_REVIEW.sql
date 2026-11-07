@@ -1,43 +1,58 @@
--- PROPOSAL ONLY. Requires reviewed deletion schema and deployed job-ad-delete.
--- Configure these two Vault secrets securely using Supabase; do not put secret
--- VALUES in this file, GitHub, screenshots or chat:
---   job_ad_cleanup_url: https://<same-project-ref>.supabase.co/functions/v1/job-ad-delete
---   job_ad_cleanup_service_key: that project's SUPABASE_SERVICE_ROLE_KEY
--- The Edge function checks the service key; anon/user JWTs cannot run cleanup.
--- Never copy a secret from another project. Never use a browser-visible key.
+-- PROPOSAL ONLY. Requires reviewed deletion schema, deployed Edge with
+-- verify_jwt=false and a verified HMAC-authenticated cleanup path.
+-- IMPORTANT: pg_net HTTP queue is readable to browser roles in this project.
+-- NEVER send the service_role key (or a static bearer token) through pg_net.
+-- Configure:
+--   Vault job_ad_cleanup_url: own-project job-ad-delete function URL
+--   Vault job_ad_cleanup_hmac_secret: random 32+ byte signing secret
+--   Edge Functions Secret JOB_AD_DELETE_CLEANUP_HMAC_SECRET: exactly the
+--     same secret (no sharing in chat, repo, screenshots or logs).
+-- The queue contains only an expiring HMAC; a replay can only process pending
+-- private deletion cleanup jobs, never select/delete arbitrary files or ads.
+-- The Edge function enforces a 120-second timestamp limit.
 BEGIN;
 DO $check$
 BEGIN
- IF to_regclass('cron.job') IS NULL OR to_regprocedure('net.http_post(text,jsonb,jsonb,jsonb,integer)') IS NULL
+ IF to_regclass('cron.job') IS NULL
+    OR to_regprocedure('net.http_post(text,jsonb,jsonb,jsonb,integer)') IS NULL
+    OR to_regprocedure('extensions.hmac(text,text,text)') IS NULL
     OR to_regclass('vault.decrypted_secrets') IS NULL THEN
-  RAISE EXCEPTION 'Supabase Cron, pg_net and Vault must be available; configure securely before enabling deletion';
+   RAISE EXCEPTION 'Cron, pg_net, pgcrypto and Vault must be available';
  END IF;
- IF to_regclass('net.http_request_queue') IS NULL OR to_regclass('vault.decrypted_secrets') IS NULL THEN
-  RAISE EXCEPTION 'Private cleanup configuration tables are required';
- END IF;
- IF has_table_privilege('anon','net.http_request_queue','SELECT')
-    OR has_table_privilege('authenticated','net.http_request_queue','SELECT')
-    OR has_table_privilege('anon','vault.decrypted_secrets','SELECT')
+ IF has_table_privilege('anon','vault.decrypted_secrets','SELECT')
     OR has_table_privilege('authenticated','vault.decrypted_secrets','SELECT') THEN
-  RAISE EXCEPTION 'Cleanup credentials could be readable by browser roles; review access without blindly changing permissions';
+   RAISE EXCEPTION 'Vault signing key could be exposed to browser users';
  END IF;
  IF EXISTS(SELECT 1 FROM cron.job WHERE jobname='s24-job-ad-file-cleanup') THEN
-  RAISE EXCEPTION 'Cleanup schedule already exists; inspect instead of overwriting';
+   RAISE EXCEPTION 'Cleanup schedule already exists';
  END IF;
  IF (SELECT count(*) FROM vault.decrypted_secrets WHERE name='job_ad_cleanup_url'
       AND decrypted_secret ~ '^https://[a-z0-9]+[.]supabase[.]co/functions/v1/job-ad-delete$')<>1
-    OR (SELECT count(*) FROM vault.decrypted_secrets WHERE name='job_ad_cleanup_service_key' AND length(decrypted_secret)>20)<>1 THEN
-  RAISE EXCEPTION 'Required same-project Vault configuration missing';
+    OR (SELECT count(*) FROM vault.decrypted_secrets WHERE name='job_ad_cleanup_hmac_secret'
+       AND length(decrypted_secret)>=32)<>1 THEN
+   RAISE EXCEPTION 'Required same-project cleanup URL or HMAC signing secret missing';
  END IF;
 END;
 $check$;
 SELECT cron.schedule('s24-job-ad-file-cleanup','*/5 * * * *',$cron$
+ WITH stamp AS MATERIALIZED (
+   SELECT floor(extract(epoch FROM clock_timestamp()))::bigint AS ts
+ )
  SELECT net.http_post(
-  url:=(SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='job_ad_cleanup_url'),
-  headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||
-    (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='job_ad_cleanup_service_key')),
-  body:='{"action":"cleanup"}'::jsonb,timeout_milliseconds:=60000);
+   url:=(SELECT decrypted_secret FROM vault.decrypted_secrets
+         WHERE name='job_ad_cleanup_url'),
+   headers:=jsonb_build_object(
+      'Content-Type','application/json',
+      'x-s24-cleanup-ts',stamp.ts::text,
+      'x-s24-cleanup-signature',encode(extensions.hmac(
+         'statybos24:job-ad-cleanup:v1:'||stamp.ts::text,
+         (SELECT decrypted_secret FROM vault.decrypted_secrets
+          WHERE name='job_ad_cleanup_hmac_secret'),
+         'sha256'),'hex')),
+   body:='{"action":"cleanup"}'::jsonb,
+   timeout_milliseconds:=60000
+ ) FROM stamp;
 $cron$);
 COMMIT;
--- Reviewer must confirm cron/pg_net tables and HTTP logs are not readable by
--- browser roles and verify successful service cleanup with no credentials logged.
+-- Reviewer must verify a valid signed request succeeds, missing/expired/
+-- tampered HMAC is rejected, and no privileged key appears in pg_net headers.

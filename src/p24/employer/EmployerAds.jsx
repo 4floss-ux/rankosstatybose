@@ -40,7 +40,6 @@ function Modal({ title, eyebrow, sub, onClose, children }) {
 }
 function statusPill(a) {
   if (a.status === "pending_payment") return <Pill tone="orange">{a.payment_pending ? "Laukia apmokėjimo" : "Neapmokėtas"}</Pill>;
-  if (a.status === "closed") return <Pill>Uždarytas</Pill>;
   if (!a.live) return <Pill>Nebegalioja</Pill>;
   return <Pill tone="green">Aktyvus · liko {daysLeft(a.expires_at)} d.</Pill>;
 }
@@ -266,9 +265,9 @@ function ExtendModal({ ad, isPro: freeAvailable, quotaEnabled, pricingBusy, onCl
     finally { setBusy(false); }
   }
   return (
-    <Modal eyebrow="Skelbimas" title="Pratęsti 30 dienų" sub={<span className="muted small">{up(ad.title)}{ad.live ? ` · dabar galioja dar ${left} d.` : ""}</span>} onClose={() => !busy && onClose()}>
-      <div className="adfee">{isPro ? <><span>Pratęsimo kaina</span><b>0 €</b><small>Įskaičiuota į Business Pro</small></> : <><span>Pratęsimo kaina</span><b>{FEE}</b><small>{quotaEnabled ? "Business Pro: 10 nemokamų paskelbimų per mėnesį" : "Business Pro plane – nemokamai"}</small></>}</div>
-      <p className="small muted" style={{ margin: "12px 0 0" }}>Po pratęsimo skelbimas galios dar {left + 30} d. Kandidatai ir įsiminimai išlieka.</p>
+    <Modal eyebrow="Skelbimas" title="Pratęsti skelbimą" sub={<span className="muted small">{up(ad.title)}</span>} onClose={() => !busy && onClose()}>
+      
+      <p style={{ margin: 0 }}>Skelbimo galiojimas bus pratęstas <b>30 dienų</b>.{ad.live ? ` Po pratęsimo liks ${left + 30} d.` : " Skelbimas galios 30 dienų."}</p>
       {err && <p className="ferr" role="alert">{err}</p>}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
         <button className="btn" type="button" disabled={busy} onClick={onClose}>Atšaukti</button>
@@ -321,7 +320,7 @@ function AdDetail({ adId, isPro, quotaEnabled, pricingBusy, deleteReady, onDelet
     if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   }
   async function removeAd() {
-    if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
+    if (!(await askConfirm({ title: "Ištrinti skelbimą?", message: "Skelbimas ir su juo susijusios kandidatūros, žinutės bei priedai bus pašalinti. Panaudota nemokamo skelbimo dovana neatsinaujins. Jei skelbimas buvo mokamai iškeltas, likusios iškėlimo dienos bus prarastos; pinigų grąžinimas nėra automatinis. Jei buvo mokėta, mokėjimo apskaitos įrašas išliks. Šio veiksmo atšaukti negalima.", confirmLabel: "Ištrinti skelbimą", cancelLabel: "Palikti skelbimą", danger: true }))) return;
     setBusy("delete"); setErr("");
     try {
       const { data, error } = await supabase.functions.invoke("job-ad-delete", { body: { adId } });
