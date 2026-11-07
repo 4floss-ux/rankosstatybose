@@ -88,6 +88,30 @@ async function ensureQaPeople(db: ReturnType<typeof createClient>): Promise<void
        years_experience:4,
        availability_confirmed_at:new Date().toISOString()
      }).eq("user_id",result.data.user.id);
+     const workerNum=Number(entry.email.split("@")[0].split(".").pop() || 0);
+     if(workerNum>=2 && workerNum<=10){
+       const jobId="f0000000-0000-4000-8000-"+String(workerNum).padStart(12,"0");
+       await db.from("job_invitations").insert({
+         job_id:jobId,worker_id:result.data.user.id,
+         status:"pending",message:"TESTAS · Kviečiame į bandomąjį darbą.",
+         invited_at:new Date().toISOString()
+       });
+     }
+   }
+   if(!result.error && result.data?.user?.id && entry.metadata.role==="employer"){
+     const company=await db.from("companies").select("id")
+       .eq("owner_id",result.data.user.id).maybeSingle();
+     if(company.data?.id){
+       await db.from("job_ads").insert({
+         company_id:company.data.id,created_by:result.data.user.id,
+         title:"TESTAS · "+String(entry.metadata.company_name||"Statybų komanda")+" ieško darbuotojo",
+         city:String(entry.metadata.city||"Vilnius"),
+         salary_min:1500,salary_max:2100,
+         description:"Tik testavimui. Bandomosios įmonės skelbimas ir darbuotojų paieška.",
+         status:"active",published_at:new Date().toISOString(),
+         expires_at:new Date(Date.now()+30*86400000).toISOString()
+       });
+     }
    }
  }
  if(failures.length)console.error("QA seed incomplete:",failures.join(","));
@@ -142,7 +166,12 @@ Deno.serve(async (req: Request) => {
       || DEMO_WORKERS.some(([first,last])=>item.display_name===first+" "+last)
       || DEMO_EMPLOYERS.some(([first,last])=>item.display_name===first+" "+last))
       .map(item=>({id:item.id,role:item.role,name:item.display_name,city:item.city}));
-    return answer(200,{ok:true,actors});
+    const workerCount=actors.filter(a=>a.role==="worker").length;
+    const employerCount=actors.filter(a=>a.role==="employer").length;
+    return answer(200,{ok:true,actors,
+      warning:workerCount<10||employerCount<10 ?
+       "Ne visi bandomieji žmonės sukurti. Atnaujinkite testavimo puslapį." : null
+    });
   }
   const candidateId=typeof body?.actor_id==="string" ? body.actor_id : defaultIds[String(role)];
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(candidateId||""))
