@@ -4700,7 +4700,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
           .ed-company-editor-actions>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:48px;height:100%;border-radius:10px;padding:11px 9px;font-size:13px;line-height:1.3;text-align:center;white-space:normal}
         }
         .ed-company-readonly{background:#f4f6f8!important;color:#655D56!important}
-        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:0;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#925400;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#4f4271}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(107,91,149,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
+        .ed-stats-section{width:100%;box-sizing:border-box;margin-bottom:0;background:#f5f7f9;border-radius:18px;padding:14px 0}.ed-stats-head{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding:0 14px}.ed-stats-toggle{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;color:#925400;font:inherit;font-size:12px;font-weight:850;letter-spacing:.08em;line-height:1;text-transform:uppercase;cursor:pointer}.ed-stats-toggle:hover{color:#4f4271}.ed-stats-toggle::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}.ed-stats-toggle.open::after{transform:rotate(225deg) translate(-1px,-1px)}.ed-stats-toggle:focus-visible{outline:2px solid rgba(255,176,32,.35);outline-offset:5px;border-radius:4px}.ed-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;animation:edStatsReveal .18s ease-out}.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(8,minmax(0,1fr))}@keyframes edStatsReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(max-width:1300px){.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:700px){.ed-kpis,.ed-kpis.ed-kpis-eight{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-stats-section{padding:12px 0}.ed-stats-head{padding:0 12px}}
         .ed-kpi{background:#fff;border:1px solid #E7E2DC;border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:104px}
         .ed-kpi span{display:block;font-size:13px;color:#655D56;line-height:1.35;min-height:36px}
         .ed-kpi b{font-family:Manrope,Inter,sans-serif;font-size:25px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-top:10px;font-variant-numeric:tabular-nums}.ed-kpi small{display:block;margin-top:5px;color:#8a98a6;font-size:11px}
@@ -4735,7 +4735,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
           text-underline-offset:3px;
         }
         .ed-reliability-title-btn:focus-visible{
-          outline:2px solid rgba(107,91,149,.35);
+          outline:2px solid rgba(255,176,32,.35);
           outline-offset:4px;
           border-radius:4px;
         }
@@ -4745,7 +4745,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         .ed-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}.ed-time-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ed-time-pair .ed-label{min-width:0}.ed-time-pair .ed-input{min-width:0}.ed-span-2{grid-column:span 2}.ed-span-4{grid-column:1/-1}
         .ed-label{display:grid;gap:7px;align-content:start;font-size:13px;font-weight:700;color:#263b4d}
         .ed-input,.ed-select,.ed-textarea{width:100%;border:1px solid #E7E2DC;border-radius:10px;padding:12px 13px;background:#fff;color:#1F1B18;font:inherit;outline:none}
-        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#FFB020;box-shadow:0 0 0 3px rgba(107,91,149,.10)}
+        .ed-input:focus,.ed-select:focus,.ed-textarea:focus{border-color:#FFB020;box-shadow:0 0 0 3px rgba(255,176,32,.10)}
         .ed-textarea{min-height:90px;resize:vertical}
         .ed-check{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;min-height:46px}.ed-check input{width:18px;height:18px;accent-color:#15803D}
         .ed-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.ed-primary{border:0;border-radius:10px;background:linear-gradient(100deg, #E18E13 0%, #FFB020 100%);color:#1C1410;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}.ed-primary:disabled{opacity:.6;cursor:wait}.ed-primary:hover:not(:disabled){background:linear-gradient(100deg, #C77B0D 0%, #EEA11A 100%)}
@@ -4783,7 +4783,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         .ed-billing-warning b{font-weight:900}
         .ed-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
         .ed-plan-card{border:1px solid #e1e8ed;border-radius:16px;padding:20px;display:flex;flex-direction:column;min-height:390px;background:#fff}
-        .ed-plan-card.current{border-color:#FFB020;box-shadow:0 0 0 2px rgba(107,91,149,.08)}
+        .ed-plan-card.current{border-color:#FFB020;box-shadow:0 0 0 2px rgba(255,176,32,.08)}
         .ed-plan-card.pro{background:#1C1410;color:#fff;border-color:#1C1410}
         .ed-plan-card .eyebrow{margin-bottom:6px}.ed-plan-card.pro .eyebrow{color:#FFB020}
         .ed-plan-card h3{font-family:Manrope,Inter,sans-serif;font-size:22px;margin:0}
@@ -4819,7 +4819,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         .ed-team-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
         .ed-team-role-card{border:1px solid #dfe7ec;background:#fff;border-radius:12px;padding:13px;text-align:left;cursor:pointer;color:#1F1B18;font:inherit;transition:border-color .15s,box-shadow .15s,background .15s}
         .ed-team-role-card:hover{border-color:#bdcbd5}
-        .ed-team-role-card.active{border-color:#FFB020;background:#fff9f3;box-shadow:0 0 0 2px rgba(107,91,149,.08)}
+        .ed-team-role-card.active{border-color:#FFB020;background:#fff9f3;box-shadow:0 0 0 2px rgba(255,176,32,.08)}
         .ed-team-role-card b{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:Manrope,Inter,sans-serif;font-size:14px;margin-bottom:5px}
         .ed-team-role-card b span{font-family:Inter,sans-serif;font-size:10px;color:#925400;background:#ece9f5;border-radius:999px;padding:4px 6px;white-space:nowrap}
         .ed-team-role-card p{margin:0;color:#655D56;font-size:12px;line-height:1.5}
@@ -4889,10 +4889,10 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
         .ed-jobs-empty{margin-top:16px;border:1px solid #e7edf1;background:#FAF9F7;border-radius:12px;padding:16px 18px;text-align:left;display:flex;align-items:center;gap:12px;color:#655D56}
         .ed-jobs-empty-icon{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #e1e8ed;display:grid;place-items:center;color:#1F1B18;font-size:20px;font-weight:800;flex:0 0 36px}
         .ed-jobs-empty b{display:block;color:#1F1B18;font-size:13px;margin-bottom:2px}.ed-jobs-empty span{display:block;font-size:12px;line-height:1.45}
-        .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#655D56;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#1F1B18;font-size:18px}.ed-job-overview-card.alert{border-color:#c9c2de;background:#fff8f1}.ed-job-overview-card.danger{border-color:#FEE2E2;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
+        .ed-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.ed-job-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}.ed-job-overview-card{border:1px solid #e3eaf0;border-radius:12px;background:#fff;padding:11px 12px}.ed-job-overview-card span{display:block;color:#655D56;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.ed-job-overview-card b{display:block;margin-top:3px;color:#1F1B18;font-size:18px}.ed-job-overview-card.alert{border-color:#E7E2DC;background:#fff8f1}.ed-job-overview-card.danger{border-color:#FEE2E2;background:#fff5f2}.ed-job-overview-card.live{border-color:#cfe7db;background:#f2faf6}
         .ed-jobs{display:grid;gap:8px;margin-top:12px}.ed-job{display:grid;grid-template-columns:108px minmax(210px,1.5fr) 96px 106px minmax(220px,.9fr);gap:11px;align-items:center;padding:10px 11px;border:1px solid #edf1f4;border-radius:12px;background:#fff;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}.ed-job:first-child{border-top:1px solid #edf1f4}.ed-job-date{white-space:nowrap}.ed-job:hover{border-color:#E7E2DC;box-shadow:0 6px 20px rgba(34,38,49,.05)}.ed-job-active{background:#eef3f6;border-color:#cfdbe4}.ed-job-priority-danger{border-left:4px solid #c65b37}.ed-job-priority-action{border-left:4px solid #1c9b67}.ed-job-priority-live{border-left:4px solid #2d9b69}.ed-opened-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;background:#dce2e6;color:#425466;font-size:11px;font-weight:800}.ed-opened-badge.declined{background:#fff0ec;color:#B91C1C;border:0;padding:5px 8px}
-        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#f0edf7;color:#925400}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#15803D}.ed-job-state.ok{background:#edf8f3;color:#15803D}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#655D56;font-size:10.5px;line-height:1.3;text-align:center}
-        .ed-job-chat-btn.has-unread{border-color:#897bb1!important;background:#F4F1ED!important;color:#925400!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
+        .ed-job-state-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:center;align-self:center;text-align:center;min-width:0;width:100%}.ed-job-state{display:inline-flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;line-height:1.2}.ed-job-state.action{background:#FFF1D6;color:#925400}.ed-job-state.danger{background:#fde8e4;color:#b42318}.ed-job-state.live{background:#edf8f3;color:#15803D}.ed-job-state.ok{background:#edf8f3;color:#15803D}.ed-job-state.muted{background:#f1f4f6;color:#667788}.ed-job-state-detail{display:block;margin-top:4px;color:#655D56;font-size:10.5px;line-height:1.3;text-align:center}
+        .ed-job-chat-btn.has-unread{border-color:#B57300!important;background:#F4F1ED!important;color:#925400!important}.ed-job-chat-new{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:6px;padding:0 5px;border-radius:999px;background:#c9362b;color:#fff;font-size:10px;font-weight:900;line-height:1;vertical-align:middle}
         .ed-job button{border:1px solid #E7E2DC;background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
         .ed-status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 8px;background:#edf8f3;color:#15803D;width:max-content}
         .ed-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;background:#f6f8fa}.ed-spinner{width:28px;height:28px;border:3px solid #dfe7ed;border-top-color:#FFB020;border-radius:50%;animation:edspin .8s linear infinite}@keyframes edspin{to{transform:rotate(360deg)}}
@@ -7192,7 +7192,7 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
             </div>
 
             {preferredPlanKey !== "basic" && planSummary?.plan_key === "basic" && (
-              <div className="ed-note" style={{ background: "#f6f4fa", border: "1px solid #ccc4df", color: "#1F1B18", marginBottom: 16 }}>
+              <div className="ed-note" style={{ background: "#F4F1ED", border: "1px solid #E7E2DC", color: "#1F1B18", marginBottom: 16 }}>
                 Jūsų pasirinkimas – {employerPlanName(preferredPlanKey)}. Žemiau patvirtinkite atsiskaitymo laikotarpį ir atlikite saugų apmokėjimą per Stripe. Iki Stripe patvirtinimo aktyvus lieka Basic planas.
               </div>
             )}
@@ -7201,8 +7201,8 @@ export function EmployerDashboard({ user, onLogout, onAdminReturn = null, impers
               <div
                 className="ed-note"
                 style={{
-                  background: "#f6f4fa",
-                  border: "1px solid #ccc4df",
+                  background: "#F4F1ED",
+                  border: "1px solid #E7E2DC",
                   color: "#1F1B18",
                   marginBottom: 16,
                 }}
