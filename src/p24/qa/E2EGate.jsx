@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabase, supabaseKey, supabaseUrl } from "../../lib/config.js";
 import "./E2EGate.css";
@@ -57,13 +57,23 @@ export function E2EGate({ children }) {
 
   useEffect(() => {
     let active = true;
+    // Dedicated bookmarked entry point for choosing a different test person.
+    // Clear only the staging actor; keep the verified tester's own session.
+    const chooserRequested = new URLSearchParams(window.location.search).has("choose-account");
     Promise.all([ownerAuth.auth.getSession(),supabase.auth.getSession()])
-      .then(([a,b]) => {
+      .then(async ([a,b]) => {
+        if (!active) return;
+        if (chooserRequested) {
+          await supabase.auth.signOut({ scope: "local" });
+          const url = new URL(window.location.href);
+          url.searchParams.delete("choose-account");
+          window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+        }
         if (!active) return;
         const initialOwner = a.data?.session || null;
         ownerIdRef.current = initialOwner?.user?.id || null;
         setOwnerSession(initialOwner);
-        setActorSession(b.data?.session || null);
+        setActorSession(chooserRequested ? null : b.data?.session || null);
         setInitialized(true);
       }).catch(() => {if(active)setInitialized(true);});
     const ownerListener=ownerAuth.auth.onAuthStateChange((event,session)=>{
@@ -157,8 +167,6 @@ export function E2EGate({ children }) {
   }
 
   const busy=Boolean(switching || checking);
-  const roleHint=useMemo(()=>actorSession?.user?.email?.split("@")?.[0]||"bandomoji paskyra",
-    [actorSession?.user?.email]);
 
   if(!initialized || (checking && !allowed && Boolean(ownerSession))) return <div className="qa-e2e-page">
     <div className="qa-e2e-card"><h1>Statybos24 testavimas</h1><p>Tikrinama prieiga...</p></div>
@@ -228,14 +236,7 @@ export function E2EGate({ children }) {
     </div>
   );
 
-  return <>
-    <aside className="qa-e2e-toolbar" aria-label="Testavimo paskyros valdymas">
-      <span>🧪 TESTAVIMAS · {roleHint} · tik netikri duomenys</span>
-      <button type="button" onClick={async()=>{
-        await supabase.auth.signOut();
-        setError("");
-      }}>Pakeisti žmogų</button>
-    </aside>
-    {children}
-  </>;
+  // The real dashboard is full screen: no floating or in-flow QA toolbar.
+  // Open /?choose-account=1 to sign out of this persona and choose another.
+  return children;
 }
