@@ -1,0 +1,1 @@
+Built for isolated Supabase E2E static proxy only.

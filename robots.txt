@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://statybos24.lt/sitemap.xml

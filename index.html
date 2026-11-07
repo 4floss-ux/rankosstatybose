@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="lt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#222631" />
+    <meta name="color-scheme" content="light" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta
+      name="description"
+      content="statybos24.lt – statybų darbų ir darbuotojų paieškos platforma Lietuvoje. Kurkite darbo pasiūlymus, raskite darbuotojus ir valdykite darbus vienoje vietoje."
+    />
+
+    <link rel="canonical" href="https://statybos24.lt/" />
+    <link rel="icon" type="image/png" href="/functions/v1/e2e-site/favicon.png" />
+
+    <!-- PWA nuorodos prieš kraunant React; niekada netaikoma atskiram /hire projektui. -->
+    <script>
+      if (!/^\/hire(?:\/|$)/.test(window.location.pathname)) {
+        const manifest = document.createElement("link");
+        manifest.rel = "manifest";
+        manifest.href = "/statybos24.webmanifest?v=4";
+        document.head.appendChild(manifest);
+        const touchIcon = document.createElement("link");
+        touchIcon.rel = "apple-touch-icon";
+        touchIcon.href = "/statybos24-touch-icon-v3.png";
+        document.head.appendChild(touchIcon);
+      }
+    </script>
+
+    <!-- Atnaujinimo režimas: jei administratorius įjungia MAINTENANCE_MODE, atidaryti langai persikrauna į atnaujinimo puslapį. -->
+    <script>
+      (function () {
+        // Atnaujinimo metu: administratoriui atsijungus nuo svetainės, nuimama ir prieiga per atnaujinimo langą
+        var bypass = false;
+        function hasSession() { try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (/^sb-.+-auth-token$/.test(k) && localStorage.getItem(k)) return true; } } catch (e) { return true; } return false; }
+        function guard() { if (bypass && !hasSession()) location.replace("/__admin/logout"); }
+        function check() { fetch("/api/status", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) { if (j && j.maintenance === true) location.reload(); bypass = !!(j && j.bypass === true); guard(); }).catch(function () {}); }
+        check();
+        setInterval(check, 60000);
+        setInterval(guard, 1500);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
+      })();
+    </script>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="lt_LT" />
+    <meta property="og:site_name" content="statybos24.lt" />
+    <meta property="og:url" content="https://statybos24.lt/" />
+    <meta property="og:title" content="statybos24.lt – statybų darbai ir darbuotojų paieška" />
+    <meta
+      property="og:description"
+      content="Statybų darbų ir darbuotojų paieška pagal realų prieinamumą. Darbo pasiūlymai, kvietimai ir darbų valdymas vienoje vietoje."
+    />
+
+    <meta property="og:image" content="https://statybos24.lt/og-statybos24-square-v6.png" />
+    <meta property="og:image:secure_url" content="https://statybos24.lt/og-statybos24-square-v6.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1254" />
+    <meta property="og:image:height" content="1254" />
+    <meta property="og:image:alt" content="Statybos24.lt logotipas" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="https://statybos24.lt/og-statybos24-square-v6.png" />
+    <meta name="twitter:image:alt" content="Statybos24.lt logotipas" />
+    <meta name="twitter:title" content="statybos24.lt – statybų darbai ir darbuotojų paieška" />
+    <meta
+      name="twitter:description"
+      content="Statybų darbų ir darbuotojų paieška pagal realų prieinamumą."
+    />
+
+    <title>Statybos24.lt - rankos tavo darbuose</title>
+
+    <!-- Grąžinti ankstesni Inter + Manrope šriftai. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    >
+
+    <style>
+      #nauda,
+      #planai,
+      #duk,
+      .home-cta,
+      .home-footer {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 760px;
+      }
+
+      /* Tik pagrindinio puslapio apatiniai CTA mygtukai ir poraštės logotipas. */
+      .home-page .home-cta .home-cta-buttons > .home-btn,
+      .home-page .home-cta .home-cta-buttons > .home-btn.outline {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, .55);
+        color: #fff;
+        box-shadow: none;
+        transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .home-page .home-cta .home-cta-buttons > .home-btn:hover,
+        .home-page .home-cta .home-cta-buttons > .home-btn.outline:hover {
+          background: #6b5b95;
+          border-color: #6b5b95;
+          color: #fff;
+        }
+      }
+
+      .home-page .home-cta .home-cta-buttons > .home-btn:focus-visible {
+        outline: 2px solid #6b5b95;
+        outline-offset: 3px;
+      }
+
+      /* Tik apatinės poraštės logotipas: React komponentas turi inline display:inline-flex. */
+      .home-page .home-footer .home-footer-inner > a.home-brand {
+        display: none !important;
+      }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "statybos24.lt",
+        "url": "https://statybos24.lt/",
+        "inLanguage": "lt-LT",
+        "description": "Statybų darbų ir darbuotojų paieškos platforma Lietuvoje."
+      }
+    </script>
+    <script type="module" crossorigin src="/functions/v1/e2e-site/assets/index-GrSvLWpI.js"></script>
+    <link rel="stylesheet" crossorigin href="/functions/v1/e2e-site/assets/index-D3TioYVy.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
