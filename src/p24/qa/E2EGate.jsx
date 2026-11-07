@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabase, supabaseKey, supabaseUrl } from "../../lib/config.js";
 import "./E2EGate.css";
@@ -29,10 +29,13 @@ async function requestActor(session, role) {
     body: JSON.stringify({role})
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body?.ok) throw new Error(
-    response.status===403 ? "Ši paskyra neturi teisės naudoti testavimo režimo."
-    : body.error || "Testavimo prisijungimas nepavyko."
-  );
+  if (!response.ok || !body?.ok) {
+    const err = new Error(response.status===403
+      ? "Ši paskyra neturi teisės naudoti testavimo režimo."
+      : body.error || "Testavimo prisijungimas nepavyko.");
+    err.status = response.status;
+    throw err;
+  }
   return body;
 }
 
@@ -46,18 +49,32 @@ export function E2EGate({ children }) {
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const ownerIdRef = useRef(null);
+  const allowedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
     Promise.all([ownerAuth.auth.getSession(),supabase.auth.getSession()])
       .then(([a,b]) => {
         if (!active) return;
-        setOwnerSession(a.data?.session || null);
+        const initialOwner = a.data?.session || null;
+        ownerIdRef.current = initialOwner?.user?.id || null;
+        setOwnerSession(initialOwner);
         setActorSession(b.data?.session || null);
         setInitialized(true);
       }).catch(() => {if(active)setInitialized(true);});
-    const ownerListener=ownerAuth.auth.onAuthStateChange((_event,session)=>{
-      if(active) {setOwnerSession(session);setAllowed(false);}
+    const ownerListener=ownerAuth.auth.onAuthStateChange((event,session)=>{
+      if(!active)return;
+      const nextId = session?.user?.id || null;
+      // Supabase emits SIGNED_IN on tab focus and TOKEN_REFRESHED when its JWT
+      // refreshes. Neither event means the tester logged out. Keep their current
+      // dashboard mounted instead of clearing access on every browser tab switch.
+      if (ownerIdRef.current !== nextId || event === "SIGNED_OUT") {
+        ownerIdRef.current = nextId;
+        allowedRef.current = false;
+        setAllowed(false);
+      }
+      setOwnerSession(session);
     });
     const actorListener=supabase.auth.onAuthStateChange((_event,session)=>{
       if(active)setActorSession(session);
@@ -68,14 +85,29 @@ export function E2EGate({ children }) {
 
   useEffect(()=>{
     if(!initialized || !ownerSession?.access_token) {
+      allowedRef.current = false;
       setAllowed(false);
+      setChecking(false);
       return;
     }
     let active=true;
-    setChecking(true);
+    // Do not cover or unmount an already open dashboard during token refresh.
+    if (!allowedRef.current) setChecking(true);
     requestActor(ownerSession,"check")
-      .then(()=> {if(active){setAllowed(true);setError("");}})
-      .catch((err)=> {if(active){setAllowed(false);setError(err.message);}})
+      .then(()=> {if(active){
+        allowedRef.current = true;
+        setAllowed(true);
+        setError("");
+      }})
+      .catch((err)=> {if(active){
+        // Only explicit authentication / authorization failures should revoke
+        // access. A momentary network error on tab resume is not a sign-out.
+        if(err?.status===401 || err?.status===403 || !allowedRef.current){
+          allowedRef.current = false;
+          setAllowed(false);
+          setError(err.message);
+        }
+      }})
       .finally(()=> {if(active)setChecking(false);});
     return ()=>{active=false;};
   }, [initialized,ownerSession?.access_token]);
@@ -107,7 +139,7 @@ export function E2EGate({ children }) {
   const roleHint=useMemo(()=>actorSession?.user?.email?.split("@")?.[0]||"bandomoji paskyra",
     [actorSession?.user?.email]);
 
-  if(!initialized || checking) return <div className="qa-e2e-page">
+  if(!initialized || (checking && !allowed && Boolean(ownerSession))) return <div className="qa-e2e-page">
     <div className="qa-e2e-card"><h1>Statybos24 testavimas</h1><p>Tikrinama prieiga...</p></div>
   </div>;
 
