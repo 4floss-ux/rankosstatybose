@@ -73,7 +73,12 @@ jobs:
             const picker = await context.newPage();
             await picker.goto("https://4floss-ux.github.io/rankosstatybose/?choose-account=1", {waitUntil:"domcontentloaded"});
             await picker.locator('input[type="email"]').waitFor({state:"visible",timeout:20000});
-            await picker.waitForFunction(() => !new URLSearchParams(location.search).has("choose-account"), {timeout:10000});
+            console.log("CHOOSER NAVIGATION:", picker.url());
+            await picker.waitForFunction(() => !new URLSearchParams(location.search).has("choose-account"), null, {timeout:12000}).catch(async e=>{
+              console.log("CHOOSER URL:", picker.url());
+              console.log("CHOOSER BODY:", (await picker.locator("body").innerText()).slice(0,1200));
+              throw e;
+            });
             if (await picker.locator(".qa-e2e-toolbar").count()) throw Error("QA toolbar was not removed");
             await picker.close();
             console.log("PASS: Bookmarked person chooser URL opens login safely and leaves no banner.");
