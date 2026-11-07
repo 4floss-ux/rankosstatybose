@@ -41,8 +41,9 @@ jobs:
           grep -Fq "ownerIdRef.current !== nextId" src/p24/qa/E2EGate.jsx
           grep -Fq "testPeople.filter" src/p24/qa/E2EGate.jsx
           grep -Fq "storage: window.sessionStorage" src/lib/config.js
-          grep -Fq "aria-label=\"Testavimo paskyros valdymas\"" src/p24/qa/E2EGate.jsx
-          grep -Fq "position:relative;box-sizing:border-box;width:100%" src/p24/qa/E2EGate.css
+          grep -Fq 'searchParams.delete("choose-account")' src/p24/qa/E2EGate.jsx
+          ! grep -Fq 'qa-e2e-toolbar' src/p24/qa/E2EGate.jsx
+          ! grep -Fq 'qa-e2e-toolbar' src/p24/qa/E2EGate.css
           npm run build -- --base=/rankosstatybose/
           node --input-type=module <<'NODE'
           import fs from "node:fs";
