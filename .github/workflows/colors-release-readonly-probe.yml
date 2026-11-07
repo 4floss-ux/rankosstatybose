@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: HTTP GET only: production status and landing
+      - name: Read-only production HTTP status check
         shell: bash
         run: |
           python3 - <<'PY'
