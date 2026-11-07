@@ -18,7 +18,7 @@ const ACTORS = [
   {role:"admin",name:"Administratorius",description:"Tikrink skelbimus, vartotojus ir administratoriaus valdymą.",icon:"🛡️"}
 ];
 
-async function requestActor(session, role) {
+async function requestActor(session, role, actorId = null) {
   const response = await fetch(`${supabaseUrl}/functions/v1/qa-actor`, {
     method:"POST",
     headers:{
@@ -26,7 +26,7 @@ async function requestActor(session, role) {
       Authorization:`Bearer ${session.access_token}`,
       apikey:supabaseKey
     },
-    body: JSON.stringify({role})
+    body: JSON.stringify({role, ...(actorId ? {actor_id:actorId} : {})})
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !body?.ok) {
@@ -49,6 +49,9 @@ export function E2EGate({ children }) {
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [testPeople, setTestPeople] = useState([]);
+  const [selectedRole, setSelectedRole] = useState("worker");
+  const [loadingPeople, setLoadingPeople] = useState(false);
   const ownerIdRef = useRef(null);
   const allowedRef = useRef(false);
 
@@ -112,6 +115,24 @@ export function E2EGate({ children }) {
     return ()=>{active=false;};
   }, [initialized,ownerSession?.access_token]);
 
+  useEffect(() => {
+    if (!allowed || !ownerSession?.access_token || actorSession) return;
+    let active = true;
+    setLoadingPeople(true);
+    requestActor(ownerSession, "list")
+      .then((data) => {
+        if(active) {
+          setTestPeople(Array.isArray(data.actors) ? data.actors : []);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        if(active) setError(err.message || "Nepavyko įkelti bandomųjų paskyrų.");
+      })
+      .finally(() => { if(active) setLoadingPeople(false); });
+    return () => {active=false;};
+  }, [allowed, ownerSession?.user?.id, actorSession?.user?.id]);
+
   async function login(e){
     e.preventDefault();setError("");setSwitching("login");
     try {
@@ -122,12 +143,12 @@ export function E2EGate({ children }) {
     finally{setSwitching("");}
   }
 
-  async function choose(role) {
+  async function choose(role, actorId = null) {
     if(!ownerSession || !allowed)return;
     setSwitching(role);setError("");
     try {
       await supabase.auth.signOut();
-      const token=await requestActor(ownerSession,role);
+      const token=await requestActor(ownerSession,role,actorId);
       if(!token.token_hash)throw new Error("Nepavyko gauti bandomosios paskyros.");
       const result=await supabase.auth.verifyOtp({token_hash:token.token_hash,type:"magiclink"});
       if(result.error || !result.data?.session)throw new Error("Nepavyko atidaryti bandomosios paskyros.");
@@ -163,13 +184,32 @@ export function E2EGate({ children }) {
         ) : allowed ? (
           <>
             <h2>Pasirink, kuo nori būti</h2>
-            <div className="qa-e2e-actors">
+            <div className="qa-e2e-roles" role="group" aria-label="Testuojamas vaidmuo">
               {ACTORS.map(actor=><button type="button" key={actor.role} disabled={busy}
-                onClick={()=>choose(actor.role)}>
-                <span className="qa-e2e-icon">{actor.icon}</span>
-                <span><strong>{actor.name}</strong><small>{actor.description}</small></span>
-                <span aria-hidden="true">›</span>
+                aria-pressed={selectedRole === actor.role}
+                className={selectedRole === actor.role ? "active" : ""}
+                onClick={()=>setSelectedRole(actor.role)}>
+                <span>{actor.icon}</span> {actor.name}
               </button>)}
+            </div>
+            <div className="qa-e2e-people" aria-live="polite">
+              {loadingPeople ? <p>Paruošiami bandomieji žmonės ir jų profiliai...</p> : null}
+              {!loadingPeople && testPeople.filter(p=>p.role===selectedRole).map(person=>
+                <button key={person.id} type="button" disabled={busy}
+                  onClick={()=>choose(selectedRole,person.id)}>
+                  <span className="qa-e2e-person-icon">{selectedRole==="worker"?"👷":selectedRole==="employer"?"🏗️":"🛡️"}</span>
+                  <span><strong>{person.name}</strong><small>{person.city || "TESTAS"} · Atidaryti tikrą paskyrą</small></span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              )}
+              {!loadingPeople && !testPeople.some(p=>p.role===selectedRole) ? (
+                <button type="button" disabled={busy} onClick={()=>choose(selectedRole)}>
+                  <span className="qa-e2e-person-icon">🧪</span>
+                  <span><strong>Atidaryti pagrindinę bandomąją paskyrą</strong>
+                  <small>Testiniai žmonės dar ruošiami</small></span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              ):null}
             </div>
             <button type="button" className="qa-e2e-signout"
               onClick={async()=>{await supabase.auth.signOut();await ownerAuth.auth.signOut();setAllowed(false);}}>
