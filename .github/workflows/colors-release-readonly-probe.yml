@@ -1,0 +1,42 @@
+name: Temporary read-only Statybos24 live status check
+on:
+  push:
+    branches:
+      - design/colors-only-1c1410-ffb020-20261107
+permissions:
+  contents: read
+jobs:
+  read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: HTTP GET only: production status and landing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error
+          base='https://statybos24.lt'
+          def get(path):
+              req=urllib.request.Request(base+path,headers={'User-Agent':'Statybos24-colors-post-merge-readonly/1.0','Accept':'application/json,text/html'},method='GET')
+              try:
+                  with urllib.request.urlopen(req,timeout=20) as r:
+                      return r.status,r.read(20000).decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read(20000).decode('utf-8','replace')
+          sc,body=get('/api/status')
+          hc,home=get('/')
+          print('STATUS_ENDPOINT_HTTP',sc)
+          print('HOME_HTTP',hc)
+          if sc==200:
+              try:
+                  j=json.loads(body)
+                  print('RELEASE',str(j.get('release','UNKNOWN'))[:120])
+                  print('MAINTENANCE',j.get('maintenance','UNKNOWN'))
+                  print('STATUS_JSON_KEYS',sorted(j.keys()))
+              except ValueError:
+                  print('STATUS_BODY_NOT_JSON',body[:250])
+          else:
+              print('STATUS_BODY',body[:250])
+          print('HOME_HTML_RETURNED',('<html' in home.lower()))
+          print('PASS read-only request, no production writes or deploy')
+          PY
