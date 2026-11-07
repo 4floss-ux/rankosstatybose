@@ -1,4 +1,4 @@
-.p24 .qa-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 18px;border:1px solid #d6c6ec;border-left:4px solid #7058a2;border-radius:8px;background:#f5f0fd;color:#302546}
+.p24 .qa-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 18px;border:1px solid #E7E2DC;border-left:4px solid #1D4ED8;border-radius:8px;background:#DBEAFE;color:#1D4ED8}
 .p24 .qa-banner b{font-size:13px;letter-spacing:.02em}
 .p24 .qa-banner p{margin:5px 0 0;font-size:12.5px;line-height:1.55}
 .p24 .qa-banner .btn{flex:none;background:white}
@@ -9,8 +9,8 @@
 .p24 .qa-head p{margin:0}
 .p24 .qa-eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--muted)}
 .p24 .qa-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.p24 .qa-error{border:1px solid #f0c9c1;background:#fff2ef;color:#a22525;padding:12px 14px;border-radius:6px;margin-top:12px}
-.p24 .qa-notice{border:1px solid #bce2cd;background:#f1faf5;color:#145735;padding:12px 14px;border-radius:6px;margin-top:12px}
+.p24 .qa-error{border:1px solid #FEE2E2;background:#FEE2E2;color:#B91C1C;padding:12px 14px;border-radius:6px;margin-top:12px}
+.p24 .qa-notice{border:1px solid #DCFCE7;background:#DCFCE7;color:#15803D;padding:12px 14px;border-radius:6px;margin-top:12px}
 .p24 .qa-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 8px}
 .p24 .qa-count{color:var(--muted);font-size:12px;font-weight:700}
 .p24 .qa-search{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:white;min-width:220px}
@@ -29,7 +29,7 @@
 .p24 .qa-fold{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:14px 16px;color:var(--navy);font:700 14px/1.4 var(--font);border:0;background:transparent;cursor:pointer}
 .p24 .qa-fold svg:nth-last-child(2){color:var(--muted);margin-left:6px}
 .p24 .qa-fold svg:last-child{margin-left:auto}
-.p24 .qa-fold[aria-expanded=true]{background:#f8f6fc}
+.p24 .qa-fold[aria-expanded=true]{background:#F4F1ED}
 .p24 .qa-fold[aria-expanded=true]+.qa-item-content{border-top:1px solid var(--line)}
 .p24 .qa-editor{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;padding-top:10px;border-top:1px solid var(--line)}
 .p24 .qa-editor label{font-size:12px;font-weight:700}
