@@ -40,6 +40,7 @@ jobs:
           npm install --no-audit --no-fund
           grep -Fq "ownerIdRef.current !== nextId" src/p24/qa/E2EGate.jsx
           grep -Fq "testPeople.filter" src/p24/qa/E2EGate.jsx
+          grep -Fq "storage: window.sessionStorage" src/lib/config.js
           npm run build -- --base=/rankosstatybose/
           node --input-type=module <<'NODE'
           import fs from "node:fs";
