@@ -229,13 +229,13 @@ export function E2EGate({ children }) {
   );
 
   return <>
-    {children}
-    <aside className="qa-e2e-toolbar">
+    <aside className="qa-e2e-toolbar" aria-label="Testavimo paskyros valdymas">
       <span>🧪 TESTAVIMAS · {roleHint} · tik netikri duomenys</span>
       <button type="button" onClick={async()=>{
         await supabase.auth.signOut();
         setError("");
       }}>Pakeisti žmogų</button>
     </aside>
+    {children}
   </>;
 }
