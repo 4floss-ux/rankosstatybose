@@ -41,6 +41,7 @@ jobs:
           grep -Fq "ownerIdRef.current !== nextId" src/p24/qa/E2EGate.jsx
           grep -Fq "testPeople.filter" src/p24/qa/E2EGate.jsx
           grep -Fq "storage: window.sessionStorage" src/lib/config.js
+          grep -Fq "setShowSavedWorkers" src/employer/EmployerDashboard.jsx
           grep -Fq 'searchParams.delete("choose-account")' src/p24/qa/E2EGate.jsx
           ! grep -Fq 'qa-e2e-toolbar' src/p24/qa/E2EGate.jsx
           ! grep -Fq 'qa-e2e-toolbar' src/p24/qa/E2EGate.css
