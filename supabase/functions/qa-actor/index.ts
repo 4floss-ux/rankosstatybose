@@ -82,6 +82,13 @@ async function ensureQaPeople(db: ReturnType<typeof createClient>): Promise<void
    if(result.error && !/already|registered|exists/i.test(result.error.message)){
      failures.push(result.error.code||"create_failed");
    }
+   if(!result.error && result.data?.user?.id && entry.metadata.role==="worker"){
+     await db.from("worker_profiles").update({
+       short_bio:"TESTAS · Statybų specialistas. Bandomasis darbuotojo profilis.",
+       years_experience:4,
+       availability_confirmed_at:new Date().toISOString()
+     }).eq("user_id",result.data.user.id);
+   }
  }
  if(failures.length)console.error("QA seed incomplete:",failures.join(","));
 }
