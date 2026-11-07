@@ -80,6 +80,10 @@ jobs:
               throw e;
             });
             if (await picker.locator(".qa-e2e-toolbar").count()) throw Error("QA toolbar was not removed");
+            const primary = await context.newPage();
+            await primary.goto("https://4floss-ux.github.io/rankosstatybose/",{waitUntil:"domcontentloaded"});
+            await primary.locator('input[type="email"]').waitFor({state:"visible",timeout:20000});
+            await primary.close();
             await picker.close();
             console.log("PASS: Bookmarked person chooser URL opens login safely and leaves no banner.");
             console.log("PASS: Two independent QA tab auth stores; reload preserves tab identity.");
