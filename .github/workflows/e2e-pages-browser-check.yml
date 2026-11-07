@@ -58,6 +58,18 @@ jobs:
             });
             await page.locator('input[type="password"]').waitFor({state:"visible",timeout:5000});
             if(await page.getByText("Pasirink, kuo nori būti").count())throw Error("Unauthorized visitor saw role switcher");
+            const aId=await page.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
+            if(!aId)throw Error("QA per-tab auth storage not initialized");
+            const second=await browser.newPage({viewport:{width:1320,height:900}});
+            await second.goto("https://4floss-ux.github.io/rankosstatybose/",{waitUntil:"domcontentloaded"});
+            await second.locator('input[type="email"]').waitFor({state:"visible",timeout:20000});
+            const bId=await second.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
+            if(!bId || aId===bId)throw Error("QA browser tabs share the same auth storage identifier");
+            await page.reload({waitUntil:"domcontentloaded"});
+            const afterReload=await page.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
+            if(afterReload!==aId)throw Error("QA session is not persistent on refresh");
+            await second.close();
+            console.log("PASS: Two independent QA tab auth stores; reload preserves tab identity.");
             console.log("PASS: Private login form is visible and actor switching is gated.");
             console.log("JS RUNTIME ERRORS:",JSON.stringify(errors.slice(0,8)));
             console.log("FAILED REQUESTS:",JSON.stringify(failed.slice(-12)));
