@@ -98,7 +98,7 @@ export function SilentLoader({ size = 20, minHeight = 44, fullscreen = false }) 
         placeItems: "center",
         width: "100%",
         minHeight: fullscreen ? "100vh" : minHeight,
-        background: fullscreen ? "#f6f8fa" : "transparent",
+        background: fullscreen ? "#FAF9F7" : "transparent",
       }}
     >
       <span
@@ -106,8 +106,8 @@ export function SilentLoader({ size = 20, minHeight = 44, fullscreen = false }) 
         style={{
           width: spinnerSize,
           height: spinnerSize,
-          border: `${Math.max(2, Math.round(spinnerSize / 9))}px solid #dfe7ed`,
-          borderTopColor: "#6b5b95",
+          border: `${Math.max(2, Math.round(spinnerSize / 9))}px solid #E7E2DC`,
+          borderTopColor: "#FFB020",
           borderRadius: "50%",
           animation: "silent-loader-spin .75s linear infinite",
           boxSizing: "border-box",
