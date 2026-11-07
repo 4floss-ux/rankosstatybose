@@ -12,7 +12,7 @@
 .p24 .interview-toggle{display:flex;align-items:center;gap:9px;width:100%;padding:15px 16px;border:0;background:var(--white);color:var(--navy);font:700 14px/1.4 var(--font);text-align:left;cursor:pointer}
 .p24 .interview-toggle>svg:last-child{margin-left:auto;transition:transform .15s}
 .p24 .interview-toggle[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}
-.p24 .interview-toggle:focus-visible{outline:2px solid var(--orange);outline-offset:-3px}
+.p24 .interview-toggle:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
 .p24 .interview-fold .wk.cand{border:0;border-top:1px solid var(--line);border-radius:0;margin:0}
 .p24 .interview-fold .cnm>.nm{display:none}
 .p24 .interview-fold .wk.cand .wa.cva{align-content:start}
