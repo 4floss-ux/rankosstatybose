@@ -70,6 +70,13 @@ jobs:
             const afterReload=await page.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
             if(afterReload!==aId)throw Error("QA session is not persistent on refresh");
             await second.close();
+            const picker = await context.newPage();
+            await picker.goto("https://4floss-ux.github.io/rankosstatybose/?choose-account=1", {waitUntil:"domcontentloaded"});
+            await picker.locator('input[type="email"]').waitFor({state:"visible",timeout:20000});
+            await picker.waitForFunction(() => !new URLSearchParams(location.search).has("choose-account"), {timeout:10000});
+            if (await picker.locator(".qa-e2e-toolbar").count()) throw Error("QA toolbar was not removed");
+            await picker.close();
+            console.log("PASS: Bookmarked person chooser URL opens login safely and leaves no banner.");
             console.log("PASS: Two independent QA tab auth stores; reload preserves tab identity.");
             console.log("PASS: Private login form is visible and actor switching is gated.");
             console.log("JS RUNTIME ERRORS:",JSON.stringify(errors.slice(0,8)));
