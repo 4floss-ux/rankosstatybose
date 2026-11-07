@@ -60,7 +60,7 @@ jobs:
             if(await page.getByText("Pasirink, kuo nori būti").count())throw Error("Unauthorized visitor saw role switcher");
             const aId=await page.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
             if(!aId)throw Error("QA per-tab auth storage not initialized");
-            const second=await browser.newPage({viewport:{width:1320,height:900}});
+            const second=await page.context().newPage();
             await second.goto("https://4floss-ux.github.io/rankosstatybose/",{waitUntil:"domcontentloaded"});
             await second.locator('input[type="email"]').waitFor({state:"visible",timeout:20000});
             const bId=await second.evaluate(()=>sessionStorage.getItem("statybos24-e2e-tab-id-v1"));
