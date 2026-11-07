@@ -123,7 +123,7 @@ export function E2EGate({ children }) {
       .then((data) => {
         if(active) {
           setTestPeople(Array.isArray(data.actors) ? data.actors : []);
-          setError("");
+          setError(data.warning || "");
         }
       })
       .catch((err) => {
